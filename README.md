@@ -8,6 +8,8 @@
 - It includes a nice MS Word-interface to review, verify and correct the resulting transcript
 - It is standing on the shoulders of giants: powered by [Whisper from OpenAI](https://github.com/openai/whisper), [Whisper.cpp by Georgi Gerganov](https://github.com/ggerganov/whisper.cpp) and [pyannote from Hervé Bredin](https://github.com/pyannote/pyannote-audio)
 
+![Main window](img/noScribe_main_window.png)
+
 ## Limitations 
 - Windows only for now, sorry. Mac-support is planned.
 - Since it uses sophisticated AI models, the download is quite large – about 3.7 GB
