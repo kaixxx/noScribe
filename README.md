@@ -27,6 +27,8 @@ Kai Dröge, PhD in sociology (with a background in computer science), qualitativ
 - *Download* the latest release from here: [noScript releases](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) (SWITCHdrive is a secure data sharing platform for Swiss universities)
 - Start the downloaded setup file. This may take a while, be patient.
 
+![Settings](img/noScribe_settings.png)
+
 ### The App
 - Select your *audio file* and a *filename for the transcript.*
 - The *Start* and *Stop* fields will accept timestamps in the format hh:mm:ss. Use this to limit the transcription to a particular part of the recording. This is especially helpful to test your settings with a small sample before committing to transcribe the whole interview, which may take several hours. Leave *Stop* empty if you want to transcribe till the end of the audio file.
