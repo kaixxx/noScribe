@@ -1,0 +1,71 @@
+en:
+  app_header: AI-powered Audio Transcription
+  welcome_message: Hi there, noScribe is ready!
+  welcome_instructions: >
+    
+    Version %{v}, Kai Dröge 2023
+    
+    powered by Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) & pyannote (Hervé Bredin)
+
+
+    Use the buttons on the left to select an audio file and a filename for your finished transcript (MS Word-Format).
+    Please be patient. The transcription may take 2 to 5 times as long as your audio file. Test your settings 
+    with a shorter section before transcribing the full audio. (Start = 00.00.00 and Stop = 00.03.00 will 
+    transcribe the first 3 minutes.)   
+
+
+    Enjoy!
+
+  setup_message: 'First run: Complete the setup...'
+
+  # UI Elements
+  label_audio_file: 'Audio file:'
+  label_audio_file_name: <select file>
+  
+  label_transcript_file: 'Save transcript as:'
+  label_transcript_file_name: <select filename> 
+
+  label_start: 'Start (hh:mm:ss): '
+  label_stop: 'Stop (hh:mm:ss): ' 
+
+  label_language: 'Language:'
+  label_speaker: 'Speaker detection:'
+  label_quality: 'Quality:'
+  
+  start_button: Start 
+  stop_button: Cancel
+
+  # log messages
+  log_transcript_filename: 'Transcript filename: '
+  log_audio_file_selected: 'Audio file selected: '
+  start_audio_conversion: 'Converting audio...'
+  audio_conversion_finished: 'Audio conversion finished'
+  start_identifiying_speakers: 'Speaker identification...'
+  loading_pyannote: 'Loading pyannote'
+  start_canceling: 'Canceling... (please wait a second)'
+  start_transcription: 'Transcription...'
+  loading_whisper: 'Loading whisper.cpp'
+  transcription_finished: 'Transcription finished.' 
+  transcription_saved: 'Saved to %{file}'
+  trancription_time: 'Duration: %{duration} minutes'
+
+  # Error messages
+  err_setup: 'An error occured during the setup. Check if you have a working internet connection and restart the program.'
+  err_invalid_time_string: 'This is not a valid time: "%{time}"'
+  err_options: 'Error in options'
+  err_no_audio_file: 'Error: Please select an audio file.'
+  err_no_transcript_file: 'Error: Please choose a filename for the finished transcript.'
+  err_ffmpeg: 'ffmpeg returned an error'
+  err_converting_audio: Error in step 1 - converting the audio.
+  err_identifying_speakers: Error in step 2 - identifiying the speakers.
+  transcription_canceled: 'Do you really want to cancel the transcription?'   
+  err_user_cancelation: 'Process has been canceled by the user.'
+  err_whisper_main: Whisper.cpp main termindeted with the error code %{e}
+  err_transcription: 'Error in step 3 - transcription'
+  rescue_saving: 'Saving to the original filename failed. Saved instead in this file: %{file}'
+  rescue_saving_failed: 'Error: Saving to the original filename failed. The alternate filename also exists. I have to quit. (Make sure your transcript is not already opened in Word!)'
+
+  # Doc contents
+  doc_header: 'Transcribed with noScribe vers. %{version}'
+  doc_header_audio: 'Audio file: %{file}'
+                      
