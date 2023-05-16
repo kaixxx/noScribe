@@ -6,7 +6,8 @@
 - It can distinguish different speakers and understands 99 languages (more or less, see below)
 - It runs locally on your computer. No cloud, no worries
 - It includes a nice MS Word-interface to review, verify and correct the resulting transcript
-- It is standing on the shoulders of giants: powered by [Whisper from OpenAI](https://github.com/openai/whisper), [Whisper.cpp by Georgi Gerganov](https://github.com/ggerganov/whisper.cpp) and [pyannote from Hervé Bredin](https://github.com/pyannote/pyannote-audio)
+- It is standing on the shoulders of giants: [Whisper from OpenAI](https://github.com/openai/whisper), [Whisper.cpp by Georgi Gerganov](https://github.com/ggerganov/whisper.cpp) and [pyannote from Hervé Bredin](https://github.com/pyannote/pyannote-audio)
+
 
 ![Main window](img/noScribe_main_window.png)
 
@@ -14,22 +15,23 @@
 - Windows only for now, sorry. Mac-support is planned.
 - Since it uses sophisticated AI models, the download is quite large – about 3.7 GB
 - It needs a decent computer, or the transcription will take forever. (Consider letting it run over night on a slower machine.)
+- Poor audio quality will lead to poor transcription results. 
 - No automatic transcription is perfect, there will always be some manual revision necessary (see "Factors influencing the quality" below). 
 
 ## Why the name "noScribe"?
 The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) defines *scribe* as *"a person whose entire miserable existence has been reduced to academic grunge and pain".* I hope this software will make your academic life a little less painful and grungy, hence the name *noScribe* :)
 
 ## About me
-Kai Dröge, PhD in sociology (with a background in computer science), qualitative researcher and teacher, Lucerne University for Applied Science (Switzerland) and Institute for Social Research, Frankfurt/M. (Germany).
+*Kai Dröge*, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).
 
 ## Usage
 ### Installation
 - *Download* the latest release from here: [noScript releases](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) (SWITCHdrive is a secure data sharing platform for Swiss universities)
 - Start the downloaded setup file. This may take a while, be patient.
 
-![Settings](img/noScribe_settings.png)
+### Settings
+<img src="img/noScribe_settings.png" width="300">
 
-### The App
 - Select your *audio file* and a *filename for the transcript.*
 - The *Start* and *Stop* fields will accept timestamps in the format hh:mm:ss. Use this to limit the transcription to a particular part of the recording. This is especially helpful to test your settings with a small sample before committing to transcribe the whole interview, which may take several hours. Leave *Stop* empty if you want to transcribe till the end of the audio file.
 - *Language:* choose the language of your transcript or leave it on “auto”
