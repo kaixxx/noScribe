@@ -10,6 +10,7 @@
 
 
 ![Main window](img/noScribe_main_window.png)
+(The transcript is from [this interview](https://youtu.be/vOwajAbvPzQ) I did in May 2022 with the russian sociologist Natalia Savelyeva.)
 
 ## Limitations 
 - Windows only for now, sorry. Mac-support is planned.
@@ -44,6 +45,9 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 - The transcript will be auto saved every few seconds under the given filename. 
 
 ### Revising the transcript in MS Word 
+
+![The transcript in MS Word](img/noScribe_Word.png)
+
 The document produced by noScribe will contain some helpful macros to work with your transcript.
 - Open the document in MS Word and allow for the **active content** (the macros) in the yellow security warning at the top.
 - Press **Ctrl + Spacebar** to hear the audio corresponding to your current position in the text. 
