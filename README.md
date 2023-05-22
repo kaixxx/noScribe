@@ -11,7 +11,7 @@ Download current release: **[Version 0.2b](https://drive.switch.ch/index.php/s/E
 
 
 ![Main window](img/noScribe_main_window.png)
-(The transcript is from [this interview](https://youtu.be/vOwajAbvPzQ) I did in May 2022 with the Russian sociologist Natalia Savelyeva.)
+(The transcript is from [this interview](https://www.youtube.com/watch?v=vOwajAbvPzQ&t=2018s) I did in May 2022 with the Russian sociologist Natalia Savelyeva.)
 
 ## Limitations 
 - Windows only for now, sorry. Mac-support is planned.
