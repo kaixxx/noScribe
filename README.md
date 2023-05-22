@@ -1,12 +1,13 @@
 ﻿# noScribe 
 ## Cutting edge AI technology for automated audio transcription
-
-- noScribe is **free and open source** (License: [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html))
+Download current release: **[Version 0.2b](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j)**
+- noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html))
 - It runs locally on your computer. **No cloud, no worries**
 - Its main purpose is to **transcribe interviews** for qualitative research or journalistic use
 - It can distinguish different **speakers** and understands 99 languages (more or less, see below)
 - It includes a **nice MS Word-interface** to review, verify and correct the resulting transcript
 - It is standing on the shoulders of giants: [Whisper from OpenAI](https://github.com/openai/whisper), [Whisper.cpp by Georgi Gerganov](https://github.com/ggerganov/whisper.cpp) and [pyannote from Hervé Bredin](https://github.com/pyannote/pyannote-audio)
+
 
 
 ![Main window](img/noScribe_main_window.png)
