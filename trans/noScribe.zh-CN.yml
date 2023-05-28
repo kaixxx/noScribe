@@ -1,0 +1,69 @@
+zh-CN:
+  app_header: 基于AI的音频转录
+  welcome_message: 你好，noScribe已准备就绪！
+  welcome_instructions: >
+
+    版本号：%{v}，Kai Dröge 2023
+    
+    由Whisper（OpenAI）、Whisper.cpp（Georgi Gerganov）和pyannote（Hervé Bredin）驱动
+
+
+    请使用左侧的按钮选择音频文件和完成转录的文件名（MS Word格式）。
+    请耐心等待。转录可能需要比音频文件长2至5倍的时间。在转录完整音频之前，请使用较短的部分测试您的设置。
+    （开始 = 00:00:00，结束 = 00:03:00将转录前3分钟。）
+
+
+    祝您使用愉快！
+
+  setup_message: '首次运行：完成设置...'
+
+  # 用户界面元素
+  label_audio_file: '音频文件：'
+  label_audio_file_name: <选择文件>
+  
+  label_transcript_file: '保存转录为：'
+  label_transcript_file_name: <选择文件名> 
+
+  label_start: '开始（hh:mm:ss）：'
+  label_stop: '结束（hh:mm:ss）：'
+
+  label_language: '语言：'
+  label_speaker: '说话人识别：'
+  label_quality: '质量：'
+  
+  start_button: 开始 
+  stop_button: 取消
+
+  # 日志信息
+  log_transcript_filename: '转录文件名：'
+  log_audio_file_selected: '已选择音频文件：'
+  start_audio_conversion: '正在转换音频...'
+  audio_conversion_finished: '音频转换完成'
+  start_identifiying_speakers: '正在识别说话人...'
+  loading_pyannote: '加载pyannote中'
+  start_canceling: '正在取消...（请稍候）'
+  start_transcription: '正在转录...'
+  loading_whisper: '加载whisper.cpp中'
+  transcription_finished: '转录完成。' 
+  transcription_saved: '已保存至%{file}'
+  trancription_time: '时长：%{duration}分钟'
+
+  # 错误信息
+  err_setup: '设置过程中发生错误。请检查您的网络连接并重新启动程序。'
+  err_invalid_time_string: '无效的时间格式：“%{time}”'
+  err_options: '选项错误'
+  err_no_audio_file: '错误：请选择音频文件。'
+  err_no_transcript_file: '错误：请选择完成的转录文件名。'
+  err_ffmpeg: 'ffmpeg返回错误'
+  err_converting_audio: '步骤1中的音频转换错误。'
+  err_identifying_speakers: '步骤2中的说话人识别错误。'
+  transcription_canceled: '是否确认取消转录？'   
+  err_user_cancelation: '转录过程已被用户取消。'
+  err_whisper_main: 'Whisper.cpp主进程终止，错误代码：%{e}'
+  err_transcription: '步骤3中的转录错误。'
+  rescue_saving: '保存至原始文件名失败。已保存至此文件：%{file}'
+  rescue_saving_failed: '错误：保存至原始文件名失败。备用文件名已存在。程序将退出。（请确保转录文件未在Word中打开！）'
+
+  # 文档内容
+  doc_header: '使用noScribe转录版本：%{version}'
+  doc_header_audio: '音频文件：%{file}'
