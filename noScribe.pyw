@@ -470,7 +470,7 @@ class App(ctk.CTk):
             # create log file
             if not os.path.exists(f'{config_dir}/log'):
                 os.makedirs(f'{config_dir}/log')
-            self.log_file = open(f'{config_dir}/log/{Path(self.audio_file).stem}.log', 'w')
+            self.log_file = open(f'{config_dir}/log/{Path(self.audio_file).stem}.log', 'w', encoding="utf-8")
             try:
 
                 #-------------------------------------------------------
