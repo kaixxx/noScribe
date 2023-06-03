@@ -1,0 +1,70 @@
+ja:
+  app_header: AIパワード音声転写
+  welcome_message: こんにちは、noScribeが準備完了です！
+  welcome_instructions: >
+    
+    バージョン %{v}、Kai Dröge 2023
+    
+    Whisper (OpenAI)、Whisper.cpp (Georgi Gerganov) & pyannote (Hervé Bredin)によって提供されています
+
+
+    左側のボタンを使用して、音声ファイルと転写済みのトランスクリプトのファイル名（MS Word形式）を選択してください。
+    転写には、音声ファイルの2〜5倍の時間がかかる場合がありますので、お待ちください。
+    全音声を転写する前に、短いセクションで設定をテストしてください。
+    （開始 = 00:00:00、終了 = 00:03:00は最初の3分間を転写します。）
+
+
+    お楽しみください！
+
+  setup_message: '初回実行：セットアップを完了してください...'
+
+  # UI要素
+  label_audio_file: '音声ファイル：'
+  label_audio_file_name: <ファイルを選択>
+  
+  label_transcript_file: '転写を保存：'
+  label_transcript_file_name: <ファイル名を選択> 
+
+  label_start: '開始（hh:mm:ss）：'
+  label_stop: '終了（hh:mm:ss）：' 
+
+  label_language: '言語：'
+  label_speaker: '話者検出：'
+  label_quality: '品質：'
+  
+  start_button: 開始 
+  stop_button: キャンセル
+
+  # ログメッセージ
+  log_transcript_filename: '転写ファイル名：'
+  log_audio_file_selected: '選択された音声ファイル：'
+  start_audio_conversion: '音声の変換を開始中...'
+  audio_conversion_finished: '音声の変換が完了しました'
+  start_identifiying_speakers: '話者の識別を開始中...'
+  loading_pyannote: 'pyannoteの読み込み中'
+  start_canceling: 'キャンセル中...（しばらくお待ちください）'
+  start_transcription: '転写を開始中...'
+  loading_whisper: 'whisper.cppの読み込み中'
+  transcription_finished: '転写が完了しました。' 
+  transcription_saved: '%{file}に保存されました'
+  trancription_time: '所要時間：%{duration}分'
+
+  # エラーメッセージ
+  err_setup: 'セットアップ中にエラーが発生しました。インターネット接続が正常か確認し、プログラムを再起動してください。'
+  err_invalid_time_string: '無効な時間です：" %{time}"'
+  err_options: 'オプションのエラー'
+  err_no_audio_file: 'エラー：音声ファイルを選択してください。'
+  err_no_transcript_file: 'エラー：転写が完了したファイル名を選択してください。'
+  err_ffmpeg: 'ffmpegでエラーが発生しました'
+  err_converting_audio: 'ステップ1でエラーが発生しました-音声の変換。'
+  err_identifying_speakers: 'ステップ2でエラーが発生しました-話者の識別。'
+  transcription_canceled: '本当に転写をキャンセルしますか？'   
+  err_user_cancelation: 'ユーザーによってプロセスがキャンセルされました。'
+  err_whisper_main: 'Whisper.cppメインがエラーコード %{e} で終了しました'
+  err_transcription: 'ステップ3でエラーが発生しました-転写'
+  rescue_saving: '元のファイル名への保存に失敗しました。代わりにこのファイルに保存されました：%{file}'
+  rescue_saving_failed: 'エラー：元のファイル名への保存に失敗しました。代替のファイル名も存在します。終了する必要があります。（Wordでトランスクリプトが既に開かれていないことを確認してください！）'
+
+  # ドキュメント内容
+  doc_header: 'noScribe vers. %{version}で転写されました'
+  doc_header_audio: '音声ファイル：%{file}'

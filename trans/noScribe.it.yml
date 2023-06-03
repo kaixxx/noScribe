@@ -1,0 +1,69 @@
+it:
+  app_header: Trascrizione audio potenziata da AI
+  welcome_message: Ciao! noScribe è pronto!
+  welcome_instructions: >
+    
+    Versione %{v}, Kai Dröge 2023
+    
+    Potenziato da Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) e pyannote (Hervé Bredin)
+
+
+    Usa i pulsanti a sinistra per selezionare un file audio e un nome di file per la tua trascrizione finale (formato MS Word).
+    Sii paziente. La trascrizione potrebbe richiedere da 2 a 5 volte più tempo rispetto al file audio. Prova le impostazioni 
+    con una sezione più breve prima di trascrivere l'audio completo. (Start = 00.00.00 e Stop = 00.03.00 trascriveranno i primi 3 minuti.)   
+
+
+    Buon divertimento!
+
+  setup_message: 'Prima esecuzione: Completa la configurazione...'
+
+  # Elementi dell'interfaccia utente
+  label_audio_file: 'File audio:'
+  label_audio_file_name: <seleziona file>
+  
+  label_transcript_file: 'Salva trascrizione come:'
+  label_transcript_file_name: <seleziona nome file> 
+
+  label_start: 'Inizio (hh:mm:ss): '
+  label_stop: 'Fine (hh:mm:ss): ' 
+
+  label_language: 'Lingua:'
+  label_speaker: 'Rilevamento degli speaker:'
+  label_quality: 'Qualità:'
+  
+  start_button: Avvia 
+  stop_button: Annulla
+
+  # Messaggi di log
+  log_transcript_filename: 'Nome file trascrizione: '
+  log_audio_file_selected: 'File audio selezionato: '
+  start_audio_conversion: 'Conversione audio in corso...'
+  audio_conversion_finished: 'Conversione audio completata'
+  start_identifiying_speakers: 'Identificazione degli speaker in corso...'
+  loading_pyannote: 'Caricamento di pyannote'
+  start_canceling: 'Annullamento in corso... (attendere un secondo)'
+  start_transcription: 'Trascrizione in corso...'
+  loading_whisper: 'Caricamento di whisper.cpp'
+  transcription_finished: 'Trascrizione completata.' 
+  transcription_saved: 'Salvato in %{file}'
+  trancription_time: 'Durata: %{duration} minuti'
+
+  # Messaggi di errore
+  err_setup: 'Si è verificato un errore durante la configurazione. Controlla la tua connessione internet e riavvia il programma.'
+  err_invalid_time_string: 'Questa non è una stringa di tempo valida: "%{time}"'
+  err_options: 'Errore nelle opzioni'
+  err_no_audio_file: 'Errore: seleziona un file audio.'
+  err_no_transcript_file: 'Errore: scegli un nome per la trascrizione finale.'
+  err_ffmpeg: 'ffmpeg ha restituito un errore'
+  err_converting_audio: 'Errore nella fase 1 - conversione audio.'
+  err_identifying_speakers: 'Errore nella fase 2 - identificazione degli speaker.'
+  transcription_canceled: 'Vuoi davvero annullare la trascrizione?'   
+  err_user_cancelation: 'Processo annullato dall\'utente.'
+  err_whisper_main: 'Whisper.cpp terminato con il codice di errore %{e}'
+  err_transcription: 'Errore nella fase 3 - trascrizione'
+  rescue_saving: 'Salvataggio con il nome originale non riuscito. Salvato invece in questo file: %{file}'
+  rescue_saving_failed: 'Errore: salvataggio con il nome originale non riuscito. Il nome alternativo esiste già. Il programma deve essere chiuso. (Assicurati che la trascrizione non sia già aperta in Word!)'
+
+  # Contenuti del documento
+  doc_header: 'Trascritto con noScribe vers. %{version}'
+  doc_header_audio: 'File audio: %{file}'
