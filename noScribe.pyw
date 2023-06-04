@@ -39,6 +39,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from io import StringIO
 from elevate import elevate
+import cpufeature
 
 app_version = '0.2b'
 ctk.set_appearance_mode('dark')
@@ -58,7 +59,6 @@ def save_config():
     with open(f'{config_dir}\\config.yml', 'w') as file:
         yaml.safe_dump(config, file)
 
-
 # locale: setting the language of the UI
 # see https://pypi.org/project/python-i18n/
 import i18n
@@ -77,6 +77,17 @@ if app_locale == 'auto': # read system locale settings
         app_locale = 'en'
 i18n.set('fallback', 'en')
 i18n.set('locale', app_locale)
+
+# Check CPU capabilities and select the right version of whisper
+if platform.system() == 'Windows':
+    if cpufeature.CPUFeature["AVX2"] == True and cpufeature.CPUFeature["OS_AVX"] == True:
+        whisper_path = "./whisper_avx2"
+    else:
+        whisper_path = "./whisper_sse2"
+#elif platform.system() == "Darwin": # = MAC
+#    whisper_path = "./whisper_mac"
+else:
+    raise Exception('Platform not supported yet.')
 
 # timestamp regex
 timestamp_re = re.compile('\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]')
@@ -292,28 +303,6 @@ class App(ctk.CTk):
 
         self.progress_bar = ctk.CTkProgressBar(self.frame_status, height=5, mode='determinate')
         self.progress_bar.set(0)
-
-        # Init
-        
-        # the following is no longer necessary since I included this modification to work with local files only:
-        # https://github.com/kaixxx/pyannote-audio/pull/1
-
-        # if platform.system() == 'Windows':
-            # Check if the neccesary files for pyannote have already been downloaded from huggingface.co
-            # If so, this directory should exist: C:\Users\<username>\.cache\huggingface\hub\models--speechbrain--spkrec-ecapa-voxceleb
-        #    user_dir = os.path.expanduser('~')
-        #    if not os.path.exists(user_dir + '\\.cache\\huggingface\\hub\\models--speechbrain--spkrec-ecapa-voxceleb'):
-        #        self.logn(t('setup_message'))
-        #        self.update()
-
-                # if we are in the compiled version, pyannote_setup.exe will be in the root folder, otherwise in the ./pyannote_setup directory:
-        #        if os.path.exists('pyannote_setup.exe'):
-        #            pyannote_setup_path = 'pyannote_setup.exe'
-        #        else:
-        #            pyannote_setup_path = './pyannote_setup/pyannote_setup.exe'
-        #        if run(pyannote_setup_path).returncode > 0:
-        #            self.logn(t('err_setup'), 'error')
-        #            self.logn()
         
         self.logn(t('welcome_message'), 'highlight')
         self.logn(t('welcome_instructions', v=app_version))
@@ -471,6 +460,13 @@ class App(ctk.CTk):
             if not os.path.exists(f'{config_dir}/log'):
                 os.makedirs(f'{config_dir}/log')
             self.log_file = open(f'{config_dir}/log/{Path(self.audio_file).stem}.log', 'w', encoding="utf-8")
+
+            # log CPU capabilities
+            if platform.system() == 'Windows':
+                self.logn("=== CPU FEATURES ===", where="file")
+                for key, value in cpufeature.CPUFeature.items():
+                    self.logn('    {:24}: {}'.format(key, value), where="file")
+            
             try:
 
                 #-------------------------------------------------------
@@ -647,7 +643,7 @@ class App(ctk.CTk):
                     config['whisper_extra_commands'] = ''
                     self.whisper_extra_commands = ''
                 
-                command = f'main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} --print-colors --print-progress --file "{self.tmp_audio_file}" {self.whisper_extra_commands}' 
+                command = f'{whisper_path}/main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} --print-colors --print-progress --file "{self.tmp_audio_file}" {self.whisper_extra_commands}' 
                 self.logn(command, where='file')
 
                 # prepare transcript docm
