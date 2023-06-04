@@ -55,8 +55,8 @@ es:
   err_no_audio_file: 'Error: Por favor, selecciona un archivo de audio.'
   err_no_transcript_file: 'Error: Por favor, elige un nombre de archivo para la transcripción finalizada.'
   err_ffmpeg: 'ffmpeg devolvió un error'
-  err_converting_audio: Error en el paso 1: conversión de audio.
-  err_identifying_speakers: Error en el paso 2: identificación de oradores.
+  err_converting_audio: 'Error en el paso 1: conversión de audio.'
+  err_identifying_speakers: 'Error en el paso 2: identificación de oradores.'
   transcription_canceled: '¿Realmente deseas cancelar la transcripción?'   
   err_user_cancelation: 'El proceso ha sido cancelado por el usuario.'
   err_whisper_main: 'Terminación de Whisper.cpp main con el código de error %{e}'

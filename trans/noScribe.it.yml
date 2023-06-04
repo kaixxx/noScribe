@@ -10,7 +10,7 @@ it:
 
     Usa i pulsanti a sinistra per selezionare un file audio e un nome di file per la tua trascrizione finale (formato MS Word).
     Sii paziente. La trascrizione potrebbe richiedere da 2 a 5 volte più tempo rispetto al file audio. Prova le impostazioni 
-    con una sezione più breve prima di trascrivere l'audio completo. (Start = 00.00.00 e Stop = 00.03.00 trascriveranno i primi 3 minuti.)   
+    con una sezione più breve prima di trascrivere l'audio completo. (Inizio = 00.00.00 e Fine = 00.03.00 trascriveranno i primi 3 minuti.)   
 
 
     Buon divertimento!
@@ -58,7 +58,7 @@ it:
   err_converting_audio: 'Errore nella fase 1 - conversione audio.'
   err_identifying_speakers: 'Errore nella fase 2 - identificazione degli speaker.'
   transcription_canceled: 'Vuoi davvero annullare la trascrizione?'   
-  err_user_cancelation: 'Processo annullato dall\'utente.'
+  err_user_cancelation: 'Processo annullato dall utente.'
   err_whisper_main: 'Whisper.cpp terminato con il codice di errore %{e}'
   err_transcription: 'Errore nella fase 3 - trascrizione'
   rescue_saving: 'Salvataggio con il nome originale non riuscito. Salvato invece in questo file: %{file}'
