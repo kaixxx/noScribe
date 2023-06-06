@@ -1,4 +1,6 @@
 from tkinter import Text, CURRENT
+# Source: https://web.archive.org/web/20200806215420/http://effbot.org/zone/tkinter-text-hyperlink.htm
+# and https://stackoverflow.com/questions/49353034/python-tkinter-have-displayed-text-as-hyperlink 
 
 class HyperlinkManager:
     def __init__(self, text):
@@ -17,7 +19,7 @@ class HyperlinkManager:
         # associated text widget
         tag = "hyper-%d" % len(self.links)
         self.links[tag] = action
-        return ["hyper", tag]
+        return ["hyper", tag] # changed: return a list instead of a tuple
 
     def _enter(self, event):
         self.text.config(cursor="hand2")
