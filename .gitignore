@@ -1,6 +1,7 @@
 old/
 build/
 src/
+__pycache__/
 
 *.code-workspace
 auto-py-to-exe_config.json
