@@ -1,12 +1,12 @@
 en:
   app_header: AI-powered Audio Transcription
   welcome_message: Hi there, noScribe is ready!
-  welcome_instructions: >
+  welcome_credits: >
     
     Version %{v}, Kai Dröge 2023
     
     powered by Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) & pyannote (Hervé Bredin)
-
+  welcome_instructions: >
 
     Use the buttons on the left to select an audio file and a filename for your finished transcript (MS Word-Format).
     Please be patient. The transcription may take 2 to 5 times as long as your audio file. Test your settings 
@@ -46,7 +46,7 @@ en:
   start_transcription: 'Transcription...'
   loading_whisper: 'Loading whisper.cpp'
   transcription_finished: 'Transcription finished.' 
-  transcription_saved: 'Saved to %{file}'
+  transcription_saved: 'Saved to: '
   trancription_time: 'Duration: %{duration} minutes'
 
   # Error messages

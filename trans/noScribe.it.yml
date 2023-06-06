@@ -1,12 +1,12 @@
 it:
   app_header: Trascrizione audio potenziata da AI
   welcome_message: Ciao! noScribe è pronto!
-  welcome_instructions: >
+  welcome_credits: >
     
     Versione %{v}, Kai Dröge 2023
     
     Potenziato da Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) e pyannote (Hervé Bredin)
-
+  welcome_instructions: >
 
     Usa i pulsanti a sinistra per selezionare un file audio e un nome di file per la tua trascrizione finale (formato MS Word).
     Sii paziente. La trascrizione potrebbe richiedere da 2 a 5 volte più tempo rispetto al file audio. Prova le impostazioni 
@@ -45,7 +45,7 @@ it:
   start_transcription: 'Trascrizione in corso...'
   loading_whisper: 'Caricamento di whisper.cpp'
   transcription_finished: 'Trascrizione completata.' 
-  transcription_saved: 'Salvato in %{file}'
+  transcription_saved: 'Salvato in '
   trancription_time: 'Durata: %{duration} minuti'
 
   # Messaggi di errore

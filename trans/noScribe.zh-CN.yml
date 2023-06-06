@@ -1,12 +1,12 @@
 zh-CN:
   app_header: 基于AI的音频转录
   welcome_message: 你好，noScribe已准备就绪！
-  welcome_instructions: >
+  welcome_credits: >
 
     版本号：%{v}，Kai Dröge 2023
     
     由Whisper（OpenAI）、Whisper.cpp（Georgi Gerganov）和pyannote（Hervé Bredin）驱动
-
+  welcome_instructions: >
 
     请使用左侧的按钮选择音频文件和完成转录的文件名（MS Word格式）。
     请耐心等待。转录可能需要比音频文件长2至5倍的时间。在转录完整音频之前，请使用较短的部分测试您的设置。
@@ -45,7 +45,7 @@ zh-CN:
   start_transcription: '正在转录...'
   loading_whisper: '加载whisper.cpp中'
   transcription_finished: '转录完成。' 
-  transcription_saved: '已保存至%{file}'
+  transcription_saved: '已保存至'
   trancription_time: '时长：%{duration}分钟'
 
   # 错误信息

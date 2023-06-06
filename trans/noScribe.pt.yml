@@ -1,12 +1,12 @@
 pt:
   app_header: Transcrição de Áudio com IA
   welcome_message: Olá, o noScribe está pronto!
-  welcome_instructions: >
+  welcome_credits: >
     
     Versão %{v}, Kai Dröge 2023
     
     Desenvolvido por Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) e pyannote (Hervé Bredin)
-
+  welcome_instructions: >
 
     Use os botões à esquerda para selecionar um arquivo de áudio e um nome de arquivo para sua transcrição concluída (formato MS Word).
     Por favor, tenha paciência. A transcrição pode levar de 2 a 5 vezes mais tempo que o arquivo de áudio. Teste suas configurações
@@ -46,7 +46,7 @@ pt:
   start_transcription: 'Transcrição...'
   loading_whisper: 'Carregando whisper.cpp'
   transcription_finished: 'Transcrição concluída.' 
-  transcription_saved: 'Salvo em %{file}'
+  transcription_saved: 'Salvo em '
   trancription_time: 'Duração: %{duration} minutos'
 
   # Mensagens de erro

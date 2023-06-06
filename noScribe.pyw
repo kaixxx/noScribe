@@ -17,6 +17,9 @@
 
 import tkinter as tk
 import customtkinter as ctk
+from tkHyperlinkManager import HyperlinkManager
+import webbrowser
+from functools import partial
 from PIL import Image
 import os
 import platform
@@ -234,16 +237,14 @@ class App(ctk.CTk):
         self.label_start = ctk.CTkLabel(self.frame_options, text=t('label_start'))
         self.label_start.grid(column=0, row=0, sticky='w', pady=[0,5])
 
-        #self.entry_start = ctk.CTkEntry(self.frame_options, width=120)
-        self.entry_start = TimeEntry(self.frame_options, width=120)
+        self.entry_start = TimeEntry(self.frame_options, width=100)
         self.entry_start.grid(column='1', row='0', sticky='e', pady=[0,5])
         self.entry_start.insert(0, '00:00:00')
 
         self.label_stop = ctk.CTkLabel(self.frame_options, text=t('label_stop'))
         self.label_stop.grid(column=0, row=1, sticky='w', pady=[5,10])
 
-        #self.entry_stop = ctk.CTkEntry(self.frame_options, width=120)
-        self.entry_stop = TimeEntry(self.frame_options, width=120)
+        self.entry_stop = TimeEntry(self.frame_options, width=100)
         self.entry_stop.grid(column='1', row='1', sticky='e', pady=[5,10])
     
         # language
@@ -252,7 +253,7 @@ class App(ctk.CTk):
 
         self.langs = ('auto', 'en (english)', 'zh (chinese)', 'de (german)', 'es (spanish)', 'ru (russian)', 'ko (korean)', 'fr (french)', 'ja (japanese)', 'pt (portuguese)', 'tr (turkish)', 'pl (polish)', 'ca (catalan)', 'nl (dutch)', 'ar (arabic)', 'sv (swedish)', 'it (italian)', 'id (indonesian)', 'hi (hindi)', 'fi (finnish)', 'vi (vietnamese)', 'iw (hebrew)', 'uk (ukrainian)', 'el (greek)', 'ms (malay)', 'cs (czech)', 'ro (romanian)', 'da (danish)', 'hu (hungarian)', 'ta (tamil)', 'no (norwegian)', 'th (thai)', 'ur (urdu)', 'hr (croatian)', 'bg (bulgarian)', 'lt (lithuanian)', 'la (latin)', 'mi (maori)', 'ml (malayalam)', 'cy (welsh)', 'sk (slovak)', 'te (telugu)', 'fa (persian)', 'lv (latvian)', 'bn (bengali)', 'sr (serbian)', 'az (azerbaijani)', 'sl (slovenian)', 'kn (kannada)', 'et (estonian)', 'mk (macedonian)', 'br (breton)', 'eu (basque)', 'is (icelandic)', 'hy (armenian)', 'ne (nepali)', 'mn (mongolian)', 'bs (bosnian)', 'kk (kazakh)', 'sq (albanian)', 'sw (swahili)', 'gl (galician)', 'mr (marathi)', 'pa (punjabi)', 'si (sinhala)', 'km (khmer)', 'sn (shona)', 'yo (yoruba)', 'so (somali)', 'af (afrikaans)', 'oc (occitan)', 'ka (georgian)', 'be (belarusian)', 'tg (tajik)', 'sd (sindhi)', 'gu (gujarati)', 'am (amharic)', 'yi (yiddish)', 'lo (lao)', 'uz (uzbek)', 'fo (faroese)', 'ht (haitian   creole)', 'ps (pashto)', 'tk (turkmen)', 'nn (nynorsk)', 'mt (maltese)', 'sa (sanskrit)', 'lb (luxembourgish)', 'my (myanmar)', 'bo (tibetan)', 'tl (tagalog)', 'mg (malagasy)', 'as (assamese)', 'tt (tatar)', 'haw (hawaiian)', 'ln (lingala)', 'ha (hausa)', 'ba (bashkir)', 'jw (javanese)', 'su (sundanese)')
 
-        self.option_menu_language = ctk.CTkOptionMenu(self.frame_options, width=120, values=self.langs)
+        self.option_menu_language = ctk.CTkOptionMenu(self.frame_options, width=100, values=self.langs)
         self.option_menu_language.grid(column=1, row=2, sticky='e', pady=10)
         try:
             self.option_menu_language.set(config['last_language'])
@@ -263,7 +264,7 @@ class App(ctk.CTk):
         self.label_speaker = ctk.CTkLabel(self.frame_options, text=t('label_speaker'))
         self.label_speaker.grid(column=0, row=3, sticky='w', pady=10)
 
-        self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=120, values=['auto', 'none'])
+        self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=100, values=['auto', 'none'])
         self.option_menu_speaker.grid(column=1, row=3, sticky='e', pady=10)
         try:
             self.option_menu_speaker.set(config['last_speaker'])
@@ -274,7 +275,7 @@ class App(ctk.CTk):
         self.label_quality = ctk.CTkLabel(self.frame_options, text=t('label_quality'))
         self.label_quality.grid(column=0, row=4, sticky='w', pady=10)
         
-        self.option_menu_quality = ctk.CTkOptionMenu(self.frame_options, width=120, values=['precise', 'fast'])
+        self.option_menu_quality = ctk.CTkOptionMenu(self.frame_options, width=100, values=['precise', 'fast'])
         self.option_menu_quality.grid(column=1, row=4, sticky='e', pady=10)
         try:
             self.option_menu_quality.set(config['last_quality'])
@@ -297,6 +298,8 @@ class App(ctk.CTk):
         self.log_textbox.tag_config('error', foreground='yellow')
         self.log_textbox.pack(padx=20, pady=[20,10], expand=True, fill='both')
 
+        self.hyperlink = HyperlinkManager(self.log_textbox._textbox)
+        
         # status bar bottom
         self.frame_status = ctk.CTkFrame(self, height=20, corner_radius=0)
         self.frame_status.pack(padx=0, pady=[0,0], anchor='sw', fill='x', side='bottom')
@@ -305,13 +308,20 @@ class App(ctk.CTk):
         self.progress_bar.set(0)
         
         self.logn(t('welcome_message'), 'highlight')
-        self.logn(t('welcome_instructions', v=app_version))
+        self.log(t('welcome_credits', v=app_version))
+        self.logn('https://github.com/kaixxx/noScribe', link='https://github.com/kaixxx/noScribe#readme')
+        self.logn(t('welcome_instructions'))       
         
     # Events and Methods
+    
+    def openLink(self, link):
+        webbrowser.open(link)
 
-    def log(self, txt='', tags=None, where='both'): # log to main window (log can be 'screen', 'file' or 'both')
+    def log(self, txt='', tags=[], where='both', link=''): # log to main window (log can be 'screen', 'file' or 'both')
         if where != 'file':
             self.log_textbox.configure(state=ctk.NORMAL)
+            if link != '':
+                tags = tags + self.hyperlink.add(partial(self.openLink, link))
             self.log_textbox.insert(ctk.END, txt, tags)
             self.log_textbox.yview_moveto(1) # scroll to last line
             self.log_textbox.configure(state=ctk.DISABLED)
@@ -320,14 +330,14 @@ class App(ctk.CTk):
                 txt = f'ERROR: {txt}'
             self.log_file.write(txt)
     
-    def logn(self, txt='', tags=None, where='both'): # log with newline
-        self.log(f'{txt}\n', tags, where)
+    def logn(self, txt='', tags=[], where='both', link=''): # log with newline
+        self.log(f'{txt}\n', tags, where, link)
 
-    def logr(self, txt='', tags=None, where='both'): # replace the last line of the log
+    def logr(self, txt='', tags=[], where='both', link=''): # replace the last line of the log
         if where != 'file':
             self.log_textbox.configure(state=ctk.NORMAL)
             self.log_textbox.delete('end-2l linestart', 'end-1l')
-        self.logn(txt, tags, where)
+        self.logn(txt, tags, where, link)
         
     def reader_thread(self, q):
         try:
@@ -804,7 +814,8 @@ class App(ctk.CTk):
                     if self.transcript_file != self.my_transcript_file: # used alternative filename because saving under the initial name failed
                         self.logn(t('rescue_saving', file=self.my_transcript_file), 'error')
                     else:
-                        self.logn(t('transcription_saved', file=self.my_transcript_file))
+                        self.log(t('transcription_saved'))
+                        self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
                     # log duration of the whole process in minutes
                     proc_time = datetime.datetime.now() - proc_start_time
                     self.logn(t('trancription_time', duration=int(proc_time.total_seconds() / 60))) 

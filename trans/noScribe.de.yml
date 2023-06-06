@@ -1,17 +1,17 @@
 de:
   app_header: KI-basierte Audio Transkription
   welcome_message: Hallo, noScribe ist bereit!
-  welcome_instructions: >
+  welcome_credits: >
     
     Version %{v}, Kai Dröge 2023 
     
     powered by Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) & pyannote (Hervé Bredin)
-
+  welcome_instructions: >
 
     Bitte wähle links eine Audiodatei und den Dateinamen, unter dem das fertige Transkript gespeichert werden
     soll (MS Word-Format). Hab Geduld, die Transkription braucht üblicherweise 2 bis 5 Mal so lang wie die Audiodatei ist. 
     Bevor man die gesamte Datei transkribiert, sollte man die Einstellungen an einem kurzen Ausschnitt testen.
-    (Bsp: Start = 00.00.00 and Stop = 00.03.00 transkribiert nur die ersten drei Minuten.)
+    (Start = 00.00.00 and Stop = 00.03.00 bspw. transkribiert nur die ersten drei Minuten.)
 
 
     Viel Erfolg!
@@ -46,7 +46,7 @@ de:
   start_transcription: 'Transkription...'
   loading_whisper: 'Lade whisper.cpp'
   transcription_finished: 'Transkription beendet.' 
-  transcription_saved: 'Gespeichert unter %{file}'
+  transcription_saved: 'Gespeichert unter: '
   trancription_time: 'Dauer: %{duration} Minuten'
 
   # Error messages

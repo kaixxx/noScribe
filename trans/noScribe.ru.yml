@@ -1,12 +1,12 @@
 ru:
   app_header: Транскрибация аудио с помощью искусственного интеллекта
   welcome_message: Привет! noScribe готов к работе!
-  welcome_instructions: >
+  welcome_credits: >
     
     Версия %{v}, Kai Dröge 2023
     
     Работает на базе Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) и pyannote (Hervé Bredin)
-
+  welcome_instructions: >
 
     Используйте кнопки слева для выбора аудиофайла и имени файла для готовой транскрипции (в формате MS Word).
     Пожалуйста, будьте терпеливы. Транскрибация может занять в 2-5 раз больше времени, чем длительность аудиофайла. Проверьте настройки
@@ -46,7 +46,7 @@ ru:
   start_transcription: 'Транскрибация...'
   loading_whisper: 'Загрузка whisper.cpp'
   transcription_finished: 'Транскрибация завершена.' 
-  transcription_saved: 'Сохранено в %{file}'
+  transcription_saved: 'Сохранено в '
   trancription_time: 'Продолжительность: %{duration} минут'
 
   # Сообщения об ошибках

@@ -1,12 +1,12 @@
 ja:
   app_header: AIパワード音声転写
   welcome_message: こんにちは、noScribeが準備完了です！
-  welcome_instructions: >
+  welcome_credits: >
     
     バージョン %{v}、Kai Dröge 2023
     
     Whisper (OpenAI)、Whisper.cpp (Georgi Gerganov) & pyannote (Hervé Bredin)によって提供されています
-
+  welcome_instructions: >
 
     左側のボタンを使用して、音声ファイルと転写済みのトランスクリプトのファイル名（MS Word形式）を選択してください。
     転写には、音声ファイルの2〜5倍の時間がかかる場合がありますので、お待ちください。
@@ -46,7 +46,7 @@ ja:
   start_transcription: '転写を開始中...'
   loading_whisper: 'whisper.cppの読み込み中'
   transcription_finished: '転写が完了しました。' 
-  transcription_saved: '%{file}に保存されました'
+  transcription_saved: '' # %{file}に保存されました'
   trancription_time: '所要時間：%{duration}分'
 
   # エラーメッセージ
