@@ -44,7 +44,7 @@ from io import StringIO
 from elevate import elevate
 import cpufeature
 
-app_version = '0.2b'
+app_version = '0.3'
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
 
@@ -672,12 +672,12 @@ class App(ctk.CTk):
                 p = d.add_paragraph()
                 speaker = ''
                 bookmark_id = 0
-                last_auto_save = datetime.datetime.now()
+                self.last_auto_save = datetime.datetime.now()
 
                 def save_doc():
                     try:
                         d.save(self.my_transcript_file)
-                        last_auto_save = datetime.datetime.now()
+                        self.last_auto_save = datetime.datetime.now()
                     except:
                         # saving failed, maybe the file is already open in Word and cannot be overwritten
                         # try saving to a different filename
@@ -690,7 +690,7 @@ class App(ctk.CTk):
                             d.save(self.my_transcript_file)
                             self.logn()
                             self.logn(t('rescue_saving', file=self.my_transcript_file), 'error')
-                            last_auto_save = datetime.datetime.now()
+                            self.last_auto_save = datetime.datetime.now()
             
                 try:
                     startupinfo = STARTUPINFO()
@@ -796,7 +796,7 @@ class App(ctk.CTk):
                                     
                                     # auto save
                                     if self.auto_save == True:
-                                        if (datetime.datetime.now() - last_auto_save).total_seconds() > 20:
+                                        if (datetime.datetime.now() - self.last_auto_save).total_seconds() > 20:
                                             save_doc()    
 
                                     self.update()
