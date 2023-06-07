@@ -642,6 +642,14 @@ class App(ctk.CTk):
                 else:
                     self.prompt_cmd = ''
                 
+                # whisper options:
+                try:
+                    # max segement length. Shorter segments can improve speaker identification.
+                    self.whisper_options = f"--max-len {config['whisper_options_max-len']}" 
+                except:
+                    config['whisper_options_max-len'] = '30'
+                    self.whisper_options = "--max-len 30"
+                
                 # "whisper_extra_commands" can be defined in config.yml and will be attached to the end of the command line. 
                 # Use this to experiment with advanced options.
                 # see https://github.com/ggerganov/whisper.cpp/tree/master/examples/main for a list of options
@@ -649,11 +657,13 @@ class App(ctk.CTk):
 
                 try:
                     self.whisper_extra_commands = config['whisper_extra_commands']
+                    if self.whisper_extra_commands == None:
+                        self.whisper_extra_commands = ''
                 except:
                     config['whisper_extra_commands'] = ''
                     self.whisper_extra_commands = ''
                 
-                command = f'{whisper_path}/main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} --print-colors --print-progress --file "{self.tmp_audio_file}" {self.whisper_extra_commands}' 
+                command = f'{whisper_path}/main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} {self.whisper_options} --print-colors --print-progress --file "{self.tmp_audio_file}" {self.whisper_extra_commands}' 
                 self.logn(command, where='file')
 
                 # prepare transcript docm
