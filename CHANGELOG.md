@@ -3,7 +3,7 @@
 
 ## version 0.3:
 **new:**
-- Translations of the user interface into Spanish, French, Italian, Japanese, Portuguese, Russian, Chinese. Thanks you, [mlynar-czyk]( https://github.com/mlynar-czyk), for this contribution! Be aware: These translations have been generated with a clever use of chatGPT. Please report any errors that you will find and make – if possible – a pull request with a better translation.
+- Translations of the user interface into Spanish, French, Italian, Japanese, Portuguese, Russian, Chinese. Thank you, [mlynar-czyk]( https://github.com/mlynar-czyk), for this contribution! Be aware: These translations have been generated with a clever use of chatGPT. Please report any errors that you will find and make – if possible – a pull request with a better translation.
 - Added hyperlinks to the main window. You can now open the finished transcript directly by clicking on the filename in the log.
 - Improved speaker identification, especially in situations with quick changes (by reducing "max-len" in whisper to 30).  
 - Installer now runs without admin rights. You should be able to install noScribe on a computer where you don’t have administrator privileges (i.e., because the machine is managed by the IT-department of your university). Thanks you, [BabyFnord](https://github.com/BabyFnord), for this suggestion!

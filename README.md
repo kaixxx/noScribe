@@ -1,6 +1,6 @@
 ﻿# noScribe 
 ## Cutting edge AI technology for automated audio transcription
-Download current release: **[Version 0.2b](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j)**
+Download current release: **[Version 0.3](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3)** ([changelog](https://github.com/kaixxx/noScribe/blob/main/CHANGELOG.md))
 - noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html))
 - It runs locally on your computer. **No cloud, no worries**
 - Its main purpose is to **transcribe interviews** for qualitative research or journalistic use
