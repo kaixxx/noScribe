@@ -498,7 +498,8 @@ class App(ctk.CTk):
                     if platform.system() == 'Windows':
                         ffmpeg_cmd = f'ffmpeg.exe -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                     elif platform.system() == "Darwin":  # = MAC
-                        ffmpeg_cmd = f'ffmpeg -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file} 2> /dev/null' # originally > /dev/null 2>&1 < /dev/null; Popen command needs to be recoded to avoid the necessity of  2> /dev/null
+                        ffmpeg_cmd = f'ffmpeg -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
+                        # ffmpeg_cmd = f'ffmpeg -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file} 2> /dev/null' # originally > /dev/null 2>&1 < /dev/null; Popen command needs to be recoded to avoid the necessity of  2> /dev/null
                     self.logn(ffmpeg_cmd, where='file')
 
                     if platform.system() == 'Windows':
