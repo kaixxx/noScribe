@@ -1,4 +1,24 @@
-﻿# noScribe 
+﻿# noScribe for macOS
+noScribe for macOS can be used, but it's still under development. To use it you currently need conda and/or mamba and ffmpeg (installed e.g. via Homebrew). And you need to clone the macOS branch of the repository (not the main branch, since this is unchanged to kaixx's). The `whisper.cpp` was compiled using an Apple Silicon Mac so I am not sure, if it will run on an Intel Mac.
+
+## Installation and execution of noScribe on macOS
+Clone the macOS branch of this repository
+```
+git clone -b macOS https://github.com/gernophil/noScribe.git
+```
+Create and activate a conda environment using the `environment.yaml` File (this will create the environment `noScribe`):
+```
+cd noScribe
+conda env create -f environment.yaml # or better: mamba env create -f environment.yaml
+conda activate noScribe
+```
+Run `noScribe.py` with Python
+```
+python noScribe.py
+```
+From here on follow the `README.md` from kaixx.
+
+# noScribe 
 ## Cutting Edge AI Technology for Automated Audio Transcription
 Download current release: **[Version 0.3](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3)** ([changelog](https://github.com/kaixxx/noScribe/blob/main/CHANGELOG.md))
 - noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html))
