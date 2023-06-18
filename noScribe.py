@@ -501,11 +501,7 @@ class App(ctk.CTk):
                         ffmpeg_cmd = f'ffmpeg.exe -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                     elif platform.system() == "Darwin":  # = MAC
                         ffmpeg_cmd = f'./ffmpeg -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
-                        # ffmpeg_cmd = f'ffmpeg -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
-                        ffmpeg_cmd = shlex.split(ffmpeg_cmd) # works
-                        # ffmpeg_cmd = ffmpeg_cmd.split(' ', 1) # attempt to get rid of shell=True for Popen(); not working
-                        # ffmpeg_cmd = ffmpeg_cmd.split(' ') # attempt to get rid of shell=True for Popen(); not working
-                        # ffmpeg_cmd = f'ffmpeg -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file} 2> /dev/null' # originally > /dev/null 2>&1 < /dev/null; Popen command needs to be recoded to avoid the necessity of  2> /dev/null
+                        ffmpeg_cmd = shlex.split(ffmpeg_cmd)
                     self.logn(ffmpeg_cmd, where='file')
 
                     if platform.system() == 'Windows':
@@ -516,8 +512,7 @@ class App(ctk.CTk):
                             for line in ffmpeg_proc.stdout:
                                 self.logn('ffmpeg: ' + line)
                     elif platform.system() == "Darwin":  # = MAC
-                        # with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8', shell=True) as ffmpeg_proc:
-                        with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8') as ffmpeg_proc: # better because shell=False, but not working currently
+                        with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8') as ffmpeg_proc:
                             for line in ffmpeg_proc.stdout:
                                 self.logn('ffmpeg: ' + line)
                     if ffmpeg_proc.returncode > 0:
@@ -685,8 +680,6 @@ class App(ctk.CTk):
                 command = f'{whisper_path}/main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} {self.whisper_options} --print-colors --print-progress --file "{self.tmp_audio_file}" {self.whisper_extra_commands}'
                 if platform.system() == "Darwin":  # = MAC
                     command = shlex.split(command)
-                #     command = command.split(' ')  # attempt to get rid of shell=True for Popen(); not working
-                #     command = command + f' 2> /dev/null' # originally f'> /dev/null 2>&1 < /dev/null'; not necessary here
                 self.logn(command, where='file')
 
                 # prepare transcript docm
@@ -731,8 +724,7 @@ class App(ctk.CTk):
                         startupinfo.dwFlags |= STARTF_USESHOWWINDOW
                         self.process = Popen(command, stdout=PIPE, stderr=STDOUT, startupinfo=startupinfo)
                     elif platform.system() == "Darwin":  # = MAC
-                        # self.process = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
-                        self.process = Popen(command, stdout=PIPE, stderr=STDOUT) # better because shell=False, but not working currently
+                        self.process = Popen(command, stdout=PIPE, stderr=STDOUT)
                     # Run whisper.cpp main.exe without blocking the GUI:
                     # Source: https://stackoverflow.com/questions/12057794/python-using-popen-poll-on-background-process 
                     # launch thread to read the subprocess output
