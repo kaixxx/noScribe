@@ -10,3 +10,4 @@ ggml*.bin
 
 .DS_Store
 stuff/
+output/

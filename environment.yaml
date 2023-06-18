@@ -14,6 +14,7 @@ dependencies:
   - pytorch::pytorch
   - pytorch::torchvision
   - pytorch::torchaudio
+  - pyinstaller
   - pip
   - pip:
     - customtkinter
