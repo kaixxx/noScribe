@@ -1,5 +1,5 @@
 ﻿# noScribe for macOS
-noScribe for macOS can be used, but it's still under development. To use it you currently need conda and/or mamba and ffmpeg (installed e.g. via Homebrew). And you need to clone the macOS branch of the repository (not the main branch, since this is unchanged to kaixx's). The `whisper.cpp` was compiled using an Apple Silicon Mac so I am not sure, if it will run on an Intel Mac.
+noScribe for macOS can be used, but it's still under development. To use it you currently need conda and/or mamba and ffmpeg (installed e.g. via Homebrew). And you need to clone the macOS branch of the repository (not the main branch, since this is unchanged to kaixx's). The `whisper.cpp` was compiled using an Apple Silicon Mac so I am not sure, if it will run on an Intel Mac. noScribe for macOS is using `ffmpeg 6.0` from [ffmpeg.org](https://ffmpeg.org/). You might need to allow the program to run first. TO do so follow [this instruction](https://support.apple.com/de-de/HT202491).
 
 ## Installation and execution of noScribe on macOS
 Clone the macOS branch of this repository:

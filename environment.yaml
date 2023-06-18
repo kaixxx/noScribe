@@ -18,7 +18,8 @@ dependencies:
   - pip:
     - customtkinter
     - elevate
-    # - cpufeature
+    # - cpufeature # conflicts with (arm64) macOS
     - python-i18n
     - git+https://github.com/kaixxx/python-docx
     - git+https://github.com/kaixxx/pyannote-audio
+    - auto-py-to-exe
