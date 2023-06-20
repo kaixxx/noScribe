@@ -49,6 +49,9 @@ if platform.system() == 'Windows':
 if platform.system() == "Darwin": # = MAC
     import shlex
 
+if platform.system() == "Darwin": # = MAC
+    os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
+
 app_version = '0.3'
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
@@ -618,6 +621,8 @@ class App(ctk.CTk):
                             self.set_progress(1, 100)
 
                             pipeline = Pipeline.from_pretrained('./models/pyannote_config.yaml')
+                            if platform.system() == "Darwin":  # = MAC
+                                pipeline.to("mps")
                             self.logn()
                             with SimpleProgressHook(parent=self) as hook:
                                 diarization = pipeline(self.tmp_audio_file, hook=hook) # apply the pipeline to the audio file
