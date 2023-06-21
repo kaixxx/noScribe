@@ -50,6 +50,7 @@ if platform.system() == "Darwin": # = MAC
     import shlex
 
 if platform.system() == "Darwin": # = MAC
+    # if platform.machine() == "arm64": # Intel should also support MPS
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
 
 app_version = '0.3'
@@ -96,7 +97,12 @@ if platform.system() == 'Windows':
     else:
         whisper_path = "./whisper_sse2"
 elif platform.system() == "Darwin": # = MAC
-   whisper_path = "./whisper_mac"
+    if platform.machine() == "arm64":
+        whisper_path = "./whisper_mac_arm64"
+    elif platform.machine() == "x86_64":
+        whisper_path = "./whisper_mac_x86_64"
+    else:
+        raise Exception('Could not detect Apple architecture.')
 else:
     raise Exception('Platform not supported yet.')
 
@@ -622,6 +628,7 @@ class App(ctk.CTk):
 
                             pipeline = Pipeline.from_pretrained('./models/pyannote_config.yaml')
                             if platform.system() == "Darwin":  # = MAC
+                                # if platform.machine() == "arm64": # Intel should also support MPS
                                 pipeline.to("mps")
                             self.logn()
                             with SimpleProgressHook(parent=self) as hook:
