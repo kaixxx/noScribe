@@ -51,7 +51,8 @@ if platform.system() == "Darwin": # = MAC
 
 if platform.system() == "Darwin": # = MAC
     # if platform.machine() == "arm64": # Intel should also support MPS
-    os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
+    if platform.mac_ver()[0] >= '12.3': # MPS need macOS 12.3+
+        os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
 
 app_version = '0.3'
 ctk.set_appearance_mode('dark')
@@ -629,7 +630,8 @@ class App(ctk.CTk):
                             pipeline = Pipeline.from_pretrained('./models/pyannote_config.yaml')
                             if platform.system() == "Darwin":  # = MAC
                                 # if platform.machine() == "arm64": # Intel should also support MPS
-                                pipeline.to("mps")
+                                if platform.mac_ver()[0] >= '12.3': # MPS need macOS 12.3+
+                                    pipeline.to("mps")
                             self.logn()
                             with SimpleProgressHook(parent=self) as hook:
                                 diarization = pipeline(self.tmp_audio_file, hook=hook) # apply the pipeline to the audio file
