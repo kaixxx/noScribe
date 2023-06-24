@@ -15,9 +15,9 @@ dependencies:
   - pyinstaller
   - pip
   - pip:
-    - torch # need to be installed via pip for using nomkl
-    - torchvision # need to be installed via pip for using nomkl
-    - torchaudio # need to be installed via pip for using nomkl
+    - torch # needs to be installed via pip for using nomkl
+    - torchvision # needs to be installed via pip for using nomkl
+    - torchaudio # needs to be installed via pip for using nomkl
     - customtkinter
     - elevate
     # - cpufeature # conflicts with (arm64) macOS
