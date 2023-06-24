@@ -5,12 +5,12 @@ channels:
 
 dependencies:
   - python=3.9
-  - tk
+  - tk # redundant, since already dependency of python
   - pillow
   - pyyaml
   - appdirs
   - typing
-  - pathlib
+  - pathlib # should be removed from environment file
   - pytorch::pytorch
   - pytorch::torchvision
   - pytorch::torchaudio

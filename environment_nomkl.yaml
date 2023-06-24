@@ -5,19 +5,19 @@ channels:
 
 dependencies:
   - python=3.9
-  - tk
+  - nomkl
+  - tk # redundant, since already dependency of python
   - pillow
   - pyyaml
   - appdirs
   - typing
-  - pathlib
-  - pytorch::pytorch
-  - pytorch::torchvision
-  - pytorch::torchaudio
+  - pathlib # should be removed from environment file
   - pyinstaller
-  - nomkl
   - pip
   - pip:
+    - torch # need to be installed via pip for using nomkl
+    - torchvision # need to be installed via pip for using nomkl
+    - torchaudio # need to be installed via pip for using nomkl
     - customtkinter
     - elevate
     # - cpufeature # conflicts with (arm64) macOS
