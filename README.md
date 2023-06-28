@@ -89,3 +89,6 @@ The document produced by noScribe will contain some helpful macros to work with 
 - If you have some experience developing software on MAC or LINUX, **I would really appreciate your help in making this app accessible on other platforms.** 
 - The first task would be to compile whisper.cpp for MAC/LINUX. For MAC, see the [instructions here](https://www.daginge.com/blog/running-whisper-on-an-m1-mac-to-transcribe-audio-data-locally).
 - If you make any changes to the code of noScribe.py, try not to break compatibility with windows. I would like to keep one single codebase for all platforms.
+
+## Other Software
+If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
