@@ -95,3 +95,6 @@ The document produced by noScribe will contain some helpful macros to work with 
 - noScribe has been ported to macOS by [gernophil](https://github.com/gernophil): (https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FmacOS) (alpha version, Apple silicon M1/M2 only) 
 - A version for LINUX is in preparation.
 - If you make any changes to the code of noScribe.py, try not to break compatibility with other platforms. I would like to keep one single codebase for all platforms.
+
+## Other Software
+If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
