@@ -1,5 +1,5 @@
 ﻿# noScribe 
-## Cutting edge AI technology for automated audio transcription
+## Cutting Edge AI Technology for Automated Audio Transcription
 Download current release: **[Version 0.3](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3)** ([changelog](https://github.com/kaixxx/noScribe/blob/main/CHANGELOG.md))
 - noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html))
 - It runs locally on your computer. **No cloud, no worries**
@@ -18,12 +18,12 @@ Download current release: **[Version 0.3](https://drive.switch.ch/index.php/s/EI
 - Since it uses sophisticated AI models, the download is quite large – about 3.7 GB
 - It needs a decent computer, or the transcription will take forever. (Consider letting it run over night on a slower machine.)
 - Poor audio quality will lead to poor transcription results. 
-- No automatic transcription is perfect, there will always be some manual revision necessary (see "Factors influencing the quality" below). 
+- No automatic transcription is perfect, there will always be some manual revision necessary (see ["Factors Influencing the Quality"](#factors-influencing-the-quality-of-the-transcription) and ["Known Issues"](#known-issues) below). 
 
-## Why the name "noScribe"?
+## Why the Name "noScribe"?
 The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) defines **scribe** as *"a person whose entire miserable existence has been reduced to academic grunge and pain".* I hope this software will make your academic life a little less painful and grungy, hence the name noScribe :)
 
-## About me
+## About Me
 **Kai Dröge**, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).
 
 ## Usage
@@ -43,9 +43,9 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 - Be aware that **a one-hour interview can take two to five hours processing time** and will put a heavy load on your machine. Doing this on battery-power is not recommended.
 - A **progress bar** at the bottom of the app will show how far you are into the whole process. 
 - The **main window** will log progress-messages and errors. It will also show you the text of your interview during the last step of the transcription. 
-- The transcript will be auto saved every few seconds under the given filename. 
+- The transcript will be auto saved every few seconds under the given filename.
 
-### Revising the transcript in MS Word 
+### Revising the Transcript in MS Word 
 
 ![The transcript in MS Word](img/noScribe_Word.png)
 
@@ -56,16 +56,19 @@ The document produced by noScribe will contain some helpful macros to work with 
 - You can also stop the audio by pressing **Ctrl + Spacebar** again.
 - **Reliability:** Whisper marks every segment of the transcript with a so called 'confidence level' (CL), reaching from 0-10. A low CL means that the transcription is less reliable and might contain errors. You can highlight these unreliable segments in your document in red. Press **Alt + r** (for reliability) and enter a CL value in the dialog box (3 is a good starting point). Every segment with this or a lower CL is now marked. Enter a CL of 0 to make all markings disappear (the default setting).
 
-## Factors influencing the quality of the transcription
+## Factors Influencing the Quality of the Transcription
 - A **good audio recording with clear voices and no ambient noise** is crucial for a high-quality transcription. Investing some effort in the quality of the recording will save you much time in the manual revision process later. 
 - Whisper (the AI powering noScribe) understands 99 different languages, but the quality of the transcription varies widely between them. **Spanish, Italian, English, Portuguese and German** are best supported (see [here for more info]( https://github.com/openai/whisper#available-models-and-languages)).
 - Whisper handles **dialects** fairly well (i.e., Swiss-German), but the transcript might need more manual work in the revision.
 - **Multilingual audio** is not supported. If the language changes mid interview, whisper will actually try to translate the text, which is usually not what we want.
 - **Quick back and forth between different speakers** is not always handled well. Some statements might get attributed to the wrong speaker, which must be corrected in the revision phase. The same is true for **speaker overlap/parallel speaking.**
 - **Speech dysfluencies** like "uhm", short interruptions or **nonverbal expressions** like laughter are usually not included in the transcript, although they might be required for a good qualitative analysis. You must add these elements manually using the functions in Word described above. (You can also play with the "prompt"-option described under "advanced options" below, but I had limited success.)
-- The whisper AI can sometimes **hallucinate** or get **stuck in a loop of repeating text,** especially on longer audio files. If this looping happens, try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
+- The whisper AI can sometimes **hallucinate**, especially in silent parts of the recording when it interprets background noise as 'text'. Check your transcripts carefully. 
 
-## Advanced options
+## Known Issues
+- The whisper AI can sometimes get **stuck in a loop of repeating text,** especially on longer audio files. If this happens, try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
+
+## Advanced Options
 - **Prompts**: The whisper AI can be initialized with a short text-sequence called prompt (see [here for more info](https://platform.openai.com/docs/guides/speech-to-text/prompting)). This will influence the style of the following transcription. I tried to force the AI to include filler words like "uhm" in the transcription by giving it a prompt containing them (like "Umm, let me think like, hmm..."). But this only worked on some occasions (whisper tends to 'forget' the prompt quite quickly). Prompts are language specific and will only be applied if you select a particular language (not 'auto'). You can change or add prompts for other languages in the file "prompt.yml" in the home directory of the app.
 - After the app has been closed for the first time, you will find a file named **config.yml** in the user config directory (on windows: C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml). Here, you can change a few **extra settings,** i.e., the language of the user interface.
 - "whisper_extra_commands" can be defined in config.yml and will be attached to the end of the command line for whisper.cpp. Use this to experiment with advanced options. See https://github.com/ggerganov/whisper.cpp/tree/master/examples/main for a list of options. Be careful: If your options change the output of main.exe in the terminal, noScribe might not be able to interpret this and fail badly...
