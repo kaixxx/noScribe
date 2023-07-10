@@ -492,7 +492,7 @@ class App(ctk.CTk):
                     else: # tranbscribe until the end
                         end_pos_cmd = ''
 
-                    ffmpeg_cmd = f'ffmpeg.exe -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
+                    ffmpeg_cmd = f'ffmpeg.exe -hwaccel auto -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                     self.logn(ffmpeg_cmd, where='file')
 
                     # (supresses the terminal, see: https://stackoverflow.com/questions/1813872/running-a-process-in-pythonw-with-popen-without-a-console)
