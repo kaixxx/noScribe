@@ -50,8 +50,9 @@ if platform.system() == "Darwin": # = MAC
     import shlex
 
 if platform.system() == "Darwin": # = MAC
+    bundle_dir = os.path.abspath(os.path.dirname(__file__))
     # if platform.machine() == "arm64": # Intel should also support MPS
-    if platform.mac_ver()[0] >= '12.3': # MPS need macOS 12.3+
+    if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
 
 app_version = '0.3'
@@ -77,7 +78,12 @@ def save_config():
 import i18n
 from i18n import t
 i18n.set('filename_format', '{locale}.{format}')
-i18n.load_path.append('./trans')
+if platform.system() == 'Windows':
+    i18n.load_path.append('./trans')
+elif platform.system() == "Darwin": # = MAC
+    i18n.load_path.append(os.path.join(bundle_dir, 'trans'))
+else:
+    raise Exception('Platform not supported yet.')
 try:
     app_locale = config['locale']
 except:
@@ -202,7 +208,12 @@ class App(ctk.CTk):
         self.header_label.pack(padx=20, pady=[0, 20], anchor='w')
      
         # graphic
-        self.header_graphic = ctk.CTkImage(dark_image=Image.open('graphic_sw.png'), size=(926,119))
+        if platform.system() == 'Windows':
+            self.header_graphic = ctk.CTkImage(dark_image=Image.open('graphic_sw.png'), size=(926,119))
+        elif platform.system() == "Darwin": # = MAC
+            self.header_graphic = ctk.CTkImage(dark_image=Image.open(os.path.join(bundle_dir, 'graphic_sw.png')), size=(926,119))
+        else:
+            raise Exception('Platform not supported yet.')
         self.header_graphic_label = ctk.CTkLabel(self.frame_header, image=self.header_graphic, text='')
         self.header_graphic_label.pack(anchor='ne', side='right', padx=[30,30])
 
@@ -446,13 +457,23 @@ class App(ctk.CTk):
                 try:
                     self.whisper_model = config['model_path_fast']
                 except:
-                    config['model_path_fast'] = './models/ggml-small.bin'
+                    if platform.system() == 'Windows':
+                        config['model_path_fast'] = './models/ggml-small.bin'
+                    elif platform.system() == "Darwin": # = MAC
+                        config['model_path_fast'] = os.path.join(bundle_dir, 'models', 'ggml-small.bin')
+                    else:
+                        raise Exception('Platform not supported yet.')
                     self.whisper_model = config['model_path_fast']
             else:
                 try:
                     self.whisper_model = config['model_path_precise']
                 except:
-                    config['model_path_precise'] = './models/ggml-large.bin'
+                    if platform.system() == 'Windows':
+                        config['model_path_precise'] = './models/ggml-large.bin'
+                    elif platform.system() == "Darwin": # = MAC
+                        config['model_path_fast'] = os.path.join(bundle_dir, 'models', 'ggml-large.bin')
+                    else:
+                        raise Exception('Platform not supported yet.')
                     self.whisper_model = config['model_path_precise']
 
             self.prompt = ''
@@ -510,8 +531,11 @@ class App(ctk.CTk):
                     if platform.system() == 'Windows':
                         ffmpeg_cmd = f'ffmpeg.exe -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                     elif platform.system() == "Darwin":  # = MAC
-                        ffmpeg_cmd = f'./ffmpeg -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
+                        ffmpeg_abspath = os.path.join(bundle_dir, 'ffmpeg')
+                        ffmpeg_cmd = f'{ffmpeg_abspath} -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                         ffmpeg_cmd = shlex.split(ffmpeg_cmd)
+                    else:
+                        raise Exception('Platform not supported yet.')
                     self.logn(ffmpeg_cmd, where='file')
 
                     if platform.system() == 'Windows':
@@ -627,11 +651,20 @@ class App(ctk.CTk):
                             from pyannote.audio import Pipeline # import only on demand because this library is huge
                             self.set_progress(1, 100)
 
-                            pipeline = Pipeline.from_pretrained('./models/pyannote_config.yaml')
-                            if platform.system() == "Darwin":  # = MAC
+                            
+                            if platform.system() == 'Windows':
+                                pipeline = Pipeline.from_pretrained('./models/pyannote_config.yaml')
+                            elif platform.system() == "Darwin": # = MAC
+                                with open(os.path.join(bundle_dir, 'models', 'pyannote_config.yaml'), 'r') as yaml_file:
+                                    pyannote_config = yaml.load(yaml_file, yaml.Loader) # yaml.Loader is considered unsafe, but should be fine in this case
+                                pyannote_config['pipeline']['params']['embedding'] = os.path.join(bundle_dir, *pyannote_config['pipeline']['params']['embedding'].split("/")[1:])
+                                pyannote_config['pipeline']['params']['segmentation'] = os.path.join(bundle_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/")[1:])
+                                pipeline = Pipeline.from_pretrained(yaml.dump(pyannote_config))
                                 # if platform.machine() == "arm64": # Intel should also support MPS
-                                if platform.mac_ver()[0] >= '12.3': # MPS need macOS 12.3+
+                                if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
                                     pipeline.to("mps")
+                            else:
+                                raise Exception('Platform not supported yet.')
                             self.logn()
                             with SimpleProgressHook(parent=self) as hook:
                                 diarization = pipeline(self.tmp_audio_file, hook=hook) # apply the pipeline to the audio file
