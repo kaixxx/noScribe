@@ -651,7 +651,6 @@ class App(ctk.CTk):
                             from pyannote.audio import Pipeline # import only on demand because this library is huge
                             self.set_progress(1, 100)
 
-                            
                             if platform.system() == 'Windows':
                                 pipeline = Pipeline.from_pretrained('./models/pyannote_config.yaml')
                             elif platform.system() == "Darwin": # = MAC
