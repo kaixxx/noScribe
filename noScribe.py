@@ -105,9 +105,9 @@ if platform.system() == 'Windows':
         whisper_path = "./whisper_sse2"
 elif platform.system() == "Darwin": # = MAC
     if platform.machine() == "arm64":
-        whisper_path = "./whisper_mac_arm64"
+        whisper_path = os.path.join(bundle_dir, "whisper_mac_arm64")
     elif platform.machine() == "x86_64":
-        whisper_path = "./whisper_mac_x86_64"
+        whisper_path = os.path.join(bundle_dir, "whisper_mac_x86_64")
     else:
         raise Exception('Could not detect Apple architecture.')
 else:
@@ -656,10 +656,15 @@ class App(ctk.CTk):
                                 pipeline = Pipeline.from_pretrained('./models/pyannote_config.yaml')
                             elif platform.system() == "Darwin": # = MAC
                                 with open(os.path.join(bundle_dir, 'models', 'pyannote_config.yaml'), 'r') as yaml_file:
-                                    pyannote_config = yaml.load(yaml_file, yaml.Loader) # yaml.Loader is considered unsafe, but should be fine in this case
+                                    pyannote_config = yaml.safe_load(yaml_file)
+
                                 pyannote_config['pipeline']['params']['embedding'] = os.path.join(bundle_dir, *pyannote_config['pipeline']['params']['embedding'].split("/")[1:])
                                 pyannote_config['pipeline']['params']['segmentation'] = os.path.join(bundle_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/")[1:])
-                                pipeline = Pipeline.from_pretrained(yaml.dump(pyannote_config))
+
+                                with open(os.path.join(bundle_dir, 'models', 'pyannote_config_macOS.yaml'), 'w') as yaml_file:
+                                    yaml.safe_dump(pyannote_config, yaml_file)
+
+                                pipeline = Pipeline.from_pretrained(os.path.join(bundle_dir, 'models', 'pyannote_config_macOS.yaml'))
                                 # if platform.machine() == "arm64": # Intel should also support MPS
                                 if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
                                     pipeline.to("mps")
@@ -730,7 +735,12 @@ class App(ctk.CTk):
                 self.logn(command, where='file')
 
                 # prepare transcript docm
-                d = Document('transcriptTempl.docm')
+                if platform.system() == 'Windows':
+                    d = Document('transcriptTempl.docm')
+                elif platform.system() == "Darwin": # = MAC
+                    d = Document(os.path.join(bundle_dir,'transcriptTempl.docm'))
+                else:
+                    raise Exception('Platform not supported yet.')
                 d.core_properties.author = f'noScribe vers. {app_version}'
                 d.core_properties.comments = self.audio_file
                 
