@@ -46,7 +46,7 @@ from io import StringIO
 from elevate import elevate
 if platform.system() == 'Windows':
     import cpufeature
-if platform.system() == "Darwin": # = MAC
+if platform.system() in ["Darwin", "Linux"]: # = macOS or Linux
     import shlex
 
 if platform.system() == "Darwin": # = MAC
@@ -95,8 +95,10 @@ if platform.system() == 'Windows':
         whisper_path = "./whisper_avx2"
     else:
         whisper_path = "./whisper_sse2"
-elif platform.system() == "Darwin": # = MAC
-   whisper_path = "./whisper_mac"
+elif platform.system() == "Darwin": # = macOS
+    whisper_path = "./whisper_mac"
+elif platform.system() == 'Linux':
+    whisper_path = "./whisper_linux"
 else:
     raise Exception('Platform not supported yet.')
 
@@ -177,7 +179,9 @@ class App(ctk.CTk):
         # configure window
         self.title('noScribe - ' + t('app_header'))
         self.geometry(f"{1100}x{650}")
-        self.iconbitmap('noScribeLogo.ico')
+        # TODO: Loading the program icon fails on Linux with: _tkinter.TclError: bitmap "noScribeLogo.ico" not defined
+        if platform.system() != 'Linux':
+            self.iconbitmap('noScribeLogo.ico')
 
         # header
         self.frame_header = ctk.CTkFrame(self, height=100)
@@ -502,8 +506,11 @@ class App(ctk.CTk):
 
                     if platform.system() == 'Windows':
                         ffmpeg_cmd = f'ffmpeg.exe -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
-                    elif platform.system() == "Darwin":  # = MAC
+                    elif platform.system() == "Darwin":
                         ffmpeg_cmd = f'./ffmpeg -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
+                        ffmpeg_cmd = shlex.split(ffmpeg_cmd)
+                    elif platform.system() == "Linux":
+                        ffmpeg_cmd = f'./ffmpeg-linux-x86_64 -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                         ffmpeg_cmd = shlex.split(ffmpeg_cmd)
                     self.logn(ffmpeg_cmd, where='file')
 
@@ -514,7 +521,7 @@ class App(ctk.CTk):
                         with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8', startupinfo=startupinfo) as ffmpeg_proc:
                             for line in ffmpeg_proc.stdout:
                                 self.logn('ffmpeg: ' + line)
-                    elif platform.system() == "Darwin":  # = MAC
+                    elif platform.system() in ["Darwin", "Linux"]:
                         with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8') as ffmpeg_proc:
                             for line in ffmpeg_proc.stdout:
                                 self.logn('ffmpeg: ' + line)
@@ -621,7 +628,7 @@ class App(ctk.CTk):
                             self.set_progress(1, 100)
 
                             pipeline = Pipeline.from_pretrained('./models/pyannote_config.yaml')
-                            if platform.system() == "Darwin":  # = MAC
+                            if platform.system() == "Darwin": # = macOS
                                 pipeline.to("mps")
                             self.logn()
                             with SimpleProgressHook(parent=self) as hook:
@@ -682,8 +689,9 @@ class App(ctk.CTk):
                     config['whisper_extra_commands'] = ''
                     self.whisper_extra_commands = ''
                 
-                command = f'{whisper_path}/main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} {self.whisper_options} --print-colors --print-progress --file "{self.tmp_audio_file}" {self.whisper_extra_commands}'
-                if platform.system() == "Darwin":  # = MAC
+                command = f'{whisper_path}/main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} {self.whisper_options} --print-colors --print-progress --threads {os.cpu_count()/2} --file "{self.tmp_audio_file}" {self.whisper_extra_commands}'
+                print(command)
+                if platform.system() in ["Darwin", "Linux"]:
                     command = shlex.split(command)
                 self.logn(command, where='file')
 
@@ -728,7 +736,7 @@ class App(ctk.CTk):
                         startupinfo = STARTUPINFO()
                         startupinfo.dwFlags |= STARTF_USESHOWWINDOW
                         self.process = Popen(command, stdout=PIPE, stderr=STDOUT, startupinfo=startupinfo)
-                    elif platform.system() == "Darwin":  # = MAC
+                    elif platform.system() in ["Darwin", "Linux"]:
                         self.process = Popen(command, stdout=PIPE, stderr=STDOUT)
                     # Run whisper.cpp main.exe without blocking the GUI:
                     # Source: https://stackoverflow.com/questions/12057794/python-using-popen-poll-on-background-process 
