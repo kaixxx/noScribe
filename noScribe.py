@@ -50,7 +50,7 @@ import datetime
 from pathlib import Path
 if platform.system() == 'Windows':
     import cpufeature
-if platform.system() == "Darwin": # = MAC
+if platform.system() in ["Darwin", "Linux"]: # = macOS or Linux
     import shlex
     import Foundation
 import logging
@@ -128,7 +128,7 @@ config['locale'] = app_locale
 # determine optimal number of threads for faster-whisper (depending on cpu cores) 
 if platform.system() == 'Windows':
     number_threads = cpufeature.CPUFeature["num_physical_cores"]
-elif platform.system() == "Darwin": # = MAC
+elif platform.system() in ("Darwin", "Linux"): # = MAC
     number_threads = 4
 else:
     raise Exception('Platform not supported yet.')
@@ -210,7 +210,9 @@ class App(ctk.CTk):
             self.geometry(f"{1100}x{695}")
         else:
             self.geometry(f"{1100}x{650}")
-        self.iconbitmap('noScribeLogo.ico')
+        # TODO: Loading the program icon fails on Linux with: _tkinter.TclError: bitmap "noScribeLogo.ico" not defined
+        if platform.system() != 'Linux':
+            self.iconbitmap('noScribeLogo.ico')
 
         # header
         self.frame_header = ctk.CTkFrame(self, height=100)
@@ -741,6 +743,11 @@ class App(ctk.CTk):
                         ffmpeg_abspath = os.path.join(app_dir, 'ffmpeg')
                         ffmpeg_cmd = f'{ffmpeg_abspath} -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                         ffmpeg_cmd = shlex.split(ffmpeg_cmd)
+                    elif platform.system() == "Linux":
+                        # TODO: Use system ffmpeg if available
+                        ffmpeg_abspath = os.path.join(app_dir, 'ffmpeg-linux-x86_64')
+                        ffmpeg_cmd = f'{ffmpeg_abspath} -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
+                        ffmpeg_cmd = shlex.split(ffmpeg_cmd)
                     else:
                         raise Exception('Platform not supported yet.')
                     self.logn(ffmpeg_cmd, where='file')
@@ -752,7 +759,7 @@ class App(ctk.CTk):
                         with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8', startupinfo=startupinfo) as ffmpeg_proc:
                             for line in ffmpeg_proc.stdout:
                                 self.logn('ffmpeg: ' + line)
-                    elif platform.system() == "Darwin":  # = MAC
+                    elif platform.system() in ["Darwin", "Linux"]:
                         with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8') as ffmpeg_proc:
                             for line in ffmpeg_proc.stdout:
                                 self.logn('ffmpeg: ' + line)
@@ -965,6 +972,11 @@ class App(ctk.CTk):
                                 
                 p = d.createElement('p')
                 main_body.appendChild(p)
+                command = f'{whisper_path}/main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} {self.whisper_options} --print-colors --print-progress --threads {os.cpu_count()/2} --file "{self.tmp_audio_file}" {self.whisper_extra_commands}'
+                print(command)
+                if platform.system() in ["Darwin", "Linux"]:
+                    command = shlex.split(command)
+                self.logn(command, where='file')
 
                 speaker = ''
                 prev_speaker = ''
@@ -998,7 +1010,7 @@ class App(ctk.CTk):
                     from faster_whisper import WhisperModel
                     if platform.system() == 'Windows':
                         whisper_device = 'cpu'
-                    elif platform.system() == "Darwin": # = MAC
+                    elif platform.system() in ("Darwin", "Linux"): # = MAC or Linux
                         whisper_device = 'auto'
                     else:
                         raise Exception('Platform not supported yet.')
