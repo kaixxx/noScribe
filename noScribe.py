@@ -211,7 +211,7 @@ class App(ctk.CTk):
         else:
             self.geometry(f"{1100}x{650}")
         # TODO: Loading the program icon fails on Linux with: _tkinter.TclError: bitmap "noScribeLogo.ico" not defined
-        if platform.system() != 'Linux':
+        if platform.system() in ["Darwin", "Windows"]:
             self.iconbitmap('noScribeLogo.ico')
 
         # header
