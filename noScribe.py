@@ -972,11 +972,6 @@ class App(ctk.CTk):
                                 
                 p = d.createElement('p')
                 main_body.appendChild(p)
-                command = f'{whisper_path}/main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} {self.whisper_options} --print-colors --print-progress --threads {os.cpu_count()/2} --file "{self.tmp_audio_file}" {self.whisper_extra_commands}'
-                print(command)
-                if platform.system() in ["Darwin", "Linux"]:
-                    command = shlex.split(command)
-                self.logn(command, where='file')
 
                 speaker = ''
                 prev_speaker = ''
