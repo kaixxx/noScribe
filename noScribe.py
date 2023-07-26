@@ -688,8 +688,7 @@ class App(ctk.CTk):
                     config['whisper_extra_commands'] = ''
                     self.whisper_extra_commands = ''
                 
-                command = f'{whisper_path}/main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} {self.whisper_options} --print-colors --print-progress --threads {os.cpu_count()/2} --file "{self.tmp_audio_file}" {self.whisper_extra_commands}'
-                print(command)
+                command = f'{whisper_path}/main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} {self.whisper_options} --print-colors --print-progress --file "{self.tmp_audio_file}" {self.whisper_extra_commands}'
                 if platform.system() in ["Darwin", "Linux"]:
                     command = shlex.split(command)
                 self.logn(command, where='file')
