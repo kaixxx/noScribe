@@ -70,7 +70,8 @@ except: # seems we run it for the first time and there is no config file
     config = {}
 
 def save_config():
-    with open(f'{config_dir}\\config.yml', 'w') as file:
+    # with open(f'{config_dir}\\config.yml', 'w') as file: # old
+    with open(f'{config_dir}/config.yml', 'w') as file:
         yaml.safe_dump(config, file)
 
 # locale: setting the language of the UI
