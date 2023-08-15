@@ -48,6 +48,7 @@ if platform.system() == 'Windows':
     import cpufeature
 if platform.system() == "Darwin": # = MAC
     import shlex
+    import Foundation
 
 if platform.system() == "Darwin": # = MAC
     bundle_dir = os.path.abspath(os.path.dirname(__file__))
@@ -92,7 +93,10 @@ except:
 
 if app_locale == 'auto': # read system locale settings
     try:
-        app_locale = locale.getdefaultlocale()[0][0:2]
+        if platform.system() == 'Windows':
+            app_locale = locale.getdefaultlocale()[0][0:2]
+        elif platform.system() == "Darwin": # = MAC
+            app_locale = Foundation.NSUserDefaults.standardUserDefaults().stringForKey_('AppleLocale')[0:2]
     except:
         app_locale = 'en'
 i18n.set('fallback', 'en')

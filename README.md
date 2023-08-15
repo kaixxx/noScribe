@@ -1,4 +1,7 @@
-﻿# noScribe for macOS
+﻿# noScribe is available as .dmg installer for Apple Silicon macs
+noScribe is available as .dmg installer for Apple Silicon macs, but up to now I don't have a file hoster. Contact me, if you are interested.
+
+# noScribe for macOS
 noScribe for macOS can be used, but it's still under development. To use it you currently need conda and/or mamba. And you need to clone the macOS branch of the repository (not the main branch, since this is unchanged to kaixx's). The `whisper.cpp` was compiled using an Apple Silicon Mac so I am not sure, if it will run on an Intel Mac. noScribe for macOS is using `ffmpeg 6.0` from [ffmpeg.org](https://ffmpeg.org/). You might need to allow the program to run first. To do so follow [this instruction](https://support.apple.com/de-de/HT202491).
 
 ## Installation and execution of noScribe on macOS
@@ -6,11 +9,11 @@ Clone the macOS branch of this repository:
 ```
 git clone -b macOS https://github.com/gernophil/noScribe.git
 ```
-Create and activate a conda environment using the `environment.yaml` File (this will create the environment `noScribe`):
+Create and activate a conda environment using the `environment_pyobjc.yaml` File (this will create the environment `noScribe_pyobjc`). You can ignore the other environment(_x).yaml files since they are for internal use:
 ```
 cd noScribe
-conda env create -f environment.yaml # or better: mamba env create -f environment.yaml
-conda activate noScribe
+conda env create -f environment_pyobjc.yaml # or better: mamba env create -f environment_pyobjc.yaml
+conda activate noScribe_pyobjc
 ```
 Run `noScribe.py` with Python:
 ```

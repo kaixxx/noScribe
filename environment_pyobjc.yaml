@@ -1,0 +1,27 @@
+name: noScribe_pyobjc
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.9
+  - tk # redundant, since already dependency of python
+  - pillow
+  - pyyaml
+  - appdirs
+  - typing
+  - pathlib # should be removed from environment file
+  - pytorch::pytorch
+  - pytorch::torchvision
+  - pytorch::torchaudio
+  - pyinstaller
+  - pip
+  - pip:
+    - customtkinter
+    - elevate
+    # - cpufeature # conflicts with (arm64) macOS
+    - python-i18n
+    - git+https://github.com/kaixxx/python-docx
+    - git+https://github.com/kaixxx/pyannote-audio
+    - auto-py-to-exe
+    - pyobjc
