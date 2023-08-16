@@ -5,6 +5,8 @@ es:
 
     Versión %{v}, Kai Dröge 2023
     
+    ported to macOS by Philipp Schneider
+    
     impulsado por Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) y pyannote (Hervé Bredin)
   welcome_instructions: >
 
