@@ -1,5 +1,6 @@
 # noScribe - AI-powered Audio Transcription
 # Copyright (C) 2023 Kai Dröge
+# ported to MAC by Philipp Schneider (gernophil)
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -50,13 +51,8 @@ if platform.system() == "Darwin": # = MAC
     import shlex
     import Foundation
 
-if platform.system() == "Darwin": # = MAC
-    bundle_dir = os.path.abspath(os.path.dirname(__file__))
-    # if platform.machine() == "arm64": # Intel should also support MPS
-    if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
-        os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
-
 app_version = '0.3'
+app_dir = os.path.abspath(os.path.dirname(__file__))
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
 
@@ -71,7 +67,6 @@ except: # seems we run it for the first time and there is no config file
     config = {}
 
 def save_config():
-    # with open(f'{config_dir}\\config.yml', 'w') as file: # old
     with open(f'{config_dir}/config.yml', 'w') as file:
         yaml.safe_dump(config, file)
 
@@ -80,12 +75,8 @@ def save_config():
 import i18n
 from i18n import t
 i18n.set('filename_format', '{locale}.{format}')
-if platform.system() == 'Windows':
-    i18n.load_path.append('./trans')
-elif platform.system() == "Darwin": # = MAC
-    i18n.load_path.append(os.path.join(bundle_dir, 'trans'))
-else:
-    raise Exception('Platform not supported yet.')
+i18n.load_path.append(os.path.join(app_dir, 'trans'))
+
 try:
     app_locale = config['locale']
 except:
@@ -105,16 +96,19 @@ i18n.set('locale', app_locale)
 # Check CPU capabilities and select the right version of whisper
 if platform.system() == 'Windows':
     if cpufeature.CPUFeature["AVX2"] == True and cpufeature.CPUFeature["OS_AVX"] == True:
-        whisper_path = "./whisper_avx2"
+        whisper_path = os.path.join(app_dir, "whisper_avx2")
     else:
-        whisper_path = "./whisper_sse2"
+        whisper_path = os.path.join(app_dir, "whisper_sse2")
 elif platform.system() == "Darwin": # = MAC
     if platform.machine() == "arm64":
-        whisper_path = os.path.join(bundle_dir, "whisper_mac_arm64")
+        whisper_path = os.path.join(app_dir, "whisper_mac_arm64")
     elif platform.machine() == "x86_64":
-        whisper_path = os.path.join(bundle_dir, "whisper_mac_x86_64")
+        whisper_path = os.path.join(app_dir, "whisper_mac_x86_64")
     else:
         raise Exception('Could not detect Apple architecture.')
+    # if platform.machine() == "arm64": # Intel should also support MPS
+    if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
+        os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
 else:
     raise Exception('Platform not supported yet.')
 
@@ -213,15 +207,9 @@ class App(ctk.CTk):
         self.header_label.pack(padx=20, pady=[0, 20], anchor='w')
      
         # graphic
-        if platform.system() == 'Windows':
-            self.header_graphic = ctk.CTkImage(dark_image=Image.open('graphic_sw.png'), size=(926,119))
-        elif platform.system() == "Darwin": # = MAC
-            self.header_graphic = ctk.CTkImage(dark_image=Image.open(os.path.join(bundle_dir, 'graphic_sw.png')), size=(926,119))
-        else:
-            raise Exception('Platform not supported yet.')
+        self.header_graphic = ctk.CTkImage(dark_image=Image.open(os.path.join(app_dir, 'graphic_sw.png')), size=(926,119))
         self.header_graphic_label = ctk.CTkLabel(self.frame_header, image=self.header_graphic, text='')
         self.header_graphic_label.pack(anchor='ne', side='right', padx=[30,30])
-
 
         # main window
         self.frame_main = ctk.CTkFrame(self)
@@ -462,28 +450,18 @@ class App(ctk.CTk):
                 try:
                     self.whisper_model = config['model_path_fast']
                 except:
-                    if platform.system() == 'Windows':
-                        config['model_path_fast'] = './models/ggml-small.bin'
-                    elif platform.system() == "Darwin": # = MAC
-                        config['model_path_fast'] = os.path.join(bundle_dir, 'models', 'ggml-small.bin')
-                    else:
-                        raise Exception('Platform not supported yet.')
+                    config['model_path_fast'] = os.path.join(app_dir, 'models', 'ggml-small.bin')
                     self.whisper_model = config['model_path_fast']
             else:
                 try:
                     self.whisper_model = config['model_path_precise']
                 except:
-                    if platform.system() == 'Windows':
-                        config['model_path_precise'] = './models/ggml-large.bin'
-                    elif platform.system() == "Darwin": # = MAC
-                        config['model_path_fast'] = os.path.join(bundle_dir, 'models', 'ggml-large.bin')
-                    else:
-                        raise Exception('Platform not supported yet.')
+                    config['model_path_precise'] = os.path.join(app_dir, 'models', 'ggml-large.bin')
                     self.whisper_model = config['model_path_precise']
 
             self.prompt = ''
             try:
-                with open('prompt.yml', 'r') as file:
+                with open(os.path.join(app_dir, 'prompt.yml'), 'r') as file:
                     prompts = yaml.safe_load(file)
             except:
                 prompts = {}
@@ -513,10 +491,18 @@ class App(ctk.CTk):
             self.log_file = open(f'{config_dir}/log/{Path(self.audio_file).stem}.log', 'w', encoding="utf-8")
 
             # log CPU capabilities
+            self.logn("=== CPU FEATURES ===", where="file")
             if platform.system() == 'Windows':
-                self.logn("=== CPU FEATURES ===", where="file")
+                self.logn("System: Windows", where="file")
                 for key, value in cpufeature.CPUFeature.items():
                     self.logn('    {:24}: {}'.format(key, value), where="file")
+            elif platform.system() == "Darwin": # = MAC
+                if platform.machine() == "arm64":
+                    self.logn("System: MAC arm64", where="file")
+                elif platform.machine() == "x86_64":
+                    self.logn("System: MAC x86_64", where="file")
+                if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
+                    self.logn("macOS < 12.3, uses PYTORCH_ENABLE_MPS_FALLBACK")
             
             try:
 
@@ -536,7 +522,7 @@ class App(ctk.CTk):
                     if platform.system() == 'Windows':
                         ffmpeg_cmd = f'ffmpeg.exe -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                     elif platform.system() == "Darwin":  # = MAC
-                        ffmpeg_abspath = os.path.join(bundle_dir, 'ffmpeg')
+                        ffmpeg_abspath = os.path.join(app_dir, 'ffmpeg')
                         ffmpeg_cmd = f'{ffmpeg_abspath} -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                         ffmpeg_cmd = shlex.split(ffmpeg_cmd)
                     else:
@@ -657,18 +643,18 @@ class App(ctk.CTk):
                             self.set_progress(1, 100)
 
                             if platform.system() == 'Windows':
-                                pipeline = Pipeline.from_pretrained('./models/pyannote_config.yaml')
+                                pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'models', 'pyannote_config.yaml'))
                             elif platform.system() == "Darwin": # = MAC
-                                with open(os.path.join(bundle_dir, 'models', 'pyannote_config.yaml'), 'r') as yaml_file:
+                                with open(os.path.join(app_dir, 'models', 'pyannote_config.yaml'), 'r') as yaml_file:
                                     pyannote_config = yaml.safe_load(yaml_file)
 
-                                pyannote_config['pipeline']['params']['embedding'] = os.path.join(bundle_dir, *pyannote_config['pipeline']['params']['embedding'].split("/")[1:])
-                                pyannote_config['pipeline']['params']['segmentation'] = os.path.join(bundle_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/")[1:])
+                                pyannote_config['pipeline']['params']['embedding'] = os.path.join(app_dir, *pyannote_config['pipeline']['params']['embedding'].split("/")[1:])
+                                pyannote_config['pipeline']['params']['segmentation'] = os.path.join(app_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/")[1:])
 
-                                with open(os.path.join(bundle_dir, 'models', 'pyannote_config_macOS.yaml'), 'w') as yaml_file:
+                                with open(os.path.join(app_dir, 'models', 'pyannote_config_macOS.yaml'), 'w') as yaml_file:
                                     yaml.safe_dump(pyannote_config, yaml_file)
 
-                                pipeline = Pipeline.from_pretrained(os.path.join(bundle_dir, 'models', 'pyannote_config_macOS.yaml'))
+                                pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'models', 'pyannote_config_macOS.yaml'))
                                 # if platform.machine() == "arm64": # Intel should also support MPS
                                 if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
                                     pipeline.to("mps")
@@ -739,12 +725,7 @@ class App(ctk.CTk):
                 self.logn(command, where='file')
 
                 # prepare transcript docm
-                if platform.system() == 'Windows':
-                    d = Document('transcriptTempl.docm')
-                elif platform.system() == "Darwin": # = MAC
-                    d = Document(os.path.join(bundle_dir,'transcriptTempl.docm'))
-                else:
-                    raise Exception('Platform not supported yet.')
+                d = Document(os.path.join(app_dir,'transcriptTempl.docm'))
                 d.core_properties.author = f'noScribe vers. {app_version}'
                 d.core_properties.comments = self.audio_file
                 
