@@ -3,7 +3,9 @@ de:
   welcome_message: Hallo, noScribe ist bereit!
   welcome_credits: >
     
-    Version %{v}, Kai Dröge 2023 
+    Version %{v}, Kai Dröge 2023
+    
+    portiert nach macOS von Philipp Schneider
     
     powered by Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) & pyannote (Hervé Bredin)
   welcome_instructions: >
