@@ -1,9 +1,11 @@
 ﻿# noScribe 
 ## Cutting Edge AI Technology for Automated Audio Transcription
-Download current release (0.3): 
-**[Windows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows)**
-**[macOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FmacOS) (alpha version, Apple silicon M1/M2 only, ported by [gernophil](https://github.com/gernophil))**
 
+**Download** current release (0.3):\
+[Windows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows)\
+[macOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FmacOS) (alpha version, Apple silicon M1/M2 only, ported by [gernophil](https://github.com/gernophil))
+
+## What is noScribe?
 - noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html))
 - It runs locally on your computer. **No cloud, no worries**
 - Its main purpose is to **transcribe interviews** for qualitative research or journalistic use
