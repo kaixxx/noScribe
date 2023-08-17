@@ -4,6 +4,8 @@ src/
 __pycache__/
 
 *.code-workspace
-auto-py-to-exe_config.json
+auto-py-to-exe*.*
 
 ggml*.bin
+ROADMAP.md
+
