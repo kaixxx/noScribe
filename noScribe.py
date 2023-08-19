@@ -65,6 +65,15 @@ try:
         config = yaml.safe_load(file)
 except: # seems we run it for the first time and there is no config file
     config = {}
+# check for app version change and clean up config if necessary:
+try:
+    config_version = config['version']
+except:
+    config_version = '0'
+if config_version != app_version: 
+    config.pop('model_path_precise', None)
+    config.pop('model_path_fast', None)
+    config['version'] = app_version
 
 def save_config():
     with open(f'{config_dir}/config.yml', 'w') as file:
