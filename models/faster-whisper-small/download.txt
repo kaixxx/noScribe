@@ -1,0 +1,1 @@
+download all files from here into this folder: https://huggingface.co/guillaumekln/faster-whisper-small/tree/main

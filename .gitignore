@@ -8,6 +8,11 @@ auto-py-to-exe*.*
 
 ggml*.bin
 ROADMAP.md
+models/faster-whisper*/*.json
+models/faster-whisper*/*.bin
+models/faster-whisper*/vocabulary.txt
+models/faster-whisper*/gitattributes.txt
+models/faster-whisper*/README.md
 
 .DS_Store
 stuff/

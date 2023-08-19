@@ -34,6 +34,7 @@ from docx import Document
 import docx
 import re
 # from pyannote.audio import Pipeline (> imported on demand below)
+from faster_whisper import WhisperModel
 from typing import Any, Mapping, Optional, Text
 import sys
 from itertools import islice
@@ -447,17 +448,23 @@ class App(ctk.CTk):
                 self.stop = millisec(val)
             
             if self.option_menu_quality.get() == 'fast':
+                self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-small')
+                """
                 try:
                     self.whisper_model = config['model_path_fast']
                 except:
-                    config['model_path_fast'] = os.path.join(app_dir, 'models', 'ggml-small.bin')
+                    config['model_path_fast'] = os.path.join(app_dir, 'models', 'faster-whisper-small')
                     self.whisper_model = config['model_path_fast']
+                """
             else:
+                self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-large-v2')
+                """
                 try:
                     self.whisper_model = config['model_path_precise']
                 except:
-                    config['model_path_precise'] = os.path.join(app_dir, 'models', 'ggml-large.bin')
+                    config['model_path_precise'] = os.path.join(app_dir, 'models', 'faster-whisper-large-v2')
                     self.whisper_model = config['model_path_precise']
+                """
 
             self.prompt = ''
             try:
@@ -684,21 +691,16 @@ class App(ctk.CTk):
                         return
 
                 #-------------------------------------------------------
-                # 3) Transcribe with whisper.cpp
+                # 3) Transcribe with faster-whisper
 
                 self.logn()
                 self.logn(t('start_transcription'), 'highlight')
                 self.logn(t('loading_whisper'))
                 self.logn()
                 self.update()
-                
-                # prompt?
-                if self.prompt != '':
-                    self.prompt_cmd = f'--prompt "{self.prompt}"'
-                else:
-                    self.prompt_cmd = ''
-                
+                               
                 # whisper options:
+                """
                 try:
                     # max segement length. Shorter segments can improve speaker identification.
                     self.whisper_options = f"--max-len {config['whisper_options_max-len']}" 
@@ -723,6 +725,8 @@ class App(ctk.CTk):
                 if platform.system() == "Darwin":  # = MAC
                     command = shlex.split(command)
                 self.logn(command, where='file')
+
+                """
 
                 # prepare transcript docm
                 d = Document(os.path.join(app_dir,'transcriptTempl.docm'))
@@ -761,26 +765,21 @@ class App(ctk.CTk):
                             self.last_auto_save = datetime.datetime.now()
             
                 try:
-                    if platform.system() == 'Windows':
-                        startupinfo = STARTUPINFO()
-                        startupinfo.dwFlags |= STARTF_USESHOWWINDOW
-                        self.process = Popen(command, stdout=PIPE, stderr=STDOUT, startupinfo=startupinfo)
-                    elif platform.system() == "Darwin":  # = MAC
-                        self.process = Popen(command, stdout=PIPE, stderr=STDOUT)
-                    # Run whisper.cpp main.exe without blocking the GUI:
-                    # Source: https://stackoverflow.com/questions/12057794/python-using-popen-poll-on-background-process 
-                    # launch thread to read the subprocess output
-                    #   (put the subprocess output into the queue in a background thread,
-                    #    get output from the queue in the GUI thread.
-                    #    Output chain: process.readline -> queue -> GUI)
-                    q = Queue(maxsize=1024)  # limit output buffering (may stall subprocess)
-                    th = Thread(target=self.reader_thread, args=[q])
-                    th.daemon = True # close pipe if GUI process exits
-                    th.start()
+                    model = WhisperModel(self.whisper_model, device="auto", compute_type="auto", local_files_only=True)
 
-                    while self.process.poll() == None: # process is running
+                    if self.language != "auto":
+                        whisper_lang = self.language
+                    else:
+                        whisper_lang = None
+                    
+                    segments, info = model.transcribe(self.tmp_audio_file, language=whisper_lang, beam_size=5, word_timestamps=True, initial_prompt=self.prompt)
+
+                    if self.language == "auto":
+                        self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
+
+                    for segment in segments:
                         self.update()
-                        # check for unser cancelation
+                        # check for user cancelation
                         if self.cancel == True:
                             if self.auto_save == True:
                                 save_doc()
@@ -789,94 +788,54 @@ class App(ctk.CTk):
                                 raise Exception(t('err_user_cancelation')) 
                             else:    
                                 raise Exception(t('err_user_cancelation')) 
-                        # process lines from the queue
-                        for line in iter_except(q.get_nowait, Empty):
-                            if line is None:
-                                break
-                            else:
-                                line = str(line.decode("utf-8", errors='ignore')) # convert to regular string
-                                
-                                # check if we have a transcript line from stdout or a line from stdterr
-                                if timestamp_re.match(line) != None: 
-                                    # found a timestamp, must be a transcript
+                            
+                        line = segment.text
+                        
+                        # get time of the segment in milliseconds
+                        start = round(segment.start * 1000.0)
+                        end = round(segment.end * 1000.0)
                                     
-                                    line = line.replace('\n', '') # remove line breaks     
-                                    line = line.replace('\r', '') # remove carriage return     
+                        # write text to the doc
+                        # diarization (speaker detection)?
+                        if self.speaker_detection == 'auto':
+                            spkr = find_speaker(diarization, start, end)
+                            if (speaker != spkr) & (spkr != ''):
+                                speaker = spkr
+                                self.logn()
+                                p = d.add_paragraph()
+                                line = f'{speaker}: {line}'
 
-                                    # get time of the segment in milliseconds
-                                    #[00:00:00.000 --> 00:00:05.760]    
-                                    start = line[1:13]
-                                    end = line[18:30]
-                                    start = millisec(start)
-                                    end = millisec(end)
+                        first_run = p.add_run() # empty run for start_bookmark
+                        
+                        # add segments to doc
+                        r = p.add_run()
+                        r.text = segment.text
+                        # Mark confidence level with a character based style,'noScribe_cl[1-10]'
+                        # This way, we can color-mark specific levels later in Word.
+                        cl_level = round((segment.avg_logprob + 1) * 10)
+                        # TODO: better cl_level for words based on https://github.com/Softcatala/whisper-ctranslate2/blob/main/src/whisper_ctranslate2/transcribe.py
+                        if cl_level > 0:
+                            r.style = d.styles[f'noScribe_cl{cl_level}']
+                        self.log(segment.text)
                                     
-                                    line = line[33:] # discard timestamp
-                                    line = line.lstrip() # discard leading spaces
+                        # Create bookmark with audio timestamps start to end.
+                        # This way, we can jump to the according audio position and play it later in Word.
+                        bookmark_id = bookmark_id + 1
+                        last_run = p.add_run()
+                        # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestaps will not match the original audio:
+                        orig_audio_start = self.start + start
+                        orig_audio_end = self.start + end
+                        docx_add_bookmark(first_run, last_run, f'ts_{orig_audio_start}_{orig_audio_end}', bookmark_id)
                                     
-                                    # write text to the doc
-                                    # diarization (speaker detection)?
-                                    if self.speaker_detection == 'auto':
-                                        spkr = find_speaker(diarization, start, end)
-                                        if (speaker != spkr) & (spkr != ''):
-                                            speaker = spkr
-                                            self.logn()
-                                            p = d.add_paragraph()
-                                            line = f'{speaker}: {line}'
+                        # auto save
+                        if self.auto_save == True:
+                            if (datetime.datetime.now() - self.last_auto_save).total_seconds() > 20:
+                                save_doc()    
 
-                                    first_run = p.add_run() # empty run for start_bookmark
-                                    # check for confidence level markers (colors)
-                                    if line.find('\u001B[38;5;') > -1: 
-                                        line_segments = line.split('\u001B[38;5;')
-                                        cl_markers = {'196m': 1, '202m': 2, '208m': 3, '214m': 4, '220m': 5, '226m': 6, '190m': 7, '154m': 8, '118m': 9, '82m': 10}
-                                        for s in line_segments:
-                                            if s == '':
-                                                continue # skip empty segments
-                                            # extract confidence level marker, get the level from cl_markers: 
-                                            cl_marker_end = s.find('m')
-                                            if cl_marker_end in [2,3]: # only possible positions
-                                                cl_marker = s[0:cl_marker_end + 1]
-                                                if cl_marker in cl_markers:
-                                                    cl_level = cl_markers[cl_marker]
-                                                else: # invalid marker
-                                                    cl_level = 0
-                                            else: # marker not found
-                                                cl_level = 0
-                                            # add segments to doc
-                                            s = s[cl_marker_end + 1:] # delete cl_marker
-                                            s = s.replace('\u001B[0m', '') # delete the closing cl mark 
-                                            r = p.add_run()
-                                            r.text = s
-                                            # Mark confidence level with a character based style,'noScribe_cl[1-10]'
-                                            # This way, we can color-mark specific levels later in Word.
-                                            if cl_level > 0:
-                                                r.style = d.styles[f'noScribe_cl{cl_level}']
-                                            self.log(s)
-                                    else: # no marker in line
-                                            r = p.add_run()
-                                            r.text = line
-                                            self.log(line)
-                                    
-                                    # Create bookmark with audio timestamps start to end.
-                                    # This way, we can jump to the according audio position and play it later in Word.
-                                    bookmark_id = bookmark_id + 1
-                                    last_run = p.add_run()
-                                    # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestaps will not match the original audio:
-                                    orig_audio_start = self.start + start
-                                    orig_audio_end = self.start + end
-                                    docx_add_bookmark(first_run, last_run, f'ts_{orig_audio_start}_{orig_audio_end}', bookmark_id)
-                                    
-                                    # auto save
-                                    if self.auto_save == True:
-                                        if (datetime.datetime.now() - self.last_auto_save).total_seconds() > 20:
-                                            save_doc()    
-
-                                    self.update()
-
-                                else: # must be line from stderr
-                                    self.logn(line, where='file')
-                                    if line[0:35] == 'whisper_full_with_state: progress =': # progress
-                                        progr = int(''.join(filter(str.isdigit, line))) # extract number, see https://stackoverflow.com/questions/4289331/how-to-extract-numbers-from-a-string-in-python
-                                        self.set_progress(3, progr)
+                        self.update()
+                        
+                        progr = round((segment.end/info.duration) * 100)
+                        self.set_progress(3, progr)
 
                     save_doc()
                     self.logn()
@@ -890,9 +849,6 @@ class App(ctk.CTk):
                     # log duration of the whole process in minutes
                     proc_time = datetime.datetime.now() - proc_start_time
                     self.logn(t('trancription_time', duration=int(proc_time.total_seconds() / 60))) 
-
-                    if self.process.poll() > 0:
-                        raise Exception(t('err_whisper_main', e=self.process.poll()))
                 
                 except Exception as e:
                     self.logn()
@@ -900,8 +856,6 @@ class App(ctk.CTk):
                     self.logn(e, 'error')
                     return
                 
-                finally:
-                    self.process.kill() # exit subprocess (zombie!)
             finally:
                 self.log_file.close()
                 self.log_file = None
