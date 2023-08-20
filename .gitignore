@@ -8,6 +8,12 @@ auto-py-to-exe*.*
 
 ggml*.bin
 ROADMAP.md
+models/pyannote_config_macOS.yaml
+models/faster-whisper*/*.json
+models/faster-whisper*/*.bin
+models/faster-whisper*/vocabulary.txt
+models/faster-whisper*/.gitattributes
+models/faster-whisper*/README.md
 
 .DS_Store
 stuff/
