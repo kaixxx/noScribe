@@ -511,7 +511,9 @@ class App(ctk.CTk):
                 elif platform.machine() == "x86_64":
                     self.logn("System: MAC x86_64", where="file")
                 if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
-                    self.logn("macOS < 12.3, uses PYTORCH_ENABLE_MPS_FALLBACK")
+                    self.logn("macOS version >= 12.3:\nUsing MPS (with PYTORCH_ENABLE_MPS_FALLBACK enabled)")
+                else:
+                    self.logn("macOS version < 12.3:\nMPS not available: Using CPU\nPerformance might be poor\nConsider updating macOS, if possible")
             
             try:
 
