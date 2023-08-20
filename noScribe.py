@@ -108,7 +108,7 @@ elif platform.system() == "Darwin": # = MAC
     else:
         raise Exception('Could not detect Apple architecture.')
     # if platform.machine() == "arm64": # Intel should also support MPS
-    if platform.mac_ver()[0] < '12.3': # MPS needs macOS 12.3+
+    if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
 else:
     raise Exception('Platform not supported yet.')
