@@ -34,6 +34,10 @@ from docx import Document
 import docx
 import re
 # from pyannote.audio import Pipeline (> imported on demand below)
+if platform.system() == "Darwin": # = MAC
+    # if platform.machine() == "arm64": # Intel should also support MPS
+    if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
+        os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
 from faster_whisper import WhisperModel
 from typing import Any, Mapping, Optional, Text
 import sys
@@ -107,9 +111,6 @@ elif platform.system() == "Darwin": # = MAC
         whisper_path = os.path.join(app_dir, "whisper_mac_x86_64")
     else:
         raise Exception('Could not detect Apple architecture.')
-    # if platform.machine() == "arm64": # Intel should also support MPS
-    if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
-        os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
 else:
     raise Exception('Platform not supported yet.')
 
