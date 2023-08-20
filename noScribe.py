@@ -108,7 +108,7 @@ elif platform.system() == "Darwin": # = MAC
     else:
         raise Exception('Could not detect Apple architecture.')
     # if platform.machine() == "arm64": # Intel should also support MPS
-    if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
+    if platform.mac_ver()[0] < '12.3': # MPS needs macOS 12.3+
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
 else:
     raise Exception('Platform not supported yet.')
@@ -468,7 +468,7 @@ class App(ctk.CTk):
 
             self.prompt = ''
             try:
-                with open(os.path.join(app_dir, 'prompt.yml'), 'r') as file:
+                with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
                     prompts = yaml.safe_load(file)
             except:
                 prompts = {}
@@ -508,7 +508,7 @@ class App(ctk.CTk):
                     self.logn("System: MAC arm64", where="file")
                 elif platform.machine() == "x86_64":
                     self.logn("System: MAC x86_64", where="file")
-                if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
+                if platform.mac_ver()[0] < '12.3': # MPS needs macOS 12.3+
                     self.logn("macOS < 12.3, uses PYTORCH_ENABLE_MPS_FALLBACK")
             
             try:
@@ -809,14 +809,14 @@ class App(ctk.CTk):
                         
                         # add segments to doc
                         r = p.add_run()
-                        r.text = segment.text
+                        r.text = line
                         # Mark confidence level with a character based style,'noScribe_cl[1-10]'
                         # This way, we can color-mark specific levels later in Word.
                         cl_level = round((segment.avg_logprob + 1) * 10)
                         # TODO: better cl_level for words based on https://github.com/Softcatala/whisper-ctranslate2/blob/main/src/whisper_ctranslate2/transcribe.py
                         if cl_level > 0:
                             r.style = d.styles[f'noScribe_cl{cl_level}']
-                        self.log(segment.text)
+                        self.log(line)
                                     
                         # Create bookmark with audio timestamps start to end.
                         # This way, we can jump to the according audio position and play it later in Word.
