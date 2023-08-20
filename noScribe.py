@@ -470,7 +470,7 @@ class App(ctk.CTk):
 
             self.prompt = ''
             try:
-                with open(os.path.join(app_dir, 'prompt.yml'), 'r') as file:
+                with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
                     prompts = yaml.safe_load(file)
             except:
                 prompts = {}
