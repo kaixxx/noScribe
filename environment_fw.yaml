@@ -1,4 +1,4 @@
-name: noScribe_pyobjc
+name: noScribe_fw
 channels:
   - conda-forge
   - defaults
