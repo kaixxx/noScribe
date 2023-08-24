@@ -32,6 +32,7 @@ en:
 
   label_language: 'Language:'
   label_speaker: 'Speaker detection:'
+  label_parallel: 'Parallel speaking:'
   label_quality: 'Quality:'
   
   start_button: Start 
