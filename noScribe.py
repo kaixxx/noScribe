@@ -565,8 +565,9 @@ class App(ctk.CTk):
                 # Helper Functions:
 
                 def overlap_len(ss_start, ss_end, ts_start, ts_end):
-                    # ss...: speaker section start and end in milliseconds (from pyannote)
-                    # ts...: transcript section start and end (from whisper.cpp)
+                    # ss...: speaker segment start and end in milliseconds (from pyannote)
+                    # ts...: transcript segment start and end (from whisper.cpp)
+                    # returns overlap percentage, i.e., "0.8" = 80% of the transcript segment overlaps with the speaker segment from pyannote  
                     if ts_end < ss_start: # no overlap, ts is before ss
                         return -1   
                     elif ts_start > ss_end: # no overlap, ts is after ss
@@ -580,22 +581,45 @@ class App(ctk.CTk):
                             overlap_end = ss_end
                         else:
                             overlap_end = ts_end
-                        return overlap_end - overlap_start + 1
+                        ol_len = overlap_end - overlap_start + 1
+                        ts_len = ts_end - ts_start
+                        if ts_len == 0:
+                            return -1
+                        else:
+                            return ol_len / ts_len
 
                 def find_speaker(diarization, transcript_start, transcript_end):
-                    # Looks for the segment in diarization that has the most overlap with section_start-end. 
-                    # Returns the speaker name if found, an empty string otherwise
+                    # Looks for the shortest segment in diarization that has at least 80% overlap 
+                    # with transcript_start - trancript_end.  
+                    # Returns the speaker name if found.
+                    # If only an overlap < 80% is found, this speaker name ist returned.
+                    # If no overlap is found, an empty string is returned.
                     spkr = ''
-                    overlap = 0
+                    overlap_found = 0
+                    overlap_threshold = 0.8
+                    segment_len = 0
+                    is_parallel = False
                     
                     for segment, _, label in diarization.itertracks(yield_label=True):
                         t = overlap_len(int(segment.start * 1000), int((segment.start + segment.duration) * 1000), transcript_start, transcript_end)
                         if t == -1: # we are already after transcript_end
                             break
-                        elif t > overlap:
-                            overlap = t
-                            spkr = f'S{label[8:]}' # shorten the label: "SPEAKER_01" > "S01"
-                    return spkr
+                        else:
+                            if overlap_found >= overlap_threshold: # we already found a fitting segment, compare length now
+                                if (t >= overlap_threshold) and (segment.duration * 1000 < segment_len): # found a shorter (= better fitting) segment that also overlaps well
+                                    is_parallel = True
+                                    overlap_found = t
+                                    segment_len = segment.duration * 1000
+                                    spkr = f'S{label[8:]}' # shorten the label: "SPEAKER_01" > "S01"
+                            elif t > overlap_found: # no segment with good overlap jet, take this if the overlap is better then previously found 
+                                overlap_found = t
+                                segment_len = segment.duration * 1000
+                                spkr = f'S{label[8:]}' # shorten the label: "SPEAKER_01" > "S01"
+
+                    if is_parallel:
+                        return f"//{spkr}"
+                    else:
+                        return spkr
 
                 class SimpleProgressHook:
                     #Hook to show progress of each internal step
@@ -803,10 +827,17 @@ class App(ctk.CTk):
                         if self.speaker_detection == 'auto':
                             spkr = find_speaker(diarization, start, end)
                             if (speaker != spkr) & (spkr != ''):
-                                speaker = spkr
-                                self.logn()
-                                p = d.add_paragraph()
-                                line = f'{speaker}: {line}'
+                                if spkr[:2] == '//': # is parallel speaking, create no new paragraph
+                                    speaker = spkr
+                                    line = f' {speaker}:{line}'                                
+                                elif speaker[:2] == '//': # previous was parallel speaking, mark the end
+                                    line = f'//{line}'
+                                    speaker = spkr
+                                else:
+                                    speaker = spkr
+                                    self.logn()
+                                    p = d.add_paragraph()
+                                    line = f'{speaker}:{line}'
 
                         first_run = p.add_run() # empty run for start_bookmark
                         
