@@ -35,6 +35,8 @@ import docx
 import re
 # from pyannote.audio import Pipeline (> imported on demand below)
 if platform.system() == "Darwin": # = MAC
+    if platform.machine() == "x86_64":
+        os.environ['KMP_DUPLICATE_LIB_OK']='True' # prevent OMP: Error #15: Initializing libomp.dylib, but found libiomp5.dylib already initialized.
     # if platform.machine() == "arm64": # Intel should also support MPS
     if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
@@ -509,6 +511,26 @@ class App(ctk.CTk):
                 config['auto_save'] = 'True'
                 self.auto_save = True 
 
+            if platform.system() == "Darwin": # = MAC
+                if platform.mac_ver()[0] >= '12.3':
+                    try:
+                        if config['macos_xpu'] == 'cpu':
+                            self.macos_xpu = 'cpu'
+                        else:
+                            self.macos_xpu = 'mps'
+                    except:
+                        config['macos_xpu'] = 'mps'
+                        self.macos_xpu = 'mps'
+                else:
+                    try:
+                        if config['macos_xpu'] == 'cpu':
+                            self.macos_xpu = 'cpu'
+                        else:
+                            self.macos_xpu = 'cpu'
+                    except:
+                        config['macos_xpu'] = 'cpu'
+                        self.macos_xpu = 'cpu'
+
             # create log file
             if not os.path.exists(f'{config_dir}/log'):
                 os.makedirs(f'{config_dir}/log')
@@ -526,7 +548,12 @@ class App(ctk.CTk):
                 elif platform.machine() == "x86_64":
                     self.logn("System: MAC x86_64", where="file")
                 if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
-                    self.logn("macOS version >= 12.3:\nUsing MPS (with PYTORCH_ENABLE_MPS_FALLBACK enabled)")
+                    if config['macos_xpu'] == 'mps':
+                        self.logn("macOS version >= 12.3:\nUsing MPS (with PYTORCH_ENABLE_MPS_FALLBACK enabled)")
+                    elif config['macos_xpu'] == 'cpu':
+                        self.logn("macOS version >= 12.3:\nUser selected to use CPU (results will be better, but you might wanna make yourself a coffee)")
+                    else:
+                        self.logn("macOS version >= 12.3:\nInvalid option for 'macos_xpu' in config.yaml (should be 'mps' or 'cpu')\nYou might wanna change this\nUsing MPS anyway (with PYTORCH_ENABLE_MPS_FALLBACK enabled)")
                 else:
                     self.logn("macOS version < 12.3:\nMPS not available: Using CPU\nPerformance might be poor\nConsider updating macOS, if possible")
             
@@ -707,7 +734,7 @@ class App(ctk.CTk):
                                 pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'models', 'pyannote_config_macOS.yaml'))
                                 # if platform.machine() == "arm64": # Intel should also support MPS
                                 if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
-                                    pipeline.to("mps")
+                                    pipeline.to(self.macos_xpu)
                             else:
                                 raise Exception('Platform not supported yet.')
                             self.logn()
