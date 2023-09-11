@@ -1,0 +1,10 @@
+customtkinter
+Pillow
+PyYAML
+appdirs
+-e git+https://github.com/kaixxx/python-docx@2be110a1f513f8420b86aba6482269bb701f35ff#egg=python_docx
+elevate
+pyobjc
+python-i18n
+pyannote.audio @ git+https://github.com/kaixxx/pyannote-audio.git@5c24815a14e6a5c62a71d5962bf3f8fa09abae0f
+faster-whisper
