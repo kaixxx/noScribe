@@ -27,7 +27,7 @@ import platform
 import yaml
 import locale
 import appdirs
-from subprocess import run, Popen, PIPE, STDOUT
+from subprocess import run, call, Popen, PIPE, STDOUT
 if platform.system() == 'Windows':
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
 import re
@@ -362,9 +362,52 @@ class App(ctk.CTk):
         
     # Events and Methods
     
-    def openLink(self, link):
-        webbrowser.open(link)
+    def launch(self, program, args):
+        # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
+        # set system/version dependent "start_new_session" analogs
+        kwargs = {}
+        if platform.system() == 'Windows':
+            # from msdn [1]
+            CREATE_NEW_PROCESS_GROUP = 0x00000200  # note: could get it from subprocess
+            DETACHED_PROCESS = 0x00000008          # 0x8 | 0x200 == 0x208
+            kwargs.update(creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP)  
+        else:  # should work on all POSIX systems, Linux and macOS 
+            kwargs.update(start_new_session=True)
 
+        # p = Popen(["C"], stdin=PIPE, stdout=PIPE, stderr=PIPE, **kwargs)
+        p = Popen([program, args], **kwargs)
+        # assert not p.poll()
+        
+        """
+        Alternative possibility (args not implemented yet)
+        Source: Source: https://stackoverflow.com/questions/13078071/start-another-program-from-python-separately/13078786#13078786
+        Run program as if it had been double-clicked in Finder, Explorer,
+        Nautilus, etc. On OS X, the program should be a .app bundle, not a
+        UNIX executable. When used with a URL, a non-executable file, etc.,
+        the behavior is implementation-defined.
+        
+        Returns something false (0 or None) on success; returns something
+        True (e.g., an error code from open or xdg-open) or throws on failure.
+        However, note that in some cases the command may succeed without
+        actually launching the targeted program.#
+        """
+        
+        """
+        if sys.platform == 'darwin':
+            ret = call(['open', program])
+        elif sys.platform.startswith('win'):
+            ret = os.startfile(os.path.normpath(program))
+        else:
+            ret = call(['xdg-open', program])
+        return ret
+        """
+    
+    def openLink(self, link):
+        if link.startswith('file://') and link.endswith('.html'):
+            self.launch(os.path.join(app_dir, 'noScribeEdit/noScribe Editor.exe '), link[7:])
+        else: 
+            webbrowser.open(link)
+    
     def log(self, txt='', tags=[], where='both', link=''): # log to main window (log can be 'screen', 'file' or 'both')
         if where != 'file':
             self.log_textbox.configure(state=ctk.NORMAL)
@@ -872,7 +915,7 @@ class App(ctk.CTk):
                             with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
                                 f.write(htmlStr)
                             self.logn()
-                            self.logn(t('rescue_saving', file=self.my_transcript_file), 'error')
+                            self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
                             self.last_auto_save = datetime.datetime.now()
             
                 try:
@@ -959,7 +1002,7 @@ class App(ctk.CTk):
                     self.logn()
                     self.logn(t('transcription_finished'), 'highlight')
                     if self.transcript_file != self.my_transcript_file: # used alternative filename because saving under the initial name failed
-                        self.logn(t('rescue_saving', file=self.my_transcript_file), 'error')
+                        self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
                     else:
                         self.log(t('transcription_saved'))
                         self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
