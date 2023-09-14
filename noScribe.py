@@ -161,20 +161,6 @@ def iter_except(function, exception):
                 yield function()
         except exception:
             return
-        
-def docx_add_bookmark(first_run, last_run, bookmark_name, bookmark_id):
-    # adds a bookmark including the two runs and everything inbetween 
-    # bookmark_id must be unique
-    start = docx.oxml.shared.OxmlElement('w:bookmarkStart')
-    start.set(docx.oxml.ns.qn('w:id'), str(bookmark_id))
-    start.set(docx.oxml.ns.qn('w:name'), bookmark_name)
-    first_run._r.append(start)
-
-    end = docx.oxml.shared.OxmlElement('w:bookmarkEnd')
-    end.set(docx.oxml.ns.qn('w:id'), str(bookmark_id))
-    end.set(docx.oxml.ns.qn('w:name'), bookmark_name)
-    last_run._r.append(end)
-
 
 
 class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format hh:mm:ss

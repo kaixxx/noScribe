@@ -3,6 +3,7 @@ build/
 src/
 __pycache__/
 .vscode/
+noScribeEdit/
 
 *.code-workspace
 auto-py-to-exe*.*
