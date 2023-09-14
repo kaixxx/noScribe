@@ -56,6 +56,11 @@ if platform.system() == 'Windows':
 if platform.system() == "Darwin": # = MAC
     import shlex
     import Foundation
+  
+import logging
+
+logging.basicConfig()
+logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
 app_version = '0.3'
 app_dir = os.path.abspath(os.path.dirname(__file__))
