@@ -2,6 +2,7 @@ old/
 build/
 src/
 __pycache__/
+.vscode/
 
 *.code-workspace
 auto-py-to-exe*.*

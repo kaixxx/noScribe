@@ -30,8 +30,6 @@ import appdirs
 from subprocess import run, Popen, PIPE, STDOUT
 if platform.system() == 'Windows':
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
-from docx import Document
-import docx
 import re
 # from pyannote.audio import Pipeline (> imported on demand below)
 if platform.system() == "Darwin": # = MAC
@@ -41,6 +39,7 @@ if platform.system() == "Darwin": # = MAC
     if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
 from faster_whisper import WhisperModel
+import AdvancedHTMLParser
 from typing import Any, Mapping, Optional, Text
 import sys
 from itertools import islice
@@ -62,6 +61,27 @@ app_version = '0.3'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
+
+default_html = """
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+<html >
+<head >
+<meta charset="UTF-8" />
+<meta name="qrichtext" content="1" />
+<style type="text/css" >
+p, li { white-space: pre-wrap; }
+</style>
+<style type="text/css" >
+ a { text-decoration: none; color: #000000; } 
+ p { font-size: 0.9em; } 
+ .MsoNormal { font-family: "Arial"; font-weight: 400; font-style: normal; font-size: 0.9em; }
+ @page WordSection1 {mso-line-numbers-restart: continuous; mso-line-numbers-count-by: 1; mso-line-numbers-start: 1; }
+ div.WordSection1 {page:WordSection1;} 
+</style>
+</head>
+<body style="font-family: 'Arial'; font-weight: 400; font-style: normal" >
+</body>
+</html>"""
 
 # config
 config_dir = appdirs.user_config_dir('noScribe')
@@ -392,7 +412,7 @@ class App(ctk.CTk):
             self.label_audio_file_name.configure(text=os.path.basename(self.audio_file))
 
     def button_transcript_file_event(self):
-        fn = tk.filedialog.asksaveasfilename(filetypes=[('Microsoft Word','*.docm')], defaultextension='docm')
+        fn = tk.filedialog.asksaveasfilename(filetypes=[('noScribe Transcript','*.html')], defaultextension='html')
         if fn != '':
             self.transcript_file = fn
             self.logn(t('log_transcript_filename') + self.transcript_file)
@@ -798,51 +818,83 @@ class App(ctk.CTk):
 
                 """
 
-                # prepare transcript docm
-                d = Document(os.path.join(app_dir,'transcriptTempl.docm'))
-                d.core_properties.author = f'noScribe vers. {app_version}'
-                d.core_properties.comments = self.audio_file
+                # prepare transcript html
+                d = AdvancedHTMLParser.AdvancedHTMLParser()
+                d.parseStr(default_html)                
                 
-                # header
-                p = d.paragraphs[0]
-                p.text = Path(self.audio_file).stem # use the name of the audio file (without extension) as the title
-                p.style = 'noScribe_header'
+                # add audio file path:
+                tag = d.createElement("meta")
+                tag.name = "audio_source"
+                tag.content = self.audio_file
+                d.head.appendChild(tag)
+
+                # add app version:
+                """ # removed because not really necessary
+                tag = d.createElement("meta")
+                tag.name = "noScribe_version"
+                tag.content = app_version
+                d.head.appendChild(tag)
+                """
                 
-                p = d.add_paragraph(t('doc_header', version=app_version), style='noScribe_subheader')
-                p = d.add_paragraph(t('doc_header_audio', file=self.audio_file), style='noScribe_subheader')
+                #add WordSection1 (for line numbers in MS Word) as main_body
+                main_body = d.createElement('div')
+                main_body.addClass('WordSection1')
+                d.body.appendChild(main_body)
                 
-                p = d.add_paragraph()
+                # header               
+                p = d.createElement('p')
+                p.setStyle('font-weight', '600')
+                p.appendText(Path(self.audio_file).stem) # use the name of the audio file (without extension) as the title
+                main_body.appendChild(p)
+                
+                # subheader
+                p = d.createElement('p')
+                p.setStyle('color', '#909090')
+                p.appendText(t('doc_header', version=app_version))
+                br = d.createElement('br')
+                p.appendChild(br)
+                p.appendText(t('doc_header_audio', file=self.audio_file))
+                main_body.appendChild(p)
+                
+                p = d.createElement('p')
+                main_body.appendChild(p)
                 speaker = ''
                 bookmark_id = 0
                 self.last_auto_save = datetime.datetime.now()
 
                 def save_doc():
                     try:
-                        d.save(self.my_transcript_file)
+                        htmlStr = d.asHTML()
+                        with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
+                            f.write(htmlStr)
                         self.last_auto_save = datetime.datetime.now()
                     except:
                         # saving failed, maybe the file is already open in Word and cannot be overwritten
                         # try saving to a different filename
                         transcript_path = Path(self.my_transcript_file)
-                        self.my_transcript_file = f'{transcript_path.parent}/{transcript_path.stem}_1.docm'
+                        self.my_transcript_file = f'{transcript_path.parent}/{transcript_path.stem}_1.html'
                         if os.path.exists(self.my_transcript_file):
                             # the alternative filename also exists already, don't want to overwrite, giving up
                             raise Exception(t('rescue_saving_failed'))
                         else:
-                            d.save(self.my_transcript_file)
+                            htmlStr = d.asHTML()
+                            with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
+                                f.write(htmlStr)
                             self.logn()
                             self.logn(t('rescue_saving', file=self.my_transcript_file), 'error')
                             self.last_auto_save = datetime.datetime.now()
             
                 try:
-                    model = WhisperModel(self.whisper_model, device="auto", compute_type="auto", local_files_only=True)
+                    # model = WhisperModel(self.whisper_model, device="auto", compute_type="auto", local_files_only=True)
+                    model = WhisperModel(self.whisper_model, device="cpu", cpu_threads=4, compute_type="int8", local_files_only=True)
 
                     if self.language != "auto":
                         whisper_lang = self.language
                     else:
                         whisper_lang = None
                     
-                    segments, info = model.transcribe(self.tmp_audio_file, language=whisper_lang, beam_size=5, word_timestamps=True, initial_prompt=self.prompt)
+                    # segments, info = model.transcribe(self.tmp_audio_file, language=whisper_lang, beam_size=5, word_timestamps=True, initial_prompt=self.prompt)
+                    segments, info = model.transcribe(self.tmp_audio_file, language=whisper_lang, beam_size=1, temperature=0, word_timestamps=True, initial_prompt=self.prompt)
 
                     if self.language == "auto":
                         self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
@@ -879,30 +931,27 @@ class App(ctk.CTk):
                                 else:
                                     speaker = spkr
                                     self.logn()
-                                    p = d.add_paragraph()
+                                    p = d.createElement('p')
+                                    main_body.appendChild(p)
                                     line = f'{speaker}:{line}'
 
-                        first_run = p.add_run() # empty run for start_bookmark
-                        
-                        # add segments to doc
-                        r = p.add_run()
-                        r.text = line
-                        # Mark confidence level with a character based style,'noScribe_cl[1-10]'
-                        # This way, we can color-mark specific levels later in Word.
-                        cl_level = round((segment.avg_logprob + 1) * 10)
+                        # Mark confidence level (not implemented yet in html)
+                        # cl_level = round((segment.avg_logprob + 1) * 10)
                         # TODO: better cl_level for words based on https://github.com/Softcatala/whisper-ctranslate2/blob/main/src/whisper_ctranslate2/transcribe.py
-                        if cl_level > 0:
-                            r.style = d.styles[f'noScribe_cl{cl_level}']
-                        self.log(line)
-                                    
-                        # Create bookmark with audio timestamps start to end.
-                        # This way, we can jump to the according audio position and play it later in Word.
-                        bookmark_id = bookmark_id + 1
-                        last_run = p.add_run()
+                        # if cl_level > 0:
+                        #     r.style = d.styles[f'noScribe_cl{cl_level}']
+
+                        # Create bookmark with audio timestamps start to end and add the current segment.
+                        # This way, we can jump to the according audio position and play it later in the editor.
                         # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestaps will not match the original audio:
                         orig_audio_start = self.start + start
                         orig_audio_end = self.start + end
-                        docx_add_bookmark(first_run, last_run, f'ts_{orig_audio_start}_{orig_audio_end}', bookmark_id)
+                        a = d.createElement('a')
+                        a.href = f'ts_{orig_audio_start}_{orig_audio_end}'
+                        a.appendText(line)
+                        p.appendChild(a)
+                        
+                        self.log(line)
                                     
                         # auto save
                         if self.auto_save == True:
