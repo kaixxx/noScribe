@@ -376,9 +376,11 @@ class App(ctk.CTk):
         
     # Events and Methods
     
-    def launch(self, program, args):
+    def launch_editor(self, file):
+        # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
         # set system/version dependent "start_new_session" analogs
+        program = os.path.join(app_dir, 'noScribeEdit/noScribe Editor.exe ')
         kwargs = {}
         if platform.system() == 'Windows':
             # from msdn [1]
@@ -389,11 +391,11 @@ class App(ctk.CTk):
             kwargs.update(start_new_session=True)
 
         # p = Popen(["C"], stdin=PIPE, stdout=PIPE, stderr=PIPE, **kwargs)
-        p = Popen([program, args], **kwargs)
+        p = Popen([program, file], **kwargs)
         # assert not p.poll()
         
         """
-        Alternative possibility (args not implemented yet)
+        Alternative possibility (file not implemented yet)
         Source: Source: https://stackoverflow.com/questions/13078071/start-another-program-from-python-separately/13078786#13078786
         Run program as if it had been double-clicked in Finder, Explorer,
         Nautilus, etc. On OS X, the program should be a .app bundle, not a
@@ -418,7 +420,7 @@ class App(ctk.CTk):
     
     def openLink(self, link):
         if link.startswith('file://') and link.endswith('.html'):
-            self.launch(os.path.join(app_dir, 'noScribeEdit/noScribe Editor.exe '), link[7:])
+            self.launch_editor(link[7:])
         else: 
             webbrowser.open(link)
     
