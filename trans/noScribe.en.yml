@@ -32,8 +32,10 @@ en:
 
   label_language: 'Language:'
   label_speaker: 'Speaker detection:'
-  label_parallel: 'Parallel speaking:'
   label_quality: 'Quality:'
+  label_parallel: 'Parallel speaking:'
+  label_pause: 'Mark pauses'
+  
   
   start_button: Start 
   stop_button: Cancel
@@ -48,6 +50,8 @@ en:
   start_canceling: 'Canceling... (please wait a second)'
   start_transcription: 'Transcription...'
   loading_whisper: 'Loading whisper.cpp'
+  vad: 'Voice activity detection...'
+
   transcription_finished: 'Transcription finished.' 
   transcription_saved: 'Saved to: '
   trancription_time: 'Duration: %{duration} minutes'
@@ -71,4 +75,6 @@ en:
   # Doc contents
   doc_header: 'Transcribed with noScribe vers. %{version}'
   doc_header_audio: 'Audio file: %{file}'
+  pause_minutes: '(%{minutes} minute[s] pause)'
+  pause_seconds: '(%{seconds} seconds pause)'
                       

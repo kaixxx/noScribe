@@ -329,6 +329,20 @@ class App(ctk.CTk):
                 self.check_box_parallel.deselect()
         except:
             self.check_box_parallel.select() # default to on
+            
+        # pause Speaking (Diarization)
+        self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
+        self.label_pause.grid(column=0, row=6, sticky='w', pady=5)
+
+        self.check_box_pause = ctk.CTkCheckBox(self.frame_options, text = '')
+        self.check_box_pause.grid(column=1, row=6, sticky='e', pady=5)
+        try:
+            if config['last_pause']:
+                self.check_box_pause.select()
+            else:
+                self.check_box_pause.deselect()
+        except:
+            self.check_box_pause.select() # default to on        
 
         # Start Button
         self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
@@ -555,6 +569,8 @@ class App(ctk.CTk):
             self.speaker_detection = self.option_menu_speaker.get()
             
             self.parallel = self.check_box_parallel.get()
+            
+            self.pause = self.check_box_pause.get()
 
             try:
                 if config['auto_save'] == 'True': # auto save during transcription (every 20 sec)?
@@ -820,7 +836,6 @@ class App(ctk.CTk):
                 self.logn()
                 self.logn(t('start_transcription'), 'highlight')
                 self.logn(t('loading_whisper'))
-                self.logn()
                 self.update()
                                
                 # whisper options:
@@ -922,37 +937,73 @@ class App(ctk.CTk):
                     # model = WhisperModel(self.whisper_model, device="auto", compute_type="auto", local_files_only=True)
                     model = WhisperModel(self.whisper_model, device="cpu", cpu_threads=4, compute_type="int8", local_files_only=True)
 
+                    self.logn(t('vad'))
+                    self.update()
+                    if self.cancel:
+                        raise Exception(t('err_user_cancelation')) 
+
                     if self.language != "auto":
                         whisper_lang = self.language
                     else:
                         whisper_lang = None
                     
                     # segments, info = model.transcribe(self.tmp_audio_file, language=whisper_lang, beam_size=5, word_timestamps=True, initial_prompt=self.prompt)
-                    segments, info = model.transcribe(self.tmp_audio_file, language=whisper_lang, beam_size=1, temperature=0, word_timestamps=True, initial_prompt=self.prompt)
+                    segments, info = model.transcribe(
+                        self.tmp_audio_file, language=whisper_lang, 
+                        beam_size=1, temperature=0, word_timestamps=True, 
+                        initial_prompt=self.prompt, vad_filter=True,
+                        vad_parameters=dict(min_silence_duration_ms=1000))
 
                     if self.language == "auto":
                         self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
 
+                    self.logn(t('start_transcription'))
+                    self.update()
+                    if self.cancel:
+                        raise Exception(t('err_user_cancelation')) 
+                    
+                    last_segment_end = 0
+                    
                     for segment in segments:
                         self.update()
                         # check for user cancelation
-                        if self.cancel == True:
-                            if self.auto_save == True:
+                        if self.cancel:
+                            if self.auto_save:
                                 save_doc()
                                 self.logn()
-                                self.logn(t('transcription_saved', file=self.my_transcript_file))
+                                self.logn(t('transcription_saved', file=self.my_transcript_file), link=f'file://{self.my_transcript_file}')
                                 raise Exception(t('err_user_cancelation')) 
                             else:    
                                 raise Exception(t('err_user_cancelation')) 
-                            
-                        line = segment.text
                         
                         # get time of the segment in milliseconds
                         start = round(segment.start * 1000.0)
                         end = round(segment.end * 1000.0)
-                                    
+                        
+                        # check for pauses and mark them in the transcript
+                        if self.pause and (start - last_segment_end >= 1000): # (more than 1 second with no speech)
+                            pause_len = round((start - last_segment_end)/1000)
+                            if pause_len >= 10:
+                                if pause_len >= 60: # > 1 minute
+                                    pause_str = ' ' + t('pause_minutes', minutes=round(pause_len/60))
+                                else: # > 10 sec < 1 min
+                                    pause_str = ' ' + t('pause_seconds', seconds=pause_len)
+                            else: # < 10 sec, note one point per second
+                                pause_str = ' (' + ('.'*pause_len) + ')'
+                            
+                            orig_audio_start_pause = self.start + last_segment_end
+                            orig_audio_end_pause = self.start + start
+                            a = d.createElement('a')
+                            a.href = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}'
+                            a.appendText(pause_str)
+                            p.appendChild(a)
+                            self.log(pause_str)
+                        last_segment_end = end
+                                        
                         # write text to the doc
                         # diarization (speaker detection)?
+                        line = segment.text
+                        
                         if self.speaker_detection == 'auto':
                             spkr = find_speaker(diarization, start, end)
                             if (speaker != spkr) & (spkr != ''):
@@ -1052,6 +1103,7 @@ class App(ctk.CTk):
             config['last_speaker'] = self.option_menu_speaker.get()
             config['last_quality'] = self.option_menu_quality.get()
             config['last_parallel'] = self.check_box_parallel.get()
+            config['last_pause'] = self.check_box_pause.get()
             save_config()
         finally:
             self.destroy()
