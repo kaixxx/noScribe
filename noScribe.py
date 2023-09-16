@@ -33,8 +33,6 @@ if platform.system() == 'Windows':
 import re
 # from pyannote.audio import Pipeline (> imported on demand below)
 if platform.system() == "Darwin": # = MAC
-    if platform.machine() == "x86_64":
-        os.environ['KMP_DUPLICATE_LIB_OK']='True' # prevent OMP: Error #15: Initializing libomp.dylib, but found libiomp5.dylib already initialized.
     # if platform.machine() == "arm64": # Intel should also support MPS
     if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
