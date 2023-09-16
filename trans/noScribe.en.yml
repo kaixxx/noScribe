@@ -69,7 +69,7 @@ en:
   err_user_cancelation: 'Process has been canceled by the user.'
   err_whisper_main: Whisper.cpp main terminated with the error code %{e}
   err_transcription: 'Error in step 3 - transcription'
-  rescue_saving: 'Saving to the original filename failed. Saved instead in this file: %{file}'
+  rescue_saving: 'Saving to the original filename failed. Saved instead in this file: '
   rescue_saving_failed: 'Error: Saving to the original filename failed. The alternate filename also exists. I have to quit. (Make sure your transcript is not already opened in Word!)'
 
   # Doc contents

@@ -969,7 +969,8 @@ class App(ctk.CTk):
                             if self.auto_save:
                                 save_doc()
                                 self.logn()
-                                self.logn(t('transcription_saved', file=self.my_transcript_file), link=f'file://{self.my_transcript_file}')
+                                self.log(t('transcription_saved'))
+                                self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
                                 raise Exception(t('err_user_cancelation')) 
                             else:    
                                 raise Exception(t('err_user_cancelation')) 
@@ -1049,7 +1050,8 @@ class App(ctk.CTk):
                     self.logn()
                     self.logn(t('transcription_finished'), 'highlight')
                     if self.transcript_file != self.my_transcript_file: # used alternative filename because saving under the initial name failed
-                        self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
+                        self.log(t('rescue_saving'))
+                        self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
                     else:
                         self.log(t('transcription_saved'))
                         self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
