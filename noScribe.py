@@ -44,6 +44,7 @@ from typing import Any, Mapping, Optional, Text
 import sys
 from itertools import islice
 from threading import Thread
+import time
 from queue import Queue, Empty
 from tempfile import TemporaryDirectory
 import datetime
@@ -486,13 +487,14 @@ class App(ctk.CTk):
             self.progress_bar.set(progr)
         else:
             self.progress_bar.set(0)
-        self.update()
 
 
     ################################################################################################
-    # main function Button Start
+    # Button Start
 
-    def button_start_event(self):
+    def transcription_worker(self):
+        # This is the main function where all the magic happens
+        # We put this in a seperate thread so that it does not block the main ui
         
         proc_start_time = datetime.datetime.now()
         self.cancel = False
@@ -637,7 +639,6 @@ class App(ctk.CTk):
                 try:
                     self.logn()
                     self.logn(t('start_audio_conversion'), 'highlight')
-                    self.update()
                 
                     if int(self.stop) > 0: # transcribe only part of the audio
                         end_pos_cmd = f'-to {self.stop}ms'
@@ -787,7 +788,6 @@ class App(ctk.CTk):
                             self.logn()
                             self.logn(t('start_identifiying_speakers'), 'highlight')
                             self.logn(t('loading_pyannote'))
-                            self.update()
                             from pyannote.audio import Pipeline # import only on demand because this library is huge
                             self.set_progress(1, 100)
 
@@ -838,7 +838,6 @@ class App(ctk.CTk):
                 self.logn()
                 self.logn(t('start_transcription'), 'highlight')
                 self.logn(t('loading_whisper'))
-                self.update()
                                
                 # whisper options:
                 """
@@ -940,7 +939,6 @@ class App(ctk.CTk):
                     model = WhisperModel(self.whisper_model, device="cpu", cpu_threads=4, compute_type="int8", local_files_only=True)
 
                     self.logn(t('vad'))
-                    self.update()
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
 
@@ -960,14 +958,12 @@ class App(ctk.CTk):
                         self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
 
                     self.logn(t('start_transcription'))
-                    self.update()
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
                     
                     last_segment_end = 0
                     
                     for segment in segments:
-                        self.update()
                         # check for user cancelation
                         if self.cancel:
                             if self.auto_save:
@@ -1043,9 +1039,7 @@ class App(ctk.CTk):
                         # auto save
                         if self.auto_save == True:
                             if (datetime.datetime.now() - self.last_auto_save).total_seconds() > 20:
-                                save_doc()    
-
-                        self.update()
+                                save_doc()
                         
                         progr = round((segment.end/info.duration) * 100)
                         self.set_progress(3, progr)
@@ -1086,6 +1080,13 @@ class App(ctk.CTk):
             # hide progress bar
             self.progress_bar.pack_forget()
 
+    def button_start_event(self):
+        wkr = Thread(target=self.transcription_worker)
+        wkr.start()
+        while wkr.is_alive():
+            self.update()
+            time.sleep(0.1)
+    
     # End main function Button Start        
     ################################################################################################
 
