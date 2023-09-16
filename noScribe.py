@@ -36,7 +36,6 @@ if platform.system() == "Darwin": # = MAC
     # if platform.machine() == "arm64": # Intel should also support MPS
     if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
-from faster_whisper import WhisperModel
 import AdvancedHTMLParser
 from typing import Any, Mapping, Optional, Text
 import sys
@@ -933,6 +932,7 @@ class App(ctk.CTk):
                             self.last_auto_save = datetime.datetime.now()
             
                 try:
+                    from faster_whisper import WhisperModel
                     # model = WhisperModel(self.whisper_model, device="auto", compute_type="auto", local_files_only=True)
                     model = WhisperModel(self.whisper_model, device="cpu", cpu_threads=4, compute_type="int8", local_files_only=True)
 
