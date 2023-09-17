@@ -6,6 +6,6 @@ AdvancedHTMLParser
 elevate
 pyobjc
 python-i18n
-pyannote.audio @ git+https://github.com/kaixxx/pyannote-audio.git@5c24815a14e6a5c62a71d5962bf3f8fa09abae0f
+pyannote.audio @ git+https://github.com/kaixxx/pyannote-audio.git
 faster-whisper
 pyinstaller

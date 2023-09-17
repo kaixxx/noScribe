@@ -33,6 +33,8 @@ if platform.system() == 'Windows':
 import re
 # from pyannote.audio import Pipeline (> imported on demand below)
 if platform.system() == "Darwin": # = MAC
+    if platform.machine() == "x86_64":
+        os.environ['KMP_DUPLICATE_LIB_OK']='True' # prevent OMP: Error #15: Initializing libomp.dylib, but found libiomp5.dylib already initialized.
     # if platform.machine() == "arm64": # Intel should also support MPS
     if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
@@ -54,7 +56,6 @@ if platform.system() == 'Windows':
 if platform.system() == "Darwin": # = MAC
     import shlex
     import Foundation
-  
 import logging
 
 logging.basicConfig()
@@ -788,6 +789,7 @@ class App(ctk.CTk):
                             self.logn()
                             self.logn(t('start_identifiying_speakers'), 'highlight')
                             self.logn(t('loading_pyannote'))
+                            import torch
                             from pyannote.audio import Pipeline # import only on demand because this library is huge
                             self.set_progress(1, 100)
 
@@ -806,7 +808,7 @@ class App(ctk.CTk):
                                 pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'models', 'pyannote_config_macOS.yaml'))
                                 # if platform.machine() == "arm64": # Intel should also support MPS
                                 if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
-                                    pipeline.to(self.macos_xpu)
+                                    pipeline.to(torch.device(self.macos_xpu))
                             else:
                                 raise Exception('Platform not supported yet.')
                             self.logn()
