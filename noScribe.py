@@ -378,7 +378,10 @@ class App(ctk.CTk):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
         # set system/version dependent "start_new_session" analogs
-        program = os.path.join(app_dir, 'noScribeEdit/noScribe Editor.exe ')
+        if platform.system() == 'Windows':
+            program = os.path.join(app_dir, 'noScribeEdit', 'noScribe Editor.exe ')
+        elif platform.system() == "Darwin": # = MAC
+            program = os.path.join(os.sep, 'Applications', 'noScribeEdit.app', 'Contents', 'MacOS', 'noScribeEdit')
         kwargs = {}
         if platform.system() == 'Windows':
             # from msdn [1]
