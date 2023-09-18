@@ -34,7 +34,7 @@ en:
   label_speaker: 'Speaker detection:'
   label_quality: 'Quality:'
   label_parallel: 'Parallel speaking:'
-  label_pause: 'Mark pauses'
+  label_pause: 'Mark pause:'
   
   
   start_button: Start 

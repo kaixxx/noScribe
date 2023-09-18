@@ -286,7 +286,7 @@ class App(ctk.CTk):
 
         self.langs = ('auto', 'en (english)', 'zh (chinese)', 'de (german)', 'es (spanish)', 'ru (russian)', 'ko (korean)', 'fr (french)', 'ja (japanese)', 'pt (portuguese)', 'tr (turkish)', 'pl (polish)', 'ca (catalan)', 'nl (dutch)', 'ar (arabic)', 'sv (swedish)', 'it (italian)', 'id (indonesian)', 'hi (hindi)', 'fi (finnish)', 'vi (vietnamese)', 'iw (hebrew)', 'uk (ukrainian)', 'el (greek)', 'ms (malay)', 'cs (czech)', 'ro (romanian)', 'da (danish)', 'hu (hungarian)', 'ta (tamil)', 'no (norwegian)', 'th (thai)', 'ur (urdu)', 'hr (croatian)', 'bg (bulgarian)', 'lt (lithuanian)', 'la (latin)', 'mi (maori)', 'ml (malayalam)', 'cy (welsh)', 'sk (slovak)', 'te (telugu)', 'fa (persian)', 'lv (latvian)', 'bn (bengali)', 'sr (serbian)', 'az (azerbaijani)', 'sl (slovenian)', 'kn (kannada)', 'et (estonian)', 'mk (macedonian)', 'br (breton)', 'eu (basque)', 'is (icelandic)', 'hy (armenian)', 'ne (nepali)', 'mn (mongolian)', 'bs (bosnian)', 'kk (kazakh)', 'sq (albanian)', 'sw (swahili)', 'gl (galician)', 'mr (marathi)', 'pa (punjabi)', 'si (sinhala)', 'km (khmer)', 'sn (shona)', 'yo (yoruba)', 'so (somali)', 'af (afrikaans)', 'oc (occitan)', 'ka (georgian)', 'be (belarusian)', 'tg (tajik)', 'sd (sindhi)', 'gu (gujarati)', 'am (amharic)', 'yi (yiddish)', 'lo (lao)', 'uz (uzbek)', 'fo (faroese)', 'ht (haitian   creole)', 'ps (pashto)', 'tk (turkmen)', 'nn (nynorsk)', 'mt (maltese)', 'sa (sanskrit)', 'lb (luxembourgish)', 'my (myanmar)', 'bo (tibetan)', 'tl (tagalog)', 'mg (malagasy)', 'as (assamese)', 'tt (tatar)', 'haw (hawaiian)', 'ln (lingala)', 'ha (hausa)', 'ba (bashkir)', 'jw (javanese)', 'su (sundanese)')
 
-        self.option_menu_language = ctk.CTkOptionMenu(self.frame_options, width=100, values=self.langs)
+        self.option_menu_language = ctk.CTkOptionMenu(self.frame_options, width=100, values=self.langs, dynamic_resizing=False)
         self.option_menu_language.grid(column=1, row=2, sticky='e', pady=5)
         try:
             self.option_menu_language.set(config['last_language'])
@@ -314,34 +314,35 @@ class App(ctk.CTk):
             self.option_menu_speaker.set(config['last_speaker'])
         except:
             pass
+        
+        # Mark pauses
+        self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
+        self.label_pause.grid(column=0, row=5, sticky='w', pady=5)
+
+        self.option_menu_pause = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', '1sec+', '2sec+', '3sec+'])
+        self.option_menu_pause.grid(column=1, row=5, sticky='e', pady=5)
+        try:
+            val = config['last_pause']
+            if val in self.option_menu_pause._values:
+                self.option_menu_pause.set(val)
+            else:
+                raise
+        except:
+            self.option_menu_pause.set(self.option_menu_pause._values[1])
 
         # Parallel Speaking (Diarization)
         self.label_parallel = ctk.CTkLabel(self.frame_options, text=t('label_parallel'))
-        self.label_parallel.grid(column=0, row=5, sticky='w', pady=5)
+        self.label_parallel.grid(column=0, row=6, sticky='w', pady=5)
 
         self.check_box_parallel = ctk.CTkCheckBox(self.frame_options, text = '')
-        self.check_box_parallel.grid(column=1, row=5, sticky='e', pady=5)
+        self.check_box_parallel.grid(column=1, row=6, sticky='e', pady=5)
         try:
             if config['last_parallel']:
                 self.check_box_parallel.select()
             else:
                 self.check_box_parallel.deselect()
         except:
-            self.check_box_parallel.select() # default to on
-            
-        # pause Speaking (Diarization)
-        self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
-        self.label_pause.grid(column=0, row=6, sticky='w', pady=5)
-
-        self.check_box_pause = ctk.CTkCheckBox(self.frame_options, text = '')
-        self.check_box_pause.grid(column=1, row=6, sticky='e', pady=5)
-        try:
-            if config['last_pause']:
-                self.check_box_pause.select()
-            else:
-                self.check_box_pause.deselect()
-        except:
-            self.check_box_pause.select() # default to on        
+            self.check_box_parallel.select() # default to on        
 
         # Start Button
         self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
@@ -575,7 +576,7 @@ class App(ctk.CTk):
             
             self.parallel = self.check_box_parallel.get()
             
-            self.pause = self.check_box_pause.get()
+            self.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
 
             try:
                 if config['auto_save'] == 'True': # auto save during transcription (every 20 sec)?
@@ -996,7 +997,7 @@ class App(ctk.CTk):
                         end = round(segment.end * 1000.0)
                         
                         # check for pauses and mark them in the transcript
-                        if self.pause and (start - last_segment_end >= 1000): # (more than 1 second with no speech)
+                        if (self.pause > 0) and (start - last_segment_end >= self.pause * 1000): # (more than x seconds with no speech)
                             pause_len = round((start - last_segment_end)/1000)
                             if pause_len >= 10:
                                 if pause_len >= 60: # > 1 minute
@@ -1124,7 +1125,7 @@ class App(ctk.CTk):
             config['last_speaker'] = self.option_menu_speaker.get()
             config['last_quality'] = self.option_menu_quality.get()
             config['last_parallel'] = self.check_box_parallel.get()
-            config['last_pause'] = self.check_box_pause.get()
+            config['last_pause'] = self.option_menu_pause.get()
             save_config()
         finally:
             self.destroy()
