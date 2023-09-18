@@ -941,7 +941,7 @@ class App(ctk.CTk):
                     # model = WhisperModel(self.whisper_model, device="auto", compute_type="auto", local_files_only=True)
                     model = WhisperModel(self.whisper_model, device="cpu", cpu_threads=4, compute_type="int8", local_files_only=True)
 
-                    self.logn(t('vad'))
+                    # self.logn(t('vad'))
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
 
@@ -949,13 +949,26 @@ class App(ctk.CTk):
                         whisper_lang = self.language
                     else:
                         whisper_lang = None
+                     
+                    """
+                    # > VAD made the pause-detection actually worse, so I removed it. Strange...   
+                    try:
+                        self.vad_threshold = float(config['voice_activity_detection_threshold'])
+                    except:
+                        config['voice_activity_detection_threshold'] = '0.5'
+                        self.vad_threshold = 0.5
                     
-                    # segments, info = model.transcribe(self.tmp_audio_file, language=whisper_lang, beam_size=5, word_timestamps=True, initial_prompt=self.prompt)
                     segments, info = model.transcribe(
                         self.tmp_audio_file, language=whisper_lang, 
                         beam_size=1, temperature=0, word_timestamps=True, 
                         initial_prompt=self.prompt, vad_filter=True,
-                        vad_parameters=dict(min_silence_duration_ms=1000))
+                        vad_parameters=dict(min_silence_duration_ms=200, 
+                                            threshold=self.vad_threshold))
+                    """
+                    segments, info = model.transcribe(
+                        self.tmp_audio_file, language=whisper_lang, 
+                        beam_size=1, temperature=0, word_timestamps=True, 
+                        initial_prompt=self.prompt, vad_filter=False)
 
                     if self.language == "auto":
                         self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
