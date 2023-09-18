@@ -380,7 +380,7 @@ class App(ctk.CTk):
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
         # set system/version dependent "start_new_session" analogs
         if platform.system() == 'Windows':
-            program = os.path.join(app_dir, 'noScribeEdit', 'noScribe Editor.exe ')
+            program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit.exe')
         elif platform.system() == "Darwin": # = MAC
             program = os.path.join(os.sep, 'Applications', 'noScribeEdit.app', 'Contents', 'MacOS', 'noScribeEdit')
         kwargs = {}
