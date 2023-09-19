@@ -577,6 +577,11 @@ class App(ctk.CTk):
             self.parallel = self.check_box_parallel.get()
             
             self.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
+            try:
+                self.pause_marker = config['pause_seconds_marker']
+            except:
+                config['pause_seconds_marker'] = '.'
+                self.pause_marker = '.' 
 
             try:
                 if config['auto_save'] == 'True': # auto save during transcription (every 20 sec)?
@@ -1004,8 +1009,8 @@ class App(ctk.CTk):
                                     pause_str = ' ' + t('pause_minutes', minutes=round(pause_len/60))
                                 else: # > 10 sec < 1 min
                                     pause_str = ' ' + t('pause_seconds', seconds=pause_len)
-                            else: # < 10 sec, note one point per second
-                                pause_str = ' (' + ('.'*pause_len) + ')'
+                            else: # < 10 sec, note one 'pause_marker' per second (default to a dot)
+                                pause_str = ' (' + (self.pause_marker * pause_len) + ')'
                             
                             orig_audio_start_pause = self.start + last_segment_end
                             orig_audio_end_pause = self.start + start
