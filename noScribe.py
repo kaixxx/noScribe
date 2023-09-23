@@ -124,8 +124,16 @@ if app_locale == 'auto': # read system locale settings
 i18n.set('fallback', 'en')
 i18n.set('locale', app_locale)
 
-# Check CPU capabilities and select the right version of whisper
+# determine optimal number of threads for faster-whisper (depending on cpu cores) 
 if platform.system() == 'Windows':
+    number_threads = cpufeature.CPUFeature["num_physical_cores"]
+elif platform.system() == "Darwin": # = MAC
+    number_threads = 4
+else:
+    raise Exception('Platform not supported yet.')
+
+# Check CPU capabilities and select the right version of whisper
+"""if platform.system() == 'Windows':
     if cpufeature.CPUFeature["AVX2"] == True and cpufeature.CPUFeature["OS_AVX"] == True:
         whisper_path = os.path.join(app_dir, "whisper_avx2")
     else:
@@ -139,7 +147,7 @@ elif platform.system() == "Darwin": # = MAC
         raise Exception('Could not detect Apple architecture.')
 else:
     raise Exception('Platform not supported yet.')
-
+"""
 # timestamp regex
 timestamp_re = re.compile('\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]')
 
@@ -525,6 +533,11 @@ class App(ctk.CTk):
                 return
 
             self.my_transcript_file = self.transcript_file
+            
+            # create log file
+            if not os.path.exists(f'{config_dir}/log'):
+                os.makedirs(f'{config_dir}/log')
+            self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
 
             val = self.entry_start.get()
             if val == '':
@@ -548,7 +561,7 @@ class App(ctk.CTk):
                     self.whisper_model = config['model_path_fast']
                 """
             else:
-                self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-large-v2')
+                self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-large-v2') # 'faster-whisper-large-v2-int8')
                 """
                 try:
                     self.whisper_model = config['model_path_precise']
@@ -612,10 +625,27 @@ class App(ctk.CTk):
                         config['macos_xpu'] = 'cpu'
                         self.macos_xpu = 'cpu'
 
-            # create log file
-            if not os.path.exists(f'{config_dir}/log'):
-                os.makedirs(f'{config_dir}/log')
-            self.log_file = open(f'{config_dir}/log/{Path(self.audio_file).stem}.log', 'w', encoding="utf-8")
+            # options for faster-whisper
+            try:
+                self.faster_whisper_beam_size = config['faster_whisper_beam_size']
+            except:
+                config['faster_whisper_beam_size'] = 1
+                self.faster_whisper_beam_size = 1
+            self.logn(f'faster-whisper beam size: {self.faster_whisper_beam_size}', where='file')
+
+            try:
+                self.faster_whisper_temperature = config['faster_whisper_temperature']
+            except:
+                config['faster_whisper_temperature'] = 0.0
+                self.faster_whisper_temperature = 0.0
+            self.logn(f'faster-whisper temperature: {self.faster_whisper_temperature}', where='file')
+
+            try:
+                self.faster_whisper_compute_type = config['faster_whisper_compute_type']
+            except:
+                config['faster_whisper_compute_type'] = 'float32'
+                self.faster_whisper_compute_type = 'float32'
+            self.logn(f'faster-whisper compute type: {self.faster_whisper_compute_type}', where='file')
 
             # log CPU capabilities
             self.logn("=== CPU FEATURES ===", where="file")
@@ -945,7 +975,11 @@ class App(ctk.CTk):
                 try:
                     from faster_whisper import WhisperModel
                     # model = WhisperModel(self.whisper_model, device="auto", compute_type="auto", local_files_only=True)
-                    model = WhisperModel(self.whisper_model, device="cpu", cpu_threads=4, compute_type="int8", local_files_only=True)
+                    model = WhisperModel(self.whisper_model, 
+                                         device="auto", 
+                                         cpu_threads=number_threads, 
+                                         compute_type=self.faster_whisper_compute_type, 
+                                         local_files_only=True)
 
                     # self.logn(t('vad'))
                     if self.cancel:
@@ -973,7 +1007,9 @@ class App(ctk.CTk):
                     """
                     segments, info = model.transcribe(
                         self.tmp_audio_file, language=whisper_lang, 
-                        beam_size=1, temperature=0, word_timestamps=True, 
+                        beam_size=self.faster_whisper_beam_size, 
+                        temperature=self.faster_whisper_temperature, 
+                        word_timestamps=True, 
                         initial_prompt=self.prompt, vad_filter=False)
 
                     if self.language == "auto":
