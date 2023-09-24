@@ -624,6 +624,8 @@ class App(ctk.CTk):
                     except:
                         config['macos_xpu'] = 'cpu'
                         self.macos_xpu = 'cpu'
+            else:
+                self.macos_xpu = 'cpu' # use cpu on any other platform for now (could potentially also be "cuda" if available)
 
             # options for faster-whisper
             try:
@@ -753,21 +755,21 @@ class App(ctk.CTk):
                     segment_len = 0
                     is_parallel = False
                     
-                    for segment, _, label in diarization.itertracks(yield_label=True):
-                        t = overlap_len(int(segment.start * 1000), int((segment.start + segment.duration) * 1000), transcript_start, transcript_end)
+                    for segment in diarization:
+                        t = overlap_len(segment["start"], segment["end"], transcript_start, transcript_end)
                         if t == -1: # we are already after transcript_end
                             break
                         else:
                             if overlap_found >= overlap_threshold: # we already found a fitting segment, compare length now
-                                if (t >= overlap_threshold) and (segment.duration * 1000 < segment_len): # found a shorter (= better fitting) segment that also overlaps well
+                                if (t >= overlap_threshold) and ((segment["end"] - segment["start"]) < segment_len): # found a shorter (= better fitting) segment that also overlaps well
                                     is_parallel = True
                                     overlap_found = t
-                                    segment_len = segment.duration * 1000
-                                    spkr = f'S{label[8:]}' # shorten the label: "SPEAKER_01" > "S01"
+                                    segment_len = segment["end"] - segment["start"]
+                                    spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
                             elif t > overlap_found: # no segment with good overlap jet, take this if the overlap is better then previously found 
                                 overlap_found = t
-                                segment_len = segment.duration * 1000
-                                spkr = f'S{label[8:]}' # shorten the label: "SPEAKER_01" > "S01"
+                                segment_len = segment["end"] - segment["start"]
+                                spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
 
                     if self.parallel and is_parallel:
                         return f"//{spkr}"
@@ -820,51 +822,56 @@ class App(ctk.CTk):
                 # Start Diarization:
 
                 if self.speaker_detection == 'auto':
-                    try: 
-                        with redirect_stderr(StringIO()) as f:
-                            self.logn()
-                            self.logn(t('start_identifiying_speakers'), 'highlight')
-                            self.logn(t('loading_pyannote'))
-                            import torch
-                            from pyannote.audio import Pipeline # import only on demand because this library is huge
-                            self.set_progress(1, 100)
+                    try:
+                        self.logn()
+                        self.logn(t('start_identifiying_speakers'), 'highlight')
+                        self.logn(t('loading_pyannote'))
+                        self.set_progress(1, 100)
 
-                            if platform.system() == 'Windows':
-                                pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'models', 'pyannote_config.yaml'))
-                            elif platform.system() == "Darwin": # = MAC
-                                with open(os.path.join(app_dir, 'models', 'pyannote_config.yaml'), 'r') as yaml_file:
-                                    pyannote_config = yaml.safe_load(yaml_file)
+                        diarize_output = tmpdir.name + '/' + 'diarize_out.yaml'
+                        diarize_abspath = os.path.join(app_dir, 'diarize.py')
+                        diarize_cmd = f'python {diarize_abspath} {self.macos_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
+                        print(diarize_cmd)
+                        
+                        if platform.system() == 'Windows':
+                            # (supresses the terminal, see: https://stackoverflow.com/questions/1813872/running-a-process-in-pythonw-with-popen-without-a-console)
+                            startupinfo = STARTUPINFO()
+                            startupinfo.dwFlags |= STARTF_USESHOWWINDOW
+                        elif platform.system() == 'Darwin': # = MAC
+                            diarize_cmd = shlex.split(diarize_cmd)
+                            startupinfo = None
+                        else:
+                            raise Exception('Platform not supported yet.')
 
-                                pyannote_config['pipeline']['params']['embedding'] = os.path.join(app_dir, *pyannote_config['pipeline']['params']['embedding'].split("/")[1:])
-                                pyannote_config['pipeline']['params']['segmentation'] = os.path.join(app_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/")[1:])
+                        with Popen(diarize_cmd, stdout=PIPE, stderr=STDOUT, encoding='UTF-8', startupinfo=startupinfo, close_fds=True) as pyannote_proc:
+                            for line in pyannote_proc.stdout:
+                                print(line)
+                                if line.startswith('progress '):
+                                    progress = line.split()
+                                    step_name = progress[1]
+                                    progress_percent = int(progress[2])
+                                    self.logr(f'{step_name}: {progress_percent}%')                       
+                                    if step_name == 'segmentation':
+                                        self.set_progress(2, progress_percent * 0.3)
+                                    elif step_name == 'embeddings':
+                                        self.set_progress(2, 30 + (progress_percent * 0.7))
+                                elif line.startswith('error '):
+                                    self.logn('PyAnnote error: ' + line[5:], 'error')
+                        
+                        if pyannote_proc.returncode > 0:
+                            raise Exception('')
+                       
+                        # load diarization results
+                        with open(diarize_output, 'r') as file:
+                            diarization = yaml.safe_load(file)
 
-                                with open(os.path.join(app_dir, 'models', 'pyannote_config_macOS.yaml'), 'w') as yaml_file:
-                                    yaml.safe_dump(pyannote_config, yaml_file)
-
-                                pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'models', 'pyannote_config_macOS.yaml'))
-                                # if platform.machine() == "arm64": # Intel should also support MPS
-                                if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
-                                    pipeline.to(torch.device(self.macos_xpu))
-                            else:
-                                raise Exception('Platform not supported yet.')
-                            self.logn()
-                            with SimpleProgressHook(parent=self) as hook:
-                                diarization = pipeline(self.tmp_audio_file, hook=hook) # apply the pipeline to the audio file
-
-                            # write segments to log file 
-                            for segment, _, label in diarization.itertracks(yield_label=True):
-                                line = (
-                                    f'{int(segment.start * 1000)} {int((segment.start + segment.duration) * 1000)} {label}\n'
-                                )
-                                self.log(line, where='file')
-                                
-                            self.logn()
+                        # write segments to log file 
+                        for segment in diarization:
+                            line = f'{segment["start"]} {segment["end"]} {segment["label"]}'
+                            self.log(line, where='file')
                             
-                            # read stderr and log it:
-                            err = f.readline()
-                            while err != '':
-                                self.logn(err, 'error')
-                                err = f.readline()
+                        self.logn()
+                        
                     except Exception as e:
                         self.logn(t('err_identifying_speakers'), 'error')
                         self.logn(e, 'error')
