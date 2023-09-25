@@ -31,7 +31,6 @@ from subprocess import run, call, Popen, PIPE, STDOUT
 if platform.system() == 'Windows':
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
 import re
-# from pyannote.audio import Pipeline (> imported on demand below)
 if platform.system() == "Darwin": # = MAC
     if platform.machine() == "x86_64":
         os.environ['KMP_DUPLICATE_LIB_OK']='True' # prevent OMP: Error #15: Initializing libomp.dylib, but found libiomp5.dylib already initialized.
@@ -39,18 +38,11 @@ if platform.system() == "Darwin": # = MAC
     if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
 import AdvancedHTMLParser
-from typing import Any, Mapping, Optional, Text
-import sys
-from itertools import islice
 from threading import Thread
 import time
-from queue import Queue, Empty
 from tempfile import TemporaryDirectory
 import datetime
-from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
-from io import StringIO
-from elevate import elevate
 if platform.system() == 'Windows':
     import cpufeature
 if platform.system() == "Darwin": # = MAC
@@ -132,22 +124,6 @@ elif platform.system() == "Darwin": # = MAC
 else:
     raise Exception('Platform not supported yet.')
 
-# Check CPU capabilities and select the right version of whisper
-"""if platform.system() == 'Windows':
-    if cpufeature.CPUFeature["AVX2"] == True and cpufeature.CPUFeature["OS_AVX"] == True:
-        whisper_path = os.path.join(app_dir, "whisper_avx2")
-    else:
-        whisper_path = os.path.join(app_dir, "whisper_sse2")
-elif platform.system() == "Darwin": # = MAC
-    if platform.machine() == "arm64":
-        whisper_path = os.path.join(app_dir, "whisper_mac_arm64")
-    elif platform.machine() == "x86_64":
-        whisper_path = os.path.join(app_dir, "whisper_mac_x86_64")
-    else:
-        raise Exception('Could not detect Apple architecture.')
-else:
-    raise Exception('Platform not supported yet.')
-"""
 # timestamp regex
 timestamp_re = re.compile('\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]')
 
@@ -168,7 +144,6 @@ def iter_except(function, exception):
                 yield function()
         except exception:
             return
-
 
 class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format hh:mm:ss
                                # based on https://stackoverflow.com/questions/63622880/how-to-make-python-automatically-put-colon-in-the-format-of-time-hhmmss
@@ -404,30 +379,6 @@ class App(ctk.CTk):
         # p = Popen(["C"], stdin=PIPE, stdout=PIPE, stderr=PIPE, **kwargs)
         p = Popen([program, file], **kwargs)
         # assert not p.poll()
-        
-        """
-        Alternative possibility (file not implemented yet)
-        Source: Source: https://stackoverflow.com/questions/13078071/start-another-program-from-python-separately/13078786#13078786
-        Run program as if it had been double-clicked in Finder, Explorer,
-        Nautilus, etc. On OS X, the program should be a .app bundle, not a
-        UNIX executable. When used with a URL, a non-executable file, etc.,
-        the behavior is implementation-defined.
-        
-        Returns something false (0 or None) on success; returns something
-        True (e.g., an error code from open or xdg-open) or throws on failure.
-        However, note that in some cases the command may succeed without
-        actually launching the targeted program.#
-        """
-        
-        """
-        if sys.platform == 'darwin':
-            ret = call(['open', program])
-        elif sys.platform.startswith('win'):
-            ret = os.startfile(os.path.normpath(program))
-        else:
-            ret = call(['xdg-open', program])
-        return ret
-        """
     
     def openLink(self, link):
         if link.startswith('file://') and link.endswith('.html'):
@@ -553,22 +504,8 @@ class App(ctk.CTk):
             
             if self.option_menu_quality.get() == 'fast':
                 self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-small')
-                """
-                try:
-                    self.whisper_model = config['model_path_fast']
-                except:
-                    config['model_path_fast'] = os.path.join(app_dir, 'models', 'faster-whisper-small')
-                    self.whisper_model = config['model_path_fast']
-                """
             else:
-                self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-large-v2') # 'faster-whisper-large-v2-int8')
-                """
-                try:
-                    self.whisper_model = config['model_path_precise']
-                except:
-                    config['model_path_precise'] = os.path.join(app_dir, 'models', 'faster-whisper-large-v2')
-                    self.whisper_model = config['model_path_precise']
-                """
+                self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-large-v2')
 
             self.prompt = ''
             try:
@@ -776,49 +713,6 @@ class App(ctk.CTk):
                     else:
                         return spkr
 
-                class SimpleProgressHook:
-                    #Hook to show progress of each internal step
-                    def __init__(self, parent, transient: bool = False):
-                        super().__init__()
-                        self.parent = parent
-                        self.transient = transient
-
-                    def __enter__(self):
-                        self.progress = 0
-                        return self
-
-                    def __exit__(self, *args):
-                        pass
-                        # self.parent.logn() # print the final new line
-
-                    def __call__(
-                        self,
-                        step_name: Text,
-                        step_artifact: Any,
-                        file: Optional[Mapping] = None,
-                        total: Optional[int] = None,
-                        completed: Optional[int] = None,
-                    ):        
-                        # check for unser cancelation
-                        if self.parent.cancel == True:
-                            raise Exception(t('err_user_cancelation')) 
-                        
-                        if completed is None:
-                            completed = total = 1
-
-                        if not hasattr(self, 'step_name') or step_name != self.step_name:
-                            self.step_name = step_name
-                        
-                        progress_percent = int(completed/total*100)
-                        self.parent.logr(f'{step_name}: {progress_percent}%')
-                        
-                        if self.step_name == 'segmentation':
-                            self.parent.set_progress(2, progress_percent * 0.3)
-                        elif self.step_name == 'embeddings':
-                            self.parent.set_progress(2, 30 + (progress_percent * 0.7))
-                        
-                        self.parent.update()
-
                 # Start Diarization:
 
                 if self.speaker_detection == 'auto':
@@ -884,35 +778,6 @@ class App(ctk.CTk):
                 self.logn(t('start_transcription'), 'highlight')
                 self.logn(t('loading_whisper'))
                                
-                # whisper options:
-                """
-                try:
-                    # max segement length. Shorter segments can improve speaker identification.
-                    self.whisper_options = f"--max-len {config['whisper_options_max-len']}" 
-                except:
-                    config['whisper_options_max-len'] = '30'
-                    self.whisper_options = "--max-len 30"
-                
-                # "whisper_extra_commands" can be defined in config.yml and will be attached to the end of the command line. 
-                # Use this to experiment with advanced options.
-                # see https://github.com/ggerganov/whisper.cpp/tree/master/examples/main for a list of options
-                # Be careful: If your options change the output of main.exe in the terminal, noScribe might not be able to interpret this and fail badly...
-
-                try:
-                    self.whisper_extra_commands = config['whisper_extra_commands']
-                    if self.whisper_extra_commands == None:
-                        self.whisper_extra_commands = ''
-                except:
-                    config['whisper_extra_commands'] = ''
-                    self.whisper_extra_commands = ''
-                
-                command = f'{whisper_path}/main --model {self.whisper_model} --language {self.language} {self.prompt_cmd} {self.whisper_options} --print-colors --print-progress --file "{self.tmp_audio_file}" {self.whisper_extra_commands}'
-                if platform.system() == "Darwin":  # = MAC
-                    command = shlex.split(command)
-                self.logn(command, where='file')
-
-                """
-
                 # prepare transcript html
                 d = AdvancedHTMLParser.AdvancedHTMLParser()
                 d.parseStr(default_html)                
