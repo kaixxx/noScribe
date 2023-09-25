@@ -492,6 +492,47 @@ class App(ctk.CTk):
                 os.makedirs(f'{config_dir}/log')
             self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
 
+            # options for faster-whisper
+            try:
+                self.whisper_precise_beam_size = config['whisper_precise_beam_size']
+            except:
+                config['whisper_precise_beam_size'] = 1
+                self.whisper_precise_beam_size = 1
+            self.logn(f'whisper precise beam size: {self.whisper_precise_beam_size}', where='file')
+            try:
+                self.whisper_fast_beam_size = config['whisper_fast_beam_size']
+            except:
+                config['whisper_fast_beam_size'] = 1
+                self.whisper_fast_beam_size = 1
+            self.logn(f'whisper fast beam size: {self.whisper_fast_beam_size}', where='file')
+
+            try:
+                self.whisper_precise_temperature = config['whisper_precise_temperature']
+            except:
+                config['whisper_precise_temperature'] = 0.0
+                self.whisper_precise_temperature = 0.0
+            self.logn(f'whisper precise temperature: {self.whisper_precise_temperature}', where='file')
+            try:
+                self.whisper_fast_temperature = config['whisper_fast_temperature']
+            except:
+                config['whisper_fast_temperature'] = 0.0
+                self.whisper_fast_temperature = 0.0
+            self.logn(f'whisper fast temperature: {self.whisper_fast_temperature}', where='file')
+
+            try:
+                self.whisper_precise_compute_type = config['whisper_precise_compute_type']
+            except:
+                config['whisper_precise_compute_type'] = 'float32'
+                self.whisper_precise_compute_type = 'float32'
+            self.logn(f'whisper precise compute type: {self.whisper_precise_compute_type}', where='file')
+            try:
+                self.whisper_fast_compute_type = config['whisper_fast_compute_type']
+            except:
+                config['whisper_fast_compute_type'] = 'int8'
+                self.whisper_fast_compute_type = 'int8'
+            self.logn(f'whisper fast compute type: {self.whisper_fast_compute_type}', where='file')
+
+            # get UI settings
             val = self.entry_start.get()
             if val == '':
                 self.start = 0
@@ -506,8 +547,14 @@ class App(ctk.CTk):
             
             if self.option_menu_quality.get() == 'fast':
                 self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-small')
+                self.whisper_beam_size = self.whisper_fast_beam_size
+                self.whisper_temperature = self.whisper_fast_temperature
+                self.whisper_compute_type = self.whisper_fast_compute_type
             else:
                 self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-large-v2')
+                self.whisper_beam_size = self.whisper_precise_beam_size
+                self.whisper_temperature = self.whisper_precise_temperature
+                self.whisper_compute_type = self.whisper_precise_compute_type
 
             self.prompt = ''
             try:
@@ -565,28 +612,6 @@ class App(ctk.CTk):
                         self.macos_xpu = 'cpu'
             else:
                 self.macos_xpu = 'cpu' # use cpu on any other platform for now (could potentially also be "cuda" if available)
-
-            # options for faster-whisper
-            try:
-                self.faster_whisper_beam_size = config['faster_whisper_beam_size']
-            except:
-                config['faster_whisper_beam_size'] = 1
-                self.faster_whisper_beam_size = 1
-            self.logn(f'faster-whisper beam size: {self.faster_whisper_beam_size}', where='file')
-
-            try:
-                self.faster_whisper_temperature = config['faster_whisper_temperature']
-            except:
-                config['faster_whisper_temperature'] = 0.0
-                self.faster_whisper_temperature = 0.0
-            self.logn(f'faster-whisper temperature: {self.faster_whisper_temperature}', where='file')
-
-            try:
-                self.faster_whisper_compute_type = config['faster_whisper_compute_type']
-            except:
-                config['faster_whisper_compute_type'] = 'float32'
-                self.faster_whisper_compute_type = 'float32'
-            self.logn(f'faster-whisper compute type: {self.faster_whisper_compute_type}', where='file')
 
             # log CPU capabilities
             self.logn("=== CPU FEATURES ===", where="file")
@@ -852,7 +877,7 @@ class App(ctk.CTk):
                     model = WhisperModel(self.whisper_model, 
                                          device="auto", 
                                          cpu_threads=number_threads, 
-                                         compute_type=self.faster_whisper_compute_type, 
+                                         compute_type=self.whisper_compute_type, 
                                          local_files_only=True)
 
                     # self.logn(t('vad'))
@@ -881,8 +906,8 @@ class App(ctk.CTk):
                     """
                     segments, info = model.transcribe(
                         self.tmp_audio_file, language=whisper_lang, 
-                        beam_size=self.faster_whisper_beam_size, 
-                        temperature=self.faster_whisper_temperature, 
+                        beam_size=self.whisper_beam_size, 
+                        temperature=self.whisper_temperature, 
                         word_timestamps=True, 
                         initial_prompt=self.prompt, vad_filter=False)
 
