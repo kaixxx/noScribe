@@ -86,6 +86,8 @@ if not os.path.exists(config_dir):
 try:
     with open(f'{config_dir}/config.yml', 'r') as file:
         config = yaml.safe_load(file)
+        if not config:
+            raise # config file is empty (None)        
 except: # seems we run it for the first time and there is no config file
     config = {}
 
