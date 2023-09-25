@@ -1,3 +1,4 @@
+# install with PYINSTALLER_COMPILE_BOOTLOADER=1 pip install -r
 customtkinter
 Pillow
 PyYAML
