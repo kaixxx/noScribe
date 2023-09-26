@@ -70,7 +70,7 @@ class SimpleProgressHook:
         progress_percent = int(completed/total*100)
         if progress_percent > 100:
             progress_percent = 100
-        print(f'progress {step_name} {progress_percent}')
+        print(f'progress {step_name} {progress_percent}', flush=True)
         
 # Start Diarization:
 
