@@ -53,7 +53,7 @@ import logging
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.3'
+app_version = '0.4'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
@@ -90,6 +90,8 @@ try:
             raise # config file is empty (None)        
 except: # seems we run it for the first time and there is no config file
     config = {}
+    
+config['app_version'] = app_version
 
 def save_config():
     with open(f'{config_dir}/config.yml', 'w') as file:
