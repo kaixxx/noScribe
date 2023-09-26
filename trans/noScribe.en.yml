@@ -7,7 +7,7 @@ en:
     
     ported to macOS by Philipp Schneider
     
-    powered by Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) & pyannote (Hervé Bredin)
+    powered by Whisper (OpenAI), faster-whisper (Guillaume Klein) & pyannote (Hervé Bredin)
   welcome_instructions: >
 
     Use the buttons on the left to select an audio file and a filename for your finished transcript (MS Word-Format).
@@ -49,7 +49,7 @@ en:
   loading_pyannote: 'Loading pyannote'
   start_canceling: 'Canceling... (please wait a second)'
   start_transcription: 'Transcription...'
-  loading_whisper: 'Loading whisper.cpp'
+  loading_whisper: 'Loading whisper'
   vad: 'Voice activity detection...'
 
   transcription_finished: 'Transcription finished.' 

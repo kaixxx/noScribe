@@ -7,7 +7,7 @@ de:
     
     portiert nach macOS von Philipp Schneider
     
-    powered by Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) & pyannote (Hervé Bredin)
+    powered by Whisper (OpenAI), faster-whisper (Guillaume Klein) & pyannote (Hervé Bredin)
   welcome_instructions: >
 
     Bitte wähle links eine Audiodatei und den Dateinamen, unter dem das fertige Transkript gespeichert werden
@@ -33,6 +33,8 @@ de:
   label_language: 'Sprache:'
   label_speaker: 'Sprecher:in erkennen:'
   label_quality: 'Qualität:'
+  label_parallel: 'Paralleles Sprechen:'
+  label_pause: 'Pausen markieren:'
   
   start_button: Start
   stop_button: Abbruch
@@ -46,7 +48,7 @@ de:
   loading_pyannote: 'Lade pyannote'
   start_canceling: 'Abbruch läuft...'
   start_transcription: 'Transkription...'
-  loading_whisper: 'Lade whisper.cpp'
+  loading_whisper: 'Lade whisper'
   transcription_finished: 'Transkription beendet.' 
   transcription_saved: 'Gespeichert unter: '
   trancription_time: 'Dauer: %{duration} Minuten'
@@ -70,3 +72,5 @@ de:
   # Doc contents
   doc_header: 'Transkribiert mit noScribe Vers. %{version}'
   doc_header_audio: 'Audiodatei: %{file}'
+  pause_minutes: '(%{minutes} Minute[n] Pause)'
+  pause_seconds: '(%{seconds} Sekunden Pause)'

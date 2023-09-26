@@ -5,9 +5,9 @@ ru:
     
     Версия %{v}, Kai Dröge 2023
     
-    ported to macOS by Philipp Schneider
+    портирована на macOS компанией Philipp Schneider
     
-    Работает на базе Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) и pyannote (Hervé Bredin)
+    Работает на базе Whisper (OpenAI), faster-whisper (Guillaume Klein) и pyannote (Hervé Bredin)
   welcome_instructions: >
 
     Используйте кнопки слева для выбора аудиофайла и имени файла для готовой транскрипции (в формате MS Word).
@@ -33,6 +33,8 @@ ru:
   label_language: 'Язык:'
   label_speaker: 'Определение диктора:'
   label_quality: 'Качество:'
+  label_parallel: 'Параллельная речь:'
+  label_pause: 'Отметьте паузы:'
   
   start_button: Старт 
   stop_button: Отмена
@@ -46,7 +48,7 @@ ru:
   loading_pyannote: 'Загрузка pyannote'
   start_canceling: 'Отмена... (пожалуйста, подождите)'
   start_transcription: 'Транскрибация...'
-  loading_whisper: 'Загрузка whisper.cpp'
+  loading_whisper: 'Загрузка whisper'
   transcription_finished: 'Транскрибация завершена.' 
   transcription_saved: 'Сохранено в '
   trancription_time: 'Продолжительность: %{duration} минут'
@@ -70,3 +72,5 @@ ru:
   # Содержимое документа
   doc_header: 'Транскрибировано с помощью noScribe версии %{version}'
   doc_header_audio: 'Аудиофайл: %{file}'
+  pause_minutes: '(%{minutes} минуты паузы)'
+  pause_seconds: '(%{seconds} секунд паузы)'

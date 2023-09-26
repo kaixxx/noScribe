@@ -117,6 +117,7 @@ if app_locale == 'auto': # read system locale settings
         app_locale = 'en'
 i18n.set('fallback', 'en')
 i18n.set('locale', app_locale)
+config['locale'] = app_locale
 
 # determine optimal number of threads for faster-whisper (depending on cpu cores) 
 if platform.system() == 'Windows':
