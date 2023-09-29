@@ -23,3 +23,5 @@ models/whisper-small-swiss/
 stuff/
 output/
 for_noScribe/
+_internal
+diarize
