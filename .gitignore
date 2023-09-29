@@ -25,3 +25,5 @@ output/
 for_noScribe/
 _internal
 diarize
+diarize_arm64
+diarize_x86_64
