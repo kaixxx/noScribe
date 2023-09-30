@@ -765,8 +765,8 @@ class App(ctk.CTk):
                                 diarize_abspath = os.path.join(app_dir, 'diarize_arm64')
                                 diarize_cmd = f'{diarize_abspath} {self.macos_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
                             elif platform.machine() == "x86_64":
-                                diarize_abspath = os.path.join(app_dir, 'diarize.py')
-                                diarize_cmd = f'python {diarize_abspath} {self.macos_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
+                                diarize_abspath = os.path.join(app_dir, 'diarize_x86_64')
+                                diarize_cmd = f'{diarize_abspath} {self.macos_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
                         print(diarize_cmd)
                         
                         if platform.system() == 'Windows':

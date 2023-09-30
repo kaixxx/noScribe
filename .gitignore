@@ -27,3 +27,4 @@ _internal
 diarize
 diarize_arm64
 diarize_x86_64
+diarize_x86_64_signed
