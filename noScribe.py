@@ -820,6 +820,9 @@ class App(ctk.CTk):
 
                         with Popen(diarize_cmd, stdout=PIPE, stderr=STDOUT, encoding='UTF-8', startupinfo=startupinfo, close_fds=True) as pyannote_proc:
                             for line in pyannote_proc.stdout:
+                                if self.cancel:
+                                    pyannote_proc.kill()
+                                    raise Exception(t('err_user_cancelation')) 
                                 print(line)
                                 if line.startswith('progress '):
                                     progress = line.split()
