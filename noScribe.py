@@ -141,6 +141,15 @@ def millisec(timeStr): # convert 'hh:mm:ss' string to milliseconds
         return s
     except:
         raise Exception(t('err_invalid_time_string', time = timeStr))
+    
+def ms_to_str(t): # convert milliseconds to timestamp 'hh:mm:ss'
+         hh = t//(60*60*1000) # hours
+         t = t-hh*(60*60*1000)
+         mm = t//(60*1000) # minutes
+         t = t-mm*(60*1000)
+         ss = t//1000 # seconds
+         # sss = t-ss*1000 # milliseconds
+         return(f'{hh:02d}:{mm:02d}:{ss:02d}')
 
 def iter_except(function, exception):
         # Works like builtin 2-argument `iter()`, but stops on `exception`.
@@ -291,24 +300,13 @@ class App(ctk.CTk):
             self.option_menu_quality.set(config['last_quality'])
         except:
             pass
-
-        # Speaker Detection (Diarization)
-        self.label_speaker = ctk.CTkLabel(self.frame_options, text=t('label_speaker'))
-        self.label_speaker.grid(column=0, row=4, sticky='w', pady=5)
-
-        self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=100, values=['auto', 'none'])
-        self.option_menu_speaker.grid(column=1, row=4, sticky='e', pady=5)
-        try:
-            self.option_menu_speaker.set(config['last_speaker'])
-        except:
-            pass
         
         # Mark pauses
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
-        self.label_pause.grid(column=0, row=5, sticky='w', pady=5)
+        self.label_pause.grid(column=0, row=4, sticky='w', pady=5)
 
         self.option_menu_pause = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', '1sec+', '2sec+', '3sec+'])
-        self.option_menu_pause.grid(column=1, row=5, sticky='e', pady=5)
+        self.option_menu_pause.grid(column=1, row=4, sticky='e', pady=5)
         try:
             val = config['last_pause']
             if val in self.option_menu_pause._values:
@@ -316,8 +314,19 @@ class App(ctk.CTk):
             else:
                 raise
         except:
-            self.option_menu_pause.set(self.option_menu_pause._values[1])
+            self.option_menu_pause.set(self.option_menu_pause._values[1])    
 
+        # Speaker Detection (Diarization)
+        self.label_speaker = ctk.CTkLabel(self.frame_options, text=t('label_speaker'))
+        self.label_speaker.grid(column=0, row=5, sticky='w', pady=5)
+
+        self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=100, values=['auto', 'none'])
+        self.option_menu_speaker.grid(column=1, row=5, sticky='e', pady=5)
+        try:
+            self.option_menu_speaker.set(config['last_speaker'])
+        except:
+            pass
+        
         # Parallel Speaking (Diarization)
         self.label_parallel = ctk.CTkLabel(self.frame_options, text=t('label_parallel'))
         self.label_parallel.grid(column=0, row=6, sticky='w', pady=5)
@@ -330,7 +339,21 @@ class App(ctk.CTk):
             else:
                 self.check_box_parallel.deselect()
         except:
-            self.check_box_parallel.select() # default to on        
+            self.check_box_parallel.select() # defaults to on
+
+        # Timestamps in text
+        self.label_timestamps = ctk.CTkLabel(self.frame_options, text=t('label_timestamps'))
+        self.label_timestamps.grid(column=0, row=7, sticky='w', pady=5)
+
+        self.check_box_timestamps = ctk.CTkCheckBox(self.frame_options, text = '')
+        self.check_box_timestamps.grid(column=1, row=7, sticky='e', pady=5)
+        try:
+            if config['last_timestamps']:
+                self.check_box_timestamps.select()
+            else:
+                self.check_box_timestamps.deselect()
+        except:
+            self.check_box_timestamps.deselect() # defaults to off
 
         # Start Button
         self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
@@ -534,6 +557,20 @@ class App(ctk.CTk):
                 config['whisper_fast_compute_type'] = 'int8'
                 self.whisper_fast_compute_type = 'int8'
             self.logn(f'whisper fast compute type: {self.whisper_fast_compute_type}', where='file')
+            
+            try:
+                self.timestamp_interval = config['timestamp_interval']
+            except:
+                config['timestamp_interval'] = 60000 # default: add a timestamps every minute
+                self.timestamp_interval = 60000
+            self.logn(f'timestamp_interval: {self.timestamp_interval}', where='file')
+            
+            try:
+                self.timestamp_color = config['timestamp_color']
+            except:
+                config['timestamp_color'] = '#78909C' # default: light gray/blue
+                self.timestamp_color = '#78909C'
+            self.logn(f'timestamp_color: {self.timestamp_color}', where='file')
 
             # get UI settings
             val = self.entry_start.get()
@@ -577,6 +614,8 @@ class App(ctk.CTk):
             self.speaker_detection = self.option_menu_speaker.get()
             
             self.parallel = self.check_box_parallel.get()
+            
+            self.timestamps = self.check_box_timestamps.get()
             
             self.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
             try:
@@ -929,11 +968,15 @@ class App(ctk.CTk):
                     if self.language == "auto":
                         self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
 
-                    self.logn(t('start_transcription'))
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
                     
+                    self.logn(t('start_transcription'))
+                    self.logn()
+                    
                     last_segment_end = 0
+                    last_timestamp_ms = 0
+                    first_segment = True
                     
                     for segment in segments:
                         # check for user cancelation
@@ -950,7 +993,14 @@ class App(ctk.CTk):
                         # get time of the segment in milliseconds
                         start = round(segment.start * 1000.0)
                         end = round(segment.end * 1000.0)
+                        # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestaps will not match the original audio:
+                        orig_audio_start = self.start + start
+                        orig_audio_end = self.start + end
                         
+                        if self.timestamps:
+                            ts = ms_to_str(orig_audio_start)
+                            ts = f'[{ts}]'
+
                         # check for pauses and mark them in the transcript
                         if (self.pause > 0) and (start - last_segment_end >= self.pause * 1000): # (more than x seconds with no speech)
                             pause_len = round((start - last_segment_end)/1000)
@@ -961,6 +1011,9 @@ class App(ctk.CTk):
                                     pause_str = ' ' + t('pause_seconds', seconds=pause_len)
                             else: # < 10 sec, note one 'pause_marker' per second (default to a dot)
                                 pause_str = ' (' + (self.pause_marker * pause_len) + ')'
+                                
+                            if first_segment:
+                                pause_str = pause_str.lstrip() + ' '
                             
                             orig_audio_start_pause = self.start + last_segment_end
                             orig_audio_end_pause = self.start + start
@@ -969,27 +1022,65 @@ class App(ctk.CTk):
                             a.appendText(pause_str)
                             p.appendChild(a)
                             self.log(pause_str)
+                            if first_segment:
+                                self.logn()
+                                self.logn()
                         last_segment_end = end
                                         
                         # write text to the doc
                         # diarization (speaker detection)?
-                        line = segment.text
+                        seg_text = segment.text
+                        seg_html = seg_text
                         
                         if self.speaker_detection == 'auto':
                             spkr = find_speaker(diarization, start, end)
-                            if (speaker != spkr) & (spkr != ''):
+                            if (speaker != spkr) & (spkr != ''): # speaker turn
                                 if spkr[:2] == '//': # is parallel speaking, create no new paragraph
                                     speaker = spkr
-                                    line = f' {speaker}:{line}'                                
+                                    seg_text = f' {speaker}:{seg_text}'
+                                    seg_html = seg_text                                
                                 elif speaker[:2] == '//': # previous was parallel speaking, mark the end
-                                    line = f'//{line}'
                                     speaker = spkr
+                                    seg_text = f'//{seg_text}'
+                                    seg_html = seg_text
                                 else:
-                                    speaker = spkr
-                                    self.logn()
                                     p = d.createElement('p')
                                     main_body.appendChild(p)
-                                    line = f'{speaker}:{line}'
+                                    if not first_segment:
+                                        self.logn()
+                                        self.logn()
+                                    speaker = spkr
+                                    # add timestamp
+                                    if self.timestamps:
+                                        seg_html = f'{speaker} <span style="color: {self.timestamp_color}" >{ts}</span>:{seg_text}'
+                                        seg_text = f'{speaker} {ts}:{seg_text}'
+                                        last_timestamp_ms = start
+                                    else: 
+                                        seg_text = f'{speaker}:{seg_text}'
+                                        seg_html = seg_text
+                            else: # same speaker
+                                if self.timestamps:
+                                    if (start - last_timestamp_ms) > self.timestamp_interval:
+                                        seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
+                                        seg_text = f' {ts}{seg_text}'
+                                        last_timestamp_ms = start
+                                    else:
+                                        seg_html = seg_text
+
+                        else: # no speaker detection
+                            if self.timestamps:
+                                if first_segment or (start - last_timestamp_ms) > self.timestamp_interval:
+                                    seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
+                                    seg_text = f' {ts}{seg_text}'
+                                    last_timestamp_ms = start
+                                else:
+                                    seg_html = seg_text
+                            else:
+                                seg_html = seg_text
+                            # avoid leading whitespace in first paragraph
+                            if first_segment:
+                                seg_text = seg_text.lstrip()
+                                seg_html = seg_html.lstrip()
 
                         # Mark confidence level (not implemented yet in html)
                         # cl_level = round((segment.avg_logprob + 1) * 10)
@@ -999,15 +1090,14 @@ class App(ctk.CTk):
 
                         # Create bookmark with audio timestamps start to end and add the current segment.
                         # This way, we can jump to the according audio position and play it later in the editor.
-                        # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestaps will not match the original audio:
-                        orig_audio_start = self.start + start
-                        orig_audio_end = self.start + end
                         a = d.createElement('a')
                         a.href = f'ts_{orig_audio_start}_{orig_audio_end}'
-                        a.appendText(line)
+                        a.appendInnerHTML(seg_html)
                         p.appendChild(a)
                         
-                        self.log(line)
+                        self.log(seg_text)
+                        
+                        first_segment = False
                                     
                         # auto save
                         if self.auto_save == True:
@@ -1079,8 +1169,10 @@ class App(ctk.CTk):
             config['last_language'] = self.option_menu_language.get()
             config['last_speaker'] = self.option_menu_speaker.get()
             config['last_quality'] = self.option_menu_quality.get()
-            config['last_parallel'] = self.check_box_parallel.get()
             config['last_pause'] = self.option_menu_pause.get()
+            config['last_parallel'] = self.check_box_parallel.get()
+            config['last_timestamps'] = self.check_box_timestamps.get()
+
             save_config()
         finally:
             self.destroy()

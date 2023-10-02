@@ -35,6 +35,7 @@ ru:
   label_quality: 'Качество:'
   label_parallel: 'Параллельная речь:'
   label_pause: 'Отметьте паузы:'
+  label_timestamps: 'Временные метки:'
   
   start_button: Старт 
   stop_button: Отмена

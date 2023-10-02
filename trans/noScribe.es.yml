@@ -34,6 +34,7 @@ es:
   label_quality: 'Calidad:'
   label_parallel: 'Habla en paralelo:'
   label_pause: 'Marca pausas:'
+  label_timestamps: 'Timestamps:'
   
   start_button: Iniciar 
   stop_button: Cancelar

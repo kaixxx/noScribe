@@ -35,6 +35,7 @@ ja:
   label_quality: '品質：'
   label_parallel: '平行して話す： '
   label_pause: 'マークはポーズをとる：'
+  label_timestamps: 'タイムスタンプ：'
   
   start_button: 開始 
   stop_button: キャンセル

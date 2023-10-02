@@ -34,6 +34,7 @@ zh-CN:
   label_quality: '质量：'
   label_parallel: '平行发言：'
   label_pause: '马克停顿了一下：'
+  label_timestamps: '时间戳：'
   
   start_button: 开始 
   stop_button: 取消

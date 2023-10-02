@@ -34,6 +34,7 @@ fr:
   label_quality: "Qualité :"
   label_parallel: 'Parler en parallèle :'
   label_pause: 'Marquer les pauses :'
+  label_timestamps: 'Horodatage :'
   
   start_button: "Démarrer"
   stop_button: "Annuler"
