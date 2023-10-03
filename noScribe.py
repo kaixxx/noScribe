@@ -1092,9 +1092,8 @@ class App(ctk.CTk):
 
                         # Create bookmark with audio timestamps start to end and add the current segment.
                         # This way, we can jump to the according audio position and play it later in the editor.
-                        a = d.createElement('a')
-                        a.href = f'ts_{orig_audio_start}_{orig_audio_end}'
-                        a.appendInnerHTML(seg_html)
+                        a_html = f'<a href="ts_{orig_audio_start}_{orig_audio_end}" >{seg_html}</a>'
+                        a = d.createElementFromHTML(a_html)
                         p.appendChild(a)
                         
                         self.log(seg_text)
