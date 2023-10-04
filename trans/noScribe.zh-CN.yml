@@ -10,7 +10,7 @@ zh-CN:
     由Whisper（OpenAI）、faster-whisper（Guillaume Klein）和pyannote（Hervé Bredin）驱动
   welcome_instructions: >
 
-    请使用左侧的按钮选择音频文件和完成转录的文件名（MS Word格式）。
+    请使用左侧的按钮选择音频文件和完成转录的文件名。
     请耐心等待。转录可能需要比音频文件长2至5倍的时间。在转录完整音频之前，请使用较短的部分测试您的设置。
     （开始 = 00:00:00，结束 = 00:03:00将转录前3分钟。）
 

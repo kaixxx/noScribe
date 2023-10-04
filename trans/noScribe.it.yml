@@ -10,7 +10,7 @@ it:
     Potenziato da Whisper (OpenAI), faster-whisper (Guillaume Klein) e pyannote (Hervé Bredin)
   welcome_instructions: >
 
-    Usa i pulsanti a sinistra per selezionare un file audio e un nome di file per la tua trascrizione finale (formato MS Word).
+    Usa i pulsanti a sinistra per selezionare un file audio e un nome di file per la tua trascrizione finale.
     Sii paziente. La trascrizione potrebbe richiedere da 2 a 5 volte più tempo rispetto al file audio. Prova le impostazioni 
     con una sezione più breve prima di trascrivere l'audio completo. (Inizio = 00.00.00 e Fine = 00.03.00 trascriveranno i primi 3 minuti.)   
 

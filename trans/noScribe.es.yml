@@ -10,7 +10,7 @@ es:
     impulsado por Whisper (OpenAI), faster-whisper (Guillaume Klein) y pyannote (Hervé Bredin)
   welcome_instructions: >
 
-    Usa los botones de la izquierda para seleccionar un archivo de audio y un nombre de archivo para tu transcripción finalizada (formato MS Word).
+    Usa los botones de la izquierda para seleccionar un archivo de audio y un nombre de archivo para tu transcripción finalizada.
     Por favor, ten paciencia. La transcripción puede llevar de 2 a 5 veces más tiempo que el archivo de audio. Prueba tus ajustes 
     con una sección más corta antes de transcribir el audio completo. (Inicio = 00:00:00 y Fin = 00:03:00 transcribirán los primeros 3 minutos.)   
 

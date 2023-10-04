@@ -10,7 +10,7 @@ en:
     powered by Whisper (OpenAI), faster-whisper (Guillaume Klein) & pyannote (Hervé Bredin)
   welcome_instructions: >
 
-    Use the buttons on the left to select an audio file and a filename for your finished transcript (MS Word-Format).
+    Use the buttons on the left to select an audio file and a filename for your finished transcript.
     Please be patient. The transcription may take 2 to 5 times as long as your audio file. Test your settings 
     with a shorter section before transcribing the full audio. (Start = 00.00.00 and Stop = 00.03.00 will 
     transcribe the first 3 minutes.)   
