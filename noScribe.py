@@ -507,6 +507,8 @@ class App(ctk.CTk):
      
         try:
             # collect all the options
+            option_info = ''
+            
             if self.audio_file == '':
                 self.logn(t('err_no_audio_file'), 'error')
                 tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
@@ -584,12 +586,14 @@ class App(ctk.CTk):
                 self.start = 0
             else:
                 self.start = millisec(val)
+                option_info += f'{t("label_start")} {val} | ' 
             
             val = self.entry_stop.get()
             if val == '':
                 self.stop = '0'
             else:
                 self.stop = millisec(val)
+                option_info += f'{t("label_stop")} {val} | '
             
             if self.option_menu_quality.get() == 'fast':
                 self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-small')
@@ -601,6 +605,7 @@ class App(ctk.CTk):
                 self.whisper_beam_size = self.whisper_precise_beam_size
                 self.whisper_temperature = self.whisper_precise_temperature
                 self.whisper_compute_type = self.whisper_precise_compute_type
+            option_info += f'{t("label_quality")} {self.option_menu_quality.get()} | '
 
             self.prompt = ''
             try:
@@ -616,14 +621,19 @@ class App(ctk.CTk):
                     self.prompt = prompts[self.language]
                 except:
                     self.prompt = ''
+            option_info += f'{t("label_language")} {self.language} | '
             
             self.speaker_detection = self.option_menu_speaker.get()
+            option_info += f'{t("label_speaker")} {self.speaker_detection} | '
             
             self.parallel = self.check_box_parallel.get()
+            option_info += f'{t("label_parallel")} {self.parallel} | '
             
             self.timestamps = self.check_box_timestamps.get()
+            option_info += f'{t("label_timestamps")} {self.timestamps} | '
             
             self.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
+            option_info += f'{t("label_pause")} {self.pause}'
             try:
                 self.pause_marker = config['pause_seconds_marker']
             except:
@@ -898,13 +908,22 @@ class App(ctk.CTk):
                 
                 # subheader
                 p = d.createElement('p')
-                p.setStyle('color', '#909090')
-                p.appendText(t('doc_header', version=app_version))
+                s = d.createElement('span')
+                s.setStyle('color', '#909090')
+                s.setStyle('font-size', '0.8em')
+                s.appendText(t('doc_header', version=app_version))
                 br = d.createElement('br')
-                p.appendChild(br)
-                p.appendText(t('doc_header_audio', file=self.audio_file))
-                main_body.appendChild(p)
+                s.appendChild(br)
                 
+                s.appendText(t('doc_header_audio', file=self.audio_file))
+                br = d.createElement('br')
+                s.appendChild(br)
+                
+                s.appendText(f'({option_info})')
+                
+                p.appendChild(s)
+                main_body.appendChild(p)
+                                
                 p = d.createElement('p')
                 main_body.appendChild(p)
                 speaker = ''

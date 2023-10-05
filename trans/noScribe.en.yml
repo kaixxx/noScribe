@@ -27,8 +27,8 @@ en:
   label_transcript_file: 'Save transcript as:'
   label_transcript_file_name: <select filename> 
 
-  label_start: 'Start (hh:mm:ss): '
-  label_stop: 'Stop (hh:mm:ss): ' 
+  label_start: 'Start (hh:mm:ss):'
+  label_stop: 'Stop (hh:mm:ss):' 
 
   label_language: 'Language:'
   label_speaker: 'Speaker detection:'
