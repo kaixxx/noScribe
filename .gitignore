@@ -28,4 +28,8 @@ _internal
 diarize
 diarize_arm64
 diarize_x86_64
-diarize_x86_64_signed
+diarize_x86_64_amia
+diarize_x86_64_gernophil
+diarize_x86_64_gernophil_unsigned
+diarize_x86_64_mod
+diarize_x86_64_mod_unsigned
