@@ -243,8 +243,11 @@ class App(ctk.CTk):
         self.frame_audio_file = ctk.CTkFrame(self.sidebar_frame, width=250, height=33, corner_radius=8, border_width=2)
         self.frame_audio_file.pack(padx=20, pady=[0,10], anchor='w')
         
-        self.label_audio_file_name = ctk.CTkLabel(self.frame_audio_file, width=200, corner_radius=8, anchor='w', text=t('label_audio_file_name'))
-        self.label_audio_file_name.place(x=3, y=3)
+        self.button_audio_file_name = ctk.CTkButton(self.frame_audio_file, width=200, corner_radius=8, bg_color='transparent', 
+                                                    fg_color='transparent', hover_color=self.frame_audio_file._bg_color, 
+                                                    border_width=0, anchor='w',  
+                                                    text=t('label_audio_file_name'), command=self.button_audio_file_event)
+        self.button_audio_file_name.place(x=3, y=3)
 
         self.button_audio_file = ctk.CTkButton(self.frame_audio_file, width=45, height=29, text='📂', command=self.button_audio_file_event)
         self.button_audio_file.place(x=203, y=2)
@@ -256,9 +259,12 @@ class App(ctk.CTk):
         self.frame_transcript_file = ctk.CTkFrame(self.sidebar_frame, width=250, height=33, corner_radius=8, border_width=2)
         self.frame_transcript_file.pack(padx=20, pady=[0,10], anchor='w')
         
-        self.label_transcript_file_name = ctk.CTkLabel(self.frame_transcript_file, width=200, corner_radius=8, anchor='w', text=t('label_transcript_file_name'))
-        self.label_transcript_file_name.place(x=3, y=3)
-
+        self.button_transcript_file_name = ctk.CTkButton(self.frame_transcript_file, width=200, corner_radius=8, bg_color='transparent', 
+                                                    fg_color='transparent', hover_color=self.frame_transcript_file._bg_color, 
+                                                    border_width=0, anchor='w',  
+                                                    text=t('label_transcript_file_name'), command=self.button_transcript_file_event)
+        self.button_transcript_file_name.place(x=3, y=3)
+        
         self.button_transcript_file = ctk.CTkButton(self.frame_transcript_file, width=45, height=29, text='📂', command=self.button_transcript_file_event)
         self.button_transcript_file.place(x=203, y=2)
 
@@ -451,18 +457,25 @@ class App(ctk.CTk):
             q.put(None)
 
     def button_audio_file_event(self):
-        fn = tk.filedialog.askopenfilename()
+        fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_file), initialfile=os.path.basename(self.audio_file))
         if fn != '':
             self.audio_file = fn
             self.logn(t('log_audio_file_selected') + self.audio_file)
-            self.label_audio_file_name.configure(text=os.path.basename(self.audio_file))
+            self.button_audio_file_name.configure(text=os.path.basename(self.audio_file))
 
     def button_transcript_file_event(self):
-        fn = tk.filedialog.asksaveasfilename(filetypes=[('noScribe Transcript','*.html')], defaultextension='html')
+        if self.transcript_file != '':
+            _initialdir = os.path.dirname(self.transcript_file)
+            _initialfile = os.path.basename(self.transcript_file)
+        else:
+            _initialdir = os.path.dirname(self.audio_file)
+            _initialfile = Path(os.path.basename(self.audio_file)).stem
+        fn = tk.filedialog.asksaveasfilename(initialdir=_initialdir, initialfile=_initialfile, 
+                                             filetypes=[('noScribe Transcript','*.html')], defaultextension='html')
         if fn != '':
             self.transcript_file = fn
             self.logn(t('log_transcript_filename') + self.transcript_file)
-            self.label_transcript_file_name.configure(text=os.path.basename(self.transcript_file))
+            self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_file))
     
     def set_progress(self, step, value):
         if step == 1:
