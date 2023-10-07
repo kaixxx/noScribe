@@ -828,7 +828,7 @@ class App(ctk.CTk):
                             diarize_cmd = f'{diarize_abspath} {self.macos_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
                         elif platform.system() == 'Darwin': # = MAC
                             # No check for arm64 or x86_64 necessary, since the correct version will be compiled and bundled
-                            diarize_abspath = os.path.join(app_dir, '..', 'MacOS','diarize')
+                            diarize_abspath = os.path.join(app_dir, '..', 'MacOS', 'diarize')
                             if not os.path.exists(diarize_abspath): # Run the compiled version of diarize if it exists, otherwise the python script:
                                 diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
                             diarize_cmd = f'{diarize_abspath} {self.macos_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
