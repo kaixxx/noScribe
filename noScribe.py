@@ -569,20 +569,20 @@ class App(ctk.CTk):
             try:
                 self.whisper_precise_compute_type = config['whisper_precise_compute_type']
             except:
-                config['whisper_precise_compute_type'] = 'float32'
-                self.whisper_precise_compute_type = 'float32'
+                config['whisper_precise_compute_type'] = 'default'
+                self.whisper_precise_compute_type = 'default'
             self.logn(f'whisper precise compute type: {self.whisper_precise_compute_type}', where='file')
             try:
                 self.whisper_fast_compute_type = config['whisper_fast_compute_type']
             except:
-                config['whisper_fast_compute_type'] = 'int8'
-                self.whisper_fast_compute_type = 'int8'
+                config['whisper_fast_compute_type'] = 'default'
+                self.whisper_fast_compute_type = 'default'
             self.logn(f'whisper fast compute type: {self.whisper_fast_compute_type}', where='file')
             
             try:
                 self.timestamp_interval = config['timestamp_interval']
             except:
-                config['timestamp_interval'] = 60000 # default: add a timestamps every minute
+                config['timestamp_interval'] = 60000 # default: add a timestamp every minute
                 self.timestamp_interval = 60000
             self.logn(f'timestamp_interval: {self.timestamp_interval}', where='file')
             
