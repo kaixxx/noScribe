@@ -448,8 +448,8 @@ class App(ctk.CTk):
     def logr(self, txt='', tags=[], where='both', link=''): # replace the last line of the log
         if where != 'file':
             self.log_textbox.configure(state=ctk.NORMAL)
-            self.log_textbox.delete('end-2l linestart', 'end-1l')
-        self.logn(txt, tags, where, link)
+            self.log_textbox.delete("end-1c linestart", "end-1c")
+        self.log(txt, tags, where, link)
         
     def reader_thread(self, q):
         try:
