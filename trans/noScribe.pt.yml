@@ -5,10 +5,12 @@ pt:
     
     Versão %{v}, Kai Dröge 2023
     
-    Desenvolvido por Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) e pyannote (Hervé Bredin)
+    adaptado para macOS por Philipp Schneider
+    
+    Desenvolvido por Whisper (OpenAI), faster-whisper (Guillaume Klein) e pyannote (Hervé Bredin)
   welcome_instructions: >
 
-    Use os botões à esquerda para selecionar um arquivo de áudio e um nome de arquivo para sua transcrição concluída (formato MS Word).
+    Use os botões à esquerda para selecionar um arquivo de áudio e um nome de arquivo para sua transcrição concluída.
     Por favor, tenha paciência. A transcrição pode levar de 2 a 5 vezes mais tempo que o arquivo de áudio. Teste suas configurações
     com uma seção mais curta antes de transcrever o áudio completo. (Início = 00.00.00 e Parar = 00.03.00 irão
     transcrever os primeiros 3 minutos.)   
@@ -31,6 +33,9 @@ pt:
   label_language: 'Idioma:'
   label_speaker: 'Detecção de alto-falante:'
   label_quality: 'Qualidade:'
+  label_parallel: 'Falar em paralelo:'
+  label_pause: 'Marcar pausas:'
+  label_timestamps: 'Registos temporais:'
   
   start_button: Iniciar 
   stop_button: Cancelar
@@ -44,7 +49,7 @@ pt:
   loading_pyannote: 'Carregando pyannote'
   start_canceling: 'Cancelando... (aguarde um segundo)'
   start_transcription: 'Transcrição...'
-  loading_whisper: 'Carregando whisper.cpp'
+  loading_whisper: 'Carregando whisper'
   transcription_finished: 'Transcrição concluída.' 
   transcription_saved: 'Salvo em '
   trancription_time: 'Duração: %{duration} minutos'
@@ -68,3 +73,5 @@ pt:
   # Conteúdo do documento
   doc_header: 'Transcrito com noScribe versão %{version}'
   doc_header_audio: 'Arquivo de áudio: %{file}'
+  pause_minutes: '(%{minutes} minuto[s] pausa)'
+  pause_seconds: '(%{seconds} segundos de pausa)'

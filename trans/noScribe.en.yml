@@ -5,10 +5,12 @@ en:
     
     Version %{v}, Kai Dröge 2023
     
-    powered by Whisper (OpenAI), Whisper.cpp (Georgi Gerganov) & pyannote (Hervé Bredin)
+    ported to macOS by Philipp Schneider
+    
+    powered by Whisper (OpenAI), faster-whisper (Guillaume Klein) & pyannote (Hervé Bredin)
   welcome_instructions: >
 
-    Use the buttons on the left to select an audio file and a filename for your finished transcript (MS Word-Format).
+    Use the buttons on the left to select an audio file and a filename for your finished transcript.
     Please be patient. The transcription may take 2 to 5 times as long as your audio file. Test your settings 
     with a shorter section before transcribing the full audio. (Start = 00.00.00 and Stop = 00.03.00 will 
     transcribe the first 3 minutes.)   
@@ -25,12 +27,16 @@ en:
   label_transcript_file: 'Save transcript as:'
   label_transcript_file_name: <select filename> 
 
-  label_start: 'Start (hh:mm:ss): '
-  label_stop: 'Stop (hh:mm:ss): ' 
+  label_start: 'Start (hh:mm:ss):'
+  label_stop: 'Stop (hh:mm:ss):' 
 
   label_language: 'Language:'
   label_speaker: 'Speaker detection:'
   label_quality: 'Quality:'
+  label_parallel: 'Parallel speaking:'
+  label_pause: 'Mark pause:'
+  label_timestamps: 'Timestamps:'
+  
   
   start_button: Start 
   stop_button: Cancel
@@ -44,7 +50,9 @@ en:
   loading_pyannote: 'Loading pyannote'
   start_canceling: 'Canceling... (please wait a second)'
   start_transcription: 'Transcription...'
-  loading_whisper: 'Loading whisper.cpp'
+  loading_whisper: 'Loading whisper'
+  vad: 'Voice activity detection...'
+
   transcription_finished: 'Transcription finished.' 
   transcription_saved: 'Saved to: '
   trancription_time: 'Duration: %{duration} minutes'
@@ -62,10 +70,12 @@ en:
   err_user_cancelation: 'Process has been canceled by the user.'
   err_whisper_main: Whisper.cpp main terminated with the error code %{e}
   err_transcription: 'Error in step 3 - transcription'
-  rescue_saving: 'Saving to the original filename failed. Saved instead in this file: %{file}'
+  rescue_saving: 'Saving to the original filename failed. Saved instead in this file: '
   rescue_saving_failed: 'Error: Saving to the original filename failed. The alternate filename also exists. I have to quit. (Make sure your transcript is not already opened in Word!)'
 
   # Doc contents
   doc_header: 'Transcribed with noScribe vers. %{version}'
   doc_header_audio: 'Audio file: %{file}'
+  pause_minutes: '(%{minutes} minute[s] pause)'
+  pause_seconds: '(%{seconds} seconds pause)'
                       

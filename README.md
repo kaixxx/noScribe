@@ -1,6 +1,11 @@
 ﻿# noScribe 
 ## Cutting Edge AI Technology for Automated Audio Transcription
-Download current release: **[Version 0.3](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3)** ([changelog](https://github.com/kaixxx/noScribe/blob/main/CHANGELOG.md))
+
+**Download** current release (0.3):\
+[Windows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows)\
+[macOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FmacOS) (alpha version, Apple silicon M1/M2 only, ported by [gernophil](https://github.com/gernophil))
+
+## What is noScribe?
 - noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html))
 - It runs locally on your computer. **No cloud, no worries**
 - Its main purpose is to **transcribe interviews** for qualitative research or journalistic use
@@ -14,11 +19,10 @@ Download current release: **[Version 0.3](https://drive.switch.ch/index.php/s/EI
 (The transcript is from [this interview](https://www.youtube.com/watch?v=vOwajAbvPzQ&t=2018s) I did in May 2022 with the Russian sociologist Natalia Savelyeva.)
 
 ## Limitations 
-- Windows only for now, sorry. Mac-support is planned.
+- noScribe needs a fairly up-to-date computer, or the transcription will take forever. (Consider letting it run over night on a slower machine.)
 - Since it uses sophisticated AI models, the download is quite large – about 3.7 GB
-- It needs a decent computer, or the transcription will take forever. (Consider letting it run over night on a slower machine.)
 - Poor audio quality will lead to poor transcription results. 
-- No automatic transcription is perfect, there will always be some manual revision necessary (see ["Factors Influencing the Quality"](#factors-influencing-the-quality-of-the-transcription) and ["Known Issues"](#known-issues) below). 
+- No automatic transcription is perfect, there will always be some manual revision necessary. Use the included Word-interface to check your transcripts thouroughly. (See also ["Factors Influencing the Quality"](#factors-influencing-the-quality-of-the-transcription) and ["Known Issues"](#known-issues) below.)
 
 ## Why the Name "noScribe"?
 The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) defines **scribe** as *"a person whose entire miserable existence has been reduced to academic grunge and pain".* I hope this software will make your academic life a little less painful and grungy, hence the name noScribe :)
@@ -28,7 +32,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 
 ## Usage
 ### Installation
-- **Download** the latest release from here: [noScript releases](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) (SWITCHdrive is a secure data sharing platform for Swiss universities)
+- **Download** the latest release for your operating system from here: [noScript releases](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) (SWITCHdrive is a secure data sharing platform for Swiss universities)
 - Start the downloaded setup file. This may take a while, be patient.
 
 ### Settings
@@ -88,10 +92,9 @@ The document produced by noScribe will contain some helpful macros to work with 
 - Your new language should be picked up automatically once you restart noScribe. You can also change your default language in the advanced settings (see above).
 
 ### MAC and LINUX support
-- I have designed noScribe with cross platform support in mind and tried to avoid using any windows-specific functions. But since I have no MAC or LINUX PC to develop and test on, I cannot go further with the implementation. 
-- If you have some experience developing software on MAC or LINUX, **I would really appreciate your help in making this app accessible on other platforms.** 
-- The first task would be to compile whisper.cpp for MAC/LINUX. For MAC, see the [instructions here](https://www.daginge.com/blog/running-whisper-on-an-m1-mac-to-transcribe-audio-data-locally).
-- If you make any changes to the code of noScribe.py, try not to break compatibility with windows. I would like to keep one single codebase for all platforms.
+- noScribe has been ported to macOS by [gernophil](https://github.com/gernophil): (https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FmacOS) (alpha version, Apple silicon M1/M2 only) 
+- A version for LINUX is in preparation.
+- If you make any changes to the code of noScribe.py, try not to break compatibility with other platforms. I would like to keep one single codebase for all platforms.
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).

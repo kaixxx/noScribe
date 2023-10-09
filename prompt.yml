@@ -2,5 +2,5 @@
 # see: https://platform.openai.com/docs/guides/speech-to-text/prompting
 # Do NOT put quotation marks (") inside your prompt!
 
-en: "Umm, let me think like, hmm... Okay, here's what I'm, like, thinking."
-de: "Also ja, äh, das ist... Es ist, ähm, nicht so einfach, weißt du?"
+en: "Umm, let me think like, hmm. Okay, here's what I'm, like, thinking."
+de: "Also ja, äh, das ist. Es ist, ähm, nicht so einfach, weißt du?"

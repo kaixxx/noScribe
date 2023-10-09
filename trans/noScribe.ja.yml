@@ -5,10 +5,12 @@ ja:
     
     バージョン %{v}、Kai Dröge 2023
     
-    Whisper (OpenAI)、Whisper.cpp (Georgi Gerganov) & pyannote (Hervé Bredin)によって提供されています
+    ported to macOS by Philipp Schneider
+    
+    Whisper (OpenAI)、faster-whisper (Guillaume Klein) & pyannote (Hervé Bredin)によって提供されています
   welcome_instructions: >
 
-    左側のボタンを使用して、音声ファイルと転写済みのトランスクリプトのファイル名（MS Word形式）を選択してください。
+    左側のボタンを使用して、音声ファイルと転写済みのトランスクリプトのファイル名を選択してください。
     転写には、音声ファイルの2〜5倍の時間がかかる場合がありますので、お待ちください。
     全音声を転写する前に、短いセクションで設定をテストしてください。
     （開始 = 00:00:00、終了 = 00:03:00は最初の3分間を転写します。）
@@ -31,6 +33,9 @@ ja:
   label_language: '言語：'
   label_speaker: '話者検出：'
   label_quality: '品質：'
+  label_parallel: '平行して話す： '
+  label_pause: 'マークはポーズをとる：'
+  label_timestamps: 'タイムスタンプ：'
   
   start_button: 開始 
   stop_button: キャンセル
@@ -44,7 +49,7 @@ ja:
   loading_pyannote: 'pyannoteの読み込み中'
   start_canceling: 'キャンセル中...（しばらくお待ちください）'
   start_transcription: '転写を開始中...'
-  loading_whisper: 'whisper.cppの読み込み中'
+  loading_whisper: 'whisperの読み込み中'
   transcription_finished: '転写が完了しました。' 
   transcription_saved: '' # %{file}に保存されました'
   trancription_time: '所要時間：%{duration}分'
@@ -68,3 +73,5 @@ ja:
   # ドキュメント内容
   doc_header: 'noScribe vers. %{version}で転写されました'
   doc_header_audio: '音声ファイル：%{file}'
+  pause_minutes: '(%{minutes}分[秒]休止)'
+  pause_seconds: '(%{seconds}秒休止)'

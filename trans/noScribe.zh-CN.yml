@@ -5,10 +5,12 @@ zh-CN:
 
     版本号：%{v}，Kai Dröge 2023
     
-    由Whisper（OpenAI）、Whisper.cpp（Georgi Gerganov）和pyannote（Hervé Bredin）驱动
+    由 Philipp Schneider 移植到 macOS
+    
+    由Whisper（OpenAI）、faster-whisper（Guillaume Klein）和pyannote（Hervé Bredin）驱动
   welcome_instructions: >
 
-    请使用左侧的按钮选择音频文件和完成转录的文件名（MS Word格式）。
+    请使用左侧的按钮选择音频文件和完成转录的文件名。
     请耐心等待。转录可能需要比音频文件长2至5倍的时间。在转录完整音频之前，请使用较短的部分测试您的设置。
     （开始 = 00:00:00，结束 = 00:03:00将转录前3分钟。）
 
@@ -30,6 +32,9 @@ zh-CN:
   label_language: '语言：'
   label_speaker: '说话人识别：'
   label_quality: '质量：'
+  label_parallel: '平行发言：'
+  label_pause: '马克停顿了一下：'
+  label_timestamps: '时间戳：'
   
   start_button: 开始 
   stop_button: 取消
@@ -43,7 +48,7 @@ zh-CN:
   loading_pyannote: '加载pyannote中'
   start_canceling: '正在取消...（请稍候）'
   start_transcription: '正在转录...'
-  loading_whisper: '加载whisper.cpp中'
+  loading_whisper: '加载whisper中'
   transcription_finished: '转录完成。' 
   transcription_saved: '已保存至'
   trancription_time: '时长：%{duration}分钟'
@@ -67,3 +72,5 @@ zh-CN:
   # 文档内容
   doc_header: '使用noScribe转录版本：%{version}'
   doc_header_audio: '音频文件：%{file}'
+  pause_minutes: '(%{minutes} 分钟 暂停)'
+  pause_seconds: '(%{seconds} 秒暂停)'

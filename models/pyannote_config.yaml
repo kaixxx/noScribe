@@ -4,7 +4,7 @@ pipeline:
     clustering: AgglomerativeClustering
     embedding: ./models/torch/pyannote/speechbrain
     embedding_batch_size: 32
-    embedding_exclude_overlap: true
+    embedding_exclude_overlap: False
     segmentation: ./models/pytorch_model.bin
     segmentation_batch_size: 32
 

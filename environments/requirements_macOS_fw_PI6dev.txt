@@ -1,0 +1,13 @@
+# install with PYINSTALLER_COMPILE_BOOTLOADER=1 pip install -r
+customtkinter
+Pillow
+PyYAML
+appdirs
+AdvancedHTMLParser
+elevate
+pyobjc
+python-i18n
+pyannote.audio @ git+https://github.com/kaixxx/pyannote-audio.git
+faster-whisper
+pyinstaller @ git+https://github.com/pyinstaller/pyinstaller.git@develop
+torchaudio==2.0.2
