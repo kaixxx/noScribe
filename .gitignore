@@ -1,11 +1,35 @@
 old/
 build/
+dist/
 src/
 __pycache__/
+.vscode/
+noScribeEdit/
 
 *.code-workspace
 auto-py-to-exe*.*
 
 ggml*.bin
 ROADMAP.md
+models/pyannote_config_macOS.yaml
+models/faster-whisper*/*.json
+models/faster-whisper*/*.bin
+models/faster-whisper*/vocabulary.txt
+models/faster-whisper*/.gitattributes.txt
+models/faster-whisper*/.gitattributes
+models/faster-whisper*/README.md
+models/whisper-small-swiss/
 
+.DS_Store
+stuff/
+output/
+for_noScribe/
+_internal
+diarize
+diarize_arm64
+diarize_x86_64
+diarize_x86_64_amia
+diarize_x86_64_gernophil
+diarize_x86_64_gernophil_unsigned
+diarize_x86_64_mod
+diarize_x86_64_mod_unsigned
