@@ -148,14 +148,17 @@ def millisec(timeStr): # convert 'hh:mm:ss' string to milliseconds
     except:
         raise Exception(t('err_invalid_time_string', time = timeStr))
     
-def ms_to_str(t): # convert milliseconds to timestamp 'hh:mm:ss'
-         hh = t//(60*60*1000) # hours
-         t = t-hh*(60*60*1000)
-         mm = t//(60*1000) # minutes
-         t = t-mm*(60*1000)
-         ss = t//1000 # seconds
-         # sss = t-ss*1000 # milliseconds
-         return(f'{hh:02d}:{mm:02d}:{ss:02d}')
+def ms_to_str(t, include_ms=False): # convert milliseconds to timestamp 'hh:mm:ss'
+    hh = t//(60*60*1000) # hours
+    t = t-hh*(60*60*1000)
+    mm = t//(60*1000) # minutes
+    t = t-mm*(60*1000)
+    ss = t//1000 # seconds
+    if include_ms:
+        sss = t-ss*1000 # milliseconds
+        return(f'{hh:02d}:{mm:02d}:{ss:02d}.{sss}')
+    else:
+        return(f'{hh:02d}:{mm:02d}:{ss:02d}')
 
 def iter_except(function, exception):
         # Works like builtin 2-argument `iter()`, but stops on `exception`.
@@ -871,8 +874,8 @@ class App(ctk.CTk):
 
                         # write segments to log file 
                         for segment in diarization:
-                            line = f'{segment["start"]} {segment["end"]} {segment["label"]}'
-                            self.log(line, where='file')
+                            line = f'{ms_to_str(self.start + segment["start"], include_ms=True)} - {ms_to_str(self.start + segment["end"], include_ms=True)} {segment["label"]}'
+                            self.logn(line, where='file')
                             
                         self.logn()
                         
@@ -937,8 +940,9 @@ class App(ctk.CTk):
                                 
                 p = d.createElement('p')
                 main_body.appendChild(p)
+
                 speaker = ''
-                bookmark_id = 0
+                prev_speaker = ''
                 self.last_auto_save = datetime.datetime.now()
 
                 def save_doc():
@@ -1071,23 +1075,31 @@ class App(ctk.CTk):
                         seg_html = seg_text
                         
                         if self.speaker_detection == 'auto':
-                            spkr = find_speaker(diarization, start, end)
-                            if (speaker != spkr) & (spkr != ''): # speaker turn
-                                if spkr[:2] == '//': # is parallel speaking, create no new paragraph
-                                    speaker = spkr
+                            new_speaker = find_speaker(diarization, start, end)
+                            if (speaker != new_speaker) & (new_speaker != ''): # speaker change
+                                if new_speaker[:2] == '//': # is parallel speaking, create no new paragraph
+                                    prev_speaker = speaker
+                                    speaker = new_speaker
                                     seg_text = f' {speaker}:{seg_text}'
                                     seg_html = seg_text                                
-                                elif speaker[:2] == '//': # previous was parallel speaking, mark the end
-                                    speaker = spkr
+                                elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was parallel speaking and we are returning to the previous speaker 
+                                    speaker = new_speaker
                                     seg_text = f'//{seg_text}'
                                     seg_html = seg_text
-                                else:
+                                else: # new speaker, not parallel
+                                    if speaker[:2] == '//': # was parallel speaking, mark the end
+                                        last_elem = p.lastElementChild
+                                        if last_elem:
+                                            last_elem.appendText('//')
+                                        else:
+                                            p.appendText('//')
+                                        self.log('//')
                                     p = d.createElement('p')
                                     main_body.appendChild(p)
                                     if not first_segment:
                                         self.logn()
                                         self.logn()
-                                    speaker = spkr
+                                    speaker = new_speaker
                                     # add timestamp
                                     if self.timestamps:
                                         seg_html = f'{speaker} <span style="color: {self.timestamp_color}" >{ts}</span>:{seg_text}'
