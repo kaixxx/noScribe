@@ -33,7 +33,7 @@ pt:
   label_language: 'Idioma:'
   label_speaker: 'Detecção de alto-falante:'
   label_quality: 'Qualidade:'
-  label_parallel: 'Falar em paralelo:'
+  label_overlapping: 'Sobreposição:'
   label_pause: 'Marcar pausas:'
   label_timestamps: 'Registos temporais:'
   
@@ -65,7 +65,7 @@ pt:
   err_identifying_speakers: Erro na etapa 2 - identificando os alto-falantes.
   transcription_canceled: 'Você realmente deseja cancelar a transcrição?'   
   err_user_cancelation: 'O processo foi cancelado pelo usuário.'
-  err_whisper_main: Whisper.cpp terminou com o código de erro %{e}
+  err_whisper_main: Whisper terminou com o código de erro %{e}
   err_transcription: 'Erro na etapa 3 - transcrição'
   rescue_saving: 'Falha ao salvar com o nome de arquivo original. Salvo em vez disso neste arquivo: %{file}'
   rescue_saving_failed: 'Erro: Falha ao salvar com o nome de arquivo original. O nome alternativo também existe. Preciso sair. (Certifique-se de que sua transcrição não esteja aberta no Word!)'

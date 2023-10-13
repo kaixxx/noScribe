@@ -32,7 +32,7 @@ zh-CN:
   label_language: '语言：'
   label_speaker: '说话人识别：'
   label_quality: '质量：'
-  label_parallel: '平行发言：'
+  label_overlapping: '重叠发言：'
   label_pause: '马克停顿了一下：'
   label_timestamps: '时间戳：'
   
@@ -64,7 +64,7 @@ zh-CN:
   err_identifying_speakers: '步骤2中的说话人识别错误。'
   transcription_canceled: '是否确认取消转录？'   
   err_user_cancelation: '转录过程已被用户取消。'
-  err_whisper_main: 'Whisper.cpp主进程终止，错误代码：%{e}'
+  err_whisper_main: 'Whisper主进程终止，错误代码：%{e}'
   err_transcription: '步骤3中的转录错误。'
   rescue_saving: '保存至原始文件名失败。已保存至此文件：%{file}'
   rescue_saving_failed: '错误：保存至原始文件名失败。备用文件名已存在。程序将退出。（请确保转录文件未在Word中打开！）'
