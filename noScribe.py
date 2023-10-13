@@ -342,19 +342,19 @@ class App(ctk.CTk):
         except:
             pass
         
-        # Parallel Speaking (Diarization)
-        self.label_parallel = ctk.CTkLabel(self.frame_options, text=t('label_parallel'))
-        self.label_parallel.grid(column=0, row=6, sticky='w', pady=5)
+        # Overlapping Speech (Diarization)
+        self.label_overlapping = ctk.CTkLabel(self.frame_options, text=t('label_overlapping'))
+        self.label_overlapping.grid(column=0, row=6, sticky='w', pady=5)
 
-        self.check_box_parallel = ctk.CTkCheckBox(self.frame_options, text = '')
-        self.check_box_parallel.grid(column=1, row=6, sticky='e', pady=5)
+        self.check_box_overlapping = ctk.CTkCheckBox(self.frame_options, text = '')
+        self.check_box_overlapping.grid(column=1, row=6, sticky='e', pady=5)
         try:
-            if config['last_parallel']:
-                self.check_box_parallel.select()
+            if config['last_overlapping']:
+                self.check_box_overlapping.select()
             else:
-                self.check_box_parallel.deselect()
+                self.check_box_overlapping.deselect()
         except:
-            self.check_box_parallel.select() # defaults to on
+            self.check_box_overlapping.select() # defaults to on
 
         # Timestamps in text
         self.label_timestamps = ctk.CTkLabel(self.frame_options, text=t('label_timestamps'))
@@ -642,8 +642,8 @@ class App(ctk.CTk):
             self.speaker_detection = self.option_menu_speaker.get()
             option_info += f'{t("label_speaker")} {self.speaker_detection} | '
             
-            self.parallel = self.check_box_parallel.get()
-            option_info += f'{t("label_parallel")} {self.parallel} | '
+            self.overlapping = self.check_box_overlapping.get()
+            option_info += f'{t("label_overlapping")} {self.overlapping} | '
             
             self.timestamps = self.check_box_timestamps.get()
             option_info += f'{t("label_timestamps")} {self.timestamps} | '
@@ -791,7 +791,7 @@ class App(ctk.CTk):
                     overlap_found = 0
                     overlap_threshold = 0.8
                     segment_len = 0
-                    is_parallel = False
+                    is_overlapping = False
                     
                     for segment in diarization:
                         t = overlap_len(segment["start"], segment["end"], transcript_start, transcript_end)
@@ -800,7 +800,7 @@ class App(ctk.CTk):
                         else:
                             if overlap_found >= overlap_threshold: # we already found a fitting segment, compare length now
                                 if (t >= overlap_threshold) and ((segment["end"] - segment["start"]) < segment_len): # found a shorter (= better fitting) segment that also overlaps well
-                                    is_parallel = True
+                                    is_overlapping = True
                                     overlap_found = t
                                     segment_len = segment["end"] - segment["start"]
                                     spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
@@ -809,7 +809,7 @@ class App(ctk.CTk):
                                 segment_len = segment["end"] - segment["start"]
                                 spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
 
-                    if self.parallel and is_parallel:
+                    if self.overlapping and is_overlapping:
                         return f"//{spkr}"
                     else:
                         return spkr
@@ -1077,17 +1077,17 @@ class App(ctk.CTk):
                         if self.speaker_detection == 'auto':
                             new_speaker = find_speaker(diarization, start, end)
                             if (speaker != new_speaker) & (new_speaker != ''): # speaker change
-                                if new_speaker[:2] == '//': # is parallel speaking, create no new paragraph
+                                if new_speaker[:2] == '//': # is overlapping speech, create no new paragraph
                                     prev_speaker = speaker
                                     speaker = new_speaker
                                     seg_text = f' {speaker}:{seg_text}'
                                     seg_html = seg_text                                
-                                elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was parallel speaking and we are returning to the previous speaker 
+                                elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker 
                                     speaker = new_speaker
                                     seg_text = f'//{seg_text}'
                                     seg_html = seg_text
-                                else: # new speaker, not parallel
-                                    if speaker[:2] == '//': # was parallel speaking, mark the end
+                                else: # new speaker, not overlapping
+                                    if speaker[:2] == '//': # was overlapping speech, mark the end
                                         last_elem = p.lastElementChild
                                         if last_elem:
                                             last_elem.appendText('//')
@@ -1219,7 +1219,7 @@ class App(ctk.CTk):
             config['last_speaker'] = self.option_menu_speaker.get()
             config['last_quality'] = self.option_menu_quality.get()
             config['last_pause'] = self.option_menu_pause.get()
-            config['last_parallel'] = self.check_box_parallel.get()
+            config['last_overlapping'] = self.check_box_overlapping.get()
             config['last_timestamps'] = self.check_box_timestamps.get()
 
             save_config()

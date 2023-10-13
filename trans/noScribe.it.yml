@@ -32,7 +32,7 @@ it:
   label_language: 'Lingua:'
   label_speaker: 'Rilevamento degli speaker:'
   label_quality: 'Qualità:'
-  label_parallel: 'Parlare in parallelo:'
+  label_overlapping: 'Discorso sovrapposto:'
   label_pause: 'Segna le pause:'
   label_timestamps: 'Timestamps:'
   
@@ -64,7 +64,7 @@ it:
   err_identifying_speakers: 'Errore nella fase 2 - identificazione degli speaker.'
   transcription_canceled: 'Vuoi davvero annullare la trascrizione?'   
   err_user_cancelation: 'Processo annullato dall utente.'
-  err_whisper_main: 'Whisper.cpp terminato con il codice di errore %{e}'
+  err_whisper_main: 'Whisper terminato con il codice di errore %{e}'
   err_transcription: 'Errore nella fase 3 - trascrizione'
   rescue_saving: 'Salvataggio con il nome originale non riuscito. Salvato invece in questo file: %{file}'
   rescue_saving_failed: 'Errore: salvataggio con il nome originale non riuscito. Il nome alternativo esiste già. Il programma deve essere chiuso. (Assicurati che la trascrizione non sia già aperta in Word!)'

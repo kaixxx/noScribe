@@ -32,7 +32,7 @@ fr:
   label_language: "Langue :"
   label_speaker: "Détection des locuteurs :"
   label_quality: "Qualité :"
-  label_parallel: 'Parler en parallèle :'
+  label_overlapping: 'Chevauchements de parole'
   label_pause: 'Marquer les pauses :'
   label_timestamps: 'Horodatage :'
   
@@ -64,7 +64,7 @@ fr:
   err_identifying_speakers: "Erreur à l'étape 2 - identification des locuteurs."
   transcription_canceled: "Voulez-vous vraiment annuler la transcription ?"   
   err_user_cancelation: "Le processus a été annulé par l'utilisateur."
-  err_whisper_main: "Arrêt de Whisper.cpp main avec le code d'erreur %{e}"
+  err_whisper_main: "Arrêt de whisper avec le code d'erreur %{e}"
   err_transcription: "Erreur à l'étape 3 - transcription"
   rescue_saving: "Échec de l'enregistrement sous le nom de fichier d'origine. Enregistré sous ce fichier à la place : %{file}"
   rescue_saving_failed: "Erreur : Échec de l'enregistrement sous le nom de fichier d'origine. Le nom de fichier alternatif existe également. Je dois quitter. (Assurez-vous que votre transcription n'est pas déjà ouverte dans Word !)"

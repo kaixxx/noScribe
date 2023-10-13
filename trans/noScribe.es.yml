@@ -32,7 +32,7 @@ es:
   label_language: 'Idioma:'
   label_speaker: 'Detección de oradores:'
   label_quality: 'Calidad:'
-  label_parallel: 'Habla en paralelo:'
+  label_overlapping: 'Discurso solapado:'
   label_pause: 'Marca pausas:'
   label_timestamps: 'Timestamps:'
   
@@ -64,7 +64,7 @@ es:
   err_identifying_speakers: 'Error en el paso 2: identificación de oradores.'
   transcription_canceled: '¿Realmente deseas cancelar la transcripción?'   
   err_user_cancelation: 'El proceso ha sido cancelado por el usuario.'
-  err_whisper_main: 'Terminación de Whisper.cpp main con el código de error %{e}'
+  err_whisper_main: 'Terminación de Whisper con el código de error %{e}'
   err_transcription: 'Error en el paso 3: transcripción'
   rescue_saving: 'Fallo al guardar con el nombre de archivo original. Guardado en este archivo en su lugar: %{file}'
   rescue_saving_failed: 'Error: Fallo al guardar con el nombre de archivo original. El nombre de archivo alternativo también existe. Tengo que salir. (¡Asegúrate de que tu transcripción no esté abierta en Word!)'

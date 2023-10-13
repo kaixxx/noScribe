@@ -33,7 +33,7 @@ ja:
   label_language: '言語：'
   label_speaker: '話者検出：'
   label_quality: '品質：'
-  label_parallel: '平行して話す： '
+  label_overlapping: 'オーバーラッピング・スピーチ：'
   label_pause: 'マークはポーズをとる：'
   label_timestamps: 'タイムスタンプ：'
   
@@ -51,7 +51,7 @@ ja:
   start_transcription: '転写を開始中...'
   loading_whisper: 'whisperの読み込み中'
   transcription_finished: '転写が完了しました。' 
-  transcription_saved: '' # %{file}に保存されました'
+  transcription_saved: '%{file}に保存されました'
   trancription_time: '所要時間：%{duration}分'
 
   # エラーメッセージ
@@ -65,7 +65,7 @@ ja:
   err_identifying_speakers: 'ステップ2でエラーが発生しました-話者の識別。'
   transcription_canceled: '本当に転写をキャンセルしますか？'   
   err_user_cancelation: 'ユーザーによってプロセスがキャンセルされました。'
-  err_whisper_main: 'Whisper.cppメインがエラーコード %{e} で終了しました'
+  err_whisper_main: 'Whisperメインがエラーコード %{e} で終了しました'
   err_transcription: 'ステップ3でエラーが発生しました-転写'
   rescue_saving: '元のファイル名への保存に失敗しました。代わりにこのファイルに保存されました：%{file}'
   rescue_saving_failed: 'エラー：元のファイル名への保存に失敗しました。代替のファイル名も存在します。終了する必要があります。（Wordでトランスクリプトが既に開かれていないことを確認してください！）'

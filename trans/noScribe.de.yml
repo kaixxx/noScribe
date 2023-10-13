@@ -33,7 +33,7 @@ de:
   label_language: 'Sprache:'
   label_speaker: 'Sprecher:in erkennen:'
   label_quality: 'Qualität:'
-  label_parallel: 'Paralleles Sprechen:'
+  label_overlapping: 'Überlappende Sprache:'
   label_pause: 'Pausen markieren:'
   label_timestamps: 'Zeitmarken:'
   
@@ -65,7 +65,7 @@ de:
   err_identifying_speakers: Fehler im 2. Schritt - Erkennung der Sprecher:innen. 
   transcription_canceled: 'Transkription wirklich abbrechen?'
   err_user_cancelation: 'Abbruch durch Nutzer:in'
-  err_whisper_main: 'Whisper.cpp "main" wurde mit folgendem Fehler beendet: %{e}'
+  err_whisper_main: 'whisper wurde mit folgendem Fehler beendet: %{e}'
   err_transcription: 'Fehler im 3. Schritt - Transkription'
   rescue_saving: 'Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Stattdessen wurde das Transkript in dieser Datei gesichert: %{file}'
   rescue_saving_failed: 'Fehler: Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Der alternative Dateiname existiert ebenso bereits. Die Transkription wird beendet. (Das Transkript darf nicht bereits in Word geöffnet sein!)'

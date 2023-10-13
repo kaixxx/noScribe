@@ -33,7 +33,7 @@ en:
   label_language: 'Language:'
   label_speaker: 'Speaker detection:'
   label_quality: 'Quality:'
-  label_parallel: 'Parallel speaking:'
+  label_overlapping: 'Overlapping speech:'
   label_pause: 'Mark pause:'
   label_timestamps: 'Timestamps:'
   
@@ -68,7 +68,7 @@ en:
   err_identifying_speakers: Error in step 2 - identifiying the speakers.
   transcription_canceled: 'Do you really want to cancel the transcription?'   
   err_user_cancelation: 'Process has been canceled by the user.'
-  err_whisper_main: Whisper.cpp main terminated with the error code %{e}
+  err_whisper_main: whisper terminated with the error code %{e}
   err_transcription: 'Error in step 3 - transcription'
   rescue_saving: 'Saving to the original filename failed. Saved instead in this file: '
   rescue_saving_failed: 'Error: Saving to the original filename failed. The alternate filename also exists. I have to quit. (Make sure your transcript is not already opened in Word!)'
