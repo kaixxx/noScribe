@@ -77,6 +77,7 @@ class SimpleProgressHook:
 try:     
     if platform.system() == 'Windows':
         pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'models', 'pyannote_config.yaml'))
+        pipeline.to(torch.device(device))
     elif platform.system() == "Darwin": # = MAC
         with open(os.path.join(app_dir, 'models', 'pyannote_config.yaml'), 'r') as yaml_file:
             pyannote_config = yaml.safe_load(yaml_file)

@@ -667,24 +667,32 @@ class App(ctk.CTk):
             if platform.system() == "Darwin": # = MAC
                 if platform.mac_ver()[0] >= '12.3':
                     try:
-                        if config['macos_xpu'] == 'cpu':
-                            self.macos_xpu = 'cpu'
+                        if config['pyannote_xpu'] == 'cpu':
+                            self.pyannote_xpu = 'cpu'
                         else:
-                            self.macos_xpu = 'mps'
+                            self.pyannote_xpu = 'mps'
                     except:
-                        config['macos_xpu'] = 'mps'
-                        self.macos_xpu = 'mps'
+                        config['pyannote_xpu'] = 'mps'
+                        self.pyannote_xpu = 'mps'
                 else:
                     try:
-                        if config['macos_xpu'] == 'cpu':
-                            self.macos_xpu = 'cpu'
+                        if config['pyannote_xpu'] == 'cpu':
+                            self.pyannote_xpu = 'cpu'
                         else:
-                            self.macos_xpu = 'cpu'
+                            self.pyannote_xpu = 'cpu'
                     except:
-                        config['macos_xpu'] = 'cpu'
-                        self.macos_xpu = 'cpu'
+                        config['pyannote_xpu'] = 'cpu'
+                        self.pyannote_xpu = 'cpu'
             else:
-                self.macos_xpu = 'cpu' # use cpu on any other platform for now (could potentially also be "cuda" if available)
+                # on other platforms, cuda can be used for pyannote if set in config.yaml (experimental)   
+                try:
+                    if config['pyannote_xpu'] == 'cuda':
+                        self.pyannote_xpu = 'cuda'
+                    else:
+                        self.pyannote_xpu = 'cpu'
+                except:
+                    config['pyannote_xpu'] = 'cpu'
+                    self.pyannote_xpu = 'cpu'
 
             # log CPU capabilities
             self.logn("=== CPU FEATURES ===", where="file")
@@ -698,12 +706,12 @@ class App(ctk.CTk):
                 elif platform.machine() == "x86_64":
                     self.logn("System: MAC x86_64", where="file")
                 if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
-                    if config['macos_xpu'] == 'mps':
+                    if config['pyannote_xpu'] == 'mps':
                         self.logn("macOS version >= 12.3:\nUsing MPS (with PYTORCH_ENABLE_MPS_FALLBACK enabled)")
-                    elif config['macos_xpu'] == 'cpu':
+                    elif config['pyannote_xpu'] == 'cpu':
                         self.logn("macOS version >= 12.3:\nUser selected to use CPU (results will be better, but you might wanna make yourself a coffee)")
                     else:
-                        self.logn("macOS version >= 12.3:\nInvalid option for 'macos_xpu' in config.yaml (should be 'mps' or 'cpu')\nYou might wanna change this\nUsing MPS anyway (with PYTORCH_ENABLE_MPS_FALLBACK enabled)")
+                        self.logn("macOS version >= 12.3:\nInvalid option for 'pyannote_xpu' in config.yaml (should be 'mps' or 'cpu')\nYou might wanna change this\nUsing MPS anyway (with PYTORCH_ENABLE_MPS_FALLBACK enabled)")
                 else:
                     self.logn("macOS version < 12.3:\nMPS not available: Using CPU\nPerformance might be poor\nConsider updating macOS, if possible")
             
@@ -827,13 +835,13 @@ class App(ctk.CTk):
                             diarize_abspath = os.path.join(app_dir, 'diarize.exe')
                             if not os.path.exists(diarize_abspath): # Run the compiled version of diarize if it exists, otherwise the python script:
                                  diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
-                            diarize_cmd = f'{diarize_abspath} {self.macos_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
+                            diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
                         elif platform.system() == 'Darwin': # = MAC
                             # No check for arm64 or x86_64 necessary, since the correct version will be compiled and bundled
                             diarize_abspath = os.path.join(app_dir, '..', 'MacOS', 'diarize')
                             if not os.path.exists(diarize_abspath): # Run the compiled version of diarize if it exists, otherwise the python script:
                                 diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
-                            diarize_cmd = f'{diarize_abspath} {self.macos_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
+                            diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
                         print(diarize_cmd)
                         
                         if platform.system() == 'Windows':
