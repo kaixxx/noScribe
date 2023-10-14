@@ -73,8 +73,7 @@ default_html = """
 <style type="text/css" >
 p, li { white-space: pre-wrap; }
 </style>
-<style type="text/css" >
- a { text-decoration: none; color: #000000; } 
+<style type="text/css" > 
  p { font-size: 0.9em; } 
  .MsoNormal { font-family: "Arial"; font-weight: 400; font-style: normal; font-size: 0.9em; }
  @page WordSection1 {mso-line-numbers-restart: continuous; mso-line-numbers-count-by: 1; mso-line-numbers-start: 1; }
