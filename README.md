@@ -57,7 +57,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 - Before working with the transcript though, you should check it with the included editor. There will always be some errors. Click on the filename in the progress window (blue + underlined) to edit the file. 
 
 
-### noScribeEdit 
+## noScribeEdit 
 The included editor to check the final transcript. 
 
 ![The transcript in the noScribe Editor](img/noScribe_Editor.png)
