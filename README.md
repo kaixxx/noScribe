@@ -57,18 +57,18 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 - Before working with the transcript though, you should check it with the included Editor. There will always be some errors. Click on the filename in the progress window (blue + underlined) to edit the file. 
 
 
-### noScribeEdit: Included Editor to check the final transcript 
+### noScribeEdit: The included Editor to check the final transcript 
 
 ![The transcript in the noScribe Editor](img/noScribe_Editor.png)
 
 The noScribe Editor is a separate app that can also be run independent from noScribe. It contains some handy features to check your finished transcript for errors and correct them:
 - Press **Ctrl + Spacebar** or the **orange button in the toolbar** to hear the audio which corresponds to your current position in the text. 
 - The **selection of the text will follow the audio that you hear**. If you want to **make changes,** click anywhere in the text with your mouse or use the arrow keys to move the cursor. The audio will stop, and you can edit the text.
-- You can also **stop the audio** by pressing Ctrl + Spacebar again or clicking the orange Button.
+- You can also **stop the audio** by pressing Ctrl + Spacebar again or clicking the orange button.
 - If you want to **speed up or slow down the audio**, change the "100%"-field next to the "Play/Pause Audio"-Button to the appropriate speed.
 - Use the loupe in the toolbar to **zoom in or out**
 - You will find the **most common features of a basic text editor** in the toolbar as well as in the menu at the top (basic text formatting, cut, copy & paste, undo & redo).
-- Your typical **hotkeys** will also work (i.e., Ctrl+S for Save). You can see all the hotkeys if you open the menu. As already mentioned, 'Ctrl+Space' is the important noScribe hotkey to start or pause the audio. 
+- Your typical **hotkeys** will also work (i.e., Ctrl+S for Save). You can see all the hotkeys if you open the menu. As already mentioned, 'Ctrl+Space' is the hotkey you'll use the most as it starts or pauses the audio. 
 
 ## Factors Influencing the Quality of the Transcription
 - A **good audio recording with clear voices and no ambient noise** is crucial for a high-quality transcription. Investing some effort in the quality of the recording will save you much time in the manual revision process later. 
