@@ -54,10 +54,11 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 - The **main window** will log progress-messages and errors. It will also show the text of your interview during the last step of the transcription. 
 - The transcript will be auto saved every few seconds under the given filename.
 - NoScribe produces an HTML-file. This can be opened in every common word editor (including MS Word, LibreOffice). 
-- Before working with the transcript though, you should check it with the included Editor. There will always be some errors. Click on the filename in the progress window (blue + underlined) to edit the file. 
+- Before working with the transcript though, you should check it with the included editor. There will always be some errors. Click on the filename in the progress window (blue + underlined) to edit the file. 
 
 
-### noScribeEdit: The included Editor to check the final transcript 
+### noScribeEdit 
+The included editor to check the final transcript. 
 
 ![The transcript in the noScribe Editor](img/noScribe_Editor.png)
 
