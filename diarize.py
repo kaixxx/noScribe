@@ -32,6 +32,7 @@ import torch
 from typing import Any, Mapping, Optional, Text
 import sys
 from pathlib import Path
+from tempfile import TemporaryDirectory
     
 app_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -85,10 +86,11 @@ try:
         pyannote_config['pipeline']['params']['embedding'] = os.path.join(app_dir, *pyannote_config['pipeline']['params']['embedding'].split("/")[1:])
         pyannote_config['pipeline']['params']['segmentation'] = os.path.join(app_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/")[1:])
 
-        with open(os.path.join(app_dir, 'models', 'pyannote_config_macOS.yaml'), 'w') as yaml_file:
+        tmpdir = TemporaryDirectory('noScribe_diarize')
+        with open(os.path.join(tmpdir.name, 'pyannote_config_macOS.yaml'), 'w') as yaml_file:
             yaml.safe_dump(pyannote_config, yaml_file)
 
-        pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'models', 'pyannote_config_macOS.yaml'))
+        pipeline = Pipeline.from_pretrained(os.path.join(tmpdir.name, 'pyannote_config_macOS.yaml'))
         pipeline.to(torch.device(device))
     else:
         raise Exception('Platform not supported yet.')
