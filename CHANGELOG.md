@@ -1,5 +1,14 @@
 # noScribe Changelog
 
+## version 0.4 beta:
+- much improved **speaker detection/separation**
+- new option to mark **pauses** (sections with no voice activity) in the transkript
+- new option to mark **overlapping speech** (experimental)
+- new option to include **timestamps** in the transcript
+- new **noScribe Editor** app to check and correct transcripts (no MS Word-Macros anymore)
+- noScribe now outputs an **HTML-file** which can be opened in every major word editor (MS Word, LibreOffice, OpenOffice...) or QDA-software package
+- many changes under the hood to prepare for an upcoming macOS-version and improve reliability and quality of the transcription
+- switched from "whisper.cpp" to "faster-whisper" as the basic framework (mainly because of the more precise timestamps)  
 
 ## version 0.3:
 **new:**
