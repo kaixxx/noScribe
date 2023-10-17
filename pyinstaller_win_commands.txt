@@ -1,6 +1,6 @@
 noScribe combined (main program + diarize.py):
 
-python  c:\users\kai\anaconda3\envs\noscribe_0_4\lib\site-packages\pyinstaller noScribe_combined.spec
+python  c:\users\kai\anaconda3\envs\noscribe_0_4\lib\site-packages\pyinstaller --clean noScribe_combined.spec
 
 
 noScribe main program:

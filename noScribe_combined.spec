@@ -9,7 +9,15 @@ block_cipher = None
 
 # noScribe:
 
-noScribe_datas = [('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/faster-whisper-large-v2', './models/faster-whisper-large-v2/'), ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/faster-whisper-small', './models/faster-whisper-small/'), ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/noScribeEdit', 'noScribeEdit/'), ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/trans', 'trans/'), ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/graphic_sw.png', '.'), ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/LICENSE.txt', '.'), ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/noScribeLogo.ico', '.'), ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/prompt.yml', '.'), ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/README.md', '.')]
+noScribe_datas = [('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/faster-whisper-large-v2', './models/faster-whisper-large-v2/'), 
+('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/faster-whisper-small', './models/faster-whisper-small/'), 
+('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/noScribeEdit', 'noScribeEdit/'), 
+('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/trans', 'trans/'), 
+('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/graphic_sw.png', '.'), 
+('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/LICENSE.txt', '.'), 
+('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/noScribeLogo.ico', '.'), 
+('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/prompt.yml', '.'), 
+('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/README_0_4.md', '.')]
 noScribe_datas += collect_data_files('customtkinter')
 noScribe_datas += copy_metadata('AdvancedHTMLParser')
 
@@ -52,7 +60,9 @@ noScribe_exe = EXE(
 
 # diarize:
 
-diarize_datas = [('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/pyannote_config.yaml', 'models/'), ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/pytorch_model.bin', 'models/'), ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/huggingface', 'models/huggingface/'), ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/torch', 'models/torch/')]
+diarize_datas = [('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/pyannote_config.yaml', 'models/'), 
+    ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/pytorch_model.bin', 'models/'), 
+    ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/torch', 'models/torch/')]
 diarize_binaries = []
 diarize_hiddenimports = []
 diarize_datas += collect_data_files('lightning')
