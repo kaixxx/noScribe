@@ -1,16 +1,15 @@
 ﻿# noScribe 
 ## Cutting Edge AI Technology for Automated Audio Transcription
 
-**Download** 
+**Download current beta release vers. 0.4b:**
+- Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FWindows)
+- macOS (alpha version, ported by [gernophil](https://github.com/gernophil)):  
+[https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS)
+> These are alpha or beta releases. [Please report your experiences here](https://github.com/kaixxx/noScribe/discussions/28) or open an issue if you find errors. Thank you!
 
-Current beta release, vers. 0.4b:\
-Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FWindows)\
-macOS (alpha version, ported by [gernophil](https://github.com/gernophil)): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS)
-> These are alpha or beta releases. Please report your experiences here: https://github.com/kaixxx/noScribe/discussions/28 or open an issue if you find errors. Thank you!
-
-Last stable release, vers. 0.3:\
-Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows)\
-[Readme for vers. 0.3](https://github.com/kaixxx/noScribe/blob/main/README_v0_3.md) 
+Last **stable release,** vers. 0.3:
+- Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows)\
+- [Readme for vers. 0.3](https://github.com/kaixxx/noScribe/blob/main/README_v0_3.md) 
 
 ## What is noScribe?
 - An AI-based software that **transcribes interviews** for qualitative social research or journalistic use
@@ -20,7 +19,7 @@ Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%2
 - It includes a **nice editor** to review, verify and correct the resulting transcript
 - It is standing on the shoulders of giants: [Whisper from OpenAI](https://github.com/openai/whisper), [faster-whisper by Guillaume Klein](https://github.com/guillaumekln/faster-whisper) and [pyannote from Hervé Bredin](https://github.com/pyannote/pyannote-audio)
 
-
+  
 
 ![Main window](img/noScribe_main_window.png)
 (The transcript is from [this interview](https://www.youtube.com/watch?v=vOwajAbvPzQ&t=2018s) which I did in May 2022 with the Russian sociologist Natalia Savelyeva.)
@@ -43,7 +42,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 - Start the downloaded setup file. This may take a while, be patient.
 
 ### Settings
-<img src="img/noScribe_settings.png" width="300">
+<img align="left" src="img/noScribe_settings.png" width="300">
 
 - Select your **audio file** and a **filename for the transcript.**
 - **Start** and **Stop** accept timestamps in the format hh:mm:ss. Use this to limit the transcription to a particular part of the recording. This is especially helpful to test your settings with a small sample before committing to transcribe the whole interview, which may take several hours. Leave Stop empty if you want to transcribe till the end of the audio file.
@@ -109,7 +108,7 @@ The noScribe Editor is a separate app that can also be run independent from noSc
 - If you want to change the language of the user interface, you have to change the value of the "locale" setting in the advanced settings (see above).
 
 ### MAC and LINUX support
-- noScribe has been ported to macOS by [gernophil](https://github.com/gernophil): (https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FmacOS) (alpha version, Apple silicon M1/M2 only) 
+- noScribe has been ported to macOS by [gernophil](https://github.com/gernophil): (https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FmacOS) (alpha version, please help testing!) 
 - If you want to port noScribe to Linux, go ahead! There once was a working version but it is no longer up to date.
 - If you make any changes to the code of noScribe, try not to break compatibility with other platforms. I would like to keep one single codebase for all platforms.
 
