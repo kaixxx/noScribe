@@ -518,7 +518,7 @@ class App(ctk.CTk):
         self.progress_bar.pack(padx=20, pady=[10,20], expand=True, fill='both')
 
         tmpdir = TemporaryDirectory('noScribe')
-        self.tmp_audio_file = tmpdir.name + '/' + 'tmp_audio.wav'
+        self.tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
      
         try:
             # collect all the options
@@ -830,7 +830,7 @@ class App(ctk.CTk):
                         self.logn(t('loading_pyannote'))
                         self.set_progress(1, 100)
 
-                        diarize_output = tmpdir.name + '/' + 'diarize_out.yaml'
+                        diarize_output = os.path.join(tmpdir.name, 'diarize_out.yaml')
                         if platform.system() == 'Windows':
                             diarize_abspath = os.path.join(app_dir, 'diarize.exe')
                             if not os.path.exists(diarize_abspath): # Run the compiled version of diarize if it exists, otherwise the python script:
