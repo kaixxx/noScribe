@@ -1,14 +1,21 @@
 ﻿# noScribe 
 ## Cutting Edge AI Technology for Automated Audio Transcription
 
-**Download** current release (0.4):\
-[Windows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows)\
-[macOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FmacOS) (alpha version, Apple silicon M1/M2 only, ported by [gernophil](https://github.com/gernophil))
+**Download** 
+
+Current beta release, vers. 0.4b:\
+Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FWindows)\
+macOS (alpha version, ported by [gernophil](https://github.com/gernophil)): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS)
+> These are alpha or beta releases. Please report your experiences here: https://github.com/kaixxx/noScribe/discussions/28 or open an issue if you find errors. Thank you!
+
+Last stable release, vers. 0.3:\
+Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows)\
+[Readme for vers. 0.3](https://github.com/kaixxx/noScribe/blob/main/README_v0_3.md) 
 
 ## What is noScribe?
+- An AI-based software that **transcribes interviews** for qualitative social research or journalistic use
 - noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html))
-- It runs completely local on your computer. No data is sent to the internet. **No cloud, no worries**
-- Its main purpose is to **transcribe interviews** for qualitative research or journalistic use
+- It runs **completely local** on your computer. No data is sent to the internet. No cloud, no worries
 - It can distinguish different **speakers** and understands 99 languages (more or less, see below)
 - It includes a **nice editor** to review, verify and correct the resulting transcript
 - It is standing on the shoulders of giants: [Whisper from OpenAI](https://github.com/openai/whisper), [faster-whisper by Guillaume Klein](https://github.com/guillaumekln/faster-whisper) and [pyannote from Hervé Bredin](https://github.com/pyannote/pyannote-audio)
