@@ -207,7 +207,10 @@ class App(ctk.CTk):
 
         # configure window
         self.title('noScribe - ' + t('app_header'))
-        self.geometry(f"{1100}x{650}")
+        if platform.system() == "Darwin":
+            self.geometry(f"{1100}x{695}")
+        else:
+            self.geometry(f"{1100}x{650}")
         self.iconbitmap('noScribeLogo.ico')
 
         # header
