@@ -108,7 +108,7 @@ The noScribe Editor is a separate app that can also be run independent from noSc
 - If you want to change the language of the user interface, you have to change the value of the "locale" setting in the advanced settings (see above).
 
 ### MAC and LINUX support
-- noScribe has been ported to macOS by [gernophil](https://github.com/gernophil): (https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FmacOS) (alpha version, please help testing!) 
+- [noScribe has been ported to macOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS) (alpha version, please help testing!) 
 - If you want to port noScribe to Linux, go ahead! There once was a working version but it is no longer up to date.
 - If you make any changes to the code of noScribe, try not to break compatibility with other platforms. I would like to keep one single codebase for all platforms.
 
