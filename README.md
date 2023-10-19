@@ -1,15 +1,12 @@
 ﻿# noScribe 
 ## Cutting Edge AI Technology for Automated Audio Transcription
 
-**Download current beta release vers. 0.4b:**
+**Download current version 0.4:**
 - Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FWindows)
 - macOS (alpha version, ported by [gernophil](https://github.com/gernophil)):  
 [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS)
-> These are alpha or beta releases. [Please report your experiences here](https://github.com/kaixxx/noScribe/discussions/28) or open an issue if you find errors. Thank you!
+> [Please discuss your experiences with version 0.4 here](https://github.com/kaixxx/noScribe/discussions/28) or open an issue if you find errors. Thank you!
 
-Last **stable release,** vers. 0.3:
-- Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows)\
-- [Readme for vers. 0.3](https://github.com/kaixxx/noScribe/blob/main/README_v0_3.md) 
 
 ## What is noScribe?
 - An AI-based software that **transcribes interviews** for qualitative social research or journalistic use
