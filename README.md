@@ -2,9 +2,9 @@
 ## Cutting Edge AI Technology for Automated Audio Transcription
 
 **Download current version 0.4:**
-- Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FWindows)
+- Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
 - macOS (beta version, ported by [gernophil](https://github.com/gernophil)):  
-[https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS)
+[https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS)
 > [Please discuss your experiences with version 0.4 here](https://github.com/kaixxx/noScribe/discussions/28) or open an issue if you find errors. Thank you!
 
 
