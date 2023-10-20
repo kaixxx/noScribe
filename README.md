@@ -5,7 +5,13 @@
 - Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
 - macOS (beta version, ported by [gernophil](https://github.com/gernophil)):  
 [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS)
+> Note: Their seems to be a problem on some Windows systems where noScribe 0.4 is chrashing at the beginning of the transcription phase. We are working on that. If you are affected by this error, you can still use the older version 0.3 (see below) until this problem is rectified.    
 > [Please discuss your experiences with version 0.4 here](https://github.com/kaixxx/noScribe/discussions/28) or open an issue if you find errors. Thank you!
+
+
+Last release vers. 0.3:
+- Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows)\
+- [Readme for vers. 0.3](https://github.com/kaixxx/noScribe/blob/main/README_v0_3.md) 
 
 
 ## What is noScribe?
