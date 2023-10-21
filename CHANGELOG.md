@@ -1,5 +1,8 @@
 # noScribe Changelog
 
+## version 0.4.1:
+- bugfix: rectifies a problem in combination with NVIDIA graphics cards
+
 ## version 0.4 beta:
 - much improved **speaker detection/separation**
 - new option to mark **pauses** (sections with no voice activity) in the transkript

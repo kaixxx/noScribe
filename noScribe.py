@@ -59,7 +59,7 @@ import logging
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.4'
+app_version = '0.4.1'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
@@ -443,6 +443,7 @@ class App(ctk.CTk):
             if tags == 'error':
                 txt = f'ERROR: {txt}'
             self.log_file.write(txt)
+            self.log_file.flush()
     
     def logn(self, txt='', tags=[], where='both', link=''): # log with newline
         self.log(f'{txt}\n', tags, where, link)
@@ -845,7 +846,7 @@ class App(ctk.CTk):
                             if not os.path.exists(diarize_abspath): # Run the compiled version of diarize if it exists, otherwise the python script:
                                 diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
                             diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
-                        print(diarize_cmd)
+                        self.logn(diarize_cmd, where='file')
                         
                         if platform.system() == 'Windows':
                             # (supresses the terminal, see: https://stackoverflow.com/questions/1813872/running-a-process-in-pythonw-with-popen-without-a-console)
@@ -960,6 +961,7 @@ class App(ctk.CTk):
                         htmlStr = d.asHTML()
                         with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
                             f.write(htmlStr)
+                            f.flush()
                         self.last_auto_save = datetime.datetime.now()
                     except:
                         # saving failed, maybe the file is already open in Word and cannot be overwritten
@@ -973,20 +975,26 @@ class App(ctk.CTk):
                             htmlStr = d.asHTML()
                             with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
                                 f.write(htmlStr)
+                                f.flush()
                             self.logn()
                             self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
                             self.last_auto_save = datetime.datetime.now()
             
                 try:
                     from faster_whisper import WhisperModel
-                    # model = WhisperModel(self.whisper_model, device="auto", compute_type="auto", local_files_only=True)
-                    model = WhisperModel(self.whisper_model, 
-                                         device="auto", 
+                    if platform.system() == 'Windows':
+                        whisper_device = 'cpu'
+                    elif platform.system() == "Darwin": # = MAC
+                        whisper_device = 'auto'
+                    else:
+                        raise Exception('Platform not supported yet.')
+                    model = WhisperModel(self.whisper_model,
+                                         device=whisper_device,  
                                          cpu_threads=number_threads, 
                                          compute_type=self.whisper_compute_type, 
                                          local_files_only=True)
-
-                    # self.logn(t('vad'))
+                    self.logn('model loaded', where='file')
+                    
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
 

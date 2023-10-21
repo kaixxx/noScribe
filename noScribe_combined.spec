@@ -17,7 +17,7 @@ noScribe_datas = [('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe
 ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/LICENSE.txt', '.'), 
 ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/noScribeLogo.ico', '.'), 
 ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/prompt.yml', '.'), 
-('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/README_0_4.md', '.')]
+('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/README.md', '.')]
 noScribe_datas += collect_data_files('customtkinter')
 noScribe_datas += copy_metadata('AdvancedHTMLParser')
 
