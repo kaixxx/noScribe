@@ -3,7 +3,7 @@
 
 **Download current version 0.4.1:**
 - Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
-> Note: Vers. 0.4 had a problem in combination with NVIDIA graphics cards on Windows. Vers. 0.4.1 fixes this. If you did not experience this bug, you don't have to update.
+> Note: Vers. 0.4.1 fixes problems in combination with NVIDIA graphics cards on Windows in vers. 0.4. If you did not experience this bug, you don't have to update.
 - macOS (beta version, ported by [gernophil](https://github.com/gernophil)):  
 [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS)    
 > [Please discuss your experiences with version 0.4.1 here](https://github.com/kaixxx/noScribe/discussions/31) or open an issue if you find errors. Thank you!
