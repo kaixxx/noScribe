@@ -19,6 +19,7 @@ models/faster-whisper*/.gitattributes.txt
 models/faster-whisper*/.gitattributes
 models/faster-whisper*/README.md
 models/whisper-small-swiss/
+models/faster-whisper-small_old/
 
 .DS_Store
 stuff/
