@@ -1,7 +1,12 @@
 # noScribe Changelog
 
+## version 0.4.2:
+    - MacOS: Solves a bug where speaker-detection would become unreliable with MPS-acceleration (a switch to torchaudio 2.1.0 rectified this).
+    - Windows: no changes
+
 ## version 0.4.1:
-- bugfix: rectifies a problem in combination with NVIDIA graphics cards
+- Windows: bugfix, rectifies a problem in combination with NVIDIA graphics cards
+- macOS: First beta release. Solved a bug with macOS Sonoma where noScribe would not react to the mouse. 
 
 ## version 0.4 beta:
 - much improved **speaker detection/separation**
@@ -12,6 +17,7 @@
 - noScribe now outputs an **HTML-file** which can be opened in every major word editor (MS Word, LibreOffice, OpenOffice...) or QDA-software package
 - many changes under the hood to prepare for an upcoming macOS-version and improve reliability and quality of the transcription
 - switched from "whisper.cpp" to "faster-whisper" as the basic framework (mainly because of the more precise timestamps)  
+- macOS: First alpha release
 
 ## version 0.3:
 **new:**
