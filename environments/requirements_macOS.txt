@@ -9,4 +9,3 @@ python-i18n
 pyannote.audio @ git+https://github.com/kaixxx/pyannote-audio.git
 faster-whisper
 pyinstaller
-torchaudio==2.0.2

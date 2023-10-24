@@ -3,7 +3,7 @@
 
 **Download current version 0.4.1:**
 - Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
-> Note: Vers. 0.4 had a problem in combination with NVIDIA graphics cards on Windows. Vers. 0.4.1 fixes this. If you did not experience this bug, you don't have to update.
+> Note: Vers. 0.4.1 fixes problems in combination with NVIDIA graphics cards on Windows in vers. 0.4. If you did not experience this bug, you don't have to update.
 - macOS (beta version, ported by [gernophil](https://github.com/gernophil)):  
 [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS)    
 > [Please discuss your experiences with version 0.4.1 here](https://github.com/kaixxx/noScribe/discussions/31) or open an issue if you find errors. Thank you!
@@ -78,7 +78,10 @@ The noScribe Editor is a separate app that can also be run independent from noSc
 - If you want to **speed up or slow down the audio**, change the "100%"-field next to the "Play/Pause Audio"-Button to the appropriate speed.
 - Use the loupe in the toolbar to **zoom in or out**
 - You will find the **most common features of a basic text editor** in the toolbar as well as in the menu at the top (basic text formatting, cut, copy & paste, undo & redo).
-- Your typical **hotkeys** will also work (i.e., Ctrl+S for Save). You can see all the hotkeys if you open the menu. As already mentioned, 'Ctrl+Space' is the hotkey you'll use the most as it starts or pauses the audio. 
+- Your typical **hotkeys** will also work (i.e., Ctrl+S for Save). You can see all the hotkeys if you open the menu. As already mentioned, 'Ctrl+Space' is the hotkey you'll use the most as it starts or pauses the audio.
+
+
+The source code of the editor can be found here: [https://github.com/kaixxx/noScribeEditor](https://github.com/kaixxx/noScribeEditor)
 
 ## Factors Influencing the Quality of the Transcription
 - A **good audio recording with clear voices and no ambient noise** is crucial for a high-quality transcription. Investing some effort in the quality of the recording will save you much time in the manual revision process later. 
