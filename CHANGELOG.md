@@ -1,8 +1,8 @@
 # noScribe Changelog
 
 ## version 0.4.2:
-    - MacOS: Solves a bug where speaker-detection would become unreliable with MPS-acceleration (a switch to torchaudio 2.1.0 rectified this).
-    - Windows: no changes
+- MacOS: Solves a bug where speaker-detection would become unreliable with MPS-acceleration (a switch to torchaudio 2.1.0 rectified this).
+- Windows: no changes
 
 ## version 0.4.1:
 - Windows: bugfix, rectifies a problem in combination with NVIDIA graphics cards
