@@ -35,9 +35,11 @@ import locale
 import appdirs
 from subprocess import run, call, Popen, PIPE, STDOUT
 if platform.system() == 'Windows':
+    # import torch.cuda # to check with torch.cuda.is_available()
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
 import re
 if platform.system() == "Darwin": # = MAC
+    import torch.backends.mps
     if platform.machine() == "x86_64":
         os.environ['KMP_DUPLICATE_LIB_OK']='True' # prevent OMP: Error #15: Initializing libomp.dylib, but found libiomp5.dylib already initialized.
     # if platform.machine() == "arm64": # Intel should also support MPS
@@ -669,7 +671,7 @@ class App(ctk.CTk):
                 self.auto_save = True 
 
             if platform.system() == "Darwin": # = MAC
-                if platform.mac_ver()[0] >= '12.3':
+                if platform.mac_ver()[0] >= '12.3' and torch.backends.mps.is_available():
                     try:
                         if config['pyannote_xpu'] == 'cpu':
                             self.pyannote_xpu = 'cpu'
