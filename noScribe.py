@@ -41,9 +41,9 @@ import re
 if platform.system() == "Darwin": # = MAC
     if platform.machine() == "x86_64":
         os.environ['KMP_DUPLICATE_LIB_OK']='True' # prevent OMP: Error #15: Initializing libomp.dylib, but found libiomp5.dylib already initialized.
-    # if platform.machine() == "arm64": # Intel should also support MPS
-    if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
-        os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
+    # # if platform.machine() == "arm64": # Intel should also support MPS
+    # if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
+    #     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
     # import torch.backends.mps # loading torch modules leads to segmentation fault later
 import AdvancedHTMLParser
 from threading import Thread
@@ -842,15 +842,16 @@ class App(ctk.CTk):
                         diarize_output = os.path.join(tmpdir.name, 'diarize_out.yaml')
                         if platform.system() == 'Windows':
                             diarize_abspath = os.path.join(app_dir, 'diarize.exe')
-                            if not os.path.exists(diarize_abspath): # Run the compiled version of diarize if it exists, otherwise the python script:
-                                 diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
-                            diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
                         elif platform.system() == 'Darwin': # = MAC
                             # No check for arm64 or x86_64 necessary, since the correct version will be compiled and bundled
                             diarize_abspath = os.path.join(app_dir, '..', 'MacOS', 'diarize')
-                            if not os.path.exists(diarize_abspath): # Run the compiled version of diarize if it exists, otherwise the python script:
-                                diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
-                            diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
+                        if not os.path.exists(diarize_abspath): # Run the compiled version of diarize if it exists, otherwise the python script:
+                            diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
+                        diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
+                        diarize_env = None
+                        if self.pyannote_xpu == 'mps':
+                            diarize_env = os.environ.copy()
+                            diarize_env["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
                         self.logn(diarize_cmd, where='file')
                         
                         if platform.system() == 'Windows':
@@ -863,7 +864,13 @@ class App(ctk.CTk):
                         else:
                             raise Exception('Platform not supported yet.')
 
-                        with Popen(diarize_cmd, stdout=PIPE, stderr=STDOUT, encoding='UTF-8', startupinfo=startupinfo, close_fds=True) as pyannote_proc:
+                        with Popen(diarize_cmd,
+                                   stdout=PIPE,
+                                   stderr=STDOUT,
+                                   encoding='UTF-8',
+                                   startupinfo=startupinfo,
+                                   env=diarize_env,
+                                   close_fds=True) as pyannote_proc:
                             for line in pyannote_proc.stdout:
                                 if self.cancel:
                                     pyannote_proc.kill()
