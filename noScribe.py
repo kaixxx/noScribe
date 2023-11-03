@@ -690,7 +690,7 @@ class App(ctk.CTk):
                         config['pyannote_xpu'] = 'cpu'
                         self.pyannote_xpu = 'cpu'
             else:
-                # on other platforms, cuda can be used for pyannote if set in config.yaml (experimental)   
+                # on other platforms, cuda can be used for pyannote if set in config.yml (experimental)   
                 try:
                     if config['pyannote_xpu'] == 'cuda':
                         self.pyannote_xpu = 'cuda'
@@ -717,7 +717,7 @@ class App(ctk.CTk):
                     elif config['pyannote_xpu'] == 'cpu':
                         self.logn("macOS version >= 12.3:\nUser selected to use CPU (results will be better, but you might wanna make yourself a coffee)", where="file")
                     else:
-                        self.logn("macOS version >= 12.3:\nInvalid option for 'pyannote_xpu' in config.yaml (should be 'mps' or 'cpu')\nYou might wanna change this\nUsing MPS anyway (with PYTORCH_ENABLE_MPS_FALLBACK enabled)", where="file")
+                        self.logn("macOS version >= 12.3:\nInvalid option for 'pyannote_xpu' in config.yml (should be 'mps' or 'cpu')\nYou might wanna change this\nUsing MPS anyway (with PYTORCH_ENABLE_MPS_FALLBACK enabled)", where="file")
                 else:
                     self.logn("macOS version < 12.3:\nMPS not available: Using CPU\nPerformance might be poor\nConsider updating macOS, if possible", where="file")
             
