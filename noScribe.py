@@ -44,7 +44,7 @@ if platform.system() == "Darwin": # = MAC
     # if platform.machine() == "arm64": # Intel should also support MPS
     if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
-    import torch.backends.mps
+    # import torch.backends.mps # loading torch modules leads to segmentation fault later
 import AdvancedHTMLParser
 from threading import Thread
 import time
@@ -671,9 +671,10 @@ class App(ctk.CTk):
                 self.auto_save = True 
 
             if platform.system() == "Darwin": # = MAC
-                if (platform.mac_ver()[0] >= '12.3' and
-                    # torch.backends.mps.is_built() and # not necessary since depends on packaged PyTorch
-                    torch.backends.mps.is_available()):
+                # if (platform.mac_ver()[0] >= '12.3' and
+                #     # torch.backends.mps.is_built() and # not necessary since depends on packaged PyTorch
+                #     torch.backends.mps.is_available()):
+                if platform.mac_ver()[0] >= '12.3': # loading torch modules leads to segmentation fault later
                     try:
                         if config['pyannote_xpu'] == 'cpu':
                             self.pyannote_xpu = 'cpu'
