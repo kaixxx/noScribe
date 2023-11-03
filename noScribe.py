@@ -671,7 +671,9 @@ class App(ctk.CTk):
                 self.auto_save = True 
 
             if platform.system() == "Darwin": # = MAC
-                if platform.mac_ver()[0] >= '12.3' and torch.backends.mps.is_available():
+                if (platform.mac_ver()[0] >= '12.3' and
+                    # torch.backends.mps.is_built() and # not necessary since depends on packaged PyTorch
+                    torch.backends.mps.is_available()):
                     try:
                         if config['pyannote_xpu'] == 'cpu':
                             self.pyannote_xpu = 'cpu'
