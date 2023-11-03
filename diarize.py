@@ -74,11 +74,11 @@ try:
         pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'models', 'pyannote_config.yaml'))
         pipeline.to(torch.device(device))
     elif platform.system() == "Darwin": # = MAC
-        if device == 'mps' and not torch.backends.mps.is_available():  # should only happen on x86_64, but checked on all archs to be sure
-            device == 'cpu'
-            print("'pyannote_xpu: mps' was selected, but mps is not available on this system!")
-            print("This happens, because availability cannot be checked earlier.")
-            print("Please, set 'pyannote_xpu: cpu' in '~/Library/Application Support/noScribe/config.yml' manually to avoid this message!")
+        if device == 'mps' and torch.backends.mps.is_available():  # should only happen on x86_64, but checked on all archs to be sure
+            device = 'cpu'
+            print("log: 'pyannote_xpu: mps' was selected, but mps is not available on this system!")
+            print("log: This happens, because availability cannot be checked earlier.")
+            print("log: 'pyannote_xpu: cpu' was set")
         with open(os.path.join(app_dir, 'models', 'pyannote_config.yaml'), 'r') as yaml_file:
             pyannote_config = yaml.safe_load(yaml_file)
 

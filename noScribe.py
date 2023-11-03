@@ -884,6 +884,11 @@ class App(ctk.CTk):
                                         self.set_progress(2, 30 + (progress_percent * 0.7))
                                 elif line.startswith('error '):
                                     self.logn('PyAnnote error: ' + line[5:], 'error')
+                                elif line.startswith('log: '):
+                                    self.logn('PyAnnote ' + line, where='file')
+                                    if line.strip() == "log: 'pyannote_xpu: cpu' was set":
+                                        self.pyannote_xpu = 'cpu'
+                                        self.logn(f'self.pyannote_xpu = {self.pyannote_xpu}', where='file')
                         
                         if pyannote_proc.returncode > 0:
                             raise Exception('')
