@@ -888,7 +888,7 @@ class App(ctk.CTk):
                                     self.logn('PyAnnote ' + line, where='file')
                                     if line.strip() == "log: 'pyannote_xpu: cpu' was set":
                                         self.pyannote_xpu = 'cpu'
-                                        self.logn(f'self.pyannote_xpu = {self.pyannote_xpu}', where='file')
+                                        config['pyannote_xpu'] = 'cpu'
                         
                         if pyannote_proc.returncode > 0:
                             raise Exception('')
