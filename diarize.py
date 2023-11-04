@@ -78,7 +78,7 @@ try:
             device = 'cpu'
             print("log: 'pyannote_xpu: mps' was selected, but mps is not available on this system!")
             print("log: This happens, because availability cannot be checked earlier.")
-            print("log: 'pyannote_xpu: cpu' was set.") # the string needs to be the same as in noScribe.py `if line.strip() == "log: 'pyannote_xpu: cpu' was set.":`
+            print("log: 'pyannote_xpu: cpu' was set.") # The string needs to be the same as in noScribe.py `if line.strip() == "log: 'pyannote_xpu: cpu' was set.":`.
         with open(os.path.join(app_dir, 'models', 'pyannote_config.yaml'), 'r') as yaml_file:
             pyannote_config = yaml.safe_load(yaml_file)
 

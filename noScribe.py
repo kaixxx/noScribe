@@ -848,7 +848,7 @@ class App(ctk.CTk):
                         diarize_env = None
                         if self.pyannote_xpu == 'mps':
                             diarize_env = os.environ.copy()
-                            diarize_env["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1)
+                            diarize_env["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1) # Necessary since some operators are not implemented for MPS yet.
                         self.logn(diarize_cmd, where='file')
                         
                         if platform.system() == 'Windows':
@@ -886,7 +886,7 @@ class App(ctk.CTk):
                                     self.logn('PyAnnote error: ' + line[5:], 'error')
                                 elif line.startswith('log: '):
                                     self.logn('PyAnnote ' + line, where='file')
-                                    if line.strip() == "log: 'pyannote_xpu: cpu' was set.": # the string needs to be the same as in diarize.py `print("log: 'pyannote_xpu: cpu' was set.")`
+                                    if line.strip() == "log: 'pyannote_xpu: cpu' was set.": # The string needs to be the same as in diarize.py `print("log: 'pyannote_xpu: cpu' was set.")`.
                                         self.pyannote_xpu = 'cpu'
                                         config['pyannote_xpu'] = 'cpu'
                         
