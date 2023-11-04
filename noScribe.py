@@ -886,7 +886,7 @@ class App(ctk.CTk):
                                     self.logn('PyAnnote error: ' + line[5:], 'error')
                                 elif line.startswith('log: '):
                                     self.logn('PyAnnote ' + line, where='file')
-                                    if line.strip() == "log: 'pyannote_xpu: cpu' was set":
+                                    if line.strip() == "log: 'pyannote_xpu: cpu' was set.": # the string needs to be the same as in diarize.py `print("log: 'pyannote_xpu: cpu' was set.")`
                                         self.pyannote_xpu = 'cpu'
                                         config['pyannote_xpu'] = 'cpu'
                         
