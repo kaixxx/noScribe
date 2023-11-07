@@ -34,3 +34,5 @@ diarize_x86_64_gernophil
 diarize_x86_64_gernophil_unsigned
 diarize_x86_64_mod
 diarize_x86_64_mod_unsigned
+
+.python-version
