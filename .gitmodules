@@ -1,0 +1,3 @@
+[submodule "models/faster-whisper-large-v2"]
+	path = models/faster-whisper-large-v2
+	url = https://huggingface.co/guillaumekln/faster-whisper-large-v2
