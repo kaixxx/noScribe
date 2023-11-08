@@ -471,7 +471,7 @@ class App(ctk.CTk):
 
     def button_audio_file_event(self):
         fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_file), initialfile=os.path.basename(self.audio_file))
-        if fn != '':
+        if fn:
             self.audio_file = fn
             self.logn(t('log_audio_file_selected') + self.audio_file)
             self.button_audio_file_name.configure(text=os.path.basename(self.audio_file))
@@ -485,7 +485,7 @@ class App(ctk.CTk):
             _initialfile = Path(os.path.basename(self.audio_file)).stem
         fn = tk.filedialog.asksaveasfilename(initialdir=_initialdir, initialfile=_initialfile, 
                                              filetypes=[('noScribe Transcript','*.html')], defaultextension='html')
-        if fn != '':
+        if fn:
             self.transcript_file = fn
             self.logn(t('log_transcript_filename') + self.transcript_file)
             self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_file))
