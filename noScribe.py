@@ -415,6 +415,8 @@ class App(ctk.CTk):
             program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit.exe')
         elif platform.system() == "Darwin": # = MAC
             program = os.path.join(os.sep, 'Applications', 'noScribeEdit.app', 'Contents', 'MacOS', 'noScribeEdit')
+        elif platform.system() == "Linux":
+            program = os.path.join(app_dir, 'noScribeEdit', "noScribeEdit")
         kwargs = {}
         if platform.system() == 'Windows':
             # from msdn [1]
