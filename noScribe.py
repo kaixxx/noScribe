@@ -39,6 +39,7 @@ if platform.system() == 'Windows':
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
 import re
 if platform.system() == "Darwin": # = MAC
+    from subprocess import check_output
     if platform.machine() == "x86_64":
         os.environ['KMP_DUPLICATE_LIB_OK']='True' # prevent OMP: Error #15: Initializing libomp.dylib, but found libiomp5.dylib already initialized.
     # import torch.backends.mps # loading torch modules leads to segmentation fault later
@@ -129,7 +130,14 @@ config['locale'] = app_locale
 if platform.system() == 'Windows':
     number_threads = cpufeature.CPUFeature["num_physical_cores"]
 elif platform.system() == "Darwin": # = MAC
-    number_threads = 4
+    if platform.machine() == "arm64":
+            number_threads = int(int(check_output(["sysctl",
+                                                   "-n",
+                                                   "hw.perflevel0.logicalcpu_max"])) * 0.75)
+    elif platform.machine() == "x86_64":
+            number_threads = int(int(check_output(["sysctl",
+                                                   "-n",
+                                                   "hw.logicalcpu_max"])) * 0.75)
 else:
     raise Exception('Platform not supported yet.')
 
