@@ -59,7 +59,7 @@ import logging
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.4.2'
+app_version = '0.4.3'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
