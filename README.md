@@ -4,9 +4,9 @@
 **Download current version:**
 - **Windows** (vers. 0.4.1): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
 > Note: Vers. 0.4.1 fixes problems in combination with NVIDIA graphics cards on Windows in vers. 0.4.
-- **macOS** (vers. 0.4.2 beta, ported by [gernophil](https://github.com/gernophil)):  
+- **macOS** (vers. 0.4.3 beta, ported by [gernophil](https://github.com/gernophil)):  
 [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS)
-> [Please discuss your experiences with versions 0.4.1/0.4.2 here](https://github.com/kaixxx/noScribe/discussions/31) or open an issue if you find errors. Thank you
+> [Please discuss your experiences with versions 0.4.1/2/3 here](https://github.com/kaixxx/noScribe/discussions/31) or open an issue if you find errors. Thank you
 
 
 Old release vers. 0.3:
