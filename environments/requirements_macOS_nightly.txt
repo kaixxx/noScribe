@@ -1,0 +1,2 @@
+# First install torchaudio with `pip install --pre torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu`
+# Second install the rest with `pip install -r requirements_macOS.txt`
