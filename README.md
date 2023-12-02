@@ -1,5 +1,5 @@
-﻿# noScribe 
-## Cutting Edge AI Technology for Automated Audio Transcription
+﻿# noScribe
+> ## Cutting Edge AI Technology for Automated Audio Transcription
 
 ## What is noScribe?
 - An AI-based software that **transcribes interviews** for qualitative social research or journalistic use
@@ -9,7 +9,7 @@
 - It includes a **nice editor** to review, verify and correct the resulting transcript
 - It is standing on the shoulders of giants: [Whisper from OpenAI](https://github.com/openai/whisper), [faster-whisper by Guillaume Klein](https://github.com/guillaumekln/faster-whisper) and [pyannote from Hervé Bredin](https://github.com/pyannote/pyannote-audio)
 
-  
+</br>  
 
 ![Main window](img/noScribe_main_window.png)
 (The transcript is from [this interview](https://www.youtube.com/watch?v=vOwajAbvPzQ&t=2018s) which I did in May 2022 with the Russian sociologist Natalia Savelyeva.)
@@ -27,22 +27,21 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 **Kai Dröge**, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).
 
 ## Download and Installation
-(All releases are currently hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.)
+> All releases are currently hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 ### Windows
 - Download current version 0.4.1: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
-> Note: Vers. 0.4.1 fixes problems in combination with NVIDIA graphics cards on Windows in vers. 0.4.
 - **Installation**: Start the downloaded setup file. This may take a while, be patient.
 
 ### MacOS 
-ported by [gernophil](https://github.com/gernophil)
-
+ported by [gernophil](https://github.com/gernophil) </br>
 noScribe runs on macOS 11.0 or higher.
 - Make sure to download the right variant: "noScribe_arm64.dmg" is for Macs with the newer M1/M2/M3 processors, "noScribe_x86_64_unsigned.dmg" for the older Intel-based machines.
 - Current version 0.4.3 beta: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS%2F0.4.3](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS%2F0.4.3)
 - **Installation (M1/M2/M3-based Macs)**: 
     - Double-click on the downloaded "noScribe_arm64.dmg" file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
     - Start noScribe and/or noScribeEdit by double-clicking the app within your applications folder.
-- **Installation (Intel-based Macs)**: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active.
+- **Installation (Intel-based Macs)**:</br>
+Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
     - Download and double-click the noScribe_arm64.dmg file.
     - Drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install")
     - Start noScribe by double-clicking the app within your applications folder. You will get an error that noScribe is from an unregistered developer. Do the same with the noScribe Editor.
@@ -52,8 +51,6 @@ noScribe runs on macOS 11.0 or higher.
 ### Linux
 ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](https://github.com/domna)
 (Installation instructions will follow)
-
-> [Please discuss your experiences with versions 0.4.1/2/3 here](https://github.com/kaixxx/noScribe/discussions/31) or open an issue if you find errors. Thank you
 
 ### Old versions:
 - [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) 
