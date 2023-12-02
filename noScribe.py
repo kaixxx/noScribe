@@ -422,7 +422,7 @@ class App(ctk.CTk):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
         # set system/version dependent "start_new_session" analogs
-        program: str | None = None
+        program: str = None
         if platform.system() == 'Windows':
             program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit.exe')
         elif platform.system() == "Darwin": # = MAC
@@ -439,12 +439,9 @@ class App(ctk.CTk):
             kwargs.update(start_new_session=True)
 
         if program is not None and os.path.exists(program):
-            # p = Popen(["C"], stdin=PIPE, stdout=PIPE, stderr=PIPE, **kwargs)
             Popen([program, file], **kwargs)
-            # assert not p.poll()
-            return
-
-        webbrowser.open(f"file://{file}")
+        else:
+            self.logn(t('err_noScribeEdit_not_found'), 'error')
 
     def openLink(self, link):
         if link.startswith('file://') and link.endswith('.html'):

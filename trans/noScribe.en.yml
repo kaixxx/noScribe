@@ -72,6 +72,7 @@ en:
   err_transcription: 'Error in step 3 - transcription'
   rescue_saving: 'Saving to the original filename failed. Saved instead in this file: '
   rescue_saving_failed: 'Error: Saving to the original filename failed. The alternate filename also exists. I have to quit. (Make sure your transcript is not already opened in Word!)'
+  err_noScribeEdit_not_found: 'Error: Could not find the noScribe Editor.'
 
   # Doc contents
   doc_header: 'Transcribed with noScribe vers. %{version}'
