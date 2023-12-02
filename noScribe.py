@@ -51,7 +51,7 @@ import datetime
 from pathlib import Path
 if platform.system() == 'Windows':
     import cpufeature
-if platform.system() in ["Darwin", "Linux"]: # = macOS or Linux
+if platform.system() in ("Darwin", "Linux"): # = macOS or Linux
     import shlex
 if platform.system() == 'Darwin':
     import Foundation
@@ -222,9 +222,9 @@ class App(ctk.CTk):
             self.geometry(f"{1100}x{695}")
         else:
             self.geometry(f"{1100}x{650}")
-        if platform.system() in ["Darwin", "Windows"]:
+        if platform.system() in ("Darwin", "Windows"):
             self.iconbitmap('noScribeLogo.ico')
-        if platform.system() in ["Linux"]:
+        if platform.system() == "Linux":
             self.iconphoto(True, tk.PhotoImage(file='noScribeLogo.png'))
 
         # header
@@ -779,7 +779,7 @@ class App(ctk.CTk):
                         with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8', startupinfo=startupinfo) as ffmpeg_proc:
                             for line in ffmpeg_proc.stdout:
                                 self.logn('ffmpeg: ' + line)
-                    elif platform.system() in ["Darwin", "Linux"]:
+                    elif platform.system() in ("Darwin", "Linux"):
                         with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8') as ffmpeg_proc:
                             for line in ffmpeg_proc.stdout:
                                 self.logn('ffmpeg: ' + line)
