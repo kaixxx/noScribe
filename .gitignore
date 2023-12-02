@@ -20,6 +20,7 @@ models/faster-whisper*/.gitattributes
 models/faster-whisper*/README.md
 models/whisper-small-swiss/
 models/faster-whisper-small_old/
+models/faster-whisper-large-v2 french/
 
 .DS_Store
 stuff/
