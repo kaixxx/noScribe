@@ -1,18 +1,6 @@
 ﻿# noScribe 
 ## Cutting Edge AI Technology for Automated Audio Transcription
 
-**Download current version:**
-- **Windows** (vers. 0.4.1): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
-> Note: Vers. 0.4.1 fixes problems in combination with NVIDIA graphics cards on Windows in vers. 0.4.
-- **macOS** (vers. 0.4.3 beta, ported by [gernophil](https://github.com/gernophil)):  
-[https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS)
-> [Please discuss your experiences with versions 0.4.1/2/3 here](https://github.com/kaixxx/noScribe/discussions/31) or open an issue if you find errors. Thank you
-
-
-Old release vers. 0.3:
-- Windows: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.3%2FWindows) ([Readme](README_v0_3.md)) 
-
-
 ## What is noScribe?
 - An AI-based software that **transcribes interviews** for qualitative social research or journalistic use
 - noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html))
@@ -38,11 +26,39 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 ## About Me
 **Kai Dröge**, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).
 
-## Usage
-### Installation
-- **Download** the latest release for your operating system from here: [noScript releases](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) (SWITCHdrive is a secure data sharing platform for Swiss universities)
-- Start the downloaded setup file. This may take a while, be patient.
+## Download and Installation
+(All releases are currently hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.)
+### Windows
+- Download current version 0.4.1: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
+> Note: Vers. 0.4.1 fixes problems in combination with NVIDIA graphics cards on Windows in vers. 0.4.
+- **Installation**: Start the downloaded setup file. This may take a while, be patient.
 
+### MacOS 
+ported by [gernophil](https://github.com/gernophil)
+
+noScribe runs on macOS 11.0 or higher.
+- Make sure to download the right variant: "noScribe_arm64.dmg" is for Macs with the newer M1/M2/M3 processors, "noScribe_x86_64_unsigned.dmg" for the older Intel-based machines.
+- Current version 0.4.3 beta: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS%2F0.4.3](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS%2F0.4.3)
+- **Installation (M1/M2/M3-based Macs)**: 
+    - Double-click on the downloaded "noScribe_arm64.dmg" file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
+    - Start noScribe and/or noScribeEdit by double-clicking the app within your applications folder.
+- **Installation (Intel-based Macs)**: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active.
+    - Download and double-click the noScribe_arm64.dmg file.
+    - Drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install")
+    - Start noScribe by double-clicking the app within your applications folder. You will get an error that noScribe is from an unregistered developer. Do the same with the noScribe Editor.
+    - Go to Settings -> Privacy and Security -> Scroll down until you see a message stating noScribe was prevented from starting and click "open anyway". Again, do the same with the noScribe Editor.
+    - From now on, both programs should start without issues.
+
+### Linux
+ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](https://github.com/domna)
+(Installation instructions will follow)
+
+> [Please discuss your experiences with versions 0.4.1/2/3 here](https://github.com/kaixxx/noScribe/discussions/31) or open an issue if you find errors. Thank you
+
+### Old versions:
+- [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) 
+
+## Usage
 ### Settings
 <img align="left" src="img/noScribe_settings.png" width="300">
 
