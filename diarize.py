@@ -73,7 +73,7 @@ try:
     if platform.system() == 'Windows':
         pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'models', 'pyannote_config.yaml'))
         pipeline.to(torch.device(device))
-    elif platform.system() == "Darwin": # = MAC
+    elif platform.system() in ("Darwin", "Linux"): # = MAC
         if device == 'mps' and not torch.backends.mps.is_available():  # should only happen on x86_64, but checked on all archs to be sure
             device = 'cpu'
             print("log: 'pyannote_xpu: mps' was selected, but mps is not available on this system!")

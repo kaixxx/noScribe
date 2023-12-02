@@ -1,0 +1,10 @@
+customtkinter
+Pillow
+PyYAML
+appdirs
+AdvancedHTMLParser
+elevate
+python-i18n
+pyannote.audio @ git+https://github.com/kaixxx/pyannote-audio.git
+faster-whisper
+pyinstaller

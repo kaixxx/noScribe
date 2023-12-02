@@ -51,8 +51,9 @@ import datetime
 from pathlib import Path
 if platform.system() == 'Windows':
     import cpufeature
-if platform.system() == "Darwin": # = MAC
+if platform.system() in ("Darwin", "Linux"): # = macOS or Linux
     import shlex
+if platform.system() == 'Darwin':
     import Foundation
 import logging
 
@@ -129,6 +130,9 @@ config['locale'] = app_locale
 # determine optimal number of threads for faster-whisper (depending on cpu cores) 
 if platform.system() == 'Windows':
     number_threads = cpufeature.CPUFeature["num_physical_cores"]
+elif platform.system() == "Linux":
+    number_threads = os.cpu_count()
+    number_threads = 4 if number_threads is None else number_threads
 elif platform.system() == "Darwin": # = MAC
     if platform.machine() == "arm64":
             number_threads = int(int(check_output(["sysctl",
@@ -214,11 +218,14 @@ class App(ctk.CTk):
 
         # configure window
         self.title('noScribe - ' + t('app_header'))
-        if platform.system() == "Darwin":
+        if platform.system() in ("Darwin", "Linux"):
             self.geometry(f"{1100}x{695}")
         else:
             self.geometry(f"{1100}x{650}")
-        self.iconbitmap('noScribeLogo.ico')
+        if platform.system() in ("Darwin", "Windows"):
+            self.iconbitmap('noScribeLogo.ico')
+        if platform.system() == "Linux":
+            self.iconphoto(True, tk.PhotoImage(file='noScribeLogo.png'))
 
         # header
         self.frame_header = ctk.CTkFrame(self, height=100)
@@ -415,10 +422,13 @@ class App(ctk.CTk):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
         # set system/version dependent "start_new_session" analogs
+        program: str = None
         if platform.system() == 'Windows':
             program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit.exe')
         elif platform.system() == "Darwin": # = MAC
             program = os.path.join(os.sep, 'Applications', 'noScribeEdit.app', 'Contents', 'MacOS', 'noScribeEdit')
+        elif platform.system() == "Linux":
+            program = os.path.join(app_dir, 'noScribeEdit', "noScribeEdit")
         kwargs = {}
         if platform.system() == 'Windows':
             # from msdn [1]
@@ -428,10 +438,11 @@ class App(ctk.CTk):
         else:  # should work on all POSIX systems, Linux and macOS 
             kwargs.update(start_new_session=True)
 
-        # p = Popen(["C"], stdin=PIPE, stdout=PIPE, stderr=PIPE, **kwargs)
-        p = Popen([program, file], **kwargs)
-        # assert not p.poll()
-    
+        if program is not None and os.path.exists(program):
+            Popen([program, file], **kwargs)
+        else:
+            self.logn(t('err_noScribeEdit_not_found'), 'error')
+
     def openLink(self, link):
         if link.startswith('file://') and link.endswith('.html'):
             self.launch_editor(link[7:])
@@ -471,7 +482,7 @@ class App(ctk.CTk):
 
     def button_audio_file_event(self):
         fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_file), initialfile=os.path.basename(self.audio_file))
-        if fn != '':
+        if fn:
             self.audio_file = fn
             self.logn(t('log_audio_file_selected') + self.audio_file)
             self.button_audio_file_name.configure(text=os.path.basename(self.audio_file))
@@ -485,7 +496,7 @@ class App(ctk.CTk):
             _initialfile = Path(os.path.basename(self.audio_file)).stem
         fn = tk.filedialog.asksaveasfilename(initialdir=_initialdir, initialfile=_initialfile, 
                                              filetypes=[('noScribe Transcript','*.html')], defaultextension='html')
-        if fn != '':
+        if fn:
             self.transcript_file = fn
             self.logn(t('log_transcript_filename') + self.transcript_file)
             self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_file))
@@ -749,6 +760,11 @@ class App(ctk.CTk):
                         ffmpeg_abspath = os.path.join(app_dir, 'ffmpeg')
                         ffmpeg_cmd = f'{ffmpeg_abspath} -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                         ffmpeg_cmd = shlex.split(ffmpeg_cmd)
+                    elif platform.system() == "Linux":
+                        # TODO: Use system ffmpeg if available
+                        ffmpeg_abspath = os.path.join(app_dir, 'ffmpeg-linux-x86_64')
+                        ffmpeg_cmd = f'{ffmpeg_abspath} -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
+                        ffmpeg_cmd = shlex.split(ffmpeg_cmd)
                     else:
                         raise Exception('Platform not supported yet.')
                     self.logn(ffmpeg_cmd, where='file')
@@ -760,7 +776,7 @@ class App(ctk.CTk):
                         with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8', startupinfo=startupinfo) as ffmpeg_proc:
                             for line in ffmpeg_proc.stdout:
                                 self.logn('ffmpeg: ' + line)
-                    elif platform.system() == "Darwin":  # = MAC
+                    elif platform.system() in ("Darwin", "Linux"):
                         with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8') as ffmpeg_proc:
                             for line in ffmpeg_proc.stdout:
                                 self.logn('ffmpeg: ' + line)
@@ -850,7 +866,7 @@ class App(ctk.CTk):
                         elif platform.system() == 'Darwin': # = MAC
                             # No check for arm64 or x86_64 necessary, since the correct version will be compiled and bundled
                             diarize_abspath = os.path.join(app_dir, '..', 'MacOS', 'diarize')
-                        if not os.path.exists(diarize_abspath): # Run the compiled version of diarize if it exists, otherwise the python script:
+                        if not 'diarize_abspath' in globals() or not os.path.exists(diarize_abspath): # Run the compiled version of diarize if it exists, otherwise the python script:
                             diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
                         diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
                         diarize_env = None
@@ -863,7 +879,7 @@ class App(ctk.CTk):
                             # (supresses the terminal, see: https://stackoverflow.com/questions/1813872/running-a-process-in-pythonw-with-popen-without-a-console)
                             startupinfo = STARTUPINFO()
                             startupinfo.dwFlags |= STARTF_USESHOWWINDOW
-                        elif platform.system() == 'Darwin': # = MAC
+                        elif platform.system() in ('Darwin', "Linux"): # = MAC
                             diarize_cmd = shlex.split(diarize_cmd)
                             startupinfo = None
                         else:
@@ -1006,7 +1022,7 @@ class App(ctk.CTk):
                     from faster_whisper import WhisperModel
                     if platform.system() == 'Windows':
                         whisper_device = 'cpu'
-                    elif platform.system() == "Darwin": # = MAC
+                    elif platform.system() in ("Darwin", "Linux"): # = MAC or Linux
                         whisper_device = 'auto'
                     else:
                         raise Exception('Platform not supported yet.')
