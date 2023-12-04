@@ -2,7 +2,6 @@
 AdvancedHTMLParser
 appdirs
 customtkinter
-elevate
 faster-whisper
 Pillow
 pyannote.audio @ git+https://github.com/kaixxx/pyannote-audio.git
