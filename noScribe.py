@@ -219,7 +219,7 @@ class App(ctk.CTk):
         # configure window
         self.title('noScribe - ' + t('app_header'))
         if platform.system() in ("Darwin", "Linux"):
-            self.geometry(f"{1100}x{695}")
+            self.geometry(f"{1100}x{725}")
         else:
             self.geometry(f"{1100}x{650}")
         if platform.system() in ("Darwin", "Windows"):
