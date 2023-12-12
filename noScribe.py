@@ -800,6 +800,11 @@ class App(ctk.CTk):
                     # returns overlap percentage, i.e., "0.8" = 80% of the transcript segment overlaps with the speaker segment from pyannote  
                     if ts_end < ss_start: # no overlap, ts is before ss
                         return None
+
+                    ts_len = ts_end - ts_start
+                    if ts_len <= 0:
+                        return None
+
                     elif ts_start > ss_end: # no overlap, ts is after ss
                         return 0.0
                     else: # ss & ts have overlap
@@ -811,11 +816,8 @@ class App(ctk.CTk):
                         overlap_end = max(ss_end, ts_end)
 
                         ol_len = overlap_end - overlap_start + 1
-                        ts_len = ts_end - ts_start
-                        if ts_len == 0:
-                            return None
-                        else:
-                            return ol_len / ts_len
+
+                        return ol_len / ts_len
 
                 def find_speaker(diarization, transcript_start, transcript_end) -> str:
                     # Looks for the shortest segment in diarization that has at least 80% overlap 
