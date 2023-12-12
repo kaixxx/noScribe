@@ -89,18 +89,21 @@ p, li { white-space: pre-wrap; }
 config_dir = appdirs.user_config_dir('noScribe')
 if not os.path.exists(config_dir):
     os.makedirs(config_dir)
+
+config_file = os.path.join(config_dir, 'config.yml')
+
 try:
-    with open(f'{config_dir}/config.yml', 'r') as file:
+    with open(config_file, 'r') as file:
         config = yaml.safe_load(file)
         if not config:
             raise # config file is empty (None)        
 except: # seems we run it for the first time and there is no config file
     config = {}
-    
+
 config['app_version'] = app_version
 
 def save_config():
-    with open(f'{config_dir}/config.yml', 'w') as file:
+    with open(config_file, 'w') as file:
         yaml.safe_dump(config, file)
 
 # locale: setting the language of the UI
