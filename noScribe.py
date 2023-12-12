@@ -159,12 +159,16 @@ def millisec(timeStr: str) -> int:
 
 def ms_to_str(t: float, include_ms=False):
     """ Convert milliseconds into formatted timestamp 'hh:mm:ss' """
-    timestamp = datetime.datetime(microsecond=int(t * 1000)) # Convert milliseconds into microseconds
-    formatted = datetime.datetime.strftime(timestamp, '%H:%M:%S')
-    rounded_ms = str(int(t)) # Round to nearest millisecond
-    if include_ms and len(rounded_ms) >= 3: # Add ms if include_ms is True
-        formatted += '.' + rounded_ms[-3:]
-    return formatted
+    hh = t//(60*60*1000) # hours
+    t = t-hh*(60*60*1000)
+    mm = t//(60*1000) # minutes
+    t = t-mm*(60*1000)
+    ss = t//1000 # seconds
+    if include_ms:
+        sss = t-ss*1000 # milliseconds
+        return(f'{hh:02d}:{mm:02d}:{ss:02d}.{sss}')
+    else:
+        return(f'{hh:02d}:{mm:02d}:{ss:02d}')
 
 def iter_except(function, exception):
         # Works like builtin 2-argument `iter()`, but stops on `exception`.
