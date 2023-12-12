@@ -702,19 +702,18 @@ class App(ctk.CTk):
                     else: # tranbscribe until the end
                         end_pos_cmd = ''
 
+                    arguments = ' -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                     if platform.system() == 'Windows':
-                        ffmpeg_cmd = f'ffmpeg.exe -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
+                        ffmpeg_path = 'ffmpeg.exe'
                     elif platform.system() == "Darwin":  # = MAC
-                        ffmpeg_abspath = os.path.join(app_dir, 'ffmpeg')
-                        ffmpeg_cmd = f'{ffmpeg_abspath} -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
-                        ffmpeg_cmd = shlex.split(ffmpeg_cmd)
+                        ffmpeg_path = os.path.join(app_dir, 'ffmpeg')
                     elif platform.system() == "Linux":
                         # TODO: Use system ffmpeg if available
-                        ffmpeg_abspath = os.path.join(app_dir, 'ffmpeg-linux-x86_64')
-                        ffmpeg_cmd = f'{ffmpeg_abspath} -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
-                        ffmpeg_cmd = shlex.split(ffmpeg_cmd)
+                        ffmpeg_path = os.path.join(app_dir, 'ffmpeg-linux-x86_64')
                     else:
                         raise Exception('Platform not supported yet.')
+
+                    ffmpeg_cmd = shlex.split(ffmpeg_path + arguments)
                     self.logn(ffmpeg_cmd, where='file')
 
                     if platform.system() == 'Windows':
