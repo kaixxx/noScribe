@@ -1117,7 +1117,7 @@ class App(ctk.CTk):
 
                         if self.speaker_detection == 'auto':
                             new_speaker = find_speaker(diarization, start, end)
-                            if (speaker != new_speaker) & (new_speaker != ''): # speaker change
+                            if (speaker != new_speaker) and (new_speaker != ''): # speaker change
                                 if new_speaker[:2] == '//': # is overlapping speech, create no new paragraph
                                     prev_speaker = speaker
                                     speaker = new_speaker
