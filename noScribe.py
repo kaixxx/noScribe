@@ -1083,12 +1083,11 @@ class App(ctk.CTk):
                         # check for pauses and mark them in the transcript
                         if (self.pause > 0) and (start - last_segment_end >= self.pause * 1000): # (more than x seconds with no speech)
                             pause_len = round((start - last_segment_end)/1000)
-                            if pause_len >= 10:
-                                if pause_len >= 60: # > 1 minute
-                                    pause_str = ' ' + t('pause_minutes', minutes=round(pause_len/60))
-                                else: # > 10 sec < 1 min
-                                    pause_str = ' ' + t('pause_seconds', seconds=pause_len)
-                            else: # < 10 sec, note one 'pause_marker' per second (default to a dot)
+                            if pause_len >= 60: # longer than 60 seconds
+                                pause_str = ' ' + t('pause_minutes', minutes=round(pause_len/60))
+                            elif pause_len >= 10: # longer than 10 seconds
+                                pause_str = ' ' + t('pause_seconds', seconds=pause_len)
+                            else: # less than 10 seconds
                                 pause_str = ' (' + (self.pause_marker * pause_len) + ')'
 
                             if first_segment:
