@@ -833,17 +833,17 @@ class App(ctk.CTk):
                         t = overlap_len(segment["start"], segment["end"], transcript_start, transcript_end)
                         if t is None: # we are already after transcript_end
                             break
-                        else:
-                            if overlap_found >= overlap_threshold: # we already found a fitting segment, compare length now
-                                if (t >= overlap_threshold) and ((segment["end"] - segment["start"]) < segment_len): # found a shorter (= better fitting) segment that also overlaps well
-                                    is_overlapping = True
-                                    overlap_found = t
-                                    segment_len = segment["end"] - segment["start"]
-                                    spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
-                            elif t > overlap_found: # no segment with good overlap jet, take this if the overlap is better then previously found 
+
+                        if overlap_found >= overlap_threshold: # we already found a fitting segment, compare length now
+                            if (t >= overlap_threshold) and ((segment["end"] - segment["start"]) < segment_len): # found a shorter (= better fitting) segment that also overlaps well
+                                is_overlapping = True
                                 overlap_found = t
                                 segment_len = segment["end"] - segment["start"]
                                 spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
+                        elif t > overlap_found: # no segment with good overlap jet, take this if the overlap is better then previously found 
+                            overlap_found = t
+                            segment_len = segment["end"] - segment["start"]
+                            spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
 
                     if self.overlapping and is_overlapping:
                         return f"//{spkr}"
