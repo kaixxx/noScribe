@@ -786,15 +786,14 @@ class App(ctk.CTk):
                     if ts_end < ss_start: # no overlap, ts is before ss
                         return None
 
+                    if ts_start > ss_end: # no overlap, ts is after ss
+                        return 0.0
+
                     ts_len = ts_end - ts_start
                     if ts_len <= 0:
                         return None
 
-                    if ts_start > ss_end: # no overlap, ts is after ss
-                        return 0.0
-
                     # ss & ts have overlap
-
                     overlap_start = max(ss_start, ts_start) # Whichever starts later
                     overlap_end = max(ss_end, ts_end) # Whichever ends later
 
