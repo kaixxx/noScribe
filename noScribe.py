@@ -563,58 +563,35 @@ class App(ctk.CTk):
                 os.makedirs(f'{config_dir}/log')
             self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
 
+            def get_config(key: str, default: str | int | float) -> str | int | float:
+                """ Get a config value, set it if it doesn't exist """
+                if key not in config:
+                    config[key] = default
+                return config[key]
+
             # options for faster-whisper
-            try:
-                self.whisper_precise_beam_size = config['whisper_precise_beam_size']
-            except:
-                config['whisper_precise_beam_size'] = 1
-                self.whisper_precise_beam_size = 1
+            self.whisper_precise_beam_size = get_config('whisper_precise_beam_size', 1)
             self.logn(f'whisper precise beam size: {self.whisper_precise_beam_size}', where='file')
-            try:
-                self.whisper_fast_beam_size = config['whisper_fast_beam_size']
-            except:
-                config['whisper_fast_beam_size'] = 1
-                self.whisper_fast_beam_size = 1
+
+            self.whisper_fast_beam_size = get_config('whisper_fast_beam_size', 1)
             self.logn(f'whisper fast beam size: {self.whisper_fast_beam_size}', where='file')
 
-            try:
-                self.whisper_precise_temperature = config['whisper_precise_temperature']
-            except:
-                config['whisper_precise_temperature'] = 0.0
-                self.whisper_precise_temperature = 0.0
+            self.whisper_precise_temperature = get_config('whisper_precise_temperature', 0.0)
             self.logn(f'whisper precise temperature: {self.whisper_precise_temperature}', where='file')
-            try:
-                self.whisper_fast_temperature = config['whisper_fast_temperature']
-            except:
-                config['whisper_fast_temperature'] = 0.0
-                self.whisper_fast_temperature = 0.0
+
+            self.whisper_fast_temperature = get_config('whisper_fast_temperature', 0.0)
             self.logn(f'whisper fast temperature: {self.whisper_fast_temperature}', where='file')
 
-            try:
-                self.whisper_precise_compute_type = config['whisper_precise_compute_type']
-            except:
-                config['whisper_precise_compute_type'] = 'default'
-                self.whisper_precise_compute_type = 'default'
+            self.whisper_precise_compute_type = get_config('whisper_precise_compute_type', 'default')
             self.logn(f'whisper precise compute type: {self.whisper_precise_compute_type}', where='file')
-            try:
-                self.whisper_fast_compute_type = config['whisper_fast_compute_type']
-            except:
-                config['whisper_fast_compute_type'] = 'default'
-                self.whisper_fast_compute_type = 'default'
+
+            self.whisper_fast_compute_type = get_config('whisper_fast_compute_type', 'default')
             self.logn(f'whisper fast compute type: {self.whisper_fast_compute_type}', where='file')
 
-            try:
-                self.timestamp_interval = config['timestamp_interval']
-            except:
-                config['timestamp_interval'] = 60000 # default: add a timestamp every minute
-                self.timestamp_interval = 60000
+            self.timestamp_interval = get_config('timestamp_interval', 60_000) # default: add a timestamp every minute
             self.logn(f'timestamp_interval: {self.timestamp_interval}', where='file')
 
-            try:
-                self.timestamp_color = config['timestamp_color']
-            except:
-                config['timestamp_color'] = '#78909C' # default: light gray/blue
-                self.timestamp_color = '#78909C'
+            self.timestamp_color = get_config('timestamp_color', '#78909C') # default: light gray/blue
             self.logn(f'timestamp_color: {self.timestamp_color}', where='file')
 
             # get UI settings
