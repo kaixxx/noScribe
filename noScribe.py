@@ -658,22 +658,14 @@ class App(ctk.CTk):
                 # if (platform.mac_ver()[0] >= '12.3' and
                 #     # torch.backends.mps.is_built() and # not necessary since depends on packaged PyTorch
                 #     torch.backends.mps.is_available()):
-                if platform.mac_ver()[0] >= '12.3': # loading torch modules leads to segmentation fault later
-                    if 'pyannote_xpu' not in config: # Default to mps if not in config
-                        config['pyannote_xpu'] = 'mps'
-
-                    self.pyannote_xpu = 'cpu' if config['pyannote_xpu'] == 'cpu' else 'mps'
-                else:
-                    if 'pyannote_xpu' not in config: # Default to cpu if not in config
-                        config['pyannote_xpu'] = 'cpu'
-
-                    self.pyannote_xpu = 'cpu'
+                # Default to mps on 12.3 and newer, else cpu
+                xpu = get_config('pyannote_xpu', 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu')
+                self.pyannote_xpu = 'cpu' if xpu == 'cpu' else 'mps'
             else:
                 # on other platforms, cuda can be used for pyannote if set in config.yml (experimental)
-                if 'pyannote_xpu' not in config: # Default to CPU if not in config
-                    config['pyannote_xpu'] = 'cpu'
-
-                self.pyannote_xpu = 'cuda' if config['pyannote_xpu'] == 'cuda' else 'cpu'
+                # Default to cpu
+                xpu = get_config('pyannote_xpu', 'cpu')
+                self.pyannote_xpu = 'cuda' if xpu == 'cuda' else 'cpu'
 
             # log CPU capabilities
             self.logn("=== CPU FEATURES ===", where="file")
