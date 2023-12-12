@@ -817,7 +817,7 @@ class App(ctk.CTk):
                         else:
                             return ol_len / ts_len
 
-                def find_speaker(diarization, transcript_start, transcript_end):
+                def find_speaker(diarization, transcript_start, transcript_end) -> str:
                     # Looks for the shortest segment in diarization that has at least 80% overlap 
                     # with transcript_start - trancript_end.  
                     # Returns the speaker name if found.
@@ -834,15 +834,18 @@ class App(ctk.CTk):
                         if t is None: # we are already after transcript_end
                             break
 
+                        # Calculate length of the current segment, as it is used multiple times
+                        current_segment_len = segment["end"] - segment["start"]
+
                         if overlap_found >= overlap_threshold: # we already found a fitting segment, compare length now
-                            if (t >= overlap_threshold) and ((segment["end"] - segment["start"]) < segment_len): # found a shorter (= better fitting) segment that also overlaps well
+                            if (t >= overlap_threshold) and (current_segment_len < segment_len): # found a shorter (= better fitting) segment that also overlaps well
                                 is_overlapping = True
                                 overlap_found = t
-                                segment_len = segment["end"] - segment["start"]
+                                segment_len = current_segment_len
                                 spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
                         elif t > overlap_found: # no segment with good overlap yet, take this if the overlap is better then previously found 
                             overlap_found = t
-                            segment_len = segment["end"] - segment["start"]
+                            segment_len = current_segment_len
                             spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
 
                     if self.overlapping and is_overlapping:
