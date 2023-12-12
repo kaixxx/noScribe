@@ -673,10 +673,7 @@ class App(ctk.CTk):
                 for key, value in cpufeature.CPUFeature.items():
                     self.logn('    {:24}: {}'.format(key, value), where="file")
             elif platform.system() == "Darwin": # = MAC
-                if platform.machine() == "arm64":
-                    self.logn("System: MAC arm64", where="file")
-                elif platform.machine() == "x86_64":
-                    self.logn("System: MAC x86_64", where="file")
+                self.logn(f"System: MAC {platform.machine()}", where="file")
                 if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
                     if config['pyannote_xpu'] == 'mps':
                         self.logn("macOS version >= 12.3:\nUsing MPS (with PYTORCH_ENABLE_MPS_FALLBACK enabled)", where="file")
