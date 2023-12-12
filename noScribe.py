@@ -1153,13 +1153,10 @@ class App(ctk.CTk):
                                         seg_html = seg_text
 
                         else: # no speaker detection
-                            if self.timestamps:
-                                if first_segment or (start - last_timestamp_ms) > self.timestamp_interval:
-                                    seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
-                                    seg_text = f' {ts}{seg_text}'
-                                    last_timestamp_ms = start
-                                else:
-                                    seg_html = seg_text
+                            if self.timestamps and (first_segment or (start - last_timestamp_ms) > self.timestamp_interval):
+                                seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
+                                seg_text = f' {ts}{seg_text}'
+                                last_timestamp_ms = start
                             else:
                                 seg_html = seg_text
                             # avoid leading whitespace in first paragraph
