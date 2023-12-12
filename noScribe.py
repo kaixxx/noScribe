@@ -1062,9 +1062,8 @@ class App(ctk.CTk):
                                 self.logn()
                                 self.log(t('transcription_saved'))
                                 self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
-                                raise Exception(t('err_user_cancelation')) 
-                            else:    
-                                raise Exception(t('err_user_cancelation')) 
+  
+                            raise Exception(t('err_user_cancelation')) 
 
                         # get time of the segment in milliseconds
                         start = round(segment.start * 1000.0)
@@ -1180,7 +1179,7 @@ class App(ctk.CTk):
                         first_segment = False
 
                         # auto save
-                        if self.auto_save == True:
+                        if self.auto_save:
                             if (datetime.datetime.now() - self.last_auto_save).total_seconds() > 20:
                                 save_doc()
 
