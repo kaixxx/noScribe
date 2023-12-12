@@ -49,10 +49,9 @@ import time
 from tempfile import TemporaryDirectory
 import datetime
 from pathlib import Path
+import shlex
 if platform.system() == 'Windows':
     import cpufeature
-if platform.system() in ("Darwin", "Linux"): # = macOS or Linux
-    import shlex
 if platform.system() == 'Darwin':
     import Foundation
 import logging
