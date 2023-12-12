@@ -799,7 +799,7 @@ class App(ctk.CTk):
                     # ts...: transcript segment start and end (from whisper.cpp)
                     # returns overlap percentage, i.e., "0.8" = 80% of the transcript segment overlaps with the speaker segment from pyannote  
                     if ts_end < ss_start: # no overlap, ts is before ss
-                        return -1   
+                        return None
                     elif ts_start > ss_end: # no overlap, ts is after ss
                         return 0
                     else: # ss & ts have overlap
@@ -813,7 +813,7 @@ class App(ctk.CTk):
                         ol_len = overlap_end - overlap_start + 1
                         ts_len = ts_end - ts_start
                         if ts_len == 0:
-                            return -1
+                            return None
                         else:
                             return ol_len / ts_len
 
@@ -831,7 +831,7 @@ class App(ctk.CTk):
                     
                     for segment in diarization:
                         t = overlap_len(segment["start"], segment["end"], transcript_start, transcript_end)
-                        if t == -1: # we are already after transcript_end
+                        if t is None: # we are already after transcript_end
                             break
                         else:
                             if overlap_found >= overlap_threshold: # we already found a fitting segment, compare length now
