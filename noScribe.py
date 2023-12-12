@@ -649,16 +649,10 @@ class App(ctk.CTk):
             self.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
             option_info += f'{t("label_pause")} {self.pause}'
 
-            if 'pause_seconds_marker' not in config: # Default to . if marker not in config
-                config['pause_seconds_marker'] = '.'
+            self.pause_marker = get_config('pause_seconds_marker', '.') # Default to . if marker not in config
 
-            self.pause_marker = config['pause_seconds_marker']
-
-            if 'auto_save' not in config: # Default to True if auto save not in config
-                config['auto_save'] == 'True'
-
-            # auto save during transcription (every 20 sec)?
-            self.auto_save = True if config['auto_save'] == 'True' else False
+            # Default to True if auto save not in config
+            self.auto_save = True if get_config('auto_save', 'True') == 'True' else False 
 
             if platform.system() == "Darwin": # = MAC
                 # if (platform.mac_ver()[0] >= '12.3' and
