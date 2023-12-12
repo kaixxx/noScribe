@@ -135,13 +135,12 @@ elif platform.system() == "Linux":
     number_threads = 4 if number_threads is None else number_threads
 elif platform.system() == "Darwin": # = MAC
     if platform.machine() == "arm64":
-            number_threads = int(int(check_output(["sysctl",
-                                                   "-n",
-                                                   "hw.perflevel0.logicalcpu_max"])) * 0.75)
+        cpu_count = int(check_output(["sysctl", "-n", "hw.perflevel0.logicalcpu_max"]))
     elif platform.machine() == "x86_64":
-            number_threads = int(int(check_output(["sysctl",
-                                                   "-n",
-                                                   "hw.logicalcpu_max"])) * 0.75)
+        cpu_count = int(check_output(["sysctl", "-n", "hw.logicalcpu_max"]))
+    else:
+        raise Exception("Unsupported mac")
+    number_threads = int(cpu_count * 0.75)
 else:
     raise Exception('Platform not supported yet.')
 
