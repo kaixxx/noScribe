@@ -671,53 +671,38 @@ class App(ctk.CTk):
             
             self.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
             option_info += f'{t("label_pause")} {self.pause}'
-            try:
-                self.pause_marker = config['pause_seconds_marker']
-            except:
-                config['pause_seconds_marker'] = '.'
-                self.pause_marker = '.' 
 
-            try:
-                if config['auto_save'] == 'True': # auto save during transcription (every 20 sec)?
-                    self.auto_save = True
-                else:
-                    self.auto_save = False
-            except:
-                config['auto_save'] = 'True'
-                self.auto_save = True 
+            if 'pause_seconds_marker' not in config: # Default to . if marker not in config
+                config['pause_seconds_marker'] = '.'
+
+            self.pause_marker = config['pause_seconds_marker']
+
+            if 'auto_save' not in config: # Default to True if auto save not in config
+                config['auto_save'] == 'True'
+
+            # auto save during transcription (every 20 sec)?
+            self.auto_save = True if config['auto_save'] == 'True' else False
 
             if platform.system() == "Darwin": # = MAC
                 # if (platform.mac_ver()[0] >= '12.3' and
                 #     # torch.backends.mps.is_built() and # not necessary since depends on packaged PyTorch
                 #     torch.backends.mps.is_available()):
                 if platform.mac_ver()[0] >= '12.3': # loading torch modules leads to segmentation fault later
-                    try:
-                        if config['pyannote_xpu'] == 'cpu':
-                            self.pyannote_xpu = 'cpu'
-                        else:
-                            self.pyannote_xpu = 'mps'
-                    except:
+                    if 'pyannote_xpu' not in config: # Default to mps if not in config
                         config['pyannote_xpu'] = 'mps'
-                        self.pyannote_xpu = 'mps'
+
+                    self.pyannote_xpu = 'cpu' if config['pyannote_xpu'] == 'cpu' else 'mps'
                 else:
-                    try:
-                        if config['pyannote_xpu'] == 'cpu':
-                            self.pyannote_xpu = 'cpu'
-                        else:
-                            self.pyannote_xpu = 'cpu'
-                    except:
+                    if 'pyannote_xpu' not in config: # Default to cpu if not in config
                         config['pyannote_xpu'] = 'cpu'
-                        self.pyannote_xpu = 'cpu'
-            else:
-                # on other platforms, cuda can be used for pyannote if set in config.yml (experimental)   
-                try:
-                    if config['pyannote_xpu'] == 'cuda':
-                        self.pyannote_xpu = 'cuda'
-                    else:
-                        self.pyannote_xpu = 'cpu'
-                except:
-                    config['pyannote_xpu'] = 'cpu'
+
                     self.pyannote_xpu = 'cpu'
+            else:
+                # on other platforms, cuda can be used for pyannote if set in config.yml (experimental)
+                if 'pyannote_xpu' not in config: # Default to CPU if not in config
+                    config['pyannote_xpu'] = 'cpu'
+
+                self.pyannote_xpu = 'cuda' if config['pyannote_xpu'] == 'cuda' else 'cpu'
 
             # log CPU capabilities
             self.logn("=== CPU FEATURES ===", where="file")
