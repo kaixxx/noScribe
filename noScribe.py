@@ -1018,10 +1018,7 @@ class App(ctk.CTk):
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
 
-                    if self.language != "auto":
-                        whisper_lang = self.language
-                    else:
-                        whisper_lang = None
+                    whisper_lang = self.language if self.language != 'auto' else None
 
                     """
                     # > VAD made the pause-detection actually worse, so I removed it. Strange...   
