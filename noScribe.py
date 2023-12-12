@@ -794,14 +794,14 @@ class App(ctk.CTk):
                 
                 # Helper Functions:
 
-                def overlap_len(ss_start, ss_end, ts_start, ts_end):
+                def overlap_len(ss_start, ss_end, ts_start, ts_end) -> float | None:
                     # ss...: speaker segment start and end in milliseconds (from pyannote)
                     # ts...: transcript segment start and end (from whisper.cpp)
                     # returns overlap percentage, i.e., "0.8" = 80% of the transcript segment overlaps with the speaker segment from pyannote  
                     if ts_end < ss_start: # no overlap, ts is before ss
                         return None
                     elif ts_start > ss_end: # no overlap, ts is after ss
-                        return 0
+                        return 0.0
                     else: # ss & ts have overlap
                         if ts_start > ss_start: # ts starts after ss
                             overlap_start = ts_start
