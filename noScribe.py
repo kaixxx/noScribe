@@ -790,19 +790,16 @@ class App(ctk.CTk):
                     if ts_len <= 0:
                         return None
 
-                    elif ts_start > ss_end: # no overlap, ts is after ss
+                    if ts_start > ss_end: # no overlap, ts is after ss
                         return 0.0
-                    else: # ss & ts have overlap
-                        if ts_start > ss_start: # ts starts after ss
-                            overlap_start = ts_start
-                        else:
-                            overlap_start = ss_start
-                        # Whichever ends later
-                        overlap_end = max(ss_end, ts_end)
 
-                        ol_len = overlap_end - overlap_start + 1
+                    # ss & ts have overlap
 
-                        return ol_len / ts_len
+                    overlap_start = max(ss_start, ts_start) # Whichever starts later
+                    overlap_end = max(ss_end, ts_end) # Whichever ends later
+
+                    ol_len = overlap_end - overlap_start + 1
+                    return ol_len / ts_len
 
                 def find_speaker(diarization, transcript_start, transcript_end) -> str:
                     # Looks for the shortest segment in diarization that has at least 80% overlap 
