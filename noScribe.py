@@ -157,18 +157,15 @@ def millisec(timeStr: str) -> int:
     except:
         raise Exception(t('err_invalid_time_string', time = timeStr))
 
-def ms_to_str(t: float, include_ms=False):
+def ms_to_str(milliseconds: float, include_ms=False):
     """ Convert milliseconds into formatted timestamp 'hh:mm:ss' """
-    hh = t//(60*60*1000) # hours
-    t = t-hh*(60*60*1000)
-    mm = t//(60*1000) # minutes
-    t = t-mm*(60*1000)
-    ss = t//1000 # seconds
+    seconds, milliseconds = divmod(milliseconds,1000)
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    formatted = f'{hours:02d}:{minutes:02d}:{seconds:02d}'
     if include_ms:
-        sss = t-ss*1000 # milliseconds
-        return(f'{hh:02d}:{mm:02d}:{ss:02d}.{sss}')
-    else:
-        return(f'{hh:02d}:{mm:02d}:{ss:02d}')
+        formatted += f'.{milliseconds:03d}'
+    return formatted 
 
 def iter_except(function, exception):
         # Works like builtin 2-argument `iter()`, but stops on `exception`.
