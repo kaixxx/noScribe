@@ -840,7 +840,7 @@ class App(ctk.CTk):
                                 overlap_found = t
                                 segment_len = segment["end"] - segment["start"]
                                 spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
-                        elif t > overlap_found: # no segment with good overlap jet, take this if the overlap is better then previously found 
+                        elif t > overlap_found: # no segment with good overlap yet, take this if the overlap is better then previously found 
                             overlap_found = t
                             segment_len = segment["end"] - segment["start"]
                             spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
