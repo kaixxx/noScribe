@@ -807,10 +807,9 @@ class App(ctk.CTk):
                             overlap_start = ts_start
                         else:
                             overlap_start = ss_start
-                        if ts_end > ss_end: # ts ends after ss
-                            overlap_end = ss_end
-                        else:
-                            overlap_end = ts_end
+                        # Whichever ends later
+                        overlap_end = max(ss_end, ts_end)
+
                         ol_len = overlap_end - overlap_start + 1
                         ts_len = ts_end - ts_start
                         if ts_len == 0:
