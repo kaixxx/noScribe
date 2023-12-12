@@ -150,11 +150,11 @@ timestamp_re = re.compile('\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]')
 
 # Helper functions
 
-def millisec(timeStr): # convert 'hh:mm:ss' string to milliseconds
+def millisec(timeStr: str) -> int:
+    """ Convert 'hh:mm:ss' string into milliseconds """
     try:
-        spl = timeStr.split(':')
-        s = (int)((int(spl[0]) * 60 * 60 + int(spl[1]) * 60 + float(spl[2]) )* 1000)
-        return s
+        h, m, s = timeStr.split(':')
+        return int(h) * 3600 + int(m) * 60 + int(s) # https://stackoverflow.com/a/6402859
     except:
         raise Exception(t('err_invalid_time_string', time = timeStr))
 
