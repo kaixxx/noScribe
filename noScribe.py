@@ -363,13 +363,11 @@ class App(ctk.CTk):
 
         self.check_box_overlapping = ctk.CTkCheckBox(self.frame_options, text = '')
         self.check_box_overlapping.grid(column=1, row=6, sticky='e', pady=5)
-        try:
-            if config['last_overlapping']:
-                self.check_box_overlapping.select()
-            else:
-                self.check_box_overlapping.deselect()
-        except:
-            self.check_box_overlapping.select() # defaults to on
+        overlapping = config.get('last_overlapping', True) # Get last overlapping, default to True
+        if overlapping:
+            self.check_box_overlapping.select()
+        else:
+            self.check_box_overlapping.deselect()
 
         # Timestamps in text
         self.label_timestamps = ctk.CTkLabel(self.frame_options, text=t('label_timestamps'))
@@ -377,13 +375,11 @@ class App(ctk.CTk):
 
         self.check_box_timestamps = ctk.CTkCheckBox(self.frame_options, text = '')
         self.check_box_timestamps.grid(column=1, row=7, sticky='e', pady=5)
-        try:
-            if config['last_timestamps']:
-                self.check_box_timestamps.select()
-            else:
-                self.check_box_timestamps.deselect()
-        except:
-            self.check_box_timestamps.deselect() # defaults to off
+        check_box_timestamps = config.get('last_timestamps', False) # Get last timestamps setting, default False
+        if check_box_timestamps:
+            self.check_box_timestamps.select()
+        else:
+            self.check_box_timestamps.deselect()
 
         # Start Button
         self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
@@ -496,6 +492,7 @@ class App(ctk.CTk):
             self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_file))
 
     def set_progress(self, step, value):
+        """ Update state of the progress bar """
         if step == 1:
             self.progress_bar.set(value * 0.05 / 100)
         elif step == 2:
