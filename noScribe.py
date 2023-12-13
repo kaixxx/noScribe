@@ -442,13 +442,14 @@ class App(ctk.CTk):
         else:
             self.logn(t('err_noScribeEdit_not_found'), 'error')
 
-    def openLink(self, link):
+    def openLink(self, link: str) -> None:
         if link.startswith('file://') and link.endswith('.html'):
             self.launch_editor(link[7:])
         else: 
             webbrowser.open(link)
 
-    def log(self, txt='', tags=[], where='both', link=''): # log to main window (log can be 'screen', 'file' or 'both')
+    def log(self, txt: str = '', tags: list = [], where: str = 'both', link: str = '') -> None:
+        """ Log to main window (where can be 'screen', 'file', or 'both') """
         if where != 'file':
             self.log_textbox.configure(state=ctk.NORMAL)
             if link != '':
@@ -462,22 +463,16 @@ class App(ctk.CTk):
             self.log_file.write(txt)
             self.log_file.flush()
 
-    def logn(self, txt='', tags=[], where='both', link=''): # log with newline
+    def logn(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '') -> None:
+        """ Log with a newline appended """
         self.log(f'{txt}\n', tags, where, link)
 
-    def logr(self, txt='', tags=[], where='both', link=''): # replace the last line of the log
+    def logr(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '') -> None:
+        """ Replace the last line of the log """
         if where != 'file':
             self.log_textbox.configure(state=ctk.NORMAL)
             self.log_textbox.delete("end-1c linestart", "end-1c")
         self.log(txt, tags, where, link)
-
-    def reader_thread(self, q):
-        try:
-            with self.process.stdout as pipe:
-                for line in iter(pipe.readline, b''):
-                    q.put(line)
-        finally:
-            q.put(None)
 
     def button_audio_file_event(self):
         fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_file), initialfile=os.path.basename(self.audio_file))
