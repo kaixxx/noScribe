@@ -612,7 +612,6 @@ class App(ctk.CTk):
                 self.whisper_compute_type = self.whisper_precise_compute_type
             option_info += f'{t("label_quality")} {self.option_menu_quality.get()} | '
 
-            self.prompt = ''
             try:
                 with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
                     prompts = yaml.safe_load(file)
@@ -622,10 +621,7 @@ class App(ctk.CTk):
             self.language = self.option_menu_language.get()
             if self.language != 'auto':
                 self.language = self.language[0:3].strip()
-                try:
-                    self.prompt = prompts[self.language]
-                except:
-                    self.prompt = ''
+
             option_info += f'{t("label_language")} {self.language} | '
 
             self.speaker_detection = self.option_menu_speaker.get()
