@@ -622,6 +622,8 @@ class App(ctk.CTk):
             if self.language != 'auto':
                 self.language = self.language[0:3].strip()
 
+            self.prompt = prompts.get(self.language, '') # Fetch language prompt, default to empty string
+
             option_info += f'{t("label_language")} {self.language} | '
 
             self.speaker_detection = self.option_menu_speaker.get()
