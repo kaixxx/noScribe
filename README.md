@@ -31,6 +31,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 ### Windows
 - Download current version 0.4.1: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
 - **Installation**: Start the downloaded setup file. This may take a while, be patient.
+- If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
 
 ### MacOS 
 ported by [gernophil](https://github.com/gernophil) </br>
