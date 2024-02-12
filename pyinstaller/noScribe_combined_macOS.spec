@@ -7,8 +7,8 @@ from PyInstaller.utils.hooks import collect_all
 noScribe_a = Analysis(
     ['/path/to/noScribe/noScribe.py'],
     pathex=[],
-    binaries=[],
-    datas=[('/path/to/noScribe/trans', 'trans/'), ('/path/to/noScribe/graphic_sw.png', '.'), ('/path/to/noScribe/ffmpeg', '.'), ('/path/to/noScribe/models/faster-whisper-small', 'models/faster-whisper-small/'), ('/path/to/noScribe/models/faster-whisper-large-v2', 'models/faster-whisper-large-v2/'), ('/path/to/noScribe/prompt.yml', '.'), ('/path/to/noScribe/LICENSE.txt', '.'), ('/path/to/noScribe/README.md', '.')],
+    binaries=[('/path/to/noScribe/ffmpeg', '.')],
+    datas=[('/path/to/noScribe/trans', 'trans/'), ('/path/to/noScribe/graphic_sw.png', '.'), ('/path/to/noScribe/models/faster-whisper-small', 'models/faster-whisper-small/'), ('/path/to/noScribe/models/faster-whisper-large-v2', 'models/faster-whisper-large-v2/'), ('/path/to/noScribe/prompt.yml', '.'), ('/path/to/noScribe/LICENSE.txt', '.'), ('/path/to/noScribe/README.md', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
