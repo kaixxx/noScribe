@@ -101,4 +101,5 @@ app = BUNDLE(
     name='noScribe.app',
     icon='/path/to/noScribe/noScribeLogo.ico',
     bundle_identifier=None,
+    info_plist={"CFBundleShortVersionString":"0.4.4"},
 )
