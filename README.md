@@ -38,7 +38,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 ported by [gernophil](https://github.com/gernophil) </br>
 noScribe runs on macOS 11.0 or higher.
 - Make sure to download the right variant: "noScribe_arm64.dmg" is for Macs with the newer M1/M2/M3 processors, "noScribe_x86_64_unsigned.dmg" for the older Intel-based machines.
-- Current version 0.4.4: https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS%2F0.4.4 
+- Current version 0.4.4: [arm64 (Apple Silicon)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS%2Farm64%20(Apple%20Silicon)%2F0.4.4) [x86_64 (Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS%2Fx86_64%20(Intel)%2F0.4.4) 
 - **Installation (M1/M2/M3-based Macs)**: 
     - Double-click on the downloaded "noScribe_arm64.dmg" file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
     - Start noScribe and/or noScribeEdit by double-clicking the app within your applications folder.
