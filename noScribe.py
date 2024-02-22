@@ -743,7 +743,7 @@ class App(ctk.CTk):
 
                     # ss & ts have overlap
                     overlap_start = max(ss_start, ts_start) # Whichever starts later
-                    overlap_end = max(ss_end, ts_end) # Whichever ends later
+                    overlap_end = min(ss_end, ts_end) # Whichever ends sooner
 
                     ol_len = overlap_end - overlap_start + 1
                     return ol_len / ts_len
