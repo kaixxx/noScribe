@@ -49,7 +49,8 @@ import time
 from tempfile import TemporaryDirectory
 import datetime
 from pathlib import Path
-import shlex
+if platform.system() in ("Darwin", "Linux"):
+    import shlex
 if platform.system() == 'Windows':
     import cpufeature
 if platform.system() == 'Darwin':
@@ -554,7 +555,7 @@ class App(ctk.CTk):
                 os.makedirs(f'{config_dir}/log')
             self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
 
-            def get_config(key: str, default: str | int | float) -> str | int | float:
+            def get_config(key: str, default):
                 """ Get a config value, set it if it doesn't exist """
                 if key not in config:
                     config[key] = default
@@ -691,15 +692,17 @@ class App(ctk.CTk):
                     arguments = f' -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                     if platform.system() == 'Windows':
                         ffmpeg_path = 'ffmpeg.exe'
+                        ffmpeg_cmd = ffmpeg_path + arguments
                     elif platform.system() == "Darwin":  # = MAC
                         ffmpeg_path = os.path.join(app_dir, 'ffmpeg')
+                        ffmpeg_cmd = shlex.split(ffmpeg_path + arguments)
                     elif platform.system() == "Linux":
                         # TODO: Use system ffmpeg if available
                         ffmpeg_path = os.path.join(app_dir, 'ffmpeg-linux-x86_64')
+                        ffmpeg_cmd = shlex.split(ffmpeg_path + arguments)
                     else:
                         raise Exception('Platform not supported yet.')
 
-                    ffmpeg_cmd = shlex.split(ffmpeg_path + arguments)
                     self.logn(ffmpeg_cmd, where='file')
 
                     if platform.system() == 'Windows':
@@ -727,7 +730,7 @@ class App(ctk.CTk):
 
                 # Helper Functions:
 
-                def overlap_len(ss_start, ss_end, ts_start, ts_end) -> float | None:
+                def overlap_len(ss_start, ss_end, ts_start, ts_end):
                     # ss...: speaker segment start and end in milliseconds (from pyannote)
                     # ts...: transcript segment start and end (from whisper.cpp)
                     # returns overlap percentage, i.e., "0.8" = 80% of the transcript segment overlaps with the speaker segment from pyannote  
@@ -766,17 +769,19 @@ class App(ctk.CTk):
                             break
 
                         current_segment_len = segment["end"] - segment["start"] # Length of the current segment
-                        if is_overlapping and (current_segment_len > segment_len): # If a qualified segment has been found, discard longer (=worse fitting) segments
-                            continue
+                        current_segment_spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
 
-                        if t >= overlap_threshold: # If segment overlap is higher than threshold, mark transcript part as overlapping
-                            is_overlapping = True
-                        elif t < overlap_found: # If current overlap not over threshold, discard segments with overlap less than current best overlap
-                            continue
-
-                        overlap_found, segment_len = t, current_segment_len # Update best segment
-                        spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
-
+                        if overlap_found >= overlap_threshold: # we already found a fitting segment, compare length now
+                            if (t >= overlap_threshold) and (current_segment_len < segment_len): # found a shorter (= better fitting) segment that also overlaps well
+                                is_overlapping = True
+                                overlap_found = t
+                                segment_len = current_segment_len
+                                spkr = current_segment_spkr
+                        elif t > overlap_found: # no segment with good overlap yet, take this if the overlap is better then previously found 
+                            overlap_found = t
+                            segment_len = current_segment_len
+                            spkr = current_segment_spkr
+                        
                     if self.overlapping and is_overlapping:
                         return f"//{spkr}"
                     else:
