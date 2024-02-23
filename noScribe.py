@@ -640,8 +640,8 @@ class App(ctk.CTk):
 
             self.pause_marker = get_config('pause_seconds_marker', '.') # Default to . if marker not in config
 
-            # Default to True if auto save not in config
-            self.auto_save = True if get_config('auto_save', 'True') == 'True' else False 
+            # Default to True if auto save not in config or invalid value
+            self.auto_save = False if get_config('auto_save', 'True') == 'False' else True 
 
             if platform.system() == "Darwin": # = MAC
                 # if (platform.mac_ver()[0] >= '12.3' and
