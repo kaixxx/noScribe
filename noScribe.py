@@ -649,7 +649,7 @@ class App(ctk.CTk):
                 #     torch.backends.mps.is_available()):
                 # Default to mps on 12.3 and newer, else cpu
                 xpu = get_config('pyannote_xpu', 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu')
-                self.pyannote_xpu = 'cpu' if xpu == 'cpu' else 'mps'
+                self.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
             else:
                 # on other platforms, cuda can be used for pyannote if set in config.yml (experimental)
                 # Default to cpu
