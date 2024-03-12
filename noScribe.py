@@ -49,10 +49,10 @@ import time
 from tempfile import TemporaryDirectory
 import datetime
 from pathlib import Path
+if platform.system() in ("Darwin", "Linux"):
+    import shlex
 if platform.system() == 'Windows':
     import cpufeature
-if platform.system() in ("Darwin", "Linux"): # = macOS or Linux
-    import shlex
 if platform.system() == 'Darwin':
     import Foundation
 import logging
@@ -89,18 +89,21 @@ p, li { white-space: pre-wrap; }
 config_dir = appdirs.user_config_dir('noScribe')
 if not os.path.exists(config_dir):
     os.makedirs(config_dir)
+
+config_file = os.path.join(config_dir, 'config.yml')
+
 try:
-    with open(f'{config_dir}/config.yml', 'r') as file:
+    with open(config_file, 'r') as file:
         config = yaml.safe_load(file)
         if not config:
             raise # config file is empty (None)        
 except: # seems we run it for the first time and there is no config file
     config = {}
-    
+
 config['app_version'] = app_version
 
 def save_config():
-    with open(f'{config_dir}/config.yml', 'w') as file:
+    with open(config_file, 'w') as file:
         yaml.safe_dump(config, file)
 
 # locale: setting the language of the UI
@@ -135,13 +138,12 @@ elif platform.system() == "Linux":
     number_threads = 4 if number_threads is None else number_threads
 elif platform.system() == "Darwin": # = MAC
     if platform.machine() == "arm64":
-            number_threads = int(int(check_output(["sysctl",
-                                                   "-n",
-                                                   "hw.perflevel0.logicalcpu_max"])) * 0.75)
+        cpu_count = int(check_output(["sysctl", "-n", "hw.perflevel0.logicalcpu_max"]))
     elif platform.machine() == "x86_64":
-            number_threads = int(int(check_output(["sysctl",
-                                                   "-n",
-                                                   "hw.logicalcpu_max"])) * 0.75)
+        cpu_count = int(check_output(["sysctl", "-n", "hw.logicalcpu_max"]))
+    else:
+        raise Exception("Unsupported mac")
+    number_threads = int(cpu_count * 0.75)
 else:
     raise Exception('Platform not supported yet.')
 
@@ -150,25 +152,23 @@ timestamp_re = re.compile('\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]')
 
 # Helper functions
 
-def millisec(timeStr): # convert 'hh:mm:ss' string to milliseconds
+def millisec(timeStr: str) -> int:
+    """ Convert 'hh:mm:ss' string into milliseconds """
     try:
-        spl = timeStr.split(':')
-        s = (int)((int(spl[0]) * 60 * 60 + int(spl[1]) * 60 + float(spl[2]) )* 1000)
-        return s
+        h, m, s = timeStr.split(':')
+        return (int(h) * 3600 + int(m) * 60 + int(s)) * 1000 # https://stackoverflow.com/a/6402859
     except:
         raise Exception(t('err_invalid_time_string', time = timeStr))
-    
-def ms_to_str(t, include_ms=False): # convert milliseconds to timestamp 'hh:mm:ss'
-    hh = t//(60*60*1000) # hours
-    t = t-hh*(60*60*1000)
-    mm = t//(60*1000) # minutes
-    t = t-mm*(60*1000)
-    ss = t//1000 # seconds
+
+def ms_to_str(milliseconds: float, include_ms=False):
+    """ Convert milliseconds into formatted timestamp 'hh:mm:ss' """
+    seconds, milliseconds = divmod(milliseconds,1000)
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    formatted = f'{hours:02d}:{minutes:02d}:{seconds:02d}'
     if include_ms:
-        sss = t-ss*1000 # milliseconds
-        return(f'{hh:02d}:{mm:02d}:{ss:02d}.{sss}')
-    else:
-        return(f'{hh:02d}:{mm:02d}:{ss:02d}')
+        formatted += f'.{milliseconds:03d}'
+    return formatted 
 
 def iter_except(function, exception):
         # Works like builtin 2-argument `iter()`, but stops on `exception`.
@@ -241,7 +241,7 @@ class App(ctk.CTk):
         # sub header
         self.header_label = ctk.CTkLabel(self.frame_header_logo, text=t('app_header'), font=ctk.CTkFont(size=16, weight="bold"))
         self.header_label.pack(padx=20, pady=[0, 20], anchor='w')
-     
+
         # graphic
         self.header_graphic = ctk.CTkImage(dark_image=Image.open(os.path.join(app_dir, 'graphic_sw.png')), size=(926,119))
         self.header_graphic_label = ctk.CTkLabel(self.frame_header, image=self.header_graphic, text='')
@@ -261,7 +261,7 @@ class App(ctk.CTk):
 
         self.frame_audio_file = ctk.CTkFrame(self.sidebar_frame, width=250, height=33, corner_radius=8, border_width=2)
         self.frame_audio_file.pack(padx=20, pady=[0,10], anchor='w')
-        
+
         self.button_audio_file_name = ctk.CTkButton(self.frame_audio_file, width=200, corner_radius=8, bg_color='transparent', 
                                                     fg_color='transparent', hover_color=self.frame_audio_file._bg_color, 
                                                     border_width=0, anchor='w',  
@@ -277,13 +277,13 @@ class App(ctk.CTk):
 
         self.frame_transcript_file = ctk.CTkFrame(self.sidebar_frame, width=250, height=33, corner_radius=8, border_width=2)
         self.frame_transcript_file.pack(padx=20, pady=[0,10], anchor='w')
-        
+
         self.button_transcript_file_name = ctk.CTkButton(self.frame_transcript_file, width=200, corner_radius=8, bg_color='transparent', 
                                                     fg_color='transparent', hover_color=self.frame_transcript_file._bg_color, 
                                                     border_width=0, anchor='w',  
                                                     text=t('label_transcript_file_name'), command=self.button_transcript_file_event)
         self.button_transcript_file_name.place(x=3, y=3)
-        
+
         self.button_transcript_file = ctk.CTkButton(self.frame_transcript_file, width=45, height=29, text='📂', command=self.button_transcript_file_event)
         self.button_transcript_file.place(x=203, y=2)
 
@@ -307,7 +307,7 @@ class App(ctk.CTk):
 
         self.entry_stop = TimeEntry(self.frame_options, width=100)
         self.entry_stop.grid(column='1', row='1', sticky='e', pady=[5,10])
-    
+
         # language
         self.label_language = ctk.CTkLabel(self.frame_options, text=t('label_language'))
         self.label_language.grid(column=0, row=2, sticky='w', pady=5)
@@ -324,14 +324,14 @@ class App(ctk.CTk):
         # Quality (Model Selection)
         self.label_quality = ctk.CTkLabel(self.frame_options, text=t('label_quality'))
         self.label_quality.grid(column=0, row=3, sticky='w', pady=5)
-        
+
         self.option_menu_quality = ctk.CTkOptionMenu(self.frame_options, width=100, values=['precise', 'fast'])
         self.option_menu_quality.grid(column=1, row=3, sticky='e', pady=5)
         try:
             self.option_menu_quality.set(config['last_quality'])
         except:
             pass
-        
+
         # Mark pauses
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
         self.label_pause.grid(column=0, row=4, sticky='w', pady=5)
@@ -357,20 +357,18 @@ class App(ctk.CTk):
             self.option_menu_speaker.set(config['last_speaker'])
         except:
             pass
-        
+
         # Overlapping Speech (Diarization)
         self.label_overlapping = ctk.CTkLabel(self.frame_options, text=t('label_overlapping'))
         self.label_overlapping.grid(column=0, row=6, sticky='w', pady=5)
 
         self.check_box_overlapping = ctk.CTkCheckBox(self.frame_options, text = '')
         self.check_box_overlapping.grid(column=1, row=6, sticky='e', pady=5)
-        try:
-            if config['last_overlapping']:
-                self.check_box_overlapping.select()
-            else:
-                self.check_box_overlapping.deselect()
-        except:
-            self.check_box_overlapping.select() # defaults to on
+        overlapping = config.get('last_overlapping', True) # Get last overlapping, default to True
+        if overlapping:
+            self.check_box_overlapping.select()
+        else:
+            self.check_box_overlapping.deselect()
 
         # Timestamps in text
         self.label_timestamps = ctk.CTkLabel(self.frame_options, text=t('label_timestamps'))
@@ -378,13 +376,11 @@ class App(ctk.CTk):
 
         self.check_box_timestamps = ctk.CTkCheckBox(self.frame_options, text = '')
         self.check_box_timestamps.grid(column=1, row=7, sticky='e', pady=5)
-        try:
-            if config['last_timestamps']:
-                self.check_box_timestamps.select()
-            else:
-                self.check_box_timestamps.deselect()
-        except:
-            self.check_box_timestamps.deselect() # defaults to off
+        check_box_timestamps = config.get('last_timestamps', False) # Get last timestamps setting, default False
+        if check_box_timestamps:
+            self.check_box_timestamps.select()
+        else:
+            self.check_box_timestamps.deselect()
 
         # Start Button
         self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
@@ -403,21 +399,21 @@ class App(ctk.CTk):
         self.log_textbox.pack(padx=20, pady=[20,10], expand=True, fill='both')
 
         self.hyperlink = HyperlinkManager(self.log_textbox._textbox)
-        
+
         # status bar bottom
         self.frame_status = ctk.CTkFrame(self, height=20, corner_radius=0)
         self.frame_status.pack(padx=0, pady=[0,0], anchor='sw', fill='x', side='bottom')
 
         self.progress_bar = ctk.CTkProgressBar(self.frame_status, height=5, mode='determinate')
         self.progress_bar.set(0)
-        
+
         self.logn(t('welcome_message'), 'highlight')
         self.log(t('welcome_credits', v=app_version))
         self.logn('https://github.com/kaixxx/noScribe', link='https://github.com/kaixxx/noScribe#readme')
         self.logn(t('welcome_instructions'))       
-        
+
     # Events and Methods
-    
+
     def launch_editor(self, file):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
@@ -443,13 +439,14 @@ class App(ctk.CTk):
         else:
             self.logn(t('err_noScribeEdit_not_found'), 'error')
 
-    def openLink(self, link):
+    def openLink(self, link: str) -> None:
         if link.startswith('file://') and link.endswith('.html'):
             self.launch_editor(link[7:])
         else: 
             webbrowser.open(link)
-    
-    def log(self, txt='', tags=[], where='both', link=''): # log to main window (log can be 'screen', 'file' or 'both')
+
+    def log(self, txt: str = '', tags: list = [], where: str = 'both', link: str = '') -> None:
+        """ Log to main window (where can be 'screen', 'file', or 'both') """
         if where != 'file':
             self.log_textbox.configure(state=ctk.NORMAL)
             if link != '':
@@ -462,23 +459,17 @@ class App(ctk.CTk):
                 txt = f'ERROR: {txt}'
             self.log_file.write(txt)
             self.log_file.flush()
-    
-    def logn(self, txt='', tags=[], where='both', link=''): # log with newline
+
+    def logn(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '') -> None:
+        """ Log with a newline appended """
         self.log(f'{txt}\n', tags, where, link)
 
-    def logr(self, txt='', tags=[], where='both', link=''): # replace the last line of the log
+    def logr(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '') -> None:
+        """ Replace the last line of the log """
         if where != 'file':
             self.log_textbox.configure(state=ctk.NORMAL)
             self.log_textbox.delete("end-1c linestart", "end-1c")
         self.log(txt, tags, where, link)
-        
-    def reader_thread(self, q):
-        try:
-            with self.process.stdout as pipe:
-                for line in iter(pipe.readline, b''):
-                    q.put(line)
-        finally:
-            q.put(None)
 
     def button_audio_file_event(self):
         fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_file), initialfile=os.path.basename(self.audio_file))
@@ -500,8 +491,9 @@ class App(ctk.CTk):
             self.transcript_file = fn
             self.logn(t('log_transcript_filename') + self.transcript_file)
             self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_file))
-    
+
     def set_progress(self, step, value):
+        """ Update state of the progress bar """
         if step == 1:
             self.progress_bar.set(value * 0.05 / 100)
         elif step == 2:
@@ -527,94 +519,71 @@ class App(ctk.CTk):
     def transcription_worker(self):
         # This is the main function where all the magic happens
         # We put this in a seperate thread so that it does not block the main ui
-        
+
         proc_start_time = datetime.datetime.now()
         self.cancel = False
 
         # Show the stop button
         self.start_button.pack_forget() # hide
         self.stop_button.pack(padx=20, pady=[0,10], expand=True, fill='x', anchor='sw')
-        
+
         # Show the progress bar
         self.progress_bar.set(0)
         self.progress_bar.pack(padx=20, pady=[10,20], expand=True, fill='both')
 
         tmpdir = TemporaryDirectory('noScribe')
         self.tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
-     
+
         try:
             # collect all the options
             option_info = ''
-            
+
             if self.audio_file == '':
                 self.logn(t('err_no_audio_file'), 'error')
                 tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
                 return
-            
+
             if self.transcript_file == '':
                 self.logn(t('err_no_transcript_file'), 'error')
                 tk.messagebox.showerror(title='noScribe', message=t('err_no_transcript_file'))
                 return
 
             self.my_transcript_file = self.transcript_file
-            
+
             # create log file
             if not os.path.exists(f'{config_dir}/log'):
                 os.makedirs(f'{config_dir}/log')
             self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
 
+            def get_config(key: str, default):
+                """ Get a config value, set it if it doesn't exist """
+                if key not in config:
+                    config[key] = default
+                return config[key]
+
             # options for faster-whisper
-            try:
-                self.whisper_precise_beam_size = config['whisper_precise_beam_size']
-            except:
-                config['whisper_precise_beam_size'] = 1
-                self.whisper_precise_beam_size = 1
+            self.whisper_precise_beam_size = get_config('whisper_precise_beam_size', 1)
             self.logn(f'whisper precise beam size: {self.whisper_precise_beam_size}', where='file')
-            try:
-                self.whisper_fast_beam_size = config['whisper_fast_beam_size']
-            except:
-                config['whisper_fast_beam_size'] = 1
-                self.whisper_fast_beam_size = 1
+
+            self.whisper_fast_beam_size = get_config('whisper_fast_beam_size', 1)
             self.logn(f'whisper fast beam size: {self.whisper_fast_beam_size}', where='file')
 
-            try:
-                self.whisper_precise_temperature = config['whisper_precise_temperature']
-            except:
-                config['whisper_precise_temperature'] = 0.0
-                self.whisper_precise_temperature = 0.0
+            self.whisper_precise_temperature = get_config('whisper_precise_temperature', 0.0)
             self.logn(f'whisper precise temperature: {self.whisper_precise_temperature}', where='file')
-            try:
-                self.whisper_fast_temperature = config['whisper_fast_temperature']
-            except:
-                config['whisper_fast_temperature'] = 0.0
-                self.whisper_fast_temperature = 0.0
+
+            self.whisper_fast_temperature = get_config('whisper_fast_temperature', 0.0)
             self.logn(f'whisper fast temperature: {self.whisper_fast_temperature}', where='file')
 
-            try:
-                self.whisper_precise_compute_type = config['whisper_precise_compute_type']
-            except:
-                config['whisper_precise_compute_type'] = 'default'
-                self.whisper_precise_compute_type = 'default'
+            self.whisper_precise_compute_type = get_config('whisper_precise_compute_type', 'default')
             self.logn(f'whisper precise compute type: {self.whisper_precise_compute_type}', where='file')
-            try:
-                self.whisper_fast_compute_type = config['whisper_fast_compute_type']
-            except:
-                config['whisper_fast_compute_type'] = 'default'
-                self.whisper_fast_compute_type = 'default'
+
+            self.whisper_fast_compute_type = get_config('whisper_fast_compute_type', 'default')
             self.logn(f'whisper fast compute type: {self.whisper_fast_compute_type}', where='file')
-            
-            try:
-                self.timestamp_interval = config['timestamp_interval']
-            except:
-                config['timestamp_interval'] = 60000 # default: add a timestamp every minute
-                self.timestamp_interval = 60000
+
+            self.timestamp_interval = get_config('timestamp_interval', 60_000) # default: add a timestamp every minute
             self.logn(f'timestamp_interval: {self.timestamp_interval}', where='file')
-            
-            try:
-                self.timestamp_color = config['timestamp_color']
-            except:
-                config['timestamp_color'] = '#78909C' # default: light gray/blue
-                self.timestamp_color = '#78909C'
+
+            self.timestamp_color = get_config('timestamp_color', '#78909C') # default: light gray/blue
             self.logn(f'timestamp_color: {self.timestamp_color}', where='file')
 
             # get UI settings
@@ -624,14 +593,14 @@ class App(ctk.CTk):
             else:
                 self.start = millisec(val)
                 option_info += f'{t("label_start")} {val} | ' 
-            
+
             val = self.entry_stop.get()
             if val == '':
                 self.stop = '0'
             else:
                 self.stop = millisec(val)
                 option_info += f'{t("label_stop")} {val} | '
-            
+
             if self.option_menu_quality.get() == 'fast':
                 self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-small')
                 self.whisper_beam_size = self.whisper_fast_beam_size
@@ -644,7 +613,6 @@ class App(ctk.CTk):
                 self.whisper_compute_type = self.whisper_precise_compute_type
             option_info += f'{t("label_quality")} {self.option_menu_quality.get()} | '
 
-            self.prompt = ''
             try:
                 with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
                     prompts = yaml.safe_load(file)
@@ -654,70 +622,40 @@ class App(ctk.CTk):
             self.language = self.option_menu_language.get()
             if self.language != 'auto':
                 self.language = self.language[0:3].strip()
-                try:
-                    self.prompt = prompts[self.language]
-                except:
-                    self.prompt = ''
+
+            self.prompt = prompts.get(self.language, '') # Fetch language prompt, default to empty string
+
             option_info += f'{t("label_language")} {self.language} | '
-            
+
             self.speaker_detection = self.option_menu_speaker.get()
             option_info += f'{t("label_speaker")} {self.speaker_detection} | '
-            
+
             self.overlapping = self.check_box_overlapping.get()
             option_info += f'{t("label_overlapping")} {self.overlapping} | '
-            
+
             self.timestamps = self.check_box_timestamps.get()
             option_info += f'{t("label_timestamps")} {self.timestamps} | '
-            
+
             self.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
             option_info += f'{t("label_pause")} {self.pause}'
-            try:
-                self.pause_marker = config['pause_seconds_marker']
-            except:
-                config['pause_seconds_marker'] = '.'
-                self.pause_marker = '.' 
 
-            try:
-                if config['auto_save'] == 'True': # auto save during transcription (every 20 sec)?
-                    self.auto_save = True
-                else:
-                    self.auto_save = False
-            except:
-                config['auto_save'] = 'True'
-                self.auto_save = True 
+            self.pause_marker = get_config('pause_seconds_marker', '.') # Default to . if marker not in config
+
+            # Default to True if auto save not in config or invalid value
+            self.auto_save = False if get_config('auto_save', 'True') == 'False' else True 
 
             if platform.system() == "Darwin": # = MAC
                 # if (platform.mac_ver()[0] >= '12.3' and
                 #     # torch.backends.mps.is_built() and # not necessary since depends on packaged PyTorch
                 #     torch.backends.mps.is_available()):
-                if platform.mac_ver()[0] >= '12.3': # loading torch modules leads to segmentation fault later
-                    try:
-                        if config['pyannote_xpu'] == 'cpu':
-                            self.pyannote_xpu = 'cpu'
-                        else:
-                            self.pyannote_xpu = 'mps'
-                    except:
-                        config['pyannote_xpu'] = 'mps'
-                        self.pyannote_xpu = 'mps'
-                else:
-                    try:
-                        if config['pyannote_xpu'] == 'cpu':
-                            self.pyannote_xpu = 'cpu'
-                        else:
-                            self.pyannote_xpu = 'cpu'
-                    except:
-                        config['pyannote_xpu'] = 'cpu'
-                        self.pyannote_xpu = 'cpu'
+                # Default to mps on 12.3 and newer, else cpu
+                xpu = get_config('pyannote_xpu', 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu')
+                self.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
             else:
-                # on other platforms, cuda can be used for pyannote if set in config.yml (experimental)   
-                try:
-                    if config['pyannote_xpu'] == 'cuda':
-                        self.pyannote_xpu = 'cuda'
-                    else:
-                        self.pyannote_xpu = 'cpu'
-                except:
-                    config['pyannote_xpu'] = 'cpu'
-                    self.pyannote_xpu = 'cpu'
+                # on other platforms, cuda can be used for pyannote if set in config.yml (experimental)
+                # Default to cpu
+                xpu = get_config('pyannote_xpu', 'cpu')
+                self.pyannote_xpu = 'cuda' if xpu == 'cuda' else 'cpu'
 
             # log CPU capabilities
             self.logn("=== CPU FEATURES ===", where="file")
@@ -726,10 +664,7 @@ class App(ctk.CTk):
                 for key, value in cpufeature.CPUFeature.items():
                     self.logn('    {:24}: {}'.format(key, value), where="file")
             elif platform.system() == "Darwin": # = MAC
-                if platform.machine() == "arm64":
-                    self.logn("System: MAC arm64", where="file")
-                elif platform.machine() == "x86_64":
-                    self.logn("System: MAC x86_64", where="file")
+                self.logn(f"System: MAC {platform.machine()}", where="file")
                 if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
                     if config['pyannote_xpu'] == 'mps':
                         self.logn("macOS version >= 12.3:\nUsing MPS (with PYTORCH_ENABLE_MPS_FALLBACK enabled)", where="file")
@@ -739,7 +674,7 @@ class App(ctk.CTk):
                         self.logn("macOS version >= 12.3:\nInvalid option for 'pyannote_xpu' in config.yml (should be 'mps' or 'cpu')\nYou might wanna change this\nUsing MPS anyway (with PYTORCH_ENABLE_MPS_FALLBACK enabled)", where="file")
                 else:
                     self.logn("macOS version < 12.3:\nMPS not available: Using CPU\nPerformance might be poor\nConsider updating macOS, if possible", where="file")
-            
+
             try:
 
                 #-------------------------------------------------------
@@ -754,19 +689,20 @@ class App(ctk.CTk):
                     else: # tranbscribe until the end
                         end_pos_cmd = ''
 
+                    arguments = f' -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
                     if platform.system() == 'Windows':
-                        ffmpeg_cmd = f'ffmpeg.exe -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
+                        ffmpeg_path = 'ffmpeg.exe'
+                        ffmpeg_cmd = ffmpeg_path + arguments
                     elif platform.system() == "Darwin":  # = MAC
-                        ffmpeg_abspath = os.path.join(app_dir, 'ffmpeg')
-                        ffmpeg_cmd = f'{ffmpeg_abspath} -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
-                        ffmpeg_cmd = shlex.split(ffmpeg_cmd)
+                        ffmpeg_path = os.path.join(app_dir, 'ffmpeg')
+                        ffmpeg_cmd = shlex.split(ffmpeg_path + arguments)
                     elif platform.system() == "Linux":
                         # TODO: Use system ffmpeg if available
-                        ffmpeg_abspath = os.path.join(app_dir, 'ffmpeg-linux-x86_64')
-                        ffmpeg_cmd = f'{ffmpeg_abspath} -nostdin -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
-                        ffmpeg_cmd = shlex.split(ffmpeg_cmd)
+                        ffmpeg_path = os.path.join(app_dir, 'ffmpeg-linux-x86_64')
+                        ffmpeg_cmd = shlex.split(ffmpeg_path + arguments)
                     else:
                         raise Exception('Platform not supported yet.')
+
                     self.logn(ffmpeg_cmd, where='file')
 
                     if platform.system() == 'Windows':
@@ -791,7 +727,7 @@ class App(ctk.CTk):
 
                 #-------------------------------------------------------
                 # 2) Speaker identification (diarization) with pyannote
-                
+
                 # Helper Functions:
 
                 def overlap_len(ss_start, ss_end, ts_start, ts_end):
@@ -799,26 +735,23 @@ class App(ctk.CTk):
                     # ts...: transcript segment start and end (from whisper.cpp)
                     # returns overlap percentage, i.e., "0.8" = 80% of the transcript segment overlaps with the speaker segment from pyannote  
                     if ts_end < ss_start: # no overlap, ts is before ss
-                        return -1   
-                    elif ts_start > ss_end: # no overlap, ts is after ss
-                        return 0
-                    else: # ss & ts have overlap
-                        if ts_start > ss_start: # ts starts after ss
-                            overlap_start = ts_start
-                        else:
-                            overlap_start = ss_start
-                        if ts_end > ss_end: # ts ends after ss
-                            overlap_end = ss_end
-                        else:
-                            overlap_end = ts_end
-                        ol_len = overlap_end - overlap_start + 1
-                        ts_len = ts_end - ts_start
-                        if ts_len == 0:
-                            return -1
-                        else:
-                            return ol_len / ts_len
+                        return None
 
-                def find_speaker(diarization, transcript_start, transcript_end):
+                    if ts_start > ss_end: # no overlap, ts is after ss
+                        return 0.0
+
+                    ts_len = ts_end - ts_start
+                    if ts_len <= 0:
+                        return None
+
+                    # ss & ts have overlap
+                    overlap_start = max(ss_start, ts_start) # Whichever starts later
+                    overlap_end = min(ss_end, ts_end) # Whichever ends sooner
+
+                    ol_len = overlap_end - overlap_start + 1
+                    return ol_len / ts_len
+
+                def find_speaker(diarization, transcript_start, transcript_end) -> str:
                     # Looks for the shortest segment in diarization that has at least 80% overlap 
                     # with transcript_start - trancript_end.  
                     # Returns the speaker name if found.
@@ -829,23 +762,26 @@ class App(ctk.CTk):
                     overlap_threshold = 0.8
                     segment_len = 0
                     is_overlapping = False
-                    
+
                     for segment in diarization:
                         t = overlap_len(segment["start"], segment["end"], transcript_start, transcript_end)
-                        if t == -1: # we are already after transcript_end
+                        if t is None: # we are already after transcript_end
                             break
-                        else:
-                            if overlap_found >= overlap_threshold: # we already found a fitting segment, compare length now
-                                if (t >= overlap_threshold) and ((segment["end"] - segment["start"]) < segment_len): # found a shorter (= better fitting) segment that also overlaps well
-                                    is_overlapping = True
-                                    overlap_found = t
-                                    segment_len = segment["end"] - segment["start"]
-                                    spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
-                            elif t > overlap_found: # no segment with good overlap jet, take this if the overlap is better then previously found 
-                                overlap_found = t
-                                segment_len = segment["end"] - segment["start"]
-                                spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
 
+                        current_segment_len = segment["end"] - segment["start"] # Length of the current segment
+                        current_segment_spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
+
+                        if overlap_found >= overlap_threshold: # we already found a fitting segment, compare length now
+                            if (t >= overlap_threshold) and (current_segment_len < segment_len): # found a shorter (= better fitting) segment that also overlaps well
+                                is_overlapping = True
+                                overlap_found = t
+                                segment_len = current_segment_len
+                                spkr = current_segment_spkr
+                        elif t > overlap_found: # no segment with good overlap yet, take this if the overlap is better then previously found 
+                            overlap_found = t
+                            segment_len = current_segment_len
+                            spkr = current_segment_spkr
+                        
                     if self.overlapping and is_overlapping:
                         return f"//{spkr}"
                     else:
@@ -874,7 +810,7 @@ class App(ctk.CTk):
                             diarize_env = os.environ.copy()
                             diarize_env["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1) # Necessary since some operators are not implemented for MPS yet.
                         self.logn(diarize_cmd, where='file')
-                        
+
                         if platform.system() == 'Windows':
                             # (supresses the terminal, see: https://stackoverflow.com/questions/1813872/running-a-process-in-pythonw-with-popen-without-a-console)
                             startupinfo = STARTUPINFO()
@@ -913,10 +849,10 @@ class App(ctk.CTk):
                                     if line.strip() == "log: 'pyannote_xpu: cpu' was set.": # The string needs to be the same as in diarize.py `print("log: 'pyannote_xpu: cpu' was set.")`.
                                         self.pyannote_xpu = 'cpu'
                                         config['pyannote_xpu'] = 'cpu'
-                        
+
                         if pyannote_proc.returncode > 0:
                             raise Exception('')
-                       
+
                         # load diarization results
                         with open(diarize_output, 'r') as file:
                             diarization = yaml.safe_load(file)
@@ -925,9 +861,9 @@ class App(ctk.CTk):
                         for segment in diarization:
                             line = f'{ms_to_str(self.start + segment["start"], include_ms=True)} - {ms_to_str(self.start + segment["end"], include_ms=True)} {segment["label"]}'
                             self.logn(line, where='file')
-                            
+
                         self.logn()
-                        
+
                     except Exception as e:
                         self.logn(t('err_identifying_speakers'), 'error')
                         self.logn(e, 'error')
@@ -939,11 +875,11 @@ class App(ctk.CTk):
                 self.logn()
                 self.logn(t('start_transcription'), 'highlight')
                 self.logn(t('loading_whisper'))
-                               
+
                 # prepare transcript html
                 d = AdvancedHTMLParser.AdvancedHTMLParser()
                 d.parseStr(default_html)                
-                
+
                 # add audio file path:
                 tag = d.createElement("meta")
                 tag.name = "audio_source"
@@ -957,18 +893,18 @@ class App(ctk.CTk):
                 tag.content = app_version
                 d.head.appendChild(tag)
                 """
-                
+
                 #add WordSection1 (for line numbers in MS Word) as main_body
                 main_body = d.createElement('div')
                 main_body.addClass('WordSection1')
                 d.body.appendChild(main_body)
-                
+
                 # header               
                 p = d.createElement('p')
                 p.setStyle('font-weight', '600')
                 p.appendText(Path(self.audio_file).stem) # use the name of the audio file (without extension) as the title
                 main_body.appendChild(p)
-                
+
                 # subheader
                 p = d.createElement('p')
                 s = d.createElement('span')
@@ -977,16 +913,16 @@ class App(ctk.CTk):
                 s.appendText(t('doc_header', version=app_version))
                 br = d.createElement('br')
                 s.appendChild(br)
-                
+
                 s.appendText(t('doc_header_audio', file=self.audio_file))
                 br = d.createElement('br')
                 s.appendChild(br)
-                
+
                 s.appendText(f'({option_info})')
-                
+
                 p.appendChild(s)
                 main_body.appendChild(p)
-                                
+
                 p = d.createElement('p')
                 main_body.appendChild(p)
 
@@ -1017,7 +953,7 @@ class App(ctk.CTk):
                             self.logn()
                             self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
                             self.last_auto_save = datetime.datetime.now()
-            
+
                 try:
                     from faster_whisper import WhisperModel
                     if platform.system() == 'Windows':
@@ -1032,15 +968,12 @@ class App(ctk.CTk):
                                          compute_type=self.whisper_compute_type, 
                                          local_files_only=True)
                     self.logn('model loaded', where='file')
-                    
+
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
 
-                    if self.language != "auto":
-                        whisper_lang = self.language
-                    else:
-                        whisper_lang = None
-                     
+                    whisper_lang = self.language if self.language != 'auto' else None
+
                     """
                     # > VAD made the pause-detection actually worse, so I removed it. Strange...   
                     try:
@@ -1068,14 +1001,14 @@ class App(ctk.CTk):
 
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
-                    
+
                     self.logn(t('start_transcription'))
                     self.logn()
-                    
+
                     last_segment_end = 0
                     last_timestamp_ms = 0
                     first_segment = True
-                    
+
                     for segment in segments:
                         # check for user cancelation
                         if self.cancel:
@@ -1084,17 +1017,16 @@ class App(ctk.CTk):
                                 self.logn()
                                 self.log(t('transcription_saved'))
                                 self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
-                                raise Exception(t('err_user_cancelation')) 
-                            else:    
-                                raise Exception(t('err_user_cancelation')) 
-                        
+  
+                            raise Exception(t('err_user_cancelation')) 
+
                         # get time of the segment in milliseconds
                         start = round(segment.start * 1000.0)
                         end = round(segment.end * 1000.0)
                         # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestaps will not match the original audio:
                         orig_audio_start = self.start + start
                         orig_audio_end = self.start + end
-                        
+
                         if self.timestamps:
                             ts = ms_to_str(orig_audio_start)
                             ts = f'[{ts}]'
@@ -1102,17 +1034,16 @@ class App(ctk.CTk):
                         # check for pauses and mark them in the transcript
                         if (self.pause > 0) and (start - last_segment_end >= self.pause * 1000): # (more than x seconds with no speech)
                             pause_len = round((start - last_segment_end)/1000)
-                            if pause_len >= 10:
-                                if pause_len >= 60: # > 1 minute
-                                    pause_str = ' ' + t('pause_minutes', minutes=round(pause_len/60))
-                                else: # > 10 sec < 1 min
-                                    pause_str = ' ' + t('pause_seconds', seconds=pause_len)
-                            else: # < 10 sec, note one 'pause_marker' per second (default to a dot)
+                            if pause_len >= 60: # longer than 60 seconds
+                                pause_str = ' ' + t('pause_minutes', minutes=round(pause_len/60))
+                            elif pause_len >= 10: # longer than 10 seconds
+                                pause_str = ' ' + t('pause_seconds', seconds=pause_len)
+                            else: # less than 10 seconds
                                 pause_str = ' (' + (self.pause_marker * pause_len) + ')'
-                                
+
                             if first_segment:
                                 pause_str = pause_str.lstrip() + ' '
-                            
+
                             orig_audio_start_pause = self.start + last_segment_end
                             orig_audio_end_pause = self.start + start
                             a = d.createElement('a')
@@ -1124,15 +1055,15 @@ class App(ctk.CTk):
                                 self.logn()
                                 self.logn()
                         last_segment_end = end
-                                        
+
                         # write text to the doc
                         # diarization (speaker detection)?
                         seg_text = segment.text
                         seg_html = seg_text
-                        
+
                         if self.speaker_detection == 'auto':
                             new_speaker = find_speaker(diarization, start, end)
-                            if (speaker != new_speaker) & (new_speaker != ''): # speaker change
+                            if (speaker != new_speaker) and (new_speaker != ''): # speaker change
                                 if new_speaker[:2] == '//': # is overlapping speech, create no new paragraph
                                     prev_speaker = speaker
                                     speaker = new_speaker
@@ -1174,13 +1105,10 @@ class App(ctk.CTk):
                                         seg_html = seg_text
 
                         else: # no speaker detection
-                            if self.timestamps:
-                                if first_segment or (start - last_timestamp_ms) > self.timestamp_interval:
-                                    seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
-                                    seg_text = f' {ts}{seg_text}'
-                                    last_timestamp_ms = start
-                                else:
-                                    seg_html = seg_text
+                            if self.timestamps and (first_segment or (start - last_timestamp_ms) > self.timestamp_interval):
+                                seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
+                                seg_text = f' {ts}{seg_text}'
+                                last_timestamp_ms = start
                             else:
                                 seg_html = seg_text
                             # avoid leading whitespace in first paragraph
@@ -1199,16 +1127,16 @@ class App(ctk.CTk):
                         a_html = f'<a name="ts_{orig_audio_start}_{orig_audio_end}" >{seg_html}</a>'
                         a = d.createElementFromHTML(a_html)
                         p.appendChild(a)
-                        
+
                         self.log(seg_text)
-                        
+
                         first_segment = False
-                                    
+
                         # auto save
-                        if self.auto_save == True:
+                        if self.auto_save:
                             if (datetime.datetime.now() - self.last_auto_save).total_seconds() > 20:
                                 save_doc()
-                        
+
                         progr = round((segment.end/info.duration) * 100)
                         self.set_progress(3, progr)
 
@@ -1231,7 +1159,7 @@ class App(ctk.CTk):
                     self.logn(t('err_transcription'), 'error')
                     self.logn(e, 'error')
                     return
-                
+
             finally:
                 self.log_file.close()
                 self.log_file = None
@@ -1240,7 +1168,7 @@ class App(ctk.CTk):
             self.logn(t('err_options'), 'error')
             self.logn(e, 'error')
             return
-        
+
         finally:
             # hide the stop button
             self.stop_button.pack_forget() # hide
@@ -1285,5 +1213,5 @@ class App(ctk.CTk):
 if __name__ == "__main__":
 
     app = App()
-    
+
     app.mainloop()
