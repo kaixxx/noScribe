@@ -37,6 +37,7 @@ from subprocess import run, call, Popen, PIPE, STDOUT
 if platform.system() == 'Windows':
     # import torch.cuda # to check with torch.cuda.is_available()
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
+    from ctranslate2 import get_cuda_device_count
 import re
 if platform.system() == "Darwin": # = MAC
     from subprocess import check_output
@@ -60,7 +61,7 @@ import logging
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.4.4'
+app_version = '0.4.5'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
@@ -99,6 +100,16 @@ try:
             raise # config file is empty (None)        
 except: # seems we run it for the first time and there is no config file
     config = {}
+
+# delete 'pyannote_xpu' from config if the config is from a version < 0.4.5 (Windows only)
+if platform.system() in ('Windows', 'Linux'):
+    try:
+        config_version_str = config['app_version']
+        config_version = config_version_str.split('.')
+        if (int(config_version[0]) == 0) and (int(config_version[1]) <= 4) and (int(config_version[2]) < 5):
+            del config['pyannote_xpu'] 
+    except:
+        pass
 
 config['app_version'] = app_version
 
@@ -653,11 +664,14 @@ class App(ctk.CTk):
                 # Default to mps on 12.3 and newer, else cpu
                 xpu = get_config('pyannote_xpu', 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu')
                 self.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
-            else:
-                # on other platforms, cuda can be used for pyannote if set in config.yml (experimental)
-                # Default to cpu
-                xpu = get_config('pyannote_xpu', 'cpu')
+            elif platform.system() in ('Windows', 'Linux'):
+                # Use cuda if available and not set otherwise in config.yml, fallback to cpu: 
+                xpu = get_config('pyannote_xpu', 'cuda' if get_cuda_device_count() > 0 else 'cpu')
                 self.pyannote_xpu = 'cuda' if xpu == 'cuda' else 'cpu'
+                whisper_xpu = get_config('whisper_xpu', 'cuda' if get_cuda_device_count() > 0 else 'cpu')
+                self.whisper_xpu = 'cuda' if whisper_xpu == 'cuda' else 'cpu'
+            else:
+                raise Exception('Platform not supported yet.')
 
             # log CPU capabilities
             self.logn("=== CPU FEATURES ===", where="file")
@@ -958,10 +972,11 @@ class App(ctk.CTk):
 
                 try:
                     from faster_whisper import WhisperModel
-                    if platform.system() == 'Windows':
-                        whisper_device = 'cpu'
-                    elif platform.system() in ("Darwin", "Linux"): # = MAC or Linux
+                    if platform.system() == "Darwin": # = MAC
                         whisper_device = 'auto'
+                    elif platform.system() in ('Windows', 'Linux'):
+                        whisper_device = 'cpu'
+                        whisper_device = self.whisper_xpu
                     else:
                         raise Exception('Platform not supported yet.')
                     model = WhisperModel(self.whisper_model,
