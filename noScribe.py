@@ -106,6 +106,8 @@ def save_config():
     with open(config_file, 'w') as file:
         yaml.safe_dump(config, file)
 
+save_config()
+
 # locale: setting the language of the UI
 # see https://pypi.org/project/python-i18n/
 import i18n

@@ -1,4 +1,4 @@
-zh-CN:
+zh-CN: &defaults
   app_header: 基于AI的音频转录
   welcome_message: 你好，noScribe已准备就绪！
   welcome_credits: >
@@ -74,3 +74,6 @@ zh-CN:
   doc_header_audio: '音频文件：%{file}'
   pause_minutes: '(%{minutes} 分钟 暂停)'
   pause_seconds: '(%{seconds} 秒暂停)'
+
+zh:
+  <<: *defaults
