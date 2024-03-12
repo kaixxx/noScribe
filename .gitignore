@@ -9,6 +9,8 @@ noScribeEdit/
 *.code-workspace
 auto-py-to-exe*.*
 
+*.exe
+nsis_tmp.nsi
 ggml*.bin
 ROADMAP.md
 models/pyannote_config_macOS.yaml
