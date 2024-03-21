@@ -10,3 +10,4 @@ pyannote.audio @ git+https://github.com/kaixxx/pyannote-audio.git
 pyinstaller
 python-i18n
 PyYAML
+speechbrain==0.5.16 # incompatible with newer speechbrain versions
