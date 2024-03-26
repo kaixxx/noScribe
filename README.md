@@ -44,7 +44,7 @@ noScribe runs on macOS 11.0 or higher.
     - Start noScribe and/or noScribeEdit by double-clicking the app within your applications folder.
 - **Installation (Intel-based Macs)**:</br>
 Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
-    - Download and double-click the noScribe_arm64.dmg file.
+    - Download and double-click the noScribe_x86_64.dmg file.
     - Drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install")
     - Start noScribe by double-clicking the app within your applications folder. You will get an error that noScribe is from an unregistered developer. Do the same with the noScribe Editor.
     - Go to Settings -> Privacy and Security -> Scroll down until you see a message stating noScribe was prevented from starting and click "open anyway". Again, do the same with the noScribe Editor.
