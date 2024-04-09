@@ -96,7 +96,7 @@ The noScribe Editor is a separate app that can also be run independent from noSc
 - If you want to **speed up or slow down the audio**, change the "100%"-field next to the "Play/Pause Audio"-Button to the appropriate speed.
 - Use the loupe in the toolbar to **zoom in or out**
 - You will find the **most common features of a basic text editor** in the toolbar as well as in the menu at the top (basic text formatting, cut, copy & paste, undo & redo).
-- Your typical **hotkeys** will also work (i.e., Ctrl+S for Save). You can see all the hotkeys if you open the menu. As already mentioned, 'Ctrl+Space' is the hotkey you'll use the most as it starts or pauses the audio.
+- Your typical **hotkeys** will also work (e.g., Ctrl+S for Save). You can see all the hotkeys if you open the menu. As already mentioned, 'Ctrl+Space' is the hotkey you'll use the most as it starts or pauses the audio.
 
 
 The source code of the editor can be found here: [https://github.com/kaixxx/noScribeEditor](https://github.com/kaixxx/noScribeEditor)
@@ -104,7 +104,7 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 ## Factors Influencing the Quality of the Transcription
 - A **good audio recording with clear voices and no ambient noise** is crucial for a high-quality transcription. Investing some effort in the quality of the recording will save you much time in the manual revision process later. 
 - Whisper (the AI powering noScribe) understands 99 different languages, but the quality of the transcription varies widely between them. **Spanish, Italian, English, Portuguese and German** are best supported (see [here for more info]( https://github.com/openai/whisper#available-models-and-languages)).
-- Whisper handles **dialects** fairly well (i.e., Swiss-German), but the transcript might need more manual work in the revision.
+- Whisper handles **dialects** fairly well (e.g., Swiss-German), but the transcript might need more manual work in the revision.
 
 ## Known Issues
 - The whisper AI can sometimes get **stuck in a loop of repeating text,** especially on longer audio files. If this happens, try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
@@ -114,7 +114,7 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 - The whisper AI can sometimes **hallucinate**, especially in silent parts of the recording when it interprets background noise as 'text'. Check your transcripts carefully. 
 
 ## Advanced Options
-- After the app has run for the first time, you will find a file named **config.yml** in the user config directory (on windows: C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml). Here, you can change a few **extra settings,** i.e., the language of the user interface.
+- After the app has run for the first time, you will find a file named **config.yml** in the user config directory (on windows: C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml). Here, you can change a few **extra settings,** e.g., the language of the user interface.
 - **Prompts**: The whisper AI can be initialized with a short text-sequence called prompt (see [here for more info](https://platform.openai.com/docs/guides/speech-to-text/prompting)). This will influence the style of the following transcription. I tried to force the AI to include filler words like "uhm" in the transcription by giving it a prompt containing them (like "Umm, let me think like, hmm."). But this only worked on some occasions (whisper tends to 'forget' the prompt quite quickly). Prompts are language specific and will only be applied if you select a particular language (not 'auto'). You can change or add prompts for other languages in the file "prompt.yml" in the home directory of the app. Please don’t use prompts longer than one sentence since this will mess up the speaker separation.
 - Also in the user config directory you will find a folder named **log** with detailed log-files for every transcript (also unfinished ones). This can be helpful in the case of any errors. Be aware though that these files also contain the text of your transcripts which might include sensitive information. 
 
