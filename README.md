@@ -29,7 +29,8 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 ## Download and Installation
 > All releases are currently hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 ### Windows
-- Download current version 0.4.1: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
+- If you have an NVIDIA graphics card, you might achieve significant speed improvements with the [new version discussed here](https://github.com/kaixxx/noScribe/discussions/50).
+- Otherwise, download the current stable version 0.4.1 here: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
 - **Installation**: Start the downloaded setup file. This may take a while, be patient.
 - If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
 - To do a silent install on a larger group of computers, start the setup with the argument `/S`.  
