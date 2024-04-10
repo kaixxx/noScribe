@@ -1,0 +1,19 @@
+# INSTRUCTIONS
+
+# Install your preferred version of torch at https://pytorch.org/get-started/locally/
+# Install with `pip install -r requirements.txt`
+
+AdvancedHTMLParser
+appdirs
+customtkinter
+faster-whisper
+Pillow
+pyannote.audio @ git+https://github.com/kaixxx/pyannote-audio.git
+pyinstaller
+python-i18n
+PyYAML
+speechbrain==0.5.16 # incompatible with newer speechbrain versions
+
+# Platform specific requirements
+pyobjc; sys_platform == 'darwin'
+cpufeature; sys_platform == 'win32'
