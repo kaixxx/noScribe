@@ -131,10 +131,5 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 - If you change anything in the language files, make sure to follow the conventions of the YAML language.
 - If you want to change the language of the user interface, you have to change the value of the "locale" setting in the advanced settings (see above).
 
-### MAC and LINUX support
-- [noScribe has been ported to macOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS) (alpha version, please help testing!) 
-- If you want to port noScribe to Linux, go ahead! There once was a working version but it is no longer up to date.
-- If you make any changes to the code of noScribe, try not to break compatibility with other platforms. I would like to keep one single codebase for all platforms.
-
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
