@@ -2,12 +2,12 @@ import os
 import sys
 from subprocess import Popen
 
-noScribe_version = '0.4.4'
-clean_build = False
+noScribe_version = '0.4.5'
+clean_build = True
 run_pyinstaller_non_cuda = False
 run_pyinstaller_cuda = False
-run_nsis_non_cuda = True
-run_nsis_cuda = False
+run_nsis_non_cuda = False
+run_nsis_cuda = True
 
 conda_env_noncuda = 'noScribe_0_4'
 conda_env_cuda = 'noScribe_0_4_cuda'
@@ -15,7 +15,7 @@ pyinstaller_path = 'C:\\users\\kai\\anaconda3\\envs\\noscribe_0_4\\lib\\site-pac
 nsis_path = 'C:\\Program Files (x86)\\NSIS\\makensis.exe'
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
-final_report = '\n#############################\nResults:\n#############################\n'
+final_report = '\n######################################\nResults:\n#######################################\n'
 
 ##### PyInstaller #####
 
@@ -89,7 +89,7 @@ def run_nsis(cuda=False):
     # Recursively generate NSIS commands for installation and uninstallation
     # of directories and files from the specified directory.
     
-    base_directory = pyinstaller_out_path
+    base_directory = os.path.join(pyinstaller_out_path, 'noScribe')
 
     install_entries = '' # "Section \"Install\"\n"
     uninstall_entries = '' # "Section \"Uninstall\"\n"
@@ -97,7 +97,7 @@ def run_nsis(cuda=False):
     directories_created = []  # Track directories for uninstall
 
     # Process directories
-    for root, dirs, files in sorted(os.walk(pyinstaller_out_path, topdown=True), key=lambda x: x[0]):
+    for root, dirs, files in sorted(os.walk(base_directory, topdown=True), key=lambda x: x[0]):
         relative_path = os.path.relpath(root, base_directory)
         if relative_path == ".":
             relative_path = ""  # NSIS SetOutPath doesn't need a dot for the base path
