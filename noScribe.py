@@ -364,7 +364,7 @@ class App(ctk.CTk):
         self.label_speaker = ctk.CTkLabel(self.frame_options, text=t('label_speaker'))
         self.label_speaker.grid(column=0, row=5, sticky='w', pady=5)
 
-        self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=100, values=['auto', 'none'])
+        self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
         self.option_menu_speaker.grid(column=1, row=5, sticky='e', pady=5)
         try:
             self.option_menu_speaker.set(config['last_speaker'])
@@ -805,7 +805,7 @@ class App(ctk.CTk):
 
                 # Start Diarization:
 
-                if self.speaker_detection == 'auto':
+                if self.speaker_detection != 'none':
                     try:
                         self.logn()
                         self.logn(t('start_identifiying_speakers'), 'highlight')
@@ -820,7 +820,7 @@ class App(ctk.CTk):
                             diarize_abspath = os.path.join(app_dir, '..', 'MacOS', 'diarize')
                         if not ('diarize_abspath' in globals() or os.path.exists(diarize_abspath)): # Run the compiled version of diarize if it exists, otherwise the python script:
                             diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
-                        diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
+                        diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}" {self.speaker_detection}'
                         diarize_env = None
                         if self.pyannote_xpu == 'mps':
                             diarize_env = os.environ.copy()
@@ -1078,7 +1078,7 @@ class App(ctk.CTk):
                         seg_text = segment.text
                         seg_html = seg_text
 
-                        if self.speaker_detection == 'auto':
+                        if self.speaker_detection != 'none':
                             new_speaker = find_speaker(diarization, start, end)
                             if (speaker != new_speaker) and (new_speaker != ''): # speaker change
                                 if new_speaker[:2] == '//': # is overlapping speech, create no new paragraph

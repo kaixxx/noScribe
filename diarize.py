@@ -33,6 +33,10 @@ app_dir = os.path.abspath(os.path.dirname(__file__))
 device = sys.argv[1]
 audio_file = sys.argv[2]
 segments_yaml = sys.argv[3]
+if sys.argv[4].isdigit():
+    my_num_speakers = int(sys.argv[4])
+else:
+    my_num_speakers = None
 
 class SimpleProgressHook:
     #Hook to show progress of each internal step
@@ -95,7 +99,10 @@ try:
         raise Exception('Platform not supported yet.')
 
     with SimpleProgressHook(parent=None) as hook:
-        diarization = pipeline(audio_file, hook=hook) # apply the pipeline to the audio file
+        if my_num_speakers is not None:
+            diarization = pipeline(audio_file, hook=hook, num_speakers=my_num_speakers) # apply the pipeline to the audio file
+        else:
+            diarization = pipeline(audio_file, hook=hook)
 
     seg_list = []
 
