@@ -19,6 +19,7 @@
 - Since it uses sophisticated AI models, the download is quite large – about 3.7 GB
 - Poor audio quality will lead to poor transcription results. 
 - No automatic transcription is perfect, there will always be some manual revision necessary. Use the [included Editor](#noscribeedit) to check your transcripts thouroughly. (See also ["Factors Influencing the Quality"](#factors-influencing-the-quality-of-the-transcription) and ["Known Issues"](#known-issues) below.)
+- If you want to know more an can understand German, Rebecca Schmidt from the University of Paderborn wrote a nice [review of noScribe,](https://sozmethode.hypotheses.org/2315) also discussing its limitations.
 
 ## Why the Name "noScribe"?
 The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) defines **scribe** as *"a person whose entire miserable existence has been reduced to academic grunge and pain".* I hope this software will make your academic life a little less painful and grungy, hence the name noScribe :)
@@ -29,7 +30,8 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 ## Download and Installation
 > All releases are currently hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 ### Windows
-- Download current version 0.4.1: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
+- If you have an NVIDIA graphics card, you might achieve significant speed improvements with the [new version discussed here](https://github.com/kaixxx/noScribe/discussions/50).
+- Otherwise, download the current stable version 0.4.1 here: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
 - **Installation**: Start the downloaded setup file. This may take a while, be patient.
 - If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
 - To do a silent install on a larger group of computers, start the setup with the argument `/S`.  
@@ -44,7 +46,7 @@ noScribe runs on macOS 11.0 or higher.
     - Start noScribe and/or noScribeEdit by double-clicking the app within your applications folder.
 - **Installation (Intel-based Macs)**:</br>
 Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
-    - Download and double-click the noScribe_arm64.dmg file.
+    - Download and double-click the noScribe_x86_64.dmg file.
     - Drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install")
     - Start noScribe by double-clicking the app within your applications folder. You will get an error that noScribe is from an unregistered developer. Do the same with the noScribe Editor.
     - Go to Settings -> Privacy and Security -> Scroll down until you see a message stating noScribe was prevented from starting and click "open anyway". Again, do the same with the noScribe Editor.
@@ -57,18 +59,21 @@ ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](htt
 ### Old versions:
 - [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) 
 
+## Citation (APA Style)
+Dröge, K. (2024). noScribe. AI-powered Audio Transcription (Version XXX) [Computer software]. https://github.com/kaixxx/noScribe
+
 ## Usage
 ### Settings
 <img align="left" src="img/noScribe_settings.png" width="300">
 
 - Select your **audio file** and a **filename for the transcript.**
-- **Start** and **Stop** accept timestamps in the format hh:mm:ss. Use this to limit the transcription to a particular part of the recording. This is especially helpful to test your settings with a small sample before committing to transcribe the whole interview, which may take several hours. Leave Stop empty if you want to transcribe till the end of the audio file.
-- **Language:** choose the language of your transcript or leave it on "auto"
-- **Quality:** "precise" is the recommended setting and will give you the most accurate transcript. On a slower machine, you can also try the "fast" option. This will be much quicker but requires more manual revision afterwards. 
-- **Mark pause**: If enabled, parts of your audio with no voice activity will be marked as pauses. Pauses are transcribed as round brackets with one dot per second inside, i.e., "(..)" for "two seconds pause". Pauses longer then 10 seconds are written out as "(XX seconds pause)" or "(XX minutes pause)". You have the option to mark either pauses of one second and more ("1sec+"), two seconds and more ("2sec+"), or only the longer ones of three seconds and more ("3sec+"). Choose "none" to disable this feature entirely.
-- **Speaker detection:** "auto" will use the pyannote AI model to detect different speakers in your audio and structure the transcript accordingly. Setting this to "none" will skip this step and save you about half the time of the whole process. But the resulting transcript will be a continuous text without any information about speaker changes. 
-- **Overlapping speech**: If enabled, noScribe tries to mark when two people speak at the same time. The overlapping portion is enclosed in //double slashes//. (This is an experimental feature which may or may not work in some instances.)
-- **Timestamps**: If enabled, noScribe will include timestamps in the format [hh:mm:ss] into the transcript at any speaker change or every 60 seconds. I find these timestamps a little distracting, so I have disabled them by default. But they can be helpful in certain applications. Even with disabled timestamps, it is quite easy to find out the audio timecode for a certain segment: Just open the transcript in the noScribe Editor, move the cursor through the text and you will see the corresponding timecode in the bottom right corner of the app. 
+- **Start** and **Stop** accept timestamps in the format hh:mm:ss. Use this to limit the transcription to a particular part of the recording. This is especially helpful for testing your settings with a small sample before committing to transcribing the whole interview, which may take several hours. Leave **Stop** empty if you want to transcribe until the end of the audio file.
+- **Language:** Select the language of your transcript or set it to 'auto'.
+- **Quality:** 'Precise' is the recommended setting for the most accurate transcript. On slower machines, you may opt for the 'fast' option. This will be quicker but might necessitate more manual revision later.
+- **Mark Pause**: If enabled, parts of your audio without voice activity will be marked as pauses. Pauses are transcribed as round brackets with one dot per second inside, e.g., '(..)' for a two-second pause. Pauses longer than 10 seconds are written out as '(XX seconds pause)' or '(XX minutes pause)'. You have the option to mark either pauses of one second and more ('1sec+'), two seconds and more ('2sec+'), or only the longer ones of three seconds and more ('3sec+'). Choose 'none' to disable this feature entirely.
+**Speaker Detection:** Choosing 'auto' utilizes the Pyannote AI model to identify distinct speakers in your audio, organizing the transcript accordingly. Opting for 'none' bypasses this step, shaving off approximately half the process time. However, the resultant transcript will be a continuous block of text without any indicators of speaker transitions.
+- **Overlapping Speech**: If enabled, noScribe attempts to mark instances where two people speak simultaneously. The overlapping section is demarcated with //double slashes//. (Note: This is an experimental feature.)
+- **Timestamps**: When enabled, noScribe incorporates timestamps in the format [hh:mm:ss] into the transcript either at every change of speaker or every 60 seconds. I find these timestamps somewhat distracting, hence my decision to disable them by default. However, they can be quite useful in certain contexts. Even with timestamps disabled, determining the audio timecode for a specific segment is straightforward: simply open the transcript in the noScribe Editor, navigate through the text, and the corresponding timecode will appear in the bottom right corner of the app.
 
 ### Transcription process
 - If you are ready, click the **Start**-button in the bottom left. **Cancel** will abort the process. 
@@ -92,7 +97,7 @@ The noScribe Editor is a separate app that can also be run independent from noSc
 - If you want to **speed up or slow down the audio**, change the "100%"-field next to the "Play/Pause Audio"-Button to the appropriate speed.
 - Use the loupe in the toolbar to **zoom in or out**
 - You will find the **most common features of a basic text editor** in the toolbar as well as in the menu at the top (basic text formatting, cut, copy & paste, undo & redo).
-- Your typical **hotkeys** will also work (i.e., Ctrl+S for Save). You can see all the hotkeys if you open the menu. As already mentioned, 'Ctrl+Space' is the hotkey you'll use the most as it starts or pauses the audio.
+- Your typical **hotkeys** will also work (e.g., Ctrl+S for Save). You can see all the hotkeys if you open the menu. As already mentioned, 'Ctrl+Space' is the hotkey you'll use the most as it starts or pauses the audio.
 
 
 The source code of the editor can be found here: [https://github.com/kaixxx/noScribeEditor](https://github.com/kaixxx/noScribeEditor)
@@ -100,7 +105,7 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 ## Factors Influencing the Quality of the Transcription
 - A **good audio recording with clear voices and no ambient noise** is crucial for a high-quality transcription. Investing some effort in the quality of the recording will save you much time in the manual revision process later. 
 - Whisper (the AI powering noScribe) understands 99 different languages, but the quality of the transcription varies widely between them. **Spanish, Italian, English, Portuguese and German** are best supported (see [here for more info]( https://github.com/openai/whisper#available-models-and-languages)).
-- Whisper handles **dialects** fairly well (i.e., Swiss-German), but the transcript might need more manual work in the revision.
+- Whisper handles **dialects** fairly well (e.g., Swiss-German), but the transcript might need more manual work in the revision.
 
 ## Known Issues
 - The whisper AI can sometimes get **stuck in a loop of repeating text,** especially on longer audio files. If this happens, try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
@@ -110,7 +115,7 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 - The whisper AI can sometimes **hallucinate**, especially in silent parts of the recording when it interprets background noise as 'text'. Check your transcripts carefully. 
 
 ## Advanced Options
-- After the app has run for the first time, you will find a file named **config.yml** in the user config directory (on windows: C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml). Here, you can change a few **extra settings,** i.e., the language of the user interface.
+- After the app has run for the first time, you will find a file named **config.yml** in the user config directory (on windows: C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml). Here, you can change a few **extra settings,** e.g., the language of the user interface.
 - **Prompts**: The whisper AI can be initialized with a short text-sequence called prompt (see [here for more info](https://platform.openai.com/docs/guides/speech-to-text/prompting)). This will influence the style of the following transcription. I tried to force the AI to include filler words like "uhm" in the transcription by giving it a prompt containing them (like "Umm, let me think like, hmm."). But this only worked on some occasions (whisper tends to 'forget' the prompt quite quickly). Prompts are language specific and will only be applied if you select a particular language (not 'auto'). You can change or add prompts for other languages in the file "prompt.yml" in the home directory of the app. Please don’t use prompts longer than one sentence since this will mess up the speaker separation.
 - Also in the user config directory you will find a folder named **log** with detailed log-files for every transcript (also unfinished ones). This can be helpful in the case of any errors. Be aware though that these files also contain the text of your transcripts which might include sensitive information. 
 
@@ -126,11 +131,6 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 - You will find the language files in the folder "trans". 
 - If you change anything in the language files, make sure to follow the conventions of the YAML language.
 - If you want to change the language of the user interface, you have to change the value of the "locale" setting in the advanced settings (see above).
-
-### MAC and LINUX support
-- [noScribe has been ported to macOS](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4b%2FmacOS) (alpha version, please help testing!) 
-- If you want to port noScribe to Linux, go ahead! There once was a working version but it is no longer up to date.
-- If you make any changes to the code of noScribe, try not to break compatibility with other platforms. I would like to keep one single codebase for all platforms.
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
