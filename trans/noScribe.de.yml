@@ -70,6 +70,8 @@ de:
   rescue_saving: 'Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Stattdessen wurde das Transkript in dieser Datei gesichert: %{file}'
   rescue_saving_failed: 'Fehler: Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Der alternative Dateiname existiert ebenso bereits. Die Transkription wird beendet. (Das Transkript darf nicht bereits in Word geöffnet sein!)'
   err_noScribeEdit_not_found: 'Fehler: Der noScribe Editor konnte nicht gefunden werden.' 
+  err_vtt_invalid_options: 'Achtung: Die Optionen "Überlappende Sprache", "Pausen markieren" und "Zeitmarken" werden bei der VTT-Ausgabe nicht unterstützt.'
+
 
   # Doc contents
   doc_header: 'Transkribiert mit noScribe Vers. %{version}'
