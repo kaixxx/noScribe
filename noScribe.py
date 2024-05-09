@@ -190,7 +190,35 @@ def iter_except(function, exception):
                 yield function()
         except exception:
             return
+        
+def html_node_to_text(node: AdvancedHTMLParser.AdvancedTag) -> str:
+    """
+    Recursively get all text from a html node and its children. 
+    """
+    # For text nodes, return their value directly
+    if AdvancedHTMLParser.isTextNode(node): # node.nodeType == node.TEXT_NODE:
+        return node
+    # For element nodes, recursively process their children
+    elif AdvancedHTMLParser.isTagNode(node):
+        text_parts = []
+        for child in node.childBlocks:
+            text = html_node_to_text(child)
+            if text:
+                text_parts.append(text)
+        # For block-level elements, prepend and append newlines
+        if node.tagName.lower() in ['p', 'div', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'br']:
+            if node.tagName.lower() == 'br':
+                return '\n'
+            else:
+                return '\n' + ''.join(text_parts).strip() + '\n'
+        else:
+            return ''.join(text_parts)
+    else:
+        return ''
 
+def html_to_text(parser: AdvancedHTMLParser.AdvancedHTMLParser) -> str:
+    return html_node_to_text(parser.body)
+    
 class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format hh:mm:ss
                                # based on https://stackoverflow.com/questions/63622880/how-to-make-python-automatically-put-colon-in-the-format-of-time-hhmmss
     def __init__(self, master, **kwargs):
@@ -498,13 +526,26 @@ class App(ctk.CTk):
         else:
             _initialdir = os.path.dirname(self.audio_file)
             _initialfile = Path(os.path.basename(self.audio_file)).stem
+        if not ('last_filetype' in config):
+            config['last_filetype'] = 'html'
+        filetypes = [
+            ('noScribe Transcript','*.html'), 
+            ('Text only','*.txt'),
+            ('WebVTT Subtitles (also for EXMARaLDA)', '*.vtt')
+        ]
+        for i, ft in enumerate(filetypes):
+            if ft[1] == f'*.{config["last_filetype"]}':
+                filetypes.insert(0, filetypes.pop(i))
+                break
         fn = tk.filedialog.asksaveasfilename(initialdir=_initialdir, initialfile=_initialfile, 
-                                             filetypes=[('noScribe Transcript','*.html')], defaultextension='html')
+                                             filetypes=filetypes, 
+                                             defaultextension=config['last_filetype'])
         if fn:
             self.transcript_file = fn
             self.logn(t('log_transcript_filename') + self.transcript_file)
             self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_file))
-
+            config['last_filetype'] = os.path.splitext(self.transcript_file)[1][1:]
+            
     def set_progress(self, step, value):
         """ Update state of the progress bar """
         if step == 1:
@@ -562,6 +603,7 @@ class App(ctk.CTk):
                 return
 
             self.my_transcript_file = self.transcript_file
+            self.file_ext = os.path.splitext(self.my_transcript_file)[1][1:]
 
             # create log file
             if not os.path.exists(f'{config_dir}/log'):
@@ -948,27 +990,37 @@ class App(ctk.CTk):
 
                 def save_doc():
                     try:
-                        htmlStr = d.asHTML()
-                        with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
-                            f.write(htmlStr)
-                            f.flush()
-                        self.last_auto_save = datetime.datetime.now()
-                    except:
-                        # saving failed, maybe the file is already open in Word and cannot be overwritten
-                        # try saving to a different filename
-                        transcript_path = Path(self.my_transcript_file)
-                        self.my_transcript_file = f'{transcript_path.parent}/{transcript_path.stem}_1.html'
-                        if os.path.exists(self.my_transcript_file):
-                            # the alternative filename also exists already, don't want to overwrite, giving up
-                            raise Exception(t('rescue_saving_failed'))
+                        txt = ''
+                        if self.file_ext == 'html':
+                            txt = d.asHTML()
+                        elif self.file_ext == 'txt':
+                            txt = html_to_text(d)
                         else:
-                            htmlStr = d.asHTML()
+                            raise TypeError(f'Invalid file type "{self.file_ext}".')
+                        if txt != '':
                             with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
-                                f.write(htmlStr)
+                                f.write(txt)
                                 f.flush()
-                            self.logn()
-                            self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
                             self.last_auto_save = datetime.datetime.now()
+                    except Exception as e:
+                        if isinstance(e, TypeError): # invalid file type
+                            raise
+                        else: 
+                            # other error while saving, maybe the file is already open in Word and cannot be overwritten
+                            # try saving to a different filename
+                            transcript_path = Path(self.my_transcript_file)
+                            self.my_transcript_file = f'{transcript_path.parent}/{transcript_path.stem}_1{self.file_ext}'
+                            if os.path.exists(self.my_transcript_file):
+                                # the alternative filename also exists already, don't want to overwrite, giving up
+                                raise Exception(t('rescue_saving_failed'))
+                            else:
+                                # htmlStr = d.asHTML()
+                                with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
+                                    f.write(txt)
+                                    f.flush()
+                                self.logn()
+                                self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
+                                self.last_auto_save = datetime.datetime.now()
 
                 try:
                     from faster_whisper import WhisperModel
