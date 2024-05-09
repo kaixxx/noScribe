@@ -191,6 +191,8 @@ def iter_except(function, exception):
         except exception:
             return
         
+# Helper for text only output
+        
 def html_node_to_text(node: AdvancedHTMLParser.AdvancedTag) -> str:
     """
     Recursively get all text from a html node and its children. 
@@ -218,6 +220,51 @@ def html_node_to_text(node: AdvancedHTMLParser.AdvancedTag) -> str:
 
 def html_to_text(parser: AdvancedHTMLParser.AdvancedHTMLParser) -> str:
     return html_node_to_text(parser.body)
+
+# Helper for WebVTT output
+
+def vtt_escape(txt: str) -> str:
+    txt = txt.replace('&', '&amp;')
+    txt = txt.replace('<', '&lt;')
+    txt = txt.replace('>', '&gt;')
+    while txt.find('\n\n') > -1:
+        txt = txt.replace('\n\n', '\n')
+    return txt    
+
+def ms_to_webvtt(milliseconds) -> str:
+    """converts milliseconds to the time stamp of WebVTT (HH:MM:SS.mmm)
+    """
+    # 1 hour = 3600000 milliseconds
+    # 1 minute = 60000 milliseconds
+    # 1 second = 1000 milliseconds
+    hours, milliseconds = divmod(milliseconds, 3600000)
+    minutes, milliseconds = divmod(milliseconds, 60000)
+    seconds, milliseconds = divmod(milliseconds, 1000)
+    return "{:02d}:{:02d}:{:02d}.{:03d}".format(hours, minutes, seconds, milliseconds)
+
+def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser):
+    vtt = 'WEBVTT '
+    paragraphs = parser.getElementsByTagName('p')
+    # The first paragraph contains the title
+    vtt += vtt_escape(paragraphs[0].textContent) + '\n\n'
+    # Next paragraph contains info about the transcript. Add as a note.
+    vtt += vtt_escape('NOTE\n' + html_node_to_text(paragraphs[1])) + '\n\n'
+
+    #Add all segments as VTT cues
+    segments = parser.getElementsByTagName('a')
+    i = 0
+    for i in range(len(segments)):
+        segment = segments[i]
+        name = segment.attributes['name']
+        if name is not None:
+            name_elems = name.split('_', 4)
+            if len(name_elems) > 1 and name_elems[0] == 'ts':
+                start = ms_to_webvtt(int(name_elems[1]))
+                end = ms_to_webvtt(int(name_elems[2]))
+                spkr = name_elems[3]
+                txt = vtt_escape(html_node_to_text(segment))
+                vtt += f'{i+1}\n{start} --> {end}\n<v {spkr}>{txt.lstrip()}\n\n'
+    return vtt
     
 class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format hh:mm:ss
                                # based on https://stackoverflow.com/questions/63622880/how-to-make-python-automatically-put-colon-in-the-format-of-time-hhmmss
@@ -698,6 +745,14 @@ class App(ctk.CTk):
 
             # Default to True if auto save not in config or invalid value
             self.auto_save = False if get_config('auto_save', 'True') == 'False' else True 
+            
+            # Check for invalid vtt options
+            if self.file_ext == 'vtt' and (self.pause > 0 or self.overlapping or self.timestamps):
+                self.logn()
+                self.logn(t('err_vtt_invalid_options'), 'error')
+                self.pause = 0
+                self.overlapping = False
+                self.timestamps = False           
 
             if platform.system() == "Darwin": # = MAC
                 # if (platform.mac_ver()[0] >= '12.3' and
@@ -989,38 +1044,37 @@ class App(ctk.CTk):
                 self.last_auto_save = datetime.datetime.now()
 
                 def save_doc():
+                    txt = ''
+                    if self.file_ext == 'html':
+                        txt = d.asHTML()
+                    elif self.file_ext == 'txt':
+                        txt = html_to_text(d)
+                    elif self.file_ext == 'vtt':
+                        txt = html_to_webvtt(d)
+                    else:
+                        raise TypeError(f'Invalid file type "{self.file_ext}".')
                     try:
-                        txt = ''
-                        if self.file_ext == 'html':
-                            txt = d.asHTML()
-                        elif self.file_ext == 'txt':
-                            txt = html_to_text(d)
-                        else:
-                            raise TypeError(f'Invalid file type "{self.file_ext}".')
                         if txt != '':
                             with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
                                 f.write(txt)
                                 f.flush()
                             self.last_auto_save = datetime.datetime.now()
                     except Exception as e:
-                        if isinstance(e, TypeError): # invalid file type
-                            raise
-                        else: 
-                            # other error while saving, maybe the file is already open in Word and cannot be overwritten
-                            # try saving to a different filename
-                            transcript_path = Path(self.my_transcript_file)
-                            self.my_transcript_file = f'{transcript_path.parent}/{transcript_path.stem}_1{self.file_ext}'
-                            if os.path.exists(self.my_transcript_file):
-                                # the alternative filename also exists already, don't want to overwrite, giving up
-                                raise Exception(t('rescue_saving_failed'))
-                            else:
-                                # htmlStr = d.asHTML()
-                                with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
-                                    f.write(txt)
-                                    f.flush()
-                                self.logn()
-                                self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
-                                self.last_auto_save = datetime.datetime.now()
+                        # other error while saving, maybe the file is already open in Word and cannot be overwritten
+                        # try saving to a different filename
+                        transcript_path = Path(self.my_transcript_file)
+                        self.my_transcript_file = f'{transcript_path.parent}/{transcript_path.stem}_1{self.file_ext}'
+                        if os.path.exists(self.my_transcript_file):
+                            # the alternative filename also exists already, don't want to overwrite, giving up
+                            raise Exception(t('rescue_saving_failed'))
+                        else:
+                            # htmlStr = d.asHTML()
+                            with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
+                                f.write(txt)
+                                f.flush()
+                            self.logn()
+                            self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
+                            self.last_auto_save = datetime.datetime.now()
 
                 try:
                     from faster_whisper import WhisperModel
@@ -1116,7 +1170,7 @@ class App(ctk.CTk):
                             orig_audio_start_pause = self.start + last_segment_end
                             orig_audio_end_pause = self.start + start
                             a = d.createElement('a')
-                            a.name = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}'
+                            a.name = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}_{speaker}'
                             a.appendText(pause_str)
                             p.appendChild(a)
                             self.log(pause_str)
@@ -1161,9 +1215,14 @@ class App(ctk.CTk):
                                         seg_html = f'{speaker} <span style="color: {self.timestamp_color}" >{ts}</span>:{seg_text}'
                                         seg_text = f'{speaker} {ts}:{seg_text}'
                                         last_timestamp_ms = start
-                                    else: 
-                                        seg_text = f'{speaker}:{seg_text}'
-                                        seg_html = seg_text
+                                    else:
+                                        if self.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
+                                            seg_text = f'{speaker}:{seg_text}'
+                                            seg_html = seg_text
+                                        else:
+                                            seg_html = seg_text.lstrip()
+                                            seg_text = f'{speaker}:{seg_text}'
+                                        
                             else: # same speaker
                                 if self.timestamps:
                                     if (start - last_timestamp_ms) > self.timestamp_interval:
@@ -1193,7 +1252,7 @@ class App(ctk.CTk):
 
                         # Create bookmark with audio timestamps start to end and add the current segment.
                         # This way, we can jump to the according audio position and play it later in the editor.
-                        a_html = f'<a name="ts_{orig_audio_start}_{orig_audio_end}" >{seg_html}</a>'
+                        a_html = f'<a name="ts_{orig_audio_start}_{orig_audio_end}_{speaker}" >{seg_html}</a>'
                         a = d.createElementFromHTML(a_html)
                         p.appendChild(a)
 
