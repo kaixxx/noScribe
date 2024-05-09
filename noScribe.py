@@ -100,13 +100,33 @@ try:
             raise # config file is empty (None)        
 except: # seems we run it for the first time and there is no config file
     config = {}
-
-# delete 'pyannote_xpu' from config if the config is from a version < 0.4.5 (Windows only)
+    
+def version_higher(version1, version2) -> int:
+    """Will return 
+    1 if version1 is higher
+    2 if version2 is higher
+    0  if both are equal """
+    version1_elems = version1.split('.')
+    version2_elems = version2.split('.')
+    # make both versions the same length
+    elem_num = max(len(version1_elems), len(version2_elems))
+    while len(version1_elems) < elem_num:
+        version1_elems.append('0')
+    while len(version1_elems) < elem_num:
+        version1_elems.append('0')
+    for i in range(elem_num):
+        if int(version1_elems[i]) > int(version2_elems[i]):
+            return 1
+        elif int(version2_elems[i]) > int(version1_elems[i]):
+            return 2
+    # must be completly equal
+    return 0
+    
+# In versions < 0.4.5 (Windows/Linux only), 'pyannote_xpu' was always set to 'cpu'.
+# Delete this so we can determine the optimal value  
 if platform.system() in ('Windows', 'Linux'):
     try:
-        config_version_str = config['app_version']
-        config_version = config_version_str.split('.')
-        if (int(config_version[0]) == 0) and (int(config_version[1]) <= 4) and (int(config_version[2]) < 5):
+        if version_higher('0.4.5', config['app_version']) == 1:
             del config['pyannote_xpu'] 
     except:
         pass
@@ -1096,9 +1116,7 @@ class App(ctk.CTk):
                         raise Exception(t('err_user_cancelation')) 
 
                     whisper_lang = self.language if self.language != 'auto' else None
-
-                    """
-                    # > VAD made the pause-detection actually worse, so I removed it. Strange...   
+   
                     try:
                         self.vad_threshold = float(config['voice_activity_detection_threshold'])
                     except:
@@ -1111,13 +1129,6 @@ class App(ctk.CTk):
                         initial_prompt=self.prompt, vad_filter=True,
                         vad_parameters=dict(min_silence_duration_ms=200, 
                                             threshold=self.vad_threshold))
-                    """
-                    segments, info = model.transcribe(
-                        self.tmp_audio_file, language=whisper_lang, 
-                        beam_size=self.whisper_beam_size, 
-                        temperature=self.whisper_temperature, 
-                        word_timestamps=True, 
-                        initial_prompt=self.prompt, vad_filter=False)
 
                     if self.language == "auto":
                         self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
