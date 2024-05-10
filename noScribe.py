@@ -63,7 +63,7 @@ import urllib
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.4.5'
+app_version = '0.5'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
@@ -102,6 +102,13 @@ try:
             raise # config file is empty (None)        
 except: # seems we run it for the first time and there is no config file
     config = {}
+    
+def get_config(key: str, default):
+    """ Get a config value, set it if it doesn't exist """
+    if key not in config:
+        config[key] = default
+    return config[key]
+
     
 def version_higher(version1, version2) -> int:
     """Will return 
@@ -523,8 +530,7 @@ class App(ctk.CTk):
         self.logn(t('welcome_instructions'))
         
         # check for new releases
-        config['check_for_update'] = config.get('check_for_update', 'True')
-        if config['check_for_update'] == 'True':
+        if get_config('check_for_update', 'True') == 'True':
             try:
                 latest_release = json.loads(urllib.request.urlopen(
                     urllib.request.Request('https://api.github.com/repos/kaixxx/noScribe/releases/latest',
@@ -696,12 +702,6 @@ class App(ctk.CTk):
             if not os.path.exists(f'{config_dir}/log'):
                 os.makedirs(f'{config_dir}/log')
             self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
-
-            def get_config(key: str, default):
-                """ Get a config value, set it if it doesn't exist """
-                if key not in config:
-                    config[key] = default
-                return config[key]
 
             # options for faster-whisper
             self.whisper_precise_beam_size = get_config('whisper_precise_beam_size', 1)
