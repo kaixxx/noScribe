@@ -57,6 +57,8 @@ if platform.system() == 'Windows':
 if platform.system() == 'Darwin':
     import Foundation
 import logging
+import json
+import urllib
 
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
@@ -518,8 +520,26 @@ class App(ctk.CTk):
         self.logn(t('welcome_message'), 'highlight')
         self.log(t('welcome_credits', v=app_version))
         self.logn('https://github.com/kaixxx/noScribe', link='https://github.com/kaixxx/noScribe#readme')
-        self.logn(t('welcome_instructions'))       
-
+        self.logn(t('welcome_instructions'))
+        
+        # check for new releases
+        config['check_for_update'] = config.get('check_for_update', 'True')
+        if config['check_for_update'] == 'True':
+            try:
+                latest_release = json.loads(urllib.request.urlopen(
+                    urllib.request.Request('https://api.github.com/repos/kaixxx/noScribe/releases/latest',
+                    headers={'Accept': 'application/vnd.github.v3+json'},),
+                    timeout=2).read())
+                latest_release_version = str(latest_release['tag_name']).lstrip('v')
+                if version_higher(latest_release_version, app_version) == 1:
+                    self.logn(t('new_release', v=latest_release_version), 'highlight')
+                    self.logn(str(latest_release['body'])) # release info
+                    self.log(t('new_release_download'))
+                    self.logn(str(latest_release['html_url']), link=str(latest_release['html_url']))
+                    self.logn()
+            except:
+                pass
+            
     # Events and Methods
 
     def launch_editor(self, file):

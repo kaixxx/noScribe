@@ -19,6 +19,8 @@ en:
     Enjoy!
 
   setup_message: 'First run: Complete the setup...'
+  new_release: 'A new version of noScribe is available (%{v}):'
+  new_release_download: 'Download: '
 
   # UI Elements
   label_audio_file: 'Audio file:'

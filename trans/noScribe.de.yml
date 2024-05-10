@@ -19,6 +19,8 @@ de:
     Viel Erfolg!
 
   setup_message: 'Einrichtung abschließen...'
+  new_release: 'Eine neue Version von noScribe ist verfügbar (%{v}):'
+  new_release_download: 'Download: '
   
   # UI Elements
   label_audio_file: 'Audiodatei:'
