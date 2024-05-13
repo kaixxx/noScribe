@@ -271,13 +271,15 @@ def ms_to_webvtt(milliseconds) -> str:
     seconds, milliseconds = divmod(milliseconds, 1000)
     return "{:02d}:{:02d}:{:02d}.{:03d}".format(hours, minutes, seconds, milliseconds)
 
-def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser):
+def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: str):
     vtt = 'WEBVTT '
     paragraphs = parser.getElementsByTagName('p')
     # The first paragraph contains the title
     vtt += vtt_escape(paragraphs[0].textContent) + '\n\n'
     # Next paragraph contains info about the transcript. Add as a note.
     vtt += vtt_escape('NOTE\n' + html_node_to_text(paragraphs[1])) + '\n\n'
+    # Add media source:
+    vtt += f'NOTE media: {media_path}\n\n'
 
     #Add all segments as VTT cues
     segments = parser.getElementsByTagName('a')
@@ -1090,7 +1092,7 @@ class App(ctk.CTk):
                     elif self.file_ext == 'txt':
                         txt = html_to_text(d)
                     elif self.file_ext == 'vtt':
-                        txt = html_to_webvtt(d)
+                        txt = html_to_webvtt(d, self.audio_file)
                     else:
                         raise TypeError(f'Invalid file type "{self.file_ext}".')
                     try:
