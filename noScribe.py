@@ -503,28 +503,39 @@ class App(ctk.CTk):
 
         # Start Button
         self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
-        self.start_button.pack(padx=20, pady=[0,10], expand=True, fill='x', anchor='sw')
+        self.start_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
 
         # Stop Button
         self.stop_button = ctk.CTkButton(self.sidebar_frame, height=42, fg_color='darkred', hover_color='darkred', text=t('stop_button'), command=self.button_stop_event)
-    
+        
         # create log textbox
         self.log_frame = ctk.CTkFrame(self.frame_main, corner_radius=0, fg_color='transparent')
-        self.log_frame.pack(padx=0, pady=0, fill='both', expand=True, side='right')
+        self.log_frame.pack(padx=0, pady=0, fill='both', expand=True, side='top')
 
         self.log_textbox = ctk.CTkTextbox(self.log_frame, wrap='word', state="disabled", font=("",16), text_color="lightgray")
         self.log_textbox.tag_config('highlight', foreground='darkorange')
         self.log_textbox.tag_config('error', foreground='yellow')
-        self.log_textbox.pack(padx=20, pady=[20,10], expand=True, fill='both')
+        self.log_textbox.pack(padx=20, pady=[20,0], expand=True, fill='both')
 
         self.hyperlink = HyperlinkManager(self.log_textbox._textbox)
 
-        # status bar bottom
-        self.frame_status = ctk.CTkFrame(self, height=20, corner_radius=0)
-        self.frame_status.pack(padx=0, pady=[0,0], anchor='sw', fill='x', side='bottom')
+        # Frame progress bar / edit button
+        self.frame_edit = ctk.CTkFrame(self.frame_main, height=20, corner_radius=0, fg_color=self.log_textbox._fg_color)
+        self.frame_edit.pack(padx=20, pady=[0,30], anchor='sw', fill='x', side='bottom')
 
-        self.progress_bar = ctk.CTkProgressBar(self.frame_status, height=5, mode='determinate')
+        # Edit Button
+        self.edit_button = ctk.CTkButton(self.frame_edit, fg_color=self.log_textbox._scrollbar_button_color, 
+                                         text=t('editor_button'), command=self.launch_editor, width=140)
+        self.edit_button.pack(padx=[20,10], pady=[10,10], expand=False, anchor='se', side='right')
+
+        # Progress bar
+        self.progress_bar = ctk.CTkProgressBar(self.frame_edit, mode='determinate', progress_color='darkred', fg_color=self.log_textbox._fg_color)
         self.progress_bar.set(0)
+        # self.progress_bar.pack(padx=[0,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
+
+        # status bar bottom
+        #self.frame_status = ctk.CTkFrame(self, height=20, corner_radius=0)
+        #self.frame_status.pack(padx=0, pady=[0,0], anchor='sw', fill='x', side='bottom')
 
         self.logn(t('welcome_message'), 'highlight')
         self.log(t('welcome_credits', v=app_version))
@@ -550,10 +561,17 @@ class App(ctk.CTk):
             
     # Events and Methods
 
-    def launch_editor(self, file):
+    def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
         # set system/version dependent "start_new_session" analogs
+        if file == '':
+            file = self.transcript_file
+        ext = os.path.splitext(self.transcript_file)[1][1:]
+        if file != '' and ext != 'html':
+            file = ''
+            if not tk.messagebox.askyesno(title='noScribe', message=t('err_editor_invalid_format')):
+                return
         program: str = None
         if platform.system() == 'Windows':
             program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit.exe')
@@ -571,7 +589,10 @@ class App(ctk.CTk):
             kwargs.update(start_new_session=True)
 
         if program is not None and os.path.exists(program):
-            Popen([program, file], **kwargs)
+            if file != '':
+                Popen([program, file], **kwargs)
+            else:
+                Popen([program], **kwargs)
         else:
             self.logn(t('err_noScribeEdit_not_found'), 'error')
 
@@ -663,7 +684,7 @@ class App(ctk.CTk):
 
 
     ################################################################################################
-    # Button Start
+    # Main function
 
     def transcription_worker(self):
         # This is the main function where all the magic happens
@@ -674,11 +695,13 @@ class App(ctk.CTk):
 
         # Show the stop button
         self.start_button.pack_forget() # hide
-        self.stop_button.pack(padx=20, pady=[0,10], expand=True, fill='x', anchor='sw')
+        self.stop_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
 
         # Show the progress bar
         self.progress_bar.set(0)
-        self.progress_bar.pack(padx=20, pady=[10,20], expand=True, fill='both')
+        self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
+        # self.progress_bar.pack(padx=[0,10], pady=[10,25], expand=True, fill='x', anchor='sw', side='left')
+        # self.progress_bar.pack(padx=20, pady=[10,20], expand=True, fill='both')
 
         tmpdir = TemporaryDirectory('noScribe')
         self.tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
@@ -787,6 +810,9 @@ class App(ctk.CTk):
 
             # Default to True if auto save not in config or invalid value
             self.auto_save = False if get_config('auto_save', 'True') == 'False' else True 
+            
+            # Open the finished transript in the editor automatically?
+            self.auto_edit_transcript = get_config('auto_edit_transcript', 'True')
             
             # Check for invalid vtt options
             if self.file_ext == 'vtt' and (self.pause > 0 or self.overlapping or self.timestamps):
@@ -1314,6 +1340,10 @@ class App(ctk.CTk):
                     # log duration of the whole process in minutes
                     proc_time = datetime.datetime.now() - proc_start_time
                     self.logn(t('trancription_time', duration=int(proc_time.total_seconds() / 60))) 
+                    
+                    # auto open transcript in editor
+                    if (self.auto_edit_transcript == 'True') and (self.file_ext == 'html'):
+                        self.launch_editor(self.my_transcript_file)
                 
                 except Exception as e:
                     self.logn()
@@ -1333,7 +1363,7 @@ class App(ctk.CTk):
         finally:
             # hide the stop button
             self.stop_button.pack_forget() # hide
-            self.start_button.pack(padx=20, pady=[0,10], expand=True, fill='x', anchor='sw')
+            self.start_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
 
             # hide progress bar
             self.progress_bar.pack_forget()

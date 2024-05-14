@@ -42,6 +42,7 @@ en:
   
   start_button: Start 
   stop_button: Cancel
+  editor_button: Editor
 
   # log messages
   log_transcript_filename: 'Transcript filename: '
@@ -76,7 +77,8 @@ en:
   rescue_saving_failed: 'Error: Saving to the original filename failed. The alternate filename also exists. I have to quit. (Make sure your transcript is not already opened in Word!)'
   err_noScribeEdit_not_found: 'Error: Could not find the noScribe Editor.'
   err_vtt_invalid_options: 'Warning: The options "overlapping speech", "Mark pause" and "Timestamps" are not supported in VTT files.'
-
+  err_editor_invalid_format: 'The editor can only be used with html files. Do you want to start it anyway?'
+  
   # Doc contents
   doc_header: 'Transcribed with noScribe vers. %{version}'
   doc_header_audio: 'Audio file: %{file}'
