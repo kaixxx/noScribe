@@ -435,21 +435,15 @@ class App(ctk.CTk):
 
         self.option_menu_language = ctk.CTkOptionMenu(self.frame_options, width=100, values=self.langs, dynamic_resizing=False)
         self.option_menu_language.grid(column=1, row=2, sticky='e', pady=5)
-        try:
-            self.option_menu_language.set(config['last_language'])
-        except:
-            pass
-
+        self.option_menu_language.set(get_config('last_language', 'auto'))
+        
         # Quality (Model Selection)
         self.label_quality = ctk.CTkLabel(self.frame_options, text=t('label_quality'))
         self.label_quality.grid(column=0, row=3, sticky='w', pady=5)
 
         self.option_menu_quality = ctk.CTkOptionMenu(self.frame_options, width=100, values=['precise', 'fast'])
         self.option_menu_quality.grid(column=1, row=3, sticky='e', pady=5)
-        try:
-            self.option_menu_quality.set(config['last_quality'])
-        except:
-            pass
+        self.option_menu_quality.set(get_config('last_quality', 'precise'))
 
         # Mark pauses
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
@@ -457,14 +451,7 @@ class App(ctk.CTk):
 
         self.option_menu_pause = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', '1sec+', '2sec+', '3sec+'])
         self.option_menu_pause.grid(column=1, row=4, sticky='e', pady=5)
-        try:
-            val = config['last_pause']
-            if val in self.option_menu_pause._values:
-                self.option_menu_pause.set(val)
-            else:
-                raise
-        except:
-            self.option_menu_pause.set(self.option_menu_pause._values[1])    
+        self.option_menu_pause.set(get_config('last_pause', '1sec+'))
 
         # Speaker Detection (Diarization)
         self.label_speaker = ctk.CTkLabel(self.frame_options, text=t('label_speaker'))
@@ -472,10 +459,7 @@ class App(ctk.CTk):
 
         self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
         self.option_menu_speaker.grid(column=1, row=5, sticky='e', pady=5)
-        try:
-            self.option_menu_speaker.set(config['last_speaker'])
-        except:
-            pass
+        self.option_menu_speaker.set(get_config('last_speaker', 'auto'))
 
         # Overlapping Speech (Diarization)
         self.label_overlapping = ctk.CTkLabel(self.frame_options, text=t('label_overlapping'))
@@ -483,7 +467,7 @@ class App(ctk.CTk):
 
         self.check_box_overlapping = ctk.CTkCheckBox(self.frame_options, text = '')
         self.check_box_overlapping.grid(column=1, row=6, sticky='e', pady=5)
-        overlapping = config.get('last_overlapping', True) # Get last overlapping, default to True
+        overlapping = config.get('last_overlapping', True)
         if overlapping:
             self.check_box_overlapping.select()
         else:
@@ -495,7 +479,7 @@ class App(ctk.CTk):
 
         self.check_box_timestamps = ctk.CTkCheckBox(self.frame_options, text = '')
         self.check_box_timestamps.grid(column=1, row=7, sticky='e', pady=5)
-        check_box_timestamps = config.get('last_timestamps', False) # Get last timestamps setting, default False
+        check_box_timestamps = config.get('last_timestamps', False)
         if check_box_timestamps:
             self.check_box_timestamps.select()
         else:
