@@ -968,6 +968,8 @@ class App(ctk.CTk):
                         elif platform.system() == 'Darwin': # = MAC
                             # No check for arm64 or x86_64 necessary, since the correct version will be compiled and bundled
                             diarize_abspath = os.path.join(app_dir, '..', 'MacOS', 'diarize')
+                        elif platform.system() == 'Linux':
+                            diarize_abspath = os.path.join(app_dir, 'diarize')
                         if not 'diarize_abspath' in globals(): # Run the diarize.py python script, if no path the compiled version was set:
                             diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
                         elif os.path.exists(diarize_abspath): # Run the diarize.py python script, if the compiled version of diarize does not exist:
