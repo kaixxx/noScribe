@@ -345,7 +345,10 @@ class App(ctk.CTk):
         if platform.system() in ("Darwin", "Windows"):
             self.iconbitmap('noScribeLogo.ico')
         if platform.system() == "Linux":
-            self.iconphoto(True, tk.PhotoImage(file='noScribeLogo.png'))
+            if hasattr(sys, "_MEIPASS"):
+                self.iconphoto(True, tk.PhotoImage(file=os.path.join(sys._MEIPASS, "noScribeLogo.png")))
+            else:
+                self.iconphoto(True, tk.PhotoImage(file='noScribeLogo.png'))
 
         # header
         self.frame_header = ctk.CTkFrame(self, height=100)
