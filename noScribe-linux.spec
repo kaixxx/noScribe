@@ -40,7 +40,7 @@ noScribe_exe = EXE(
 # diarize
 
 site_packages = site.getsitepackages()
-diarize_datas = [('models/pyannote_config.yaml', 'models/.'), (f'{site_packages}/lightning', 'lightning/'), (f'{site_packages}lightning_fabric', 'lightning_fabric'), (f'{site_packages}/torchaudio', 'torchaudio'), (f'{site_packages}/pyannote', 'pyannote/'), (f'{site_packages}/pytorch_metric_learning', 'pytorch_metric_learning/'), (f'{site_packages}/sklearn', 'sklearn/'), ('models/pytorch_model.bin', 'models/.'), (f'{site_packages}/asteroid_filterbanks', 'asteroid_filterbanks/'), (f'{site_packages}/pytorch_lightning', 'pytorch_lightning/'), ('models/torch', 'models/torch/')]
+diarize_datas = [('models/pyannote_config.yaml', 'models/.'), (f'{site_packages[0]}/lightning', 'lightning/'), (f'{site_packages[0]}/lightning_fabric', 'lightning_fabric'), (f'{site_packages[0]}/torchaudio', 'torchaudio'), (f'{site_packages[0]}/pyannote', 'pyannote/'), (f'{site_packages[0]}/pytorch_metric_learning', 'pytorch_metric_learning/'), (f'{site_packages[0]}/sklearn', 'sklearn/'), ('models/pytorch_model.bin', 'models/.'), (f'{site_packages[0]}/asteroid_filterbanks', 'asteroid_filterbanks/'), (f'{site_packages[0]}/pytorch_lightning', 'pytorch_lightning/'), ('models/torch', 'models/torch/')]
 diarize_binaries = []
 diarize_hiddenimports = []
 diarize_tmp_ret = collect_all('speechbrain')
