@@ -1,4 +1,5 @@
 from PyInstaller.utils.hooks import collect_all
+import site
 
 # noScribe
 
@@ -38,7 +39,8 @@ noScribe_exe = EXE(
 
 # diarize
 
-diarize_datas = [('models/pyannote_config.yaml', 'models/.'), ('/home/dobener/.pyenv/versions/scribe/lib/python3.9/site-packages/lightning', 'lightning/'), ('/home/dobener/.pyenv/versions/scribe/lib/python3.9/site-packages/lightning_fabric', 'lightning_fabric'), ('/home/dobener/.pyenv/versions/scribe/lib/python3.9/site-packages/torchaudio', 'torchaudio'), ('/home/dobener/.pyenv/versions/scribe/lib/python3.9/site-packages/pyannote', 'pyannote/'), ('/home/dobener/.pyenv/versions/scribe/lib/python3.9/site-packages/pytorch_metric_learning', 'pytorch_metric_learning/'), ('/home/dobener/.pyenv/versions/scribe/lib/python3.9/site-packages/sklearn', 'sklearn/'), ('models/pytorch_model.bin', 'models/.'), ('/home/dobener/.pyenv/versions/scribe/lib/python3.9/site-packages/asteroid_filterbanks', 'asteroid_filterbanks/'), ('/home/dobener/.pyenv/versions/scribe/lib/python3.9/site-packages/pytorch_lightning', 'pytorch_lightning/'), ('models/torch', 'models/torch/')]
+site_packages = site.getsitepackages()
+diarize_datas = [('models/pyannote_config.yaml', 'models/.'), (f'{site_packages}/lightning', 'lightning/'), (f'{site_packages}lightning_fabric', 'lightning_fabric'), (f'{site_packages}/torchaudio', 'torchaudio'), (f'{site_packages}/pyannote', 'pyannote/'), (f'{site_packages}/pytorch_metric_learning', 'pytorch_metric_learning/'), (f'{site_packages}/sklearn', 'sklearn/'), ('models/pytorch_model.bin', 'models/.'), (f'{site_packages}/asteroid_filterbanks', 'asteroid_filterbanks/'), (f'{site_packages}/pytorch_lightning', 'pytorch_lightning/'), ('models/torch', 'models/torch/')]
 diarize_binaries = []
 diarize_hiddenimports = []
 diarize_tmp_ret = collect_all('speechbrain')
