@@ -29,24 +29,26 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 
 ## Download and Installation
 > All releases are currently hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
+**Current version: 0.5** (see [changelog](CHANGELOG.md))
 ### Windows
-- If you have an NVIDIA graphics card, you might achieve significant speed improvements with the [new version discussed here](https://github.com/kaixxx/noScribe/discussions/50).
-- Otherwise, download the current stable version 0.4.1 here: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
-- **Installation**: Start the downloaded setup file. This may take a while, be patient.
-- If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
-- To do a silent install on a larger group of computers, start the setup with the argument `/S`.  
+- The **general purpose version** for normal PCs without a NVIDIA graphics card: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fnon%20cuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fnon%20cuda) 
+- A special version using **CUDA acceleration on NVIDIA graphics cards** with at least 6 GB of VRAM: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fcuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fcuda). You must also install the [CUDA toolkit from here](https://developer.nvidia.com/cuda-downloads?target_os=Windows) (a reboot is required afterwards).
+- **Installation**: 
+    - Start the downloaded setup file. This may take a while, be patient.
+    - If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
+    - To do a silent install on a larger group of computers, start the setup with the argument `/S`.  
 
 ### MacOS 
 ported by [gernophil](https://github.com/gernophil) </br>
-noScribe runs on macOS 11.0 or higher.
-- Make sure to download the right variant: "noScribe_arm64.dmg" is for Macs with the newer M1/M2/M3 processors, "noScribe_x86_64_unsigned.dmg" for the older Intel-based machines.
-- Current version 0.4.4: [arm64 (Apple Silicon)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS%2Farm64%20(Apple%20Silicon)%2F0.4.4) [x86_64 (Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS%2Fx86_64%20(Intel)%2F0.4.4) 
-- **Installation (M1/M2/M3-based Macs)**: 
-    - Double-click on the downloaded "noScribe_arm64.dmg" file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
-    - Start noScribe and/or noScribeEdit by double-clicking the app within your applications folder.
-- **Installation (Intel-based Macs)**:</br>
-Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
-    - Download and double-click the noScribe_x86_64.dmg file.
+- **Newer Macs with Apple Silicon M1-M4 processors**
+    - Download: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Farm64%20(Apple%20Silicon)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Farm64%20(Apple%20Silicon))
+    - Double-click on the downloaded dmg-file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
+    - Start noScribe and/or noScribeEdit by double-clicking the app within your applications 
+- **Older Macs with Intel processors**
+    - for macOS Sonoma (14): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel))
+    - for macOS 11 (Big Sur), 12 (Monterey) and 13 (Ventura): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel))
+    - Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
+    - Double-click the downloaded dmg-file.
     - Drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install")
     - Start noScribe by double-clicking the app within your applications folder. You will get an error that noScribe is from an unregistered developer. Do the same with the noScribe Editor.
     - Go to Settings -> Privacy and Security -> Scroll down until you see a message stating noScribe was prevented from starting and click "open anyway". Again, do the same with the noScribe Editor.
