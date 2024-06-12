@@ -20,6 +20,7 @@ noScribe_datas = [('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe
 ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/README.md', '.')]
 noScribe_datas += collect_data_files('customtkinter')
 noScribe_datas += copy_metadata('AdvancedHTMLParser')
+noScribe_datas += collect_data_files('faster_whisper')
 
 noScribe_a = Analysis(
     ['C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/noScribe.py'],

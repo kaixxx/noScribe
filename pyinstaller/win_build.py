@@ -2,11 +2,11 @@ import os
 import sys
 from subprocess import Popen
 
-noScribe_version = '0.4.5'
+noScribe_version = '0.5'
 clean_build = True
-run_pyinstaller_non_cuda = False
-run_pyinstaller_cuda = False
-run_nsis_non_cuda = False
+run_pyinstaller_non_cuda = True
+run_pyinstaller_cuda = True
+run_nsis_non_cuda = True
 run_nsis_cuda = True
 
 conda_env_noncuda = 'noScribe_0_4'
