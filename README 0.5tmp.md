@@ -46,7 +46,7 @@ ported by [gernophil](https://github.com/gernophil) </br>
     - Double-click on the downloaded dmg-file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
     - Start noScribe and/or noScribeEdit by double-clicking the app within your applications 
 - **Older Macs with Intel processors**
-    - for macOS Sonoma (14): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel))
+    - for macOS Sonoma (14) and later: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel))
     - for macOS 11 (Big Sur), 12 (Monterey) and 13 (Ventura): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel))
     - Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
     - Double-click the downloaded dmg-file.
@@ -69,12 +69,13 @@ Dröge, K. (2024). noScribe. AI-powered Audio Transcription (Version XXX) [Compu
 ### Settings
 <img align="left" src="img/noScribe_settings.png" width="300">
 
-- Select your **audio file** and a **filename for the transcript.**
+- Select your **audio file**. NoScribe supports almost any audio or video format.
+- Select the **filename for the transcript.** You can also choose the file type: *.html is the default, supported also by the noScribe editor. *.vtt is a video subtitles format and is especially useful if you want to import your transcript into [EXMARaLDA](https://exmaralda.org/) for further annotation. *.txt exports the transcript as plain text.
 - **Start** and **Stop** accept timestamps in the format hh:mm:ss. Use this to limit the transcription to a particular part of the recording. This is especially helpful for testing your settings with a small sample before committing to transcribing the whole interview, which may take several hours. Leave **Stop** empty if you want to transcribe until the end of the audio file.
 - **Language:** Select the language of your transcript or set it to 'auto'.
 - **Quality:** 'Precise' is the recommended setting for the most accurate transcript. On slower machines, you may opt for the 'fast' option. This will be quicker but might necessitate more manual revision later.
 - **Mark Pause**: If enabled, parts of your audio without voice activity will be marked as pauses. Pauses are transcribed as round brackets with one dot per second inside, e.g., '(..)' for a two-second pause. Pauses longer than 10 seconds are written out as '(XX seconds pause)' or '(XX minutes pause)'. You have the option to mark either pauses of one second and more ('1sec+'), two seconds and more ('2sec+'), or only the longer ones of three seconds and more ('3sec+'). Choose 'none' to disable this feature entirely.
-**Speaker Detection:** Choosing 'auto' utilizes the Pyannote AI model to identify distinct speakers in your audio, organizing the transcript accordingly. Opting for 'none' bypasses this step, shaving off approximately half the process time. However, the resultant transcript will be a continuous block of text without any indicators of speaker transitions.
+- **Speaker Detection:** This feature uses the Pyannote AI model to identify distinct speakers in your audio and organizes the transcript accordingly. Choose the number of speakers if known, or select 'auto.' Opting for 'none' bypasses this step altogether, reducing the processing time by approximately half. However, the resultant transcript will be a continuous block of text without any indicators of speaker transitions.
 - **Overlapping Speech**: If enabled, noScribe attempts to mark instances where two people speak simultaneously. The overlapping section is demarcated with //double slashes//. (Note: This is an experimental feature.)
 - **Timestamps**: When enabled, noScribe incorporates timestamps in the format [hh:mm:ss] into the transcript either at every change of speaker or every 60 seconds. I find these timestamps somewhat distracting, hence my decision to disable them by default. However, they can be quite useful in certain contexts. Even with timestamps disabled, determining the audio timecode for a specific segment is straightforward: simply open the transcript in the noScribe Editor, navigate through the text, and the corresponding timecode will appear in the bottom right corner of the app.
 
@@ -84,8 +85,8 @@ Dröge, K. (2024). noScribe. AI-powered Audio Transcription (Version XXX) [Compu
 - A **progress bar** at the bottom of the app will show how far you are into the whole process. 
 - The **main window** will log progress-messages and errors. It will also show the text of your interview during the last step of the transcription. 
 - The transcript will be auto saved every few seconds under the given filename.
-- NoScribe produces an HTML-file. This can be opened in every common word editor (including MS Word, LibreOffice). 
-- Before working with the transcript though, you should check it with the included editor. There will always be some errors. Click on the filename in the progress window (blue + underlined) to edit the file. 
+- By default, noScribe produces an HTML-file. This can be opened in every common word editor (including MS Word, LibreOffice) or QDA-package (MAXQDA, ATLAS.ti, QualCoder...). 
+- Before working with the transcript though, you should check it with the included editor. There will always be some errors. 
 
 
 ## noScribeEdit 
@@ -93,7 +94,7 @@ The included editor to check the final transcript.
 
 ![The transcript in the noScribe Editor](img/noScribe_Editor.png)
 
-The noScribe Editor is a separate app that can also be run independent from noScribe. It contains some handy features to check your finished transcript for errors and correct them:
+The noScribe Editor is a separate app. It will open automatically once the transcript is finished, but can also be run independent from noScribe. It contains some handy features to check your finished transcript for errors and correct them:
 - Press **Ctrl + Spacebar** or the **orange button in the toolbar** to hear the audio which corresponds to your current position in the text. 
 - The **selection of the text will follow the audio that you hear**. If you want to **make changes,** click anywhere in the text with your mouse or use the arrow keys to move the cursor. The audio will stop, and you can edit the text.
 - You can also **stop the audio** by pressing Ctrl + Spacebar again or clicking the orange button.
