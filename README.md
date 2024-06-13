@@ -28,25 +28,28 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 **Kai Dröge**, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).
 
 ## Download and Installation
-> All releases are currently hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
+**Current Version Number: 0.5** (see [changelog](CHANGELOG.md))
+> All releases are hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
+
 ### Windows
-- If you have an NVIDIA graphics card, you might achieve significant speed improvements with the [new version discussed here](https://github.com/kaixxx/noScribe/discussions/50).
-- Otherwise, download the current stable version 0.4.1 here: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FWindows)
-- **Installation**: Start the downloaded setup file. This may take a while, be patient.
-- If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
-- To do a silent install on a larger group of computers, start the setup with the argument `/S`.  
+- The **general purpose version** for normal PCs without a NVIDIA graphics card: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fnon%20cuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fnon%20cuda) 
+- A special version using **CUDA acceleration on NVIDIA graphics cards** with at least 6 GB of VRAM: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fcuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fcuda). You must also install the [CUDA toolkit from here](https://developer.nvidia.com/cuda-downloads?target_os=Windows) (a reboot is required afterwards).
+- **Installation**: 
+    - Start the downloaded setup file. This may take a while, be patient.
+    - If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
+    - To do a silent install on a larger group of computers, start the setup with the argument `/S`.  
 
 ### MacOS 
 ported by [gernophil](https://github.com/gernophil) </br>
-noScribe runs on macOS 11.0 or higher.
-- Make sure to download the right variant: "noScribe_arm64.dmg" is for Macs with the newer M1/M2/M3 processors, "noScribe_x86_64_unsigned.dmg" for the older Intel-based machines.
-- Current version 0.4.4: [arm64 (Apple Silicon)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS%2Farm64%20(Apple%20Silicon)%2F0.4.4) [x86_64 (Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.4%2FmacOS%2Fx86_64%20(Intel)%2F0.4.4) 
-- **Installation (M1/M2/M3-based Macs)**: 
-    - Double-click on the downloaded "noScribe_arm64.dmg" file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
-    - Start noScribe and/or noScribeEdit by double-clicking the app within your applications folder.
-- **Installation (Intel-based Macs)**:</br>
-Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
-    - Download and double-click the noScribe_x86_64.dmg file.
+- **Newer Macs with Apple Silicon M1-M4 processors**
+    - Download: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Farm64%20(Apple%20Silicon)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Farm64%20(Apple%20Silicon))
+    - Double-click on the downloaded dmg-file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
+    - Start noScribe and/or noScribeEdit by double-clicking the app within your applications 
+- **Older Macs with Intel processors**
+    - for macOS Sonoma (14) and later: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel))
+    - for macOS 11 (Big Sur), 12 (Monterey) and 13 (Ventura): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel))
+    - Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
+    - Double-click the downloaded dmg-file.
     - Drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install")
     - Start noScribe by double-clicking the app within your applications folder. You will get an error that noScribe is from an unregistered developer. Do the same with the noScribe Editor.
     - Go to Settings -> Privacy and Security -> Scroll down until you see a message stating noScribe was prevented from starting and click "open anyway". Again, do the same with the noScribe Editor.
@@ -66,12 +69,13 @@ Dröge, K. (2024). noScribe. AI-powered Audio Transcription (Version XXX) [Compu
 ### Settings
 <img align="left" src="img/noScribe_settings.png" width="300">
 
-- Select your **audio file** and a **filename for the transcript.**
+- Select your **audio file**. NoScribe supports almost any audio or video format.
+- Select the **filename for the transcript.** You can also choose the file type: *.html is the default, supported also by the noScribe editor. *.vtt is a video subtitles format and is especially useful if you want to import your transcript into [EXMARaLDA](https://exmaralda.org/) for further annotation. *.txt exports the transcript as plain text.
 - **Start** and **Stop** accept timestamps in the format hh:mm:ss. Use this to limit the transcription to a particular part of the recording. This is especially helpful for testing your settings with a small sample before committing to transcribing the whole interview, which may take several hours. Leave **Stop** empty if you want to transcribe until the end of the audio file.
 - **Language:** Select the language of your transcript or set it to 'auto'.
 - **Quality:** 'Precise' is the recommended setting for the most accurate transcript. On slower machines, you may opt for the 'fast' option. This will be quicker but might necessitate more manual revision later.
 - **Mark Pause**: If enabled, parts of your audio without voice activity will be marked as pauses. Pauses are transcribed as round brackets with one dot per second inside, e.g., '(..)' for a two-second pause. Pauses longer than 10 seconds are written out as '(XX seconds pause)' or '(XX minutes pause)'. You have the option to mark either pauses of one second and more ('1sec+'), two seconds and more ('2sec+'), or only the longer ones of three seconds and more ('3sec+'). Choose 'none' to disable this feature entirely.
-**Speaker Detection:** Choosing 'auto' utilizes the Pyannote AI model to identify distinct speakers in your audio, organizing the transcript accordingly. Opting for 'none' bypasses this step, shaving off approximately half the process time. However, the resultant transcript will be a continuous block of text without any indicators of speaker transitions.
+- **Speaker Detection:** This feature uses the Pyannote AI model to identify distinct speakers in your audio and organizes the transcript accordingly. Choose the number of speakers if known, or select 'auto.' Opting for 'none' bypasses this step altogether, reducing the processing time by approximately half. However, the resultant transcript will be a continuous block of text without any indicators of speaker transitions.
 - **Overlapping Speech**: If enabled, noScribe attempts to mark instances where two people speak simultaneously. The overlapping section is demarcated with //double slashes//. (Note: This is an experimental feature.)
 - **Timestamps**: When enabled, noScribe incorporates timestamps in the format [hh:mm:ss] into the transcript either at every change of speaker or every 60 seconds. I find these timestamps somewhat distracting, hence my decision to disable them by default. However, they can be quite useful in certain contexts. Even with timestamps disabled, determining the audio timecode for a specific segment is straightforward: simply open the transcript in the noScribe Editor, navigate through the text, and the corresponding timecode will appear in the bottom right corner of the app.
 
@@ -81,8 +85,8 @@ Dröge, K. (2024). noScribe. AI-powered Audio Transcription (Version XXX) [Compu
 - A **progress bar** at the bottom of the app will show how far you are into the whole process. 
 - The **main window** will log progress-messages and errors. It will also show the text of your interview during the last step of the transcription. 
 - The transcript will be auto saved every few seconds under the given filename.
-- NoScribe produces an HTML-file. This can be opened in every common word editor (including MS Word, LibreOffice). 
-- Before working with the transcript though, you should check it with the included editor. There will always be some errors. Click on the filename in the progress window (blue + underlined) to edit the file. 
+- By default, noScribe produces an HTML-file. This can be opened in every common word editor (including MS Word, LibreOffice) or QDA-package (MAXQDA, ATLAS.ti, QualCoder...). 
+- Before working with the transcript though, you should check it with the included editor. There will always be some errors. 
 
 
 ## noScribeEdit 
@@ -90,7 +94,7 @@ The included editor to check the final transcript.
 
 ![The transcript in the noScribe Editor](img/noScribe_Editor.png)
 
-The noScribe Editor is a separate app that can also be run independent from noScribe. It contains some handy features to check your finished transcript for errors and correct them:
+The noScribe Editor is a separate app. It will open automatically once the transcript is finished, but can also be run independent from noScribe. It contains some handy features to check your finished transcript for errors and correct them:
 - Press **Ctrl + Spacebar** or the **orange button in the toolbar** to hear the audio which corresponds to your current position in the text. 
 - The **selection of the text will follow the audio that you hear**. If you want to **make changes,** click anywhere in the text with your mouse or use the arrow keys to move the cursor. The audio will stop, and you can edit the text.
 - You can also **stop the audio** by pressing Ctrl + Spacebar again or clicking the orange button.
