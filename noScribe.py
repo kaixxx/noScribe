@@ -37,6 +37,7 @@ from subprocess import run, call, Popen, PIPE, STDOUT
 if platform.system() == 'Windows':
     # import torch.cuda # to check with torch.cuda.is_available()
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
+if platform.system() in ("Windows", "Linux"):
     from ctranslate2 import get_cuda_device_count
 import re
 if platform.system() == "Darwin": # = MAC
@@ -967,7 +968,11 @@ class App(ctk.CTk):
                         elif platform.system() == 'Darwin': # = MAC
                             # No check for arm64 or x86_64 necessary, since the correct version will be compiled and bundled
                             diarize_abspath = os.path.join(app_dir, '..', 'MacOS', 'diarize')
-                        if not ('diarize_abspath' in globals() or os.path.exists(diarize_abspath)): # Run the compiled version of diarize if it exists, otherwise the python script:
+                        elif platform.system() == 'Linux':
+                            diarize_abspath = os.path.join(app_dir, 'diarize')
+                        if not 'diarize_abspath' in globals(): # Run the diarize.py python script, if no path the compiled version was set:
+                            diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
+                        elif not os.path.exists(diarize_abspath): # Run the diarize.py python script, if the compiled version of diarize does not exist:
                             diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
                         diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}" {self.speaker_detection}'
                         diarize_env = None
