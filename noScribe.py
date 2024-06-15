@@ -969,17 +969,16 @@ class App(ctk.CTk):
                         self.set_progress(1, 100)
 
                         diarize_output = os.path.join(tmpdir.name, 'diarize_out.yaml')
-                        if platform.system() == 'Windows':
-                            diarize_abspath = os.path.join(app_dir, 'diarize.exe')
-                        elif platform.system() == 'Darwin': # = MAC
-                            # No check for arm64 or x86_64 necessary, since the correct version will be compiled and bundled
-                            diarize_abspath = os.path.join(app_dir, '..', 'MacOS', 'diarize')
-                        elif platform.system() == 'Linux':
-                            diarize_abspath = os.path.join(app_dir, 'diarize')
-                        if not 'diarize_abspath' in globals(): # Run the diarize.py python script, if no path the compiled version was set:
-                            diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
-                        elif not os.path.exists(diarize_abspath): # Run the diarize.py python script, if the compiled version of diarize does not exist:
-                            diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
+                        diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
+                        diarize_abspath_win = os.path.join(app_dir, 'diarize.exe')
+                        diarize_abspath_mac = os.path.join(app_dir, '..', 'MacOS', 'diarize')
+                        diarize_abspath_lin = os.path.join(app_dir, 'diarize')
+                        if platform.system() == 'Windows' and os.path.exists(diarize_abspath_win):
+                            diarize_abspath = diarize_abspath_win
+                        elif platform.system() == 'Darwin' and os.path.exists(diarize_abspath_mac): # = MAC
+                            diarize_abspath = diarize_abspath_mac
+                        elif platform.system() == 'Linux' and os.path.exists(diarize_abspath_lin):
+                            diarize_abspath = diarize_abspath_lin
                         diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}" {self.speaker_detection}'
                         diarize_env = None
                         if self.pyannote_xpu == 'mps':
