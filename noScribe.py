@@ -179,7 +179,6 @@ if platform.system() == 'Windows':
 elif platform.system() == "Linux":
     number_threads = os.cpu_count()
     number_threads = 4 if number_threads is None else number_threads
-    number_threads = 0
 elif platform.system() == "Darwin": # = MAC
     if platform.machine() == "arm64":
         cpu_count = int(check_output(["sysctl", "-n", "hw.perflevel0.logicalcpu_max"]))
