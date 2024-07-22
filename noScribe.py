@@ -179,6 +179,7 @@ if platform.system() == 'Windows':
 elif platform.system() == "Linux":
     number_threads = os.cpu_count()
     number_threads = 4 if number_threads is None else number_threads
+    number_threads = 0
 elif platform.system() == "Darwin": # = MAC
     if platform.machine() == "arm64":
         cpu_count = int(check_output(["sysctl", "-n", "hw.perflevel0.logicalcpu_max"]))
@@ -593,20 +594,43 @@ class App(ctk.CTk):
         else: 
             webbrowser.open(link)
 
+    def disable_log_textbox(self):
+        try:
+            if self.log_textbox.winfo_exists():
+                self.log_textbox.configure(state=tk.DISABLED)
+        except Exception as e:
+            print(f"Error disabling log_textbox: {e}")
+    
     def log(self, txt: str = '', tags: list = [], where: str = 'both', link: str = '') -> None:
         """ Log to main window (where can be 'screen', 'file', or 'both') """
         if where != 'file':
-            self.log_textbox.configure(state=ctk.NORMAL)
-            if link != '':
-                tags = tags + self.hyperlink.add(partial(self.openLink, link))
-            self.log_textbox.insert(ctk.END, txt, tags)
-            self.log_textbox.yview_moveto(1) # scroll to last line
-            self.log_textbox.configure(state=ctk.DISABLED)
-        if (where != 'screen') and (self.log_file != None) and (self.log_file.closed == False):
-            if tags == 'error':
-                txt = f'ERROR: {txt}'
-            self.log_file.write(txt)
-            self.log_file.flush()
+            
+            try:
+                # Ensure this is done on the main thread
+                if not self.log_textbox.winfo_exists():
+                    return  # Exit if widget does not exist
+                
+                self.log_textbox.configure(state=tk.NORMAL)
+
+                if link:
+                    tags = tags + self.hyperlink.add(partial(self.openLink, link))
+                
+                
+                self.log_textbox.insert(tk.END, txt, tags)
+                self.log_textbox.yview_moveto(1)  # Scroll to last line
+                self.log_textbox.after(0, self.disable_log_textbox)
+            except Exception as e:
+                print(f"Error updating log_textbox: {e}")
+
+        if where != 'screen' and self.log_file and not self.log_file.closed:
+            
+            try:
+                if tags == 'error':
+                    txt = f'ERROR: {txt}'
+                self.log_file.write(txt)
+                self.log_file.flush()
+            except Exception as e:
+                print(f"Error writing to log file: {e}")
 
     def logn(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '') -> None:
         """ Log with a newline appended """
@@ -1207,6 +1231,7 @@ class App(ctk.CTk):
                             ts = ms_to_str(orig_audio_start)
                             ts = f'[{ts}]'
 
+
                         # check for pauses and mark them in the transcript
                         if (self.pause > 0) and (start - last_segment_end >= self.pause * 1000): # (more than x seconds with no speech)
                             pause_len = round((start - last_segment_end)/1000)
@@ -1232,11 +1257,13 @@ class App(ctk.CTk):
                                 self.logn()
                         last_segment_end = end
 
+
                         # write text to the doc
                         # diarization (speaker detection)?
                         seg_text = segment.text
                         seg_html = seg_text
 
+                        
                         if self.speaker_detection != 'none':
                             new_speaker = find_speaker(diarization, start, end)
                             if (speaker != new_speaker) and (new_speaker != ''): # speaker change
@@ -1297,6 +1324,8 @@ class App(ctk.CTk):
                                 seg_text = seg_text.lstrip()
                                 seg_html = seg_html.lstrip()
 
+
+                        
                         # Mark confidence level (not implemented yet in html)
                         # cl_level = round((segment.avg_logprob + 1) * 10)
                         # TODO: better cl_level for words based on https://github.com/Softcatala/whisper-ctranslate2/blob/main/src/whisper_ctranslate2/transcribe.py
@@ -1308,10 +1337,13 @@ class App(ctk.CTk):
                         a_html = f'<a name="ts_{orig_audio_start}_{orig_audio_end}_{speaker}" >{seg_html}</a>'
                         a = d.createElementFromHTML(a_html)
                         p.appendChild(a)
-
+                        
                         self.log(seg_text)
+                        
 
                         first_segment = False
+
+                        
 
                         # auto save
                         if self.auto_save:
@@ -1320,7 +1352,9 @@ class App(ctk.CTk):
 
                         progr = round((segment.end/info.duration) * 100)
                         self.set_progress(3, progr)
-
+                        
+                    
+                    print(f"Out of segments")
                     save_doc()
                     self.logn()
                     self.logn()
