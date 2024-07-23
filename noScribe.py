@@ -110,6 +110,27 @@ def get_config(key: str, default):
         config[key] = default
     return config[key]
 
+
+def check_python_binary():
+    import subprocess
+
+    try:
+        # Try to check 'python' binary version
+        python_version = subprocess.check_output(['python', '--version'], stderr=subprocess.STDOUT).decode().strip()
+        if python_version.startswith('Python 3'):
+            return 'python'
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    
+    try:
+        # Try to check 'python3' binary version
+        python3_version = subprocess.check_output(['python3', '--version'], stderr=subprocess.STDOUT).decode().strip()
+        if python3_version.startswith('Python 3'):
+            return 'python3'
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    
+    raise EnvironmentError("No Python 3 interpreter found on this machine.")
     
 def version_higher(version1, version2) -> int:
     """Will return 
@@ -992,7 +1013,7 @@ class App(ctk.CTk):
                         self.set_progress(1, 100)
 
                         diarize_output = os.path.join(tmpdir.name, 'diarize_out.yaml')
-                        diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
+                        diarize_abspath = f"{check_python_binary()} " + os.path.join(app_dir, 'diarize.py')
                         diarize_abspath_win = os.path.join(app_dir, 'diarize.exe')
                         diarize_abspath_mac = os.path.join(app_dir, '..', 'MacOS', 'diarize')
                         diarize_abspath_lin = os.path.join(app_dir, 'diarize')
