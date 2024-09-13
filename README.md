@@ -46,7 +46,7 @@ ported by [gernophil](https://github.com/gernophil) </br>
     - Double-click on the downloaded dmg-file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
     - You will need Apple's Rosetta2 Intel emulator since one component (ffmpeg) is still for the Intel CPUs. If you don't have it installed already installed, do this as follows:
         - Open the Terminal (located at `/Applications/Utilities/Terminal.app`).
-        - Type `softwareupdate --install-rosetta` or ``softwareupdate --install-rosetta --agree-to-license`.
+        - Type `softwareupdate --install-rosetta` or `softwareupdate --install-rosetta --agree-to-license`.
         - Hit enter and follow the instructions on the screen.
     - Start noScribe and/or noScribeEdit by double-clicking the app within your applications.
 - **Older Macs with Intel processors**
