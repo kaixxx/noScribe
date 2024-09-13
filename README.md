@@ -44,13 +44,17 @@ ported by [gernophil](https://github.com/gernophil) </br>
 - **Newer Macs with Apple Silicon M1-M4 processors**
     - Download: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Farm64%20(Apple%20Silicon)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Farm64%20(Apple%20Silicon))
     - Double-click on the downloaded dmg-file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
-    - Start noScribe and/or noScribeEdit by double-clicking the app within your applications 
+    - You will need Apple's Rosetta2 Intel emulator since one component (ffmpeg) is still for the Intel CPUs. If you don't have it installed already installed, do this as follows:
+        - Open the Terminal (/Applications/Utilities/Terminal.app).
+        - Type `softwareupdate --install-rosetta` or ``softwareupdate --install-rosetta --agree-to-license`.
+        - Hit enter and follow the instructions on the screen.
+    - Start noScribe and/or noScribeEdit by double-clicking the app within your applications.
 - **Older Macs with Intel processors**
     - for macOS Sonoma (14): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel))
     - for macOS 11 (Big Sur), 12 (Monterey) and 13 (Ventura): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel))
     - Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
     - Double-click the downloaded dmg-file.
-    - Drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install")
+    - Drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
     - Start noScribe by double-clicking the app within your applications folder. You will get an error that noScribe is from an unregistered developer. Do the same with the noScribe Editor.
     - Go to Settings -> Privacy and Security -> Scroll down until you see a message stating noScribe was prevented from starting and click "open anyway". Again, do the same with the noScribe Editor.
     - From now on, both programs should start without issues.
