@@ -44,7 +44,7 @@ ported by [gernophil](https://github.com/gernophil) </br>
 - **Newer Macs with Apple Silicon M1-M4 processors**
     - Download: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Farm64%20(Apple%20Silicon)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Farm64%20(Apple%20Silicon))
     - Double-click on the downloaded dmg-file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
-    - You will need Apple's Rosetta2 Intel emulator since one component (ffmpeg) is still for the Intel CPUs. If you don't have it installed already installed, do this as follows:
+    - You will need Apple's Rosetta2 Intel emulator since one component (ffmpeg) is still made the Intel CPUs. If you don't have it installed already, do this as follows:
         - Open the Terminal (located at `/Applications/Utilities/Terminal.app`).
         - Type `softwareupdate --install-rosetta` or `softwareupdate --install-rosetta --agree-to-license`.
         - Hit enter and follow the instructions on the screen.
