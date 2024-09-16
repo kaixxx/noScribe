@@ -60,8 +60,7 @@ ported by [gernophil](https://github.com/gernophil) </br>
     - From now on, both programs should start without issues.
 
 ### Linux
-ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](https://github.com/domna)
-(Installation instructions will follow)
+ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](https://github.com/domna). Installation: [see these instructions by mael-lenoc](https://github.com/kaixxx/noScribe/discussions/83)
 
 ### Old versions:
 - [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) 
