@@ -35,6 +35,7 @@ zh-CN: &defaults
   label_overlapping: '重叠发言：'
   label_pause: '马克停顿了一下：'
   label_timestamps: '时间戳：'
+  label_export_all_formats: '导出 TXT + VTT：'
   
   start_button: 开始 
   stop_button: 取消

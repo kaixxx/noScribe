@@ -35,6 +35,7 @@ fr:
   label_overlapping: 'Chevauchements de parole'
   label_pause: 'Marquer les pauses :'
   label_timestamps: 'Horodatage :'
+  label_export_all_formats: 'Exporter TXT + VTT:'
   
   start_button: "Démarrer"
   stop_button: "Annuler"
