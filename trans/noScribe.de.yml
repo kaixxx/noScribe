@@ -38,7 +38,7 @@ de:
   label_overlapping: 'Überlappende Sprache:'
   label_pause: 'Pausen markieren:'
   label_timestamps: 'Zeitmarken:'
-  label_export_all_formats: 'Export TXT + VTT:'
+  label_export_all_formats: 'TXT + VTT exportieren:'
   
   start_button: Start
   stop_button: Abbruch
