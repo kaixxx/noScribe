@@ -339,9 +339,9 @@ class App(ctk.CTk):
         # configure window
         self.title('noScribe - ' + t('app_header'))
         if platform.system() in ("Darwin", "Linux"):
-            self.geometry(f"{1100}x{725}")
+            self.geometry(f"{1100}x{730}")
         else:
-            self.geometry(f"{1100}x{650}")
+            self.geometry(f"{1100}x{655}")
         if platform.system() in ("Darwin", "Windows"):
             self.iconbitmap('noScribeLogo.ico')
         if platform.system() == "Linux":
@@ -488,6 +488,18 @@ class App(ctk.CTk):
             self.check_box_timestamps.select()
         else:
             self.check_box_timestamps.deselect()
+            
+        # Export all output formats
+        self.label_export_all_formats = ctk.CTkLabel(self.frame_options, text=t('label_export_all_formats'))
+        self.label_export_all_formats.grid(column=0, row=8, sticky='w', pady=5)
+        
+        self.check_box_export_all_formats = ctk.CTkCheckBox(self.frame_options, text = '')
+        self.check_box_export_all_formats.grid(column=1, row=8, sticky='e', pady=5)
+        check_box_export_all_formats = config.get('export_all_formats', False)
+        if check_box_export_all_formats:
+            self.check_box_export_all_formats.select()
+        else:
+            self.check_box_export_all_formats.deselect()
 
         # Start Button
         self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
@@ -793,6 +805,9 @@ class App(ctk.CTk):
 
             self.timestamps = self.check_box_timestamps.get()
             option_info += f'{t("label_timestamps")} {self.timestamps} | '
+            
+            self.export_all_formats = self.check_box_export_all_formats.get()
+            option_info += f'{t("label_export_all_formats")} {self.export_all_formats} | '
 
             self.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
             option_info += f'{t("label_pause")} {self.pause}'
@@ -1104,7 +1119,7 @@ class App(ctk.CTk):
                 speaker = ''
                 prev_speaker = ''
                 self.last_auto_save = datetime.datetime.now()
-
+                
                 def save_doc():
                     txt = ''
                     if self.file_ext == 'html':
@@ -1116,11 +1131,26 @@ class App(ctk.CTk):
                     else:
                         raise TypeError(f'Invalid file type "{self.file_ext}".')
                     try:
-                        if txt != '':
-                            with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
-                                f.write(txt)
-                                f.flush()
-                            self.last_auto_save = datetime.datetime.now()
+                        if self.export_all_formats:
+                            # Export all available output formats at once
+                            self.formats = {
+                                'html': d.asHTML(),
+                                'txt': html_to_text(d),
+                                'vtt': html_to_webvtt(d, self.audio_file)
+                            }
+                            for ext, txt in self.formats.items():
+                                transcript_path = Path(self.my_transcript_file)
+                                output_file = f'{transcript_path.parent}/{transcript_path.stem}.{ext}'
+                                with open(output_file, 'w', encoding="utf-8") as f:
+                                    f.write(txt)
+                                    f.flush()
+                                self.last_auto_save = datetime.datetime.now()
+                        else:
+                            if txt != '':
+                                with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
+                                    f.write(txt)
+                                    f.flush()
+                                self.last_auto_save = datetime.datetime.now()
                     except Exception as e:
                         # other error while saving, maybe the file is already open in Word and cannot be overwritten
                         # try saving to a different filename
@@ -1330,7 +1360,13 @@ class App(ctk.CTk):
                         self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
                     else:
                         self.log(t('transcription_saved'))
-                        self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
+                        if self.export_all_formats:
+                            for ext, _ in self.formats.items():
+                                transcript_path = Path(self.my_transcript_file)
+                                output_file = f'{transcript_path.parent}/{transcript_path.stem}.{ext}'
+                                self.logn(output_file, link=f'file://{output_file}')
+                        else:
+                            self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
                     # log duration of the whole process in minutes
                     proc_time = datetime.datetime.now() - proc_start_time
                     self.logn(t('trancription_time', duration=int(proc_time.total_seconds() / 60))) 
