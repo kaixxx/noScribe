@@ -1,5 +1,5 @@
 de:
-  app_header: KI-basierte Audio Transkription
+  app_header: KI-basierte Audio-Transkription
   welcome_message: Hallo, noScribe ist bereit!
   welcome_credits: >
     
@@ -26,7 +26,7 @@ de:
   label_audio_file: 'Audiodatei:'
   label_audio_file_name: <Audiodatei wählen>
   
-  label_transcript_file: 'Transcript speichern unter:'
+  label_transcript_file: 'Transkript speichern unter:'
   label_transcript_file_name: <Dateinamen auswählen> 
 
   label_start: 'Start (hh:mm:ss): '
@@ -40,24 +40,24 @@ de:
   label_timestamps: 'Zeitmarken:'
   
   start_button: Start
-  stop_button: Abbruch
+  stop_button: Abbrechen
 
   # log messages
-  log_transcript_filename: 'Transkript Dateiname: '
-  log_audio_file_selected: 'Audiodatei gewählt: '
+  log_transcript_filename: 'Transkript-Dateiname: '
+  log_audio_file_selected: 'Gewählte Audiodatei: '
   start_audio_conversion: 'Audioumwandlung...'
   audio_conversion_finished: 'Umwandlung fertig.'
   start_identifiying_speakers: 'Sprecher:innen identifizieren...'
-  loading_pyannote: 'Lade pyannote'
-  start_canceling: 'Abbruch läuft...'
+  loading_pyannote: 'pyannote laden'
+  start_canceling: 'Abbrechen läuft...'
   start_transcription: 'Transkription...'
-  loading_whisper: 'Lade whisper'
+  loading_whisper: 'whisper laden'
   transcription_finished: 'Transkription beendet.' 
   transcription_saved: 'Gespeichert unter: '
   trancription_time: 'Dauer: %{duration} Minuten'
 
   # Error messages
-  err_setup: 'Während des EInrichtung ist ein Fehler aufgetreten. Bitte die Internetverbindung prüfen.'
+  err_setup: 'Während des Einrichtung ist ein Fehler aufgetreten. Bitte die Internetverbindung prüfen.'
   err_invalid_time_string: 'Das ist keine korrekte Zeitangabe: "%{time}"'
   err_options: 'Fehler in den Optionen'
   err_no_audio_file: 'Fehler: Bitte eine Audiodatei wählen.'
@@ -71,7 +71,7 @@ de:
   err_transcription: 'Fehler im 3. Schritt - Transkription'
   rescue_saving: 'Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Stattdessen wurde das Transkript in dieser Datei gesichert: %{file}'
   rescue_saving_failed: 'Fehler: Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Der alternative Dateiname existiert ebenso bereits. Die Transkription wird beendet. (Das Transkript darf nicht bereits in Word geöffnet sein!)'
-  err_noScribeEdit_not_found: 'Fehler: Der noScribe Editor konnte nicht gefunden werden.' 
+  err_noScribeEdit_not_found: 'Fehler: Der noScribe-Editor konnte nicht gefunden werden.' 
   err_vtt_invalid_options: 'Achtung: Die Optionen "Überlappende Sprache", "Pausen markieren" und "Zeitmarken" werden bei der VTT-Ausgabe nicht unterstützt.'
 
 
