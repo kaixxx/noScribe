@@ -32,6 +32,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 > All releases are hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 
 ### Windows
+**Note: Their seems to be an issue on Windows 10 (maybe even on some Win 11 maachines) that the blue start button in the bottom left is not be visible. If this happens to you, just make the window a little bigger (or go fullscreen). I will try to solve this issue in the next release.** 
 - The **general purpose version** for normal PCs without a NVIDIA graphics card: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fnon%20cuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fnon%20cuda) 
 - A special version using **CUDA acceleration on NVIDIA graphics cards** with at least 6 GB of VRAM: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fcuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fcuda). You must also install the [CUDA toolkit from here](https://developer.nvidia.com/cuda-downloads?target_os=Windows) (a reboot is required afterwards).
 - **Installation**: 
