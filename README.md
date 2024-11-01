@@ -120,7 +120,7 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 - **Multilingual audio** is not supported. If the language changes mid interview, whisper will actually try to translate the text, which is usually not what we want.
 - **Filler words** like "uhm" and especially **nonverbal expressions** like laughter are often not included in the transcript, although they are usually required for a good qualitative analysis. You must add these elements manually. (The identification of filler words works best if you select the correct language for the transcript, not "auto".) 
 - **Speaker identification:** In some recordings, the AI used by noScribe may not be able to tell the voices of certain speakers apart, even if they sound quite different to the human ear. It may also happen that noScribe identifies more speakers in a recording then there actually are. Check the results carefully.
-- The whisper AI can sometimes **hallucinate**, especially in silent parts of the recording when it interprets background noise as 'text'. Check your transcripts carefully. 
+- The whisper AI can sometimes **hallucinate**, especially in silent parts of the recording when it interprets background noise as 'text' (see [this study from the Cornell University](https://facctconference.org/static/papers24/facct24-111.pdf) for more info about the issue). Check your transcripts carefully. 
 
 ## Advanced Options
 - After the app has run for the first time, you will find a file named **config.yml** in the user config directory (on windows: C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml). Here, you can change a few **extra settings,** e.g., the language of the user interface.
