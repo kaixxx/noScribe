@@ -51,7 +51,7 @@ ported by [gernophil](https://github.com/gernophil) </br>
         - Hit enter and follow the instructions on the screen.
     - Start noScribe and/or noScribeEdit by double-clicking the app within your applications.
 - **Older Macs with Intel processors**
-    - for macOS Sonoma (14): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel))
+    - for macOS Sonoma (14) and Sequoia (15): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel))
     - for macOS 11 (Big Sur), 12 (Monterey) and 13 (Ventura): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel))
     - Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
     - Double-click the downloaded dmg-file.
