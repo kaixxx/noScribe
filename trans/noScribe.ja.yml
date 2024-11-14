@@ -36,6 +36,7 @@ ja:
   label_overlapping: 'オーバーラッピング・スピーチ：'
   label_pause: 'マークはポーズをとる：'
   label_timestamps: 'タイムスタンプ：'
+  label_export_all_formats: 'TXT + VTTをエクスポートします：'
   
   start_button: 開始 
   stop_button: キャンセル

@@ -36,6 +36,7 @@ ru:
   label_overlapping: 'Перекрытие речи:'
   label_pause: 'Отметьте паузы:'
   label_timestamps: 'Временные метки:'
+  label_export_all_formats: 'Экспорт TXT + VTT:'
   
   start_button: Старт 
   stop_button: Отмена
