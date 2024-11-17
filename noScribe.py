@@ -37,6 +37,7 @@ from subprocess import run, call, Popen, PIPE, STDOUT
 if platform.system() == 'Windows':
     # import torch.cuda # to check with torch.cuda.is_available()
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
+if platform.system() in ("Windows", "Linux"):
     from ctranslate2 import get_cuda_device_count
 import re
 if platform.system() == "Darwin": # = MAC
@@ -57,11 +58,13 @@ if platform.system() == 'Windows':
 if platform.system() == 'Darwin':
     import Foundation
 import logging
+import json
+import urllib
 
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.4.5'
+app_version = '0.5'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
@@ -100,13 +103,40 @@ try:
             raise # config file is empty (None)        
 except: # seems we run it for the first time and there is no config file
     config = {}
+    
+def get_config(key: str, default):
+    """ Get a config value, set it if it doesn't exist """
+    if key not in config:
+        config[key] = default
+    return config[key]
 
-# delete 'pyannote_xpu' from config if the config is from a version < 0.4.5 (Windows only)
+    
+def version_higher(version1, version2) -> int:
+    """Will return 
+    1 if version1 is higher
+    2 if version2 is higher
+    0  if both are equal """
+    version1_elems = version1.split('.')
+    version2_elems = version2.split('.')
+    # make both versions the same length
+    elem_num = max(len(version1_elems), len(version2_elems))
+    while len(version1_elems) < elem_num:
+        version1_elems.append('0')
+    while len(version1_elems) < elem_num:
+        version1_elems.append('0')
+    for i in range(elem_num):
+        if int(version1_elems[i]) > int(version2_elems[i]):
+            return 1
+        elif int(version2_elems[i]) > int(version1_elems[i]):
+            return 2
+    # must be completly equal
+    return 0
+    
+# In versions < 0.4.5 (Windows/Linux only), 'pyannote_xpu' was always set to 'cpu'.
+# Delete this so we can determine the optimal value  
 if platform.system() in ('Windows', 'Linux'):
     try:
-        config_version_str = config['app_version']
-        config_version = config_version_str.split('.')
-        if (int(config_version[0]) == 0) and (int(config_version[1]) <= 4) and (int(config_version[2]) < 5):
+        if version_higher('0.4.5', config['app_version']) == 1:
             del config['pyannote_xpu'] 
     except:
         pass
@@ -190,7 +220,84 @@ def iter_except(function, exception):
                 yield function()
         except exception:
             return
+        
+# Helper for text only output
+        
+def html_node_to_text(node: AdvancedHTMLParser.AdvancedTag) -> str:
+    """
+    Recursively get all text from a html node and its children. 
+    """
+    # For text nodes, return their value directly
+    if AdvancedHTMLParser.isTextNode(node): # node.nodeType == node.TEXT_NODE:
+        return node
+    # For element nodes, recursively process their children
+    elif AdvancedHTMLParser.isTagNode(node):
+        text_parts = []
+        for child in node.childBlocks:
+            text = html_node_to_text(child)
+            if text:
+                text_parts.append(text)
+        # For block-level elements, prepend and append newlines
+        if node.tagName.lower() in ['p', 'div', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'br']:
+            if node.tagName.lower() == 'br':
+                return '\n'
+            else:
+                return '\n' + ''.join(text_parts).strip() + '\n'
+        else:
+            return ''.join(text_parts)
+    else:
+        return ''
 
+def html_to_text(parser: AdvancedHTMLParser.AdvancedHTMLParser) -> str:
+    return html_node_to_text(parser.body)
+
+# Helper for WebVTT output
+
+def vtt_escape(txt: str) -> str:
+    txt = txt.replace('&', '&amp;')
+    txt = txt.replace('<', '&lt;')
+    txt = txt.replace('>', '&gt;')
+    while txt.find('\n\n') > -1:
+        txt = txt.replace('\n\n', '\n')
+    return txt    
+
+def ms_to_webvtt(milliseconds) -> str:
+    """converts milliseconds to the time stamp of WebVTT (HH:MM:SS.mmm)
+    """
+    # 1 hour = 3600000 milliseconds
+    # 1 minute = 60000 milliseconds
+    # 1 second = 1000 milliseconds
+    hours, milliseconds = divmod(milliseconds, 3600000)
+    minutes, milliseconds = divmod(milliseconds, 60000)
+    seconds, milliseconds = divmod(milliseconds, 1000)
+    return "{:02d}:{:02d}:{:02d}.{:03d}".format(hours, minutes, seconds, milliseconds)
+
+def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: str):
+    vtt = 'WEBVTT '
+    paragraphs = parser.getElementsByTagName('p')
+    # The first paragraph contains the title
+    vtt += vtt_escape(paragraphs[0].textContent) + '\n\n'
+    # Next paragraph contains info about the transcript. Add as a note.
+    vtt += vtt_escape('NOTE\n' + html_node_to_text(paragraphs[1])) + '\n\n'
+    # Add media source:
+    vtt += f'NOTE media: {media_path}\n\n'
+
+    #Add all segments as VTT cues
+    segments = parser.getElementsByTagName('a')
+    i = 0
+    for i in range(len(segments)):
+        segment = segments[i]
+        name = segment.attributes['name']
+        if name is not None:
+            name_elems = name.split('_', 4)
+            if len(name_elems) > 1 and name_elems[0] == 'ts':
+                start = ms_to_webvtt(int(name_elems[1]))
+                end = ms_to_webvtt(int(name_elems[2]))
+                spkr = name_elems[3]
+                txt = vtt_escape(html_node_to_text(segment))
+                vtt += f'{i+1}\n{start} --> {end}\n<v {spkr}>{txt.lstrip()}\n\n'
+    return vtt
+    
 class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format hh:mm:ss
                                # based on https://stackoverflow.com/questions/63622880/how-to-make-python-automatically-put-colon-in-the-format-of-time-hhmmss
     def __init__(self, master, **kwargs):
@@ -238,7 +345,10 @@ class App(ctk.CTk):
         if platform.system() in ("Darwin", "Windows"):
             self.iconbitmap('noScribeLogo.ico')
         if platform.system() == "Linux":
-            self.iconphoto(True, tk.PhotoImage(file='noScribeLogo.png'))
+            if hasattr(sys, "_MEIPASS"):
+                self.iconphoto(True, tk.PhotoImage(file=os.path.join(sys._MEIPASS, "noScribeLogo.png")))
+            else:
+                self.iconphoto(True, tk.PhotoImage(file='noScribeLogo.png'))
 
         # header
         self.frame_header = ctk.CTkFrame(self, height=100)
@@ -329,21 +439,15 @@ class App(ctk.CTk):
 
         self.option_menu_language = ctk.CTkOptionMenu(self.frame_options, width=100, values=self.langs, dynamic_resizing=False)
         self.option_menu_language.grid(column=1, row=2, sticky='e', pady=5)
-        try:
-            self.option_menu_language.set(config['last_language'])
-        except:
-            pass
-
+        self.option_menu_language.set(get_config('last_language', 'auto'))
+        
         # Quality (Model Selection)
         self.label_quality = ctk.CTkLabel(self.frame_options, text=t('label_quality'))
         self.label_quality.grid(column=0, row=3, sticky='w', pady=5)
 
         self.option_menu_quality = ctk.CTkOptionMenu(self.frame_options, width=100, values=['precise', 'fast'])
         self.option_menu_quality.grid(column=1, row=3, sticky='e', pady=5)
-        try:
-            self.option_menu_quality.set(config['last_quality'])
-        except:
-            pass
+        self.option_menu_quality.set(get_config('last_quality', 'precise'))
 
         # Mark pauses
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
@@ -351,25 +455,15 @@ class App(ctk.CTk):
 
         self.option_menu_pause = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', '1sec+', '2sec+', '3sec+'])
         self.option_menu_pause.grid(column=1, row=4, sticky='e', pady=5)
-        try:
-            val = config['last_pause']
-            if val in self.option_menu_pause._values:
-                self.option_menu_pause.set(val)
-            else:
-                raise
-        except:
-            self.option_menu_pause.set(self.option_menu_pause._values[1])    
+        self.option_menu_pause.set(get_config('last_pause', '1sec+'))
 
         # Speaker Detection (Diarization)
         self.label_speaker = ctk.CTkLabel(self.frame_options, text=t('label_speaker'))
         self.label_speaker.grid(column=0, row=5, sticky='w', pady=5)
 
-        self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=100, values=['auto', 'none'])
+        self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
         self.option_menu_speaker.grid(column=1, row=5, sticky='e', pady=5)
-        try:
-            self.option_menu_speaker.set(config['last_speaker'])
-        except:
-            pass
+        self.option_menu_speaker.set(get_config('last_speaker', 'auto'))
 
         # Overlapping Speech (Diarization)
         self.label_overlapping = ctk.CTkLabel(self.frame_options, text=t('label_overlapping'))
@@ -377,7 +471,7 @@ class App(ctk.CTk):
 
         self.check_box_overlapping = ctk.CTkCheckBox(self.frame_options, text = '')
         self.check_box_overlapping.grid(column=1, row=6, sticky='e', pady=5)
-        overlapping = config.get('last_overlapping', True) # Get last overlapping, default to True
+        overlapping = config.get('last_overlapping', True)
         if overlapping:
             self.check_box_overlapping.select()
         else:
@@ -389,7 +483,7 @@ class App(ctk.CTk):
 
         self.check_box_timestamps = ctk.CTkCheckBox(self.frame_options, text = '')
         self.check_box_timestamps.grid(column=1, row=7, sticky='e', pady=5)
-        check_box_timestamps = config.get('last_timestamps', False) # Get last timestamps setting, default False
+        check_box_timestamps = config.get('last_timestamps', False)
         if check_box_timestamps:
             self.check_box_timestamps.select()
         else:
@@ -397,47 +491,85 @@ class App(ctk.CTk):
 
         # Start Button
         self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
-        self.start_button.pack(padx=20, pady=[0,10], expand=True, fill='x', anchor='sw')
+        self.start_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
 
         # Stop Button
         self.stop_button = ctk.CTkButton(self.sidebar_frame, height=42, fg_color='darkred', hover_color='darkred', text=t('stop_button'), command=self.button_stop_event)
-    
+        
         # create log textbox
         self.log_frame = ctk.CTkFrame(self.frame_main, corner_radius=0, fg_color='transparent')
-        self.log_frame.pack(padx=0, pady=0, fill='both', expand=True, side='right')
+        self.log_frame.pack(padx=0, pady=0, fill='both', expand=True, side='top')
 
         self.log_textbox = ctk.CTkTextbox(self.log_frame, wrap='word', state="disabled", font=("",16), text_color="lightgray")
         self.log_textbox.tag_config('highlight', foreground='darkorange')
         self.log_textbox.tag_config('error', foreground='yellow')
-        self.log_textbox.pack(padx=20, pady=[20,10], expand=True, fill='both')
+        self.log_textbox.pack(padx=20, pady=[20,0], expand=True, fill='both')
 
         self.hyperlink = HyperlinkManager(self.log_textbox._textbox)
 
-        # status bar bottom
-        self.frame_status = ctk.CTkFrame(self, height=20, corner_radius=0)
-        self.frame_status.pack(padx=0, pady=[0,0], anchor='sw', fill='x', side='bottom')
+        # Frame progress bar / edit button
+        self.frame_edit = ctk.CTkFrame(self.frame_main, height=20, corner_radius=0, fg_color=self.log_textbox._fg_color)
+        self.frame_edit.pack(padx=20, pady=[0,30], anchor='sw', fill='x', side='bottom')
 
-        self.progress_bar = ctk.CTkProgressBar(self.frame_status, height=5, mode='determinate')
+        # Edit Button
+        self.edit_button = ctk.CTkButton(self.frame_edit, fg_color=self.log_textbox._scrollbar_button_color, 
+                                         text=t('editor_button'), command=self.launch_editor, width=140)
+        self.edit_button.pack(padx=[20,10], pady=[10,10], expand=False, anchor='se', side='right')
+
+        # Progress bar
+        self.progress_bar = ctk.CTkProgressBar(self.frame_edit, mode='determinate', progress_color='darkred', fg_color=self.log_textbox._fg_color)
         self.progress_bar.set(0)
+        # self.progress_bar.pack(padx=[0,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
+
+        # status bar bottom
+        #self.frame_status = ctk.CTkFrame(self, height=20, corner_radius=0)
+        #self.frame_status.pack(padx=0, pady=[0,0], anchor='sw', fill='x', side='bottom')
 
         self.logn(t('welcome_message'), 'highlight')
         self.log(t('welcome_credits', v=app_version))
         self.logn('https://github.com/kaixxx/noScribe', link='https://github.com/kaixxx/noScribe#readme')
-        self.logn(t('welcome_instructions'))       
-
+        self.logn(t('welcome_instructions'))
+        
+        # check for new releases
+        if get_config('check_for_update', 'True') == 'True':
+            try:
+                latest_release = json.loads(urllib.request.urlopen(
+                    urllib.request.Request('https://api.github.com/repos/kaixxx/noScribe/releases/latest',
+                    headers={'Accept': 'application/vnd.github.v3+json'},),
+                    timeout=2).read())
+                latest_release_version = str(latest_release['tag_name']).lstrip('v')
+                if version_higher(latest_release_version, app_version) == 1:
+                    self.logn(t('new_release', v=latest_release_version), 'highlight')
+                    self.logn(str(latest_release['body'])) # release info
+                    self.log(t('new_release_download'))
+                    self.logn(str(latest_release['html_url']), link=str(latest_release['html_url']))
+                    self.logn()
+            except:
+                pass
+            
     # Events and Methods
 
-    def launch_editor(self, file):
+    def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
         # set system/version dependent "start_new_session" analogs
+        if file == '':
+            file = self.transcript_file
+        ext = os.path.splitext(self.transcript_file)[1][1:]
+        if file != '' and ext != 'html':
+            file = ''
+            if not tk.messagebox.askyesno(title='noScribe', message=t('err_editor_invalid_format')):
+                return
         program: str = None
         if platform.system() == 'Windows':
             program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit.exe')
         elif platform.system() == "Darwin": # = MAC
             program = os.path.join(os.sep, 'Applications', 'noScribeEdit.app', 'Contents', 'MacOS', 'noScribeEdit')
         elif platform.system() == "Linux":
-            program = os.path.join(app_dir, 'noScribeEdit', "noScribeEdit")
+            if hasattr(sys, "_MEIPASS"):
+                program = os.path.join(sys._MEIPASS, 'noScribeEdit', "noScribeEdit")
+            else:
+                program = os.path.join(app_dir, 'noScribeEdit', "noScribeEdit")
         kwargs = {}
         if platform.system() == 'Windows':
             # from msdn [1]
@@ -448,7 +580,10 @@ class App(ctk.CTk):
             kwargs.update(start_new_session=True)
 
         if program is not None and os.path.exists(program):
-            Popen([program, file], **kwargs)
+            if file != '':
+                Popen([program, file], **kwargs)
+            else:
+                Popen([program], **kwargs)
         else:
             self.logn(t('err_noScribeEdit_not_found'), 'error')
 
@@ -498,13 +633,26 @@ class App(ctk.CTk):
         else:
             _initialdir = os.path.dirname(self.audio_file)
             _initialfile = Path(os.path.basename(self.audio_file)).stem
+        if not ('last_filetype' in config):
+            config['last_filetype'] = 'html'
+        filetypes = [
+            ('noScribe Transcript','*.html'), 
+            ('Text only','*.txt'),
+            ('WebVTT Subtitles (also for EXMARaLDA)', '*.vtt')
+        ]
+        for i, ft in enumerate(filetypes):
+            if ft[1] == f'*.{config["last_filetype"]}':
+                filetypes.insert(0, filetypes.pop(i))
+                break
         fn = tk.filedialog.asksaveasfilename(initialdir=_initialdir, initialfile=_initialfile, 
-                                             filetypes=[('noScribe Transcript','*.html')], defaultextension='html')
+                                             filetypes=filetypes, 
+                                             defaultextension=config['last_filetype'])
         if fn:
             self.transcript_file = fn
             self.logn(t('log_transcript_filename') + self.transcript_file)
             self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_file))
-
+            config['last_filetype'] = os.path.splitext(self.transcript_file)[1][1:]
+            
     def set_progress(self, step, value):
         """ Update state of the progress bar """
         if step == 1:
@@ -527,7 +675,7 @@ class App(ctk.CTk):
 
 
     ################################################################################################
-    # Button Start
+    # Main function
 
     def transcription_worker(self):
         # This is the main function where all the magic happens
@@ -538,11 +686,13 @@ class App(ctk.CTk):
 
         # Show the stop button
         self.start_button.pack_forget() # hide
-        self.stop_button.pack(padx=20, pady=[0,10], expand=True, fill='x', anchor='sw')
+        self.stop_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
 
         # Show the progress bar
         self.progress_bar.set(0)
-        self.progress_bar.pack(padx=20, pady=[10,20], expand=True, fill='both')
+        self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
+        # self.progress_bar.pack(padx=[0,10], pady=[10,25], expand=True, fill='x', anchor='sw', side='left')
+        # self.progress_bar.pack(padx=20, pady=[10,20], expand=True, fill='both')
 
         tmpdir = TemporaryDirectory('noScribe')
         self.tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
@@ -562,17 +712,12 @@ class App(ctk.CTk):
                 return
 
             self.my_transcript_file = self.transcript_file
+            self.file_ext = os.path.splitext(self.my_transcript_file)[1][1:]
 
             # create log file
             if not os.path.exists(f'{config_dir}/log'):
                 os.makedirs(f'{config_dir}/log')
             self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
-
-            def get_config(key: str, default):
-                """ Get a config value, set it if it doesn't exist """
-                if key not in config:
-                    config[key] = default
-                return config[key]
 
             # options for faster-whisper
             self.whisper_precise_beam_size = get_config('whisper_precise_beam_size', 1)
@@ -656,6 +801,17 @@ class App(ctk.CTk):
 
             # Default to True if auto save not in config or invalid value
             self.auto_save = False if get_config('auto_save', 'True') == 'False' else True 
+            
+            # Open the finished transript in the editor automatically?
+            self.auto_edit_transcript = get_config('auto_edit_transcript', 'True')
+            
+            # Check for invalid vtt options
+            if self.file_ext == 'vtt' and (self.pause > 0 or self.overlapping or self.timestamps):
+                self.logn()
+                self.logn(t('err_vtt_invalid_options'), 'error')
+                self.pause = 0
+                self.overlapping = False
+                self.timestamps = False           
 
             if platform.system() == "Darwin": # = MAC
                 # if (platform.mac_ver()[0] >= '12.3' and
@@ -705,7 +861,7 @@ class App(ctk.CTk):
                     else: # tranbscribe until the end
                         end_pos_cmd = ''
 
-                    arguments = f' -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le {self.tmp_audio_file}'
+                    arguments = f' -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le "{self.tmp_audio_file}"'
                     if platform.system() == 'Windows':
                         ffmpeg_path = 'ffmpeg.exe'
                         ffmpeg_cmd = ffmpeg_path + arguments
@@ -805,7 +961,7 @@ class App(ctk.CTk):
 
                 # Start Diarization:
 
-                if self.speaker_detection == 'auto':
+                if self.speaker_detection != 'none':
                     try:
                         self.logn()
                         self.logn(t('start_identifiying_speakers'), 'highlight')
@@ -813,14 +969,17 @@ class App(ctk.CTk):
                         self.set_progress(1, 100)
 
                         diarize_output = os.path.join(tmpdir.name, 'diarize_out.yaml')
-                        if platform.system() == 'Windows':
-                            diarize_abspath = os.path.join(app_dir, 'diarize.exe')
-                        elif platform.system() == 'Darwin': # = MAC
-                            # No check for arm64 or x86_64 necessary, since the correct version will be compiled and bundled
-                            diarize_abspath = os.path.join(app_dir, '..', 'MacOS', 'diarize')
-                        if not ('diarize_abspath' in globals() or os.path.exists(diarize_abspath)): # Run the compiled version of diarize if it exists, otherwise the python script:
-                            diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
-                        diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}"'
+                        diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
+                        diarize_abspath_win = os.path.join(app_dir, 'diarize.exe')
+                        diarize_abspath_mac = os.path.join(app_dir, '..', 'MacOS', 'diarize')
+                        diarize_abspath_lin = os.path.join(app_dir, 'diarize')
+                        if platform.system() == 'Windows' and os.path.exists(diarize_abspath_win):
+                            diarize_abspath = diarize_abspath_win
+                        elif platform.system() == 'Darwin' and os.path.exists(diarize_abspath_mac): # = MAC
+                            diarize_abspath = diarize_abspath_mac
+                        elif platform.system() == 'Linux' and os.path.exists(diarize_abspath_lin):
+                            diarize_abspath = diarize_abspath_lin
+                        diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}" {self.speaker_detection}'
                         diarize_env = None
                         if self.pyannote_xpu == 'mps':
                             diarize_env = os.environ.copy()
@@ -947,24 +1106,33 @@ class App(ctk.CTk):
                 self.last_auto_save = datetime.datetime.now()
 
                 def save_doc():
+                    txt = ''
+                    if self.file_ext == 'html':
+                        txt = d.asHTML()
+                    elif self.file_ext == 'txt':
+                        txt = html_to_text(d)
+                    elif self.file_ext == 'vtt':
+                        txt = html_to_webvtt(d, self.audio_file)
+                    else:
+                        raise TypeError(f'Invalid file type "{self.file_ext}".')
                     try:
-                        htmlStr = d.asHTML()
-                        with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
-                            f.write(htmlStr)
-                            f.flush()
-                        self.last_auto_save = datetime.datetime.now()
-                    except:
-                        # saving failed, maybe the file is already open in Word and cannot be overwritten
+                        if txt != '':
+                            with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
+                                f.write(txt)
+                                f.flush()
+                            self.last_auto_save = datetime.datetime.now()
+                    except Exception as e:
+                        # other error while saving, maybe the file is already open in Word and cannot be overwritten
                         # try saving to a different filename
                         transcript_path = Path(self.my_transcript_file)
-                        self.my_transcript_file = f'{transcript_path.parent}/{transcript_path.stem}_1.html'
+                        self.my_transcript_file = f'{transcript_path.parent}/{transcript_path.stem}_1{self.file_ext}'
                         if os.path.exists(self.my_transcript_file):
                             # the alternative filename also exists already, don't want to overwrite, giving up
                             raise Exception(t('rescue_saving_failed'))
                         else:
-                            htmlStr = d.asHTML()
+                            # htmlStr = d.asHTML()
                             with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
-                                f.write(htmlStr)
+                                f.write(txt)
                                 f.flush()
                             self.logn()
                             self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
@@ -990,9 +1158,7 @@ class App(ctk.CTk):
                         raise Exception(t('err_user_cancelation')) 
 
                     whisper_lang = self.language if self.language != 'auto' else None
-
-                    """
-                    # > VAD made the pause-detection actually worse, so I removed it. Strange...   
+   
                     try:
                         self.vad_threshold = float(config['voice_activity_detection_threshold'])
                     except:
@@ -1005,13 +1171,6 @@ class App(ctk.CTk):
                         initial_prompt=self.prompt, vad_filter=True,
                         vad_parameters=dict(min_silence_duration_ms=200, 
                                             threshold=self.vad_threshold))
-                    """
-                    segments, info = model.transcribe(
-                        self.tmp_audio_file, language=whisper_lang, 
-                        beam_size=self.whisper_beam_size, 
-                        temperature=self.whisper_temperature, 
-                        word_timestamps=True, 
-                        initial_prompt=self.prompt, vad_filter=False)
 
                     if self.language == "auto":
                         self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
@@ -1064,7 +1223,7 @@ class App(ctk.CTk):
                             orig_audio_start_pause = self.start + last_segment_end
                             orig_audio_end_pause = self.start + start
                             a = d.createElement('a')
-                            a.name = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}'
+                            a.name = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}_{speaker}'
                             a.appendText(pause_str)
                             p.appendChild(a)
                             self.log(pause_str)
@@ -1078,7 +1237,7 @@ class App(ctk.CTk):
                         seg_text = segment.text
                         seg_html = seg_text
 
-                        if self.speaker_detection == 'auto':
+                        if self.speaker_detection != 'none':
                             new_speaker = find_speaker(diarization, start, end)
                             if (speaker != new_speaker) and (new_speaker != ''): # speaker change
                                 if new_speaker[:2] == '//': # is overlapping speech, create no new paragraph
@@ -1109,9 +1268,14 @@ class App(ctk.CTk):
                                         seg_html = f'{speaker} <span style="color: {self.timestamp_color}" >{ts}</span>:{seg_text}'
                                         seg_text = f'{speaker} {ts}:{seg_text}'
                                         last_timestamp_ms = start
-                                    else: 
-                                        seg_text = f'{speaker}:{seg_text}'
-                                        seg_html = seg_text
+                                    else:
+                                        if self.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
+                                            seg_text = f'{speaker}:{seg_text}'
+                                            seg_html = seg_text
+                                        else:
+                                            seg_html = seg_text.lstrip()
+                                            seg_text = f'{speaker}:{seg_text}'
+                                        
                             else: # same speaker
                                 if self.timestamps:
                                     if (start - last_timestamp_ms) > self.timestamp_interval:
@@ -1141,7 +1305,7 @@ class App(ctk.CTk):
 
                         # Create bookmark with audio timestamps start to end and add the current segment.
                         # This way, we can jump to the according audio position and play it later in the editor.
-                        a_html = f'<a name="ts_{orig_audio_start}_{orig_audio_end}" >{seg_html}</a>'
+                        a_html = f'<a name="ts_{orig_audio_start}_{orig_audio_end}_{speaker}" >{seg_html}</a>'
                         a = d.createElementFromHTML(a_html)
                         p.appendChild(a)
 
@@ -1170,6 +1334,10 @@ class App(ctk.CTk):
                     # log duration of the whole process in minutes
                     proc_time = datetime.datetime.now() - proc_start_time
                     self.logn(t('trancription_time', duration=int(proc_time.total_seconds() / 60))) 
+                    
+                    # auto open transcript in editor
+                    if (self.auto_edit_transcript == 'True') and (self.file_ext == 'html'):
+                        self.launch_editor(self.my_transcript_file)
                 
                 except Exception as e:
                     self.logn()
@@ -1189,7 +1357,7 @@ class App(ctk.CTk):
         finally:
             # hide the stop button
             self.stop_button.pack_forget() # hide
-            self.start_button.pack(padx=20, pady=[0,10], expand=True, fill='x', anchor='sw')
+            self.start_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
 
             # hide progress bar
             self.progress_bar.pack_forget()

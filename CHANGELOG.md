@@ -1,5 +1,17 @@
 # noScribe Changelog
 
+## version 0.5:
+- new WebVTT output (video subtitle format), allows also importing noScribe transcripts into EXMARaLDA
+- new plain text output (*.txt)
+- new automatic update notification on new releases
+- improved speaker detection: number of speakers can be defined beforehand
+- reduced hallucination and looping by adding a VAD filter
+- CUDA support now non-beta
+- small fixes with hebrew language setting, chinese UI locale, requirements file, etc.  
+
+## version 0.4.5:
+- Windows: beta version to test CUDA support (acceleration with NVIDIA graphics cards) 
+
 ## version 0.4.2:
 - MacOS: Solves a bug where speaker-detection would become unreliable with MPS-acceleration (a switch to torchaudio 2.1.0 rectified this).
 - Windows: no changes
