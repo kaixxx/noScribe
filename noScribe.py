@@ -861,7 +861,7 @@ class App(ctk.CTk):
                     else: # tranbscribe until the end
                         end_pos_cmd = ''
 
-                    arguments = f' -loglevel warning -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le "{self.tmp_audio_file}"'
+                    arguments = f' -loglevel warning -hwaccel auto -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le "{self.tmp_audio_file}"'
                     if platform.system() == 'Windows':
                         ffmpeg_path = 'ffmpeg.exe'
                         ffmpeg_cmd = ffmpeg_path + arguments
