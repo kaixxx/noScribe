@@ -38,6 +38,7 @@ en:
   label_overlapping: 'Overlapping speech:'
   label_pause: 'Mark pause:'
   label_timestamps: 'Timestamps:'
+  label_export_all_formats: 'Export TXT + VTT:'
   
   
   start_button: Start 

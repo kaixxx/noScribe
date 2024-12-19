@@ -36,6 +36,7 @@ pt:
   label_overlapping: 'Sobreposição:'
   label_pause: 'Marcar pausas:'
   label_timestamps: 'Registos temporais:'
+  label_export_all_formats: 'Exportar TXT + VTT:'
   
   start_button: Iniciar 
   stop_button: Cancelar
