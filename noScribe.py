@@ -39,6 +39,7 @@ if platform.system() == 'Windows':
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
 if platform.system() in ("Windows", "Linux"):
     from ctranslate2 import get_cuda_device_count
+    import torch
 import re
 if platform.system() == "Darwin": # = MAC
     from subprocess import check_output
@@ -655,6 +656,7 @@ class App(ctk.CTk):
             
     def set_progress(self, step, value):
         """ Update state of the progress bar """
+        return
         if step == 1:
             self.progress_bar.set(value * 0.05 / 100)
         elif step == 2:
@@ -822,9 +824,10 @@ class App(ctk.CTk):
                 self.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
             elif platform.system() in ('Windows', 'Linux'):
                 # Use cuda if available and not set otherwise in config.yml, fallback to cpu: 
-                xpu = get_config('pyannote_xpu', 'cuda' if get_cuda_device_count() > 0 else 'cpu')
+                cuda_available = torch.cuda.is_available() and get_cuda_device_count() > 0
+                xpu = get_config('pyannote_xpu', 'cuda' if cuda_available else 'cpu')
                 self.pyannote_xpu = 'cuda' if xpu == 'cuda' else 'cpu'
-                whisper_xpu = get_config('whisper_xpu', 'cuda' if get_cuda_device_count() > 0 else 'cpu')
+                whisper_xpu = get_config('whisper_xpu', 'cuda' if cuda_available else 'cpu')
                 self.whisper_xpu = 'cuda' if whisper_xpu == 'cuda' else 'cpu'
             else:
                 raise Exception('Platform not supported yet.')
@@ -1333,7 +1336,10 @@ class App(ctk.CTk):
                         self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
                     # log duration of the whole process in minutes
                     proc_time = datetime.datetime.now() - proc_start_time
-                    self.logn(t('trancription_time', duration=int(proc_time.total_seconds() / 60))) 
+                    proc_seconds = "{:02d}".format(int(proc_time.total_seconds() % 60))
+                    proc_time_str = f'{int(proc_time.total_seconds() // 60)}:{proc_seconds}' 
+                    self.logn(t('trancription_time', duration=proc_time_str)) 
+                    # self.logn(t('trancription_time', duration=int(proc_time.total_seconds() / 60))) 
                     
                     # auto open transcript in editor
                     if (self.auto_edit_transcript == 'True') and (self.file_ext == 'html'):
