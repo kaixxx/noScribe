@@ -1177,10 +1177,10 @@ class App(ctk.CTk):
                     
                     segments, info = model.transcribe(
                         self.tmp_audio_file, language=whisper_lang, 
-                        beam_size=1, temperature=0, word_timestamps=True, 
+                        beam_size=1, temperature=self.whisper_temperature, word_timestamps=True, 
                         initial_prompt=self.prompt, vad_filter=True,
                         vad_parameters=dict(min_silence_duration_ms=200, 
-                                            threshold=self.vad_threshold))
+                                            onset=self.vad_threshold))
 
                     if self.language == "auto":
                         self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
