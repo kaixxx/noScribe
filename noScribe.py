@@ -517,9 +517,12 @@ class App(ctk.CTk):
         self.edit_button.pack(padx=[20,10], pady=[10,10], expand=False, anchor='se', side='right')
 
         # Progress bar
-        self.progress_bar = ctk.CTkProgressBar(self.frame_edit, mode='determinate', progress_color='darkred', fg_color=self.log_textbox._fg_color)
-        self.progress_bar.set(0)
-        # self.progress_bar.pack(padx=[0,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
+        self.progress_textbox = ctk.CTkTextbox(self.frame_edit, wrap='none', height=15, state="disabled", font=("",16), text_color="lightgray")
+        self.progress_textbox.pack(padx=[10,10], pady=[5,0], expand=True, fill='x', anchor='sw', side='left')
+        
+        #self.progress_bar = ctk.CTkProgressBar(self.frame_edit, mode='determinate', progress_color='darkred', fg_color=self.log_textbox._fg_color)
+        #self.progress_bar.set(0)
+        # self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
 
         # status bar bottom
         #self.frame_status = ctk.CTkFrame(self, height=20, corner_radius=0)
@@ -655,23 +658,30 @@ class App(ctk.CTk):
             
     def set_progress(self, step, value):
         """ Update state of the progress bar """
+        progr = -1
         if step == 1:
-            self.progress_bar.set(value * 0.05 / 100)
+            progr = value * 0.05 / 100
         elif step == 2:
             progr = 0.05 # (step 1)
             progr = progr + (value * 0.45 / 100)
-            self.progress_bar.set(progr)
         elif step == 3:
-            if self.speaker_detection == 'auto':
+            if self.speaker_detection != 'none':
                 progr = 0.05 + 0.45 # (step 1 + step 2)
                 progr_factor = 0.5
             else:
                 progr = 0.05 # (step 1)
                 progr_factor = 0.95
             progr = progr + (value * progr_factor / 100)
-            self.progress_bar.set(progr)
+
+        # Update progress_textbox
+        if progr < 0:
+            progr_str = ''
         else:
-            self.progress_bar.set(0)
+            progr_str = f'({round(progr * 100)}%)'
+        self.progress_textbox.configure(state=ctk.NORMAL)        
+        self.progress_textbox.delete('1.0', tk.END)
+        self.progress_textbox.insert(tk.END, progr_str)
+        self.progress_textbox.configure(state=ctk.DISABLED)
 
 
     ################################################################################################
@@ -689,8 +699,8 @@ class App(ctk.CTk):
         self.stop_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
 
         # Show the progress bar
-        self.progress_bar.set(0)
-        self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
+        # self.progress_bar.set(0)
+        # self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
         # self.progress_bar.pack(padx=[0,10], pady=[10,25], expand=True, fill='x', anchor='sw', side='left')
         # self.progress_bar.pack(padx=20, pady=[10,20], expand=True, fill='both')
 
@@ -1331,10 +1341,12 @@ class App(ctk.CTk):
                     else:
                         self.log(t('transcription_saved'))
                         self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
-                    # log duration of the whole process in minutes
+                    # log duration of the whole process
                     proc_time = datetime.datetime.now() - proc_start_time
-                    self.logn(t('trancription_time', duration=int(proc_time.total_seconds() / 60))) 
-                    
+                    proc_seconds = "{:02d}".format(int(proc_time.total_seconds() % 60))
+                    proc_time_str = f'{int(proc_time.total_seconds() // 60)}:{proc_seconds}' 
+                    self.logn(t('trancription_time', duration=proc_time_str)) 
+
                     # auto open transcript in editor
                     if (self.auto_edit_transcript == 'True') and (self.file_ext == 'html'):
                         self.launch_editor(self.my_transcript_file)
@@ -1359,9 +1371,9 @@ class App(ctk.CTk):
             self.stop_button.pack_forget() # hide
             self.start_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
 
-            # hide progress bar
-            self.progress_bar.pack_forget()
-
+            # hide progress
+            self.set_progress(0, 0)
+            
     def button_start_event(self):
         wkr = Thread(target=self.transcription_worker)
         wkr.start()
