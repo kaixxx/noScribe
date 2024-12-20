@@ -35,6 +35,7 @@ es:
   label_overlapping: 'Discurso solapado:'
   label_pause: 'Marca pausas:'
   label_timestamps: 'Timestamps:'
+  label_export_all_formats: 'Exportar TXT + VTT:'
   
   start_button: Iniciar 
   stop_button: Cancelar
