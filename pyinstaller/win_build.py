@@ -1,13 +1,14 @@
 import os
 import sys
 from subprocess import Popen
+from datetime import datetime
 
 noScribe_version = '0.5'
-clean_build = True
-run_pyinstaller_non_cuda = True
-run_pyinstaller_cuda = True
+clean_build = False
+run_pyinstaller_non_cuda = False
+run_pyinstaller_cuda = False
 run_nsis_non_cuda = True
-run_nsis_cuda = True
+run_nsis_cuda = False
 
 conda_env_noncuda = 'noScribe_0_4'
 conda_env_cuda = 'noScribe_0_4_cuda'
@@ -85,6 +86,7 @@ def run_nsis(cuda=False):
     with open(os.path.join(script_dir, 'nsis_template.txt'), 'r', encoding="utf-8") as nsis_templ_file:
         nsis_templ = nsis_templ_file.read()
     nsis_templ = nsis_templ.replace('#*version*#', format_version(noScribe_version))
+    nsis_templ = nsis_templ.replace('#*year*#', str(datetime.now().year))
 
     # Recursively generate NSIS commands for installation and uninstallation
     # of directories and files from the specified directory.

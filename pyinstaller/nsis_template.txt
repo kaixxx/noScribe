@@ -7,13 +7,13 @@
 !define COMP_NAME "noScribe"
 !define WEB_SITE "https://github.com/kaixxx/noScribe"
 !define VERSION "#*version*#"
-!define COPYRIGHT "Kai Dröge  (c) 2024"
-!define DESCRIPTION "AI powered Audio Transcription"
+!define COPYRIGHT "Kai Dröge  (c) #*year*#"
+!define DESCRIPTION "noScribe - AI powered Audio Transcription"
 !define LICENSE_TXT "C:\Users\kai\Documents\Programmierung\2023_WhisperTranscribe\noScribe\dist\noScribe\LICENSE.txt"
 !define INSTALLER_NAME "#*installer_name*#"
 !define MAIN_APP_EXE "noScribe.exe"
 !define INSTALL_TYPE "SetShellVarContext current"
-!define REG_ROOT "HKCU"
+!define REG_ROOT "HKLM"
 !define REG_APP_PATH "Software\Microsoft\Windows\CurrentVersion\App Paths\${MAIN_APP_EXE}"
 !define UNINSTALL_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 
@@ -82,19 +82,56 @@ InstallDir "$PROGRAMFILES\noScribe"
 
 Section -MainProgram
 
+; Uninstall system wide
+
 ; Read unistall string from registry
 ReadRegStr $0 ${REG_ROOT} "${UNINSTALL_PATH}" "UninstallString"
-; ReadRegStr $0 "HKCU" "Software\Microsoft\Windows\CurrentVersion\Uninstall\noScribe" "UninstallString"
 
-; ${If} $UNINSTALL_PREV != ""
+StrCmp $0 "" uninstallUser 
+
+; Check if the installation is silent
+${If} ${Silent}
+
+    ; Silent install: Uninstall the previous version automatically
+    GetFullPathName $1 "$0\.." ; $InstDir
+    ExecWait '"$0" /S _?=$1' ; Uninstall silently
+
+${Else}
+
+    ; Non-silent install: Ask the user if they want to uninstall the previous version
+    MessageBox MB_YESNO|MB_ICONQUESTION "Previous version of noScribe found (system). Do you want to remove it first (recommended)?" /SD IDYES IDYES uninstallPreviousVersionSystem IDNO continueInstallation
+
+    uninstallPreviousVersionSystem:
+    GetFullPathName $1 "$0\.." ; $InstDir
+    ExecWait '"$0" _?=$1'
+
+${EndIf}
+
+; Uninstall for current user (noScribe until v0.5)
+
+uninstallUser:
+
+ReadRegStr $0 "HKCU" "${UNINSTALL_PATH}" "UninstallString"
+
 StrCmp $0 "" continueInstallation 
 
-; Ask if the user wants to uninstall the previous version
-MessageBox MB_YESNO|MB_ICONQUESTION "Previous version of noScribe found. Do you want to remove it first (recommended)?" /SD IDYES IDYES uninstallPreviousVersion IDNO continueInstallation
+; Check if the installation is silent
+${If} ${Silent}
 
-uninstallPreviousVersion:
-GetFullPathName $1 "$0\.." ; $InstDir
-ExecWait '"$0" _?=$1'
+    ; Silent install: Uninstall the previous version automatically
+    GetFullPathName $1 "$0\.." ; $InstDir
+    ExecWait '"$0" /S _?=$1' ; Uninstall silently
+
+${Else}
+
+    ; Non-silent install: Ask the user if they want to uninstall the previous version
+    MessageBox MB_YESNO|MB_ICONQUESTION "Previous version of noScribe found (user). Do you want to remove it first (recommended)?" /SD IDYES IDYES uninstallPreviousVersionUser IDNO continueInstallation
+
+    uninstallPreviousVersionUser:
+    GetFullPathName $1 "$0\.." ; $InstDir
+    ExecWait '"$0" _?=$1'
+
+${EndIf}
 
 continueInstallation:
 
