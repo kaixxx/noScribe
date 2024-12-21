@@ -1,18 +1,21 @@
+version: 3.1.0
+
 pipeline:
   name: pyannote.audio.pipelines.SpeakerDiarization
   params:
     clustering: AgglomerativeClustering
-    embedding: ./models/torch/pyannote/speechbrain
+    # embedding: pyannote/wespeaker-voxceleb-resnet34-LM  # if you want to use the HF model
+    embedding: models/pyannote_model_wespeaker-voxceleb-resnet34-LM.bin  # if you want to use the local model
     embedding_batch_size: 32
-    embedding_exclude_overlap: False
-    segmentation: ./models/pytorch_model.bin
+    embedding_exclude_overlap: true
+    # segmentation: pyannote/segmentation-3.0  # if you want to use the HF model
+    segmentation: models/pyannote_model_segmentation-3.0.bin  # if you want to use the local model
     segmentation_batch_size: 32
 
 params:
   clustering:
     method: centroid
-    min_cluster_size: 15
-    threshold: 0.7153814381597874
+    min_cluster_size: 12
+    threshold: 0.7045654963945799
   segmentation:
-    min_duration_off: 0.5817029604921046
-    threshold: 0.4442333667381752
+    min_duration_off: 0.0
