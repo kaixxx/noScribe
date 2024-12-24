@@ -45,6 +45,8 @@ if platform.system() == "Darwin": # = MAC
     if platform.machine() == "x86_64":
         os.environ['KMP_DUPLICATE_LIB_OK']='True' # prevent OMP: Error #15: Initializing libomp.dylib, but found libiomp5.dylib already initialized.
     # import torch.backends.mps # loading torch modules leads to segmentation fault later
+from faster_whisper.audio import decode_audio
+from faster_whisper.vad import VadOptions, get_speech_timestamps
 import AdvancedHTMLParser
 from threading import Thread
 import time
@@ -1168,19 +1170,63 @@ class App(ctk.CTk):
                         raise Exception(t('err_user_cancelation')) 
 
                     whisper_lang = self.language if self.language != 'auto' else None
-   
+                    
+                    # VAD 
+                     
                     try:
                         self.vad_threshold = float(config['voice_activity_detection_threshold'])
                     except:
                         config['voice_activity_detection_threshold'] = '0.5'
-                        self.vad_threshold = 0.5
+                        self.vad_threshold = 0.5                     
+
+                    sampling_rate = model.feature_extractor.sampling_rate
+                    audio = decode_audio(self.tmp_audio_file, sampling_rate=sampling_rate)
+                    duration = audio.shape[0] / sampling_rate
+                    
+                    self.logn('Voice Activity Detection')
+                    vad_parameters=VadOptions(min_silence_duration_ms=1000, 
+                                              onset=self.vad_threshold,
+                                              speech_pad_ms=0)
+                    speech_chunks = get_speech_timestamps(audio, vad_parameters)
+                    
+                    def adjust_for_pause(segment):
+                        """Adjusts start and end of segment if it falls into a pause 
+                        identified by the VAD"""
+                        pause_extend = 0.2  # extend the pauses by 200ms to make the detection more robust
+                        print(f'Segement: {segment.start} --> {segment.end}')
+                        
+                        # iterate through the pauses and adjust segment boundaries accordingly
+                        for i in range(0, len(speech_chunks)):
+                            pause_start = (speech_chunks[i]['end'] / sampling_rate) - pause_extend
+                            if i == (len(speech_chunks) - 1): 
+                                pause_end = duration + pause_extend # last segment, pause till the end
+                            else:
+                                pause_end = (speech_chunks[i+1]['start']  / sampling_rate) + pause_extend
+                            print(f'Pause {pause_start} --> {pause_end}')
+                            
+                            if pause_start > segment.end:
+                                break  # we moved beyond the segment, stop going further
+                            if segment.start > pause_start and segment.start < pause_end:
+                                segment.start = pause_end - pause_extend
+                            if segment.end > pause_start and segment.end < pause_end:
+                                segment.end = pause_start + pause_extend
+                        
+                        return segment
+                    
+                    # transcribe
+                    
+                    vad_parameters.speech_pad_ms = 400
                     
                     segments, info = model.transcribe(
-                        self.tmp_audio_file, language=whisper_lang, 
-                        beam_size=1, temperature=self.whisper_temperature, word_timestamps=True, 
-                        initial_prompt=self.prompt, vad_filter=True,
-                        vad_parameters=dict(min_silence_duration_ms=200, 
-                                            onset=self.vad_threshold))
+                        audio, 
+                        language=whisper_lang, 
+                        beam_size=1, 
+                        #temperature=self.whisper_temperature, 
+                        word_timestamps=True, 
+                        initial_prompt=self.prompt, 
+                        vad_filter=True,
+                        vad_parameters=vad_parameters
+                    )
 
                     if self.language == "auto":
                         self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
@@ -1203,8 +1249,10 @@ class App(ctk.CTk):
                                 self.logn()
                                 self.log(t('transcription_saved'))
                                 self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
-  
+
                             raise Exception(t('err_user_cancelation')) 
+
+                        segment = adjust_for_pause(segment)
 
                         # get time of the segment in milliseconds
                         start = round(segment.start * 1000.0)
