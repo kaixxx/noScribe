@@ -75,7 +75,7 @@ class SimpleProgressHook:
 
 try:     
     if platform.system() == 'Windows':
-        pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'models', 'pyannote_config.yaml'))
+        pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'pyannote', 'pyannote_config.yaml'))
         pipeline.to(torch.device(device))
     elif platform.system() in ("Darwin", "Linux"): # = MAC
         if device == 'mps' and not torch.backends.mps.is_available():  # should only happen on x86_64, but checked on all archs to be sure
@@ -83,7 +83,7 @@ try:
             print("log: 'pyannote_xpu: mps' was selected, but mps is not available on this system!")
             print("log: This happens, because availability cannot be checked earlier.")
             print("log: 'pyannote_xpu: cpu' was set.") # The string needs to be the same as in noScribe.py `if line.strip() == "log: 'pyannote_xpu: cpu' was set.":`.
-        with open(os.path.join(app_dir, 'models', 'pyannote_config.yaml'), 'r') as yaml_file:
+        with open(os.path.join(app_dir, 'pyannote', 'pyannote_config.yaml'), 'r') as yaml_file:
             pyannote_config = yaml.safe_load(yaml_file)
 
         pyannote_config['pipeline']['params']['embedding'] = os.path.join(app_dir, *pyannote_config['pipeline']['params']['embedding'].split("/")[1:])
