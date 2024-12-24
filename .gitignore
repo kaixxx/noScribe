@@ -8,7 +8,7 @@ noScribeEdit/
 
 *.code-workspace
 auto-py-to-exe*.*
-
+tmp*.*
 *.exe
 nsis_tmp.nsi
 ggml*.bin

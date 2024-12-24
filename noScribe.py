@@ -1184,9 +1184,15 @@ class App(ctk.CTk):
                     duration = audio.shape[0] / sampling_rate
                     
                     self.logn('Voice Activity Detection')
-                    vad_parameters=VadOptions(min_silence_duration_ms=1000, 
-                                              onset=self.vad_threshold,
-                                              speech_pad_ms=0)
+                    try:
+                        vad_parameters = VadOptions(min_silence_duration_ms=1000, 
+                                                threshold=self.vad_threshold,
+                                                speech_pad_ms=0)
+                    except TypeError:
+                        # parameter threshold was temporarily renamed to 'onset' in pyannote 3.1:  
+                        vad_parameters = VadOptions(min_silence_duration_ms=1000, 
+                                                onset=self.vad_threshold,
+                                                speech_pad_ms=0)
                     speech_chunks = get_speech_timestamps(audio, vad_parameters)
                     
                     def adjust_for_pause(segment):
