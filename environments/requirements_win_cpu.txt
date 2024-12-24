@@ -1,0 +1,14 @@
+# for CPU:
+torchaudio
+# for CUDA 11.8: 
+# torchaudio --index-url https://download.pytorch.org/whl/cu118
+AdvancedHTMLParser
+appdirs
+cpufeature
+customtkinter
+faster-whisper
+Pillow
+pyannote.audio>=3.3.2
+pyinstaller
+python-i18n
+PyYAML
