@@ -377,14 +377,19 @@ class App(ctk.CTk):
         self.frame_main.pack(padx=0, pady=0, anchor='nw', expand=True, fill='both')
 
         # create sidebar frame for options
-        self.sidebar_frame = ctk.CTkFrame(self.frame_main, width=270, corner_radius=0, fg_color='transparent')
+        self.sidebar_frame = ctk.CTkFrame(self.frame_main, width=300, corner_radius=0, fg_color='transparent')
         self.sidebar_frame.pack(padx=0, pady=0, fill='y', expand=False, side='left')
 
+        # create options scrollable frame
+        self.scrollable_options = ctk.CTkScrollableFrame(self.sidebar_frame, width=300, corner_radius=0, fg_color='transparent')
+        self.scrollable_options.pack(padx=0, pady=0, anchor='w', fill='both', expand=True)
+        self.bind('<Configure>', self.on_resize) # Bind the configure event of options_frame to a check_scrollbar requirement function
+        
         # input audio file
-        self.label_audio_file = ctk.CTkLabel(self.sidebar_frame, text=t('label_audio_file'))
+        self.label_audio_file = ctk.CTkLabel(self.scrollable_options, text=t('label_audio_file'))
         self.label_audio_file.pack(padx=20, pady=[20,0], anchor='w')
 
-        self.frame_audio_file = ctk.CTkFrame(self.sidebar_frame, width=250, height=33, corner_radius=8, border_width=2)
+        self.frame_audio_file = ctk.CTkFrame(self.scrollable_options, width=260, height=33, corner_radius=8, border_width=2)
         self.frame_audio_file.pack(padx=20, pady=[0,10], anchor='w')
 
         self.button_audio_file_name = ctk.CTkButton(self.frame_audio_file, width=200, corner_radius=8, bg_color='transparent', 
@@ -394,13 +399,13 @@ class App(ctk.CTk):
         self.button_audio_file_name.place(x=3, y=3)
 
         self.button_audio_file = ctk.CTkButton(self.frame_audio_file, width=45, height=29, text='📂', command=self.button_audio_file_event)
-        self.button_audio_file.place(x=203, y=2)
+        self.button_audio_file.place(x=213, y=2)
 
         # input transcript file name
-        self.label_transcript_file = ctk.CTkLabel(self.sidebar_frame, text=t('label_transcript_file'))
+        self.label_transcript_file = ctk.CTkLabel(self.scrollable_options, text=t('label_transcript_file'))
         self.label_transcript_file.pack(padx=20, pady=[10,0], anchor='w')
 
-        self.frame_transcript_file = ctk.CTkFrame(self.sidebar_frame, width=250, height=33, corner_radius=8, border_width=2)
+        self.frame_transcript_file = ctk.CTkFrame(self.scrollable_options, width=260, height=33, corner_radius=8, border_width=2)
         self.frame_transcript_file.pack(padx=20, pady=[0,10], anchor='w')
 
         self.button_transcript_file_name = ctk.CTkButton(self.frame_transcript_file, width=200, corner_radius=8, bg_color='transparent', 
@@ -410,10 +415,10 @@ class App(ctk.CTk):
         self.button_transcript_file_name.place(x=3, y=3)
 
         self.button_transcript_file = ctk.CTkButton(self.frame_transcript_file, width=45, height=29, text='📂', command=self.button_transcript_file_event)
-        self.button_transcript_file.place(x=203, y=2)
+        self.button_transcript_file.place(x=213, y=2)
 
         # Options grid
-        self.frame_options = ctk.CTkFrame(self.sidebar_frame, width=250, fg_color='transparent')
+        self.frame_options = ctk.CTkFrame(self.scrollable_options, width=250, fg_color='transparent')
         self.frame_options.pack(padx=20, pady=10, anchor='w', fill='x')
 
         self.frame_options.grid_columnconfigure(0, weight=1)
@@ -493,7 +498,7 @@ class App(ctk.CTk):
 
         # Start Button
         self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
-        self.start_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
+        self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
 
         # Stop Button
         self.stop_button = ctk.CTkButton(self.sidebar_frame, height=42, fg_color='darkred', hover_color='darkred', text=t('stop_button'), command=self.button_stop_event)
@@ -521,7 +526,8 @@ class App(ctk.CTk):
         # Progress bar
         self.progress_textbox = ctk.CTkTextbox(self.frame_edit, wrap='none', height=15, state="disabled", font=("",16), text_color="lightgray")
         self.progress_textbox.pack(padx=[10,10], pady=[5,0], expand=True, fill='x', anchor='sw', side='left')
-        
+
+        self.update_scrollbar_visibility()        
         #self.progress_bar = ctk.CTkProgressBar(self.frame_edit, mode='determinate', progress_color='darkred', fg_color=self.log_textbox._fg_color)
         #self.progress_bar.set(0)
         # self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
@@ -553,6 +559,22 @@ class App(ctk.CTk):
                 pass
             
     # Events and Methods
+    
+    def on_resize(self, event):
+        self.update_scrollbar_visibility()
+
+    def update_scrollbar_visibility(self):
+        # Get the size of the scroll region and current canvas size
+        canvas = self.scrollable_options._parent_canvas  
+        scroll_region_height = canvas.bbox("all")[3]
+        canvas_height = canvas.winfo_height()        
+        
+        scrollbar = self.scrollable_options._scrollbar
+
+        if scroll_region_height > canvas_height:
+            scrollbar.grid()
+        else:
+            scrollbar.grid_remove()  # Hide the scrollbar if not needed    
 
     def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
