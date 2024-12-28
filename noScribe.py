@@ -720,8 +720,8 @@ class App(ctk.CTk):
 
         # Show the stop button
         self.start_button.pack_forget() # hide
-        self.stop_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
-
+        self.stop_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+        
         # Show the progress bar
         # self.progress_bar.set(0)
         # self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
@@ -1445,7 +1445,7 @@ class App(ctk.CTk):
         finally:
             # hide the stop button
             self.stop_button.pack_forget() # hide
-            self.start_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
+            self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
 
             # hide progress
             self.set_progress(0, 0)
