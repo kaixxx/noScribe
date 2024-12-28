@@ -656,7 +656,6 @@ class App(ctk.CTk):
             
     def set_progress(self, step, value):
         """ Update state of the progress bar """
-        #return
         if step == 1:
             self.progress_bar.set(value * 0.05 / 100)
         elif step == 2:
