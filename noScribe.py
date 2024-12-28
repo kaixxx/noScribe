@@ -39,6 +39,7 @@ if platform.system() == 'Windows':
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
 if platform.system() in ("Windows", "Linux"):
     from ctranslate2 import get_cuda_device_count
+    import torch
 import re
 if platform.system() == "Darwin": # = MAC
     from subprocess import check_output
@@ -832,9 +833,10 @@ class App(ctk.CTk):
                 self.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
             elif platform.system() in ('Windows', 'Linux'):
                 # Use cuda if available and not set otherwise in config.yml, fallback to cpu: 
-                xpu = get_config('pyannote_xpu', 'cuda' if get_cuda_device_count() > 0 else 'cpu')
+                cuda_available = torch.cuda.is_available() and get_cuda_device_count() > 0
+                xpu = get_config('pyannote_xpu', 'cuda' if cuda_available else 'cpu')
                 self.pyannote_xpu = 'cuda' if xpu == 'cuda' else 'cpu'
-                whisper_xpu = get_config('whisper_xpu', 'cuda' if get_cuda_device_count() > 0 else 'cpu')
+                whisper_xpu = get_config('whisper_xpu', 'cuda' if cuda_available else 'cpu')
                 self.whisper_xpu = 'cuda' if whisper_xpu == 'cuda' else 'cpu'
             else:
                 raise Exception('Platform not supported yet.')
