@@ -1,7 +1,7 @@
 # for CPU:
 torchaudio
-# for CUDA 11.8: 
-# torchaudio --index-url https://download.pytorch.org/whl/cu118
+# for CUDA 12.1:
+# torchaudio --index-url https://download.pytorch.org/whl/cu121 
 AdvancedHTMLParser
 appdirs
 cpufeature
