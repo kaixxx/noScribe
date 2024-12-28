@@ -1351,8 +1351,8 @@ class App(ctk.CTk):
                                     speaker = new_speaker
                                     # add timestamp
                                     if self.timestamps:
-                                        seg_html = f'{speaker} <span style="color: {self.timestamp_color}" >{ts}</span>:{seg_text}'
-                                        seg_text = f'{speaker} {ts}:{seg_text}'
+                                        seg_html = f'{speaker}: <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
+                                        seg_text = f'{speaker}: {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
                                         if self.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
