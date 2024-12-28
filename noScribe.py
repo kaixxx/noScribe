@@ -1223,7 +1223,6 @@ class App(ctk.CTk):
                         """Adjusts start and end of segment if it falls into a pause 
                         identified by the VAD"""
                         pause_extend = 0.2  # extend the pauses by 200ms to make the detection more robust
-                        print(f'Segement: {segment.start} --> {segment.end}')
                         
                         # iterate through the pauses and adjust segment boundaries accordingly
                         for i in range(0, len(speech_chunks)):
@@ -1232,7 +1231,6 @@ class App(ctk.CTk):
                                 pause_end = duration + pause_extend # last segment, pause till the end
                             else:
                                 pause_end = (speech_chunks[i+1]['start']  / sampling_rate) + pause_extend
-                            print(f'Pause {pause_start} --> {pause_end}')
                             
                             if pause_start > segment.end:
                                 break  # we moved beyond the segment, stop going further
