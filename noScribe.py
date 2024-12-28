@@ -899,7 +899,7 @@ class App(ctk.CTk):
 
                     arguments = f' -loglevel warning -hwaccel auto -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le "{self.tmp_audio_file}"'
                     if platform.system() == 'Windows':
-                        ffmpeg_path = 'ffmpeg.exe'
+                        ffmpeg_path = os.path.join(app_dir, 'ffmpeg.exe')
                         ffmpeg_cmd = ffmpeg_path + arguments
                     elif platform.system() == "Darwin":  # = MAC
                         ffmpeg_path = os.path.join(app_dir, 'ffmpeg')
