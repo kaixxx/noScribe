@@ -4,7 +4,8 @@ dist/
 src/
 __pycache__/
 .vscode/
-noScribeEdit/
+noScribeEdit/*
+!noScribeEdit/readme.txt
 
 *.code-workspace
 auto-py-to-exe*.*
