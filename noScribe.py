@@ -49,6 +49,7 @@ if platform.system() == "Darwin": # = MAC
 from faster_whisper.audio import decode_audio
 from faster_whisper.vad import VadOptions, get_speech_timestamps
 import AdvancedHTMLParser
+import html
 from threading import Thread
 import time
 from tempfile import TemporaryDirectory
@@ -232,7 +233,7 @@ def html_node_to_text(node: AdvancedHTMLParser.AdvancedTag) -> str:
     """
     # For text nodes, return their value directly
     if AdvancedHTMLParser.isTextNode(node): # node.nodeType == node.TEXT_NODE:
-        return node
+        return html.unescape(node)
     # For element nodes, recursively process their children
     elif AdvancedHTMLParser.isTagNode(node):
         text_parts = []
@@ -257,9 +258,7 @@ def html_to_text(parser: AdvancedHTMLParser.AdvancedHTMLParser) -> str:
 # Helper for WebVTT output
 
 def vtt_escape(txt: str) -> str:
-    txt = txt.replace('&', '&amp;')
-    txt = txt.replace('<', '&lt;')
-    txt = txt.replace('>', '&gt;')
+    txt = html.escape(txt)
     while txt.find('\n\n') > -1:
         txt = txt.replace('\n\n', '\n')
     return txt    
@@ -1129,7 +1128,7 @@ class App(ctk.CTk):
                 br = d.createElement('br')
                 s.appendChild(br)
 
-                s.appendText(f'({option_info})')
+                s.appendText(f'({html.escape(option_info)})')
 
                 p.appendChild(s)
                 main_body.appendChild(p)
@@ -1321,7 +1320,7 @@ class App(ctk.CTk):
                         # write text to the doc
                         # diarization (speaker detection)?
                         seg_text = segment.text
-                        seg_html = seg_text
+                        seg_html = html.escape(seg_text)
 
                         if self.speaker_detection != 'none':
                             new_speaker = find_speaker(diarization, start, end)
@@ -1330,11 +1329,11 @@ class App(ctk.CTk):
                                     prev_speaker = speaker
                                     speaker = new_speaker
                                     seg_text = f' {speaker}:{seg_text}'
-                                    seg_html = seg_text                                
+                                    seg_html = html.escape(seg_text)                                
                                 elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker 
                                     speaker = new_speaker
                                     seg_text = f'//{seg_text}'
-                                    seg_html = seg_text
+                                    seg_html = html.escape(seg_text)
                                 else: # new speaker, not overlapping
                                     if speaker[:2] == '//': # was overlapping speech, mark the end
                                         last_elem = p.lastElementChild
@@ -1351,33 +1350,33 @@ class App(ctk.CTk):
                                     speaker = new_speaker
                                     # add timestamp
                                     if self.timestamps:
-                                        seg_html = f'{speaker}: <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
+                                        seg_html = f'{speaker}: <span style="color: {self.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
                                         seg_text = f'{speaker}: {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
                                         if self.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
                                             seg_text = f'{speaker}:{seg_text}'
-                                            seg_html = seg_text
+                                            seg_html = html.escape(seg_text)
                                         else:
-                                            seg_html = seg_text.lstrip()
+                                            seg_html = html.escape(seg_text).lstrip()
                                             seg_text = f'{speaker}:{seg_text}'
                                         
                             else: # same speaker
                                 if self.timestamps:
                                     if (start - last_timestamp_ms) > self.timestamp_interval:
-                                        seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
+                                        seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
                                         seg_text = f' {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
-                                        seg_html = seg_text
+                                        seg_html = html.escape(seg_text)
 
                         else: # no speaker detection
                             if self.timestamps and (first_segment or (start - last_timestamp_ms) > self.timestamp_interval):
-                                seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
+                                seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
                                 seg_text = f' {ts}{seg_text}'
                                 last_timestamp_ms = start
                             else:
-                                seg_html = seg_text
+                                seg_html = html.escape(seg_text)
                             # avoid leading whitespace in first paragraph
                             if first_segment:
                                 seg_text = seg_text.lstrip()
