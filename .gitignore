@@ -15,8 +15,9 @@ nsis_tmp.nsi
 ggml*.bin
 ROADMAP.md
 
-models/*
+models/precise/*
 !models/precise/NOSCRIBE_README.txt
+models/fast/*
 !models/fast/NOSCRIBE_README.txt
 
 .DS_Store
