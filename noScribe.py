@@ -70,6 +70,7 @@ logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
 app_version = '0.5'
 app_dir = os.path.abspath(os.path.dirname(__file__))
+
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
 
@@ -332,7 +333,15 @@ class App(ctk.CTk):
         super().__init__()
 
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
-
+        
+        self.user_models_dir = os.path.join(config_dir, 'whisper_models')
+        os.makedirs(self.user_models_dir, exist_ok=True)
+        whisper_models_readme = os.path.join(self.user_models_dir, 'readme.txt')
+        if not os.path.exists(whisper_models_readme):
+            with open(whisper_models_readme, 'w') as file:
+                file.write('You can download custom Whisper-models for the transcription into this folder. \n' 
+                           'See here for more information: https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription')            
+        
         self.audio_file = ''
         self.transcript_file = ''
         self.log_file = None
@@ -419,9 +428,11 @@ class App(ctk.CTk):
 
         # Options grid
         self.frame_options = ctk.CTkFrame(self.scrollable_options, width=250, fg_color='transparent')
+        self.frame_options.pack_propagate(False)
         self.frame_options.pack(padx=20, pady=10, anchor='w', fill='x')
 
-        self.frame_options.grid_columnconfigure(0, weight=1)
+        # self.frame_options.grid_configure .resizable(width=False, height=True)
+        self.frame_options.grid_columnconfigure(0, weight=1, minsize=0)
         self.frame_options.grid_columnconfigure(1, weight=0)
 
         # Start/stop
@@ -448,13 +459,58 @@ class App(ctk.CTk):
         self.option_menu_language.grid(column=1, row=2, sticky='e', pady=5)
         self.option_menu_language.set(get_config('last_language', 'auto'))
         
-        # Quality (Model Selection)
-        self.label_quality = ctk.CTkLabel(self.frame_options, text=t('label_quality'))
-        self.label_quality.grid(column=0, row=3, sticky='w', pady=5)
+        # Whisper Model Selection   
+        class CustomCTkOptionMenu(ctk.CTkOptionMenu):
+            # Custom version that reads available models on drop down
+            def __init__(self, noScribe_parent, master, width = 140, height = 28, corner_radius = None, bg_color = "transparent", fg_color = None, button_color = None, button_hover_color = None, text_color = None, text_color_disabled = None, dropdown_fg_color = None, dropdown_hover_color = None, dropdown_text_color = None, font = None, dropdown_font = None, values = None, variable = None, state = tk.NORMAL, hover = True, command = None, dynamic_resizing = True, anchor = "w", **kwargs):
+                super().__init__(master, width, height, corner_radius, bg_color, fg_color, button_color, button_hover_color, text_color, text_color_disabled, dropdown_fg_color, dropdown_hover_color, dropdown_text_color, font, dropdown_font, values, variable, state, hover, command, dynamic_resizing, anchor, **kwargs)
+                self.noScribe_parent = noScribe_parent
+                self.old_value = ''
 
-        self.option_menu_quality = ctk.CTkOptionMenu(self.frame_options, width=100, values=['precise', 'fast'])
-        self.option_menu_quality.grid(column=1, row=3, sticky='e', pady=5)
-        self.option_menu_quality.set(get_config('last_quality', 'precise'))
+            def _clicked(self, event=0):
+                self.old_value = self.get()
+                self._values = self.noScribe_parent.get_whisper_models()
+                self._values.append('--------------------')
+                self._values.append(t('label_add_custom_models'))
+                self._dropdown_menu.configure(values=self._values)
+                super()._clicked(event)
+                
+            def _dropdown_callback(self, value: str):
+                if value == self._values[-2]:  # divider
+                    return
+                if value == self._values[-1]:  # Add custom model
+                    # show custom model folder
+                    path = self.noScribe_parent.user_models_dir
+                    try:
+                        os_type = platform.system()
+                        if os_type == "Windows":
+                            os.startfile(path)
+                        elif os_type == "Darwin":
+                            run(["open", path])
+                        elif os_type == "Linux":
+                            run(["xdg-open", path])
+                        else:
+                            raise OSError(f"Unsupported operating system: {os_type}")
+                    except Exception as e:
+                        self.noScribe_parent.logn(f"Failed to open folder: {e}")
+                else:
+                    super()._dropdown_callback(value)
+        
+        self.label_whisper_model = ctk.CTkLabel(self.frame_options, text=t('label_whisper_model'))
+        self.label_whisper_model.grid(column=0, row=3, sticky='w', pady=5)
+
+        models = self.get_whisper_models()
+        self.option_menu_whisper_model = CustomCTkOptionMenu(self, 
+                                                       self.frame_options, 
+                                                       width=100,
+                                                       values=models,
+                                                       dynamic_resizing=False)
+        self.option_menu_whisper_model.grid(column=1, row=3, sticky='e', pady=5)
+        last_whisper_model = get_config('last_whisper_model', 'precise')
+        if last_whisper_model in models:
+            self.option_menu_whisper_model.set(last_whisper_model)
+        elif len(models) > 0:
+            self.option_menu_whisper_model.set(models[0])
 
         # Mark pauses
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
@@ -559,7 +615,31 @@ class App(ctk.CTk):
                 pass
             
     # Events and Methods
+
+    def get_whisper_models(self):
+        self.whisper_model_paths = {}
+        
+        def collect_models(dir):        
+            for entry in os.listdir(dir):
+                entry_path = os.path.join(dir, entry)
+                if os.path.isdir(entry_path):
+                    if entry in self.whisper_model_paths:
+                        self.logn(f'Ignored double name for whisper model: "{entry}"', 'error')
+                    else:
+                        self.whisper_model_paths[entry]=entry_path 
+       
+        # collect system models:
+        collect_models(os.path.join(app_dir, 'models'))
+        
+        # collect user defined models:        
+        collect_models(self.user_models_dir)
+
+        return list(self.whisper_model_paths.keys())
     
+    def on_whisper_model_selected(self, value):
+        print(self.option_menu_whisper_model.old_value)
+        print(value)
+        
     def on_resize(self, event):
         self.update_scrollbar_visibility()
 
@@ -622,7 +702,7 @@ class App(ctk.CTk):
 
     def log(self, txt: str = '', tags: list = [], where: str = 'both', link: str = '') -> None:
         """ Log to main window (where can be 'screen', 'file', or 'both') """
-        if where != 'file':
+        if where != 'file' and hasattr(self, 'log_textbox'):
             self.log_textbox.configure(state=ctk.NORMAL)
             if link != '':
                 tags = tags + self.hyperlink.add(partial(self.openLink, link))
@@ -754,23 +834,14 @@ class App(ctk.CTk):
             self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
 
             # options for faster-whisper
-            self.whisper_precise_beam_size = get_config('whisper_precise_beam_size', 1)
-            self.logn(f'whisper precise beam size: {self.whisper_precise_beam_size}', where='file')
+            self.whisper_beam_size = get_config('whisper_beam_size', 1)
+            self.logn(f'whisper beam size: {self.whisper_beam_size}', where='file')
 
-            self.whisper_fast_beam_size = get_config('whisper_fast_beam_size', 1)
-            self.logn(f'whisper fast beam size: {self.whisper_fast_beam_size}', where='file')
+            self.whisper_temperature = get_config('whisper_temperature', 0.0)
+            self.logn(f'whisper temperature: {self.whisper_temperature}', where='file')
 
-            self.whisper_precise_temperature = get_config('whisper_precise_temperature', 0.0)
-            self.logn(f'whisper precise temperature: {self.whisper_precise_temperature}', where='file')
-
-            self.whisper_fast_temperature = get_config('whisper_fast_temperature', 0.0)
-            self.logn(f'whisper fast temperature: {self.whisper_fast_temperature}', where='file')
-
-            self.whisper_precise_compute_type = get_config('whisper_precise_compute_type', 'default')
-            self.logn(f'whisper precise compute type: {self.whisper_precise_compute_type}', where='file')
-
-            self.whisper_fast_compute_type = get_config('whisper_fast_compute_type', 'default')
-            self.logn(f'whisper fast compute type: {self.whisper_fast_compute_type}', where='file')
+            self.whisper_compute_type = get_config('whisper_compute_type', 'default')
+            self.logn(f'whisper compute type: {self.whisper_compute_type}', where='file')
 
             self.timestamp_interval = get_config('timestamp_interval', 60_000) # default: add a timestamp every minute
             self.logn(f'timestamp_interval: {self.timestamp_interval}', where='file')
@@ -791,19 +862,15 @@ class App(ctk.CTk):
                 self.stop = '0'
             else:
                 self.stop = millisec(val)
-                option_info += f'{t("label_stop")} {val} | '
+                option_info += f'{t("label_stop")} {val} | '          
+            
+            sel_whisper_model = self.option_menu_whisper_model.get()
+            if sel_whisper_model in self.whisper_model_paths.keys():
+                self.whisper_model = self.whisper_model_paths[sel_whisper_model]
+            else:                
+                raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
 
-            if self.option_menu_quality.get() == 'fast':
-                self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-small')
-                self.whisper_beam_size = self.whisper_fast_beam_size
-                self.whisper_temperature = self.whisper_fast_temperature
-                self.whisper_compute_type = self.whisper_fast_compute_type
-            else:
-                self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-large-v2')
-                self.whisper_beam_size = self.whisper_precise_beam_size
-                self.whisper_temperature = self.whisper_precise_temperature
-                self.whisper_compute_type = self.whisper_precise_compute_type
-            option_info += f'{t("label_quality")} {self.option_menu_quality.get()} | '
+            option_info += f'{t("label_whisper_model")} {sel_whisper_model} | '
 
             try:
                 with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
@@ -1247,10 +1314,11 @@ class App(ctk.CTk):
                     segments, info = model.transcribe(
                         audio, 
                         language=whisper_lang, 
-                        beam_size=1, 
+                        beam_size=5, 
                         #temperature=self.whisper_temperature, 
                         word_timestamps=True, 
-                        initial_prompt=self.prompt, 
+                        #initial_prompt=self.prompt,
+                        hotwords=self.prompt, 
                         vad_filter=True,
                         vad_parameters=vad_parameters
                     )
@@ -1473,7 +1541,7 @@ class App(ctk.CTk):
             # remember some settings for the next run
             config['last_language'] = self.option_menu_language.get()
             config['last_speaker'] = self.option_menu_speaker.get()
-            config['last_quality'] = self.option_menu_quality.get()
+            config['last_whisper_model'] = self.option_menu_whisper_model.get()
             config['last_pause'] = self.option_menu_pause.get()
             config['last_overlapping'] = self.check_box_overlapping.get()
             config['last_timestamps'] = self.check_box_timestamps.get()

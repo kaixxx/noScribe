@@ -32,7 +32,8 @@ pt:
 
   label_language: 'Idioma:'
   label_speaker: 'Detecção de alto-falante:'
-  label_quality: 'Qualidade:'
+  label_whisper_model: 'Modelo:'
+  label_add_custom_models: 'Adicionar modelo de IA...'  
   label_overlapping: 'Sobreposição:'
   label_pause: 'Marcar pausas:'
   label_timestamps: 'Registos temporais:'

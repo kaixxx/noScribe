@@ -32,7 +32,8 @@ ru:
 
   label_language: 'Язык:'
   label_speaker: 'Определение диктора:'
-  label_quality: 'Качество:'
+  label_whisper_model: 'Модель:'
+  label_add_custom_models: 'Добавить модель искусственного интеллекта...'  
   label_overlapping: 'Перекрытие речи:'
   label_pause: 'Отметьте паузы:'
   label_timestamps: 'Временные метки:'

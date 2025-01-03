@@ -31,7 +31,8 @@ zh-CN: &defaults
 
   label_language: '语言：'
   label_speaker: '说话人识别：'
-  label_quality: '质量：'
+  label_whisper_model: '人工智能模型：'
+  label_add_custom_models: '添加人工智能模型...'  
   label_overlapping: '重叠发言：'
   label_pause: '马克停顿了一下：'
   label_timestamps: '时间戳：'

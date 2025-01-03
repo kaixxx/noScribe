@@ -32,7 +32,8 @@ ja:
 
   label_language: '言語：'
   label_speaker: '話者検出：'
-  label_quality: '品質：'
+  label_whisper_model: 'モデル：'
+  label_add_custom_models: 'AIモデルを追加...'
   label_overlapping: 'オーバーラッピング・スピーチ：'
   label_pause: 'マークはポーズをとる：'
   label_timestamps: 'タイムスタンプ：'

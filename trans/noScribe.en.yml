@@ -34,7 +34,8 @@ en:
 
   label_language: 'Language:'
   label_speaker: 'Speaker detection:'
-  label_quality: 'Quality:'
+  label_whisper_model: 'Model:'
+  label_add_custom_models: 'Add AI model...'
   label_overlapping: 'Overlapping speech:'
   label_pause: 'Mark pause:'
   label_timestamps: 'Timestamps:'

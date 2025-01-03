@@ -14,16 +14,10 @@ tmp*.*
 nsis_tmp.nsi
 ggml*.bin
 ROADMAP.md
-models/pyannote_config_macOS.yaml
-models/faster-whisper*/*.json
-models/faster-whisper*/*.bin
-models/faster-whisper*/vocabulary.txt
-models/faster-whisper*/.gitattributes.txt
-models/faster-whisper*/.gitattributes
-models/faster-whisper*/README.md
-models/whisper-small-swiss/
-models/faster-whisper-small_old/
-models/faster-whisper-large-v2 french/
+
+models/*
+!models/precise/NOSCRIBE_README.txt
+!models/fast/NOSCRIBE_README.txt
 
 .DS_Store
 stuff/
