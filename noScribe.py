@@ -350,9 +350,9 @@ class App(ctk.CTk):
         # configure window
         self.title('noScribe - ' + t('app_header'))
         if platform.system() in ("Darwin", "Linux"):
-            self.geometry(f"{1100}x{725}")
+            self.geometry(f"{1100}x{765}")
         else:
-            self.geometry(f"{1100}x{650}")
+            self.geometry(f"{1100}x{690}")
         if platform.system() in ("Darwin", "Windows"):
             self.iconbitmap('noScribeLogo.ico')
         if platform.system() == "Linux":
