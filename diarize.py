@@ -86,8 +86,8 @@ try:
         with open(os.path.join(app_dir, 'pyannote', 'pyannote_config.yaml'), 'r') as yaml_file:
             pyannote_config = yaml.safe_load(yaml_file)
 
-        pyannote_config['pipeline']['params']['embedding'] = os.path.join(app_dir, *pyannote_config['pipeline']['params']['embedding'].split("/")[1:])
-        pyannote_config['pipeline']['params']['segmentation'] = os.path.join(app_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/")[1:])
+        pyannote_config['pipeline']['params']['embedding'] = os.path.join(app_dir, *pyannote_config['pipeline']['params']['embedding'].split("/"))
+        pyannote_config['pipeline']['params']['segmentation'] = os.path.join(app_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/"))
 
         tmpdir = TemporaryDirectory('noScribe_diarize')
         with open(os.path.join(tmpdir.name, 'pyannote_config_macOS.yaml'), 'w') as yaml_file:
