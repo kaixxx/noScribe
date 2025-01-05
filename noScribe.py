@@ -539,19 +539,31 @@ class App(ctk.CTk):
             self.check_box_overlapping.select()
         else:
             self.check_box_overlapping.deselect()
+            
+        # Disfluencies
+        self.label_disfluencies = ctk.CTkLabel(self.frame_options, text=t('label_disfluencies'))
+        self.label_disfluencies.grid(column=0, row=7, sticky='w', pady=5)
+
+        self.check_box_disfluencies = ctk.CTkCheckBox(self.frame_options, text = '')
+        self.check_box_disfluencies.grid(column=1, row=7, sticky='e', pady=5)
+        check_box_disfluencies = config.get('last_disfluencies', True)
+        if check_box_disfluencies:
+            self.check_box_disfluencies.select()
+        else:
+            self.check_box_disfluencies.deselect()
 
         # Timestamps in text
         self.label_timestamps = ctk.CTkLabel(self.frame_options, text=t('label_timestamps'))
-        self.label_timestamps.grid(column=0, row=7, sticky='w', pady=5)
+        self.label_timestamps.grid(column=0, row=8, sticky='w', pady=5)
 
         self.check_box_timestamps = ctk.CTkCheckBox(self.frame_options, text = '')
-        self.check_box_timestamps.grid(column=1, row=7, sticky='e', pady=5)
+        self.check_box_timestamps.grid(column=1, row=8, sticky='e', pady=5)
         check_box_timestamps = config.get('last_timestamps', False)
         if check_box_timestamps:
             self.check_box_timestamps.select()
         else:
             self.check_box_timestamps.deselect()
-
+        
         # Start Button
         self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
         self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
@@ -872,17 +884,9 @@ class App(ctk.CTk):
 
             option_info += f'{t("label_whisper_model")} {sel_whisper_model} | '
 
-            try:
-                with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
-                    prompts = yaml.safe_load(file)
-            except:
-                prompts = {}
-
             self.language = self.option_menu_language.get()
-            if self.language != 'auto':
+            if self.language != 'auto' and self.language != 'multilingual':
                 self.language = self.language[0:3].strip()
-
-            self.prompt = prompts.get(self.language, '') # Fetch language prompt, default to empty string
 
             option_info += f'{t("label_language")} {self.language} | '
 
@@ -894,6 +898,9 @@ class App(ctk.CTk):
 
             self.timestamps = self.check_box_timestamps.get()
             option_info += f'{t("label_timestamps")} {self.timestamps} | '
+            
+            self.disfluencies = self.check_box_disfluencies.get()
+            option_info += f'{t("label_disfluencies")} {self.disfluencies} | '
 
             self.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
             option_info += f'{t("label_pause")} {self.pause}'
@@ -1309,7 +1316,30 @@ class App(ctk.CTk):
                     
                     # transcribe
                     
+                    if self.cancel:
+                        raise Exception(t('err_user_cancelation')) 
+
                     vad_parameters.speech_pad_ms = 400
+
+                    # detect language                    
+                    if self.language == 'auto':
+                        language, language_probability, all_language_probs = model.detect_language(
+                            audio,
+                            vad_filter=True,
+                            vad_parameters=vad_parameters
+                        )
+                        self.language = language
+                        self.logn("Detected language '%s' with probability %f" % (language, language_probability))
+
+                    if self.disfluencies:                    
+                        try:
+                            with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
+                                prompts = yaml.safe_load(file)
+                        except:
+                            prompts = {}
+                        self.prompt = prompts.get(self.language, '') # Fetch language prompt, default to empty string
+                    else:
+                        self.prompt = ''
                     
                     segments, info = model.transcribe(
                         audio, 
@@ -1320,11 +1350,12 @@ class App(ctk.CTk):
                         #initial_prompt=self.prompt,
                         hotwords=self.prompt, 
                         vad_filter=True,
-                        vad_parameters=vad_parameters
+                        vad_parameters=vad_parameters,
+                        # length_penalty=0.5
                     )
 
-                    if self.language == "auto":
-                        self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
+                    #if self.language == "auto":
+                    #    self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
 
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
@@ -1545,6 +1576,7 @@ class App(ctk.CTk):
             config['last_pause'] = self.option_menu_pause.get()
             config['last_overlapping'] = self.check_box_overlapping.get()
             config['last_timestamps'] = self.check_box_timestamps.get()
+            config['last_disfluencies'] = self.check_box_disfluencies.get()
 
             save_config()
         finally:

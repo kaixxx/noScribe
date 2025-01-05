@@ -39,6 +39,7 @@ en:
   label_overlapping: 'Overlapping speech:'
   label_pause: 'Mark pause:'
   label_timestamps: 'Timestamps:'
+  label_disfluencies: 'Disfluencies:'
   
   
   start_button: Start 

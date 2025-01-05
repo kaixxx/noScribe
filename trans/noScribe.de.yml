@@ -39,6 +39,7 @@ de:
   label_overlapping: 'Überlappende Sprache:'
   label_pause: 'Pausen markieren:'
   label_timestamps: 'Zeitmarken:'
+  label_disfluencies: 'Füllworte:'
   
   start_button: Start
   stop_button: Abbrechen
