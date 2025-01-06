@@ -94,6 +94,68 @@ p, li { white-space: pre-wrap; }
 </body>
 </html>"""
 
+languages = {
+    "Auto": "auto",
+    "Multilingual": "multilingual",
+    "Afrikaans": "af",
+    "Arabic": "ar",
+    "Armenian": "hy",
+    "Azerbaijani": "az",
+    "Belarusian": "be",
+    "Bosnian": "bs",
+    "Bulgarian": "bg",
+    "Catalan": "ca",
+    "Chinese": "zh",
+    "Croatian": "hr",
+    "Czech": "cs",
+    "Danish": "da",
+    "Dutch": "nl",
+    "English": "en",
+    "Estonian": "et",
+    "Finnish": "fi",
+    "French": "fr",
+    "Galician": "gl",
+    "German": "de",
+    "Greek": "el",
+    "Hebrew": "he",
+    "Hindi": "hi",
+    "Hungarian": "hu",
+    "Icelandic": "is",
+    "Indonesian": "id",
+    "Italian": "it",
+    "Japanese": "ja",
+    "Kannada": "kn",
+    "Kazakh": "kk",
+    "Korean": "ko",
+    "Latvian": "lv",
+    "Lithuanian": "lt",
+    "Macedonian": "mk",
+    "Malay": "ms",
+    "Marathi": "mr",
+    "Maori": "mi",
+    "Nepali": "ne",
+    "Norwegian": "no",
+    "Persian": "fa",
+    "Polish": "pl",
+    "Portuguese": "pt",
+    "Romanian": "ro",
+    "Russian": "ru",
+    "Serbian": "sr",
+    "Slovak": "sk",
+    "Slovenian": "sl",
+    "Spanish": "es",
+    "Swahili": "sw",
+    "Swedish": "sv",
+    "Tagalog": "tl",
+    "Tamil": "ta",
+    "Thai": "th",
+    "Turkish": "tr",
+    "Ukrainian": "uk",
+    "Urdu": "ur",
+    "Vietnamese": "vi",
+    "Welsh": "cy",
+}
+
 # config
 config_dir = appdirs.user_config_dir('noScribe')
 if not os.path.exists(config_dir):
@@ -453,11 +515,13 @@ class App(ctk.CTk):
         self.label_language = ctk.CTkLabel(self.frame_options, text=t('label_language'))
         self.label_language.grid(column=0, row=2, sticky='w', pady=5)
 
-        self.langs = ('auto', 'en (english)', 'zh (chinese)', 'de (german)', 'es (spanish)', 'ru (russian)', 'ko (korean)', 'fr (french)', 'ja (japanese)', 'pt (portuguese)', 'tr (turkish)', 'pl (polish)', 'ca (catalan)', 'nl (dutch)', 'ar (arabic)', 'sv (swedish)', 'it (italian)', 'id (indonesian)', 'hi (hindi)', 'fi (finnish)', 'vi (vietnamese)', 'he (hebrew)', 'uk (ukrainian)', 'el (greek)', 'ms (malay)', 'cs (czech)', 'ro (romanian)', 'da (danish)', 'hu (hungarian)', 'ta (tamil)', 'no (norwegian)', 'th (thai)', 'ur (urdu)', 'hr (croatian)', 'bg (bulgarian)', 'lt (lithuanian)', 'la (latin)', 'mi (maori)', 'ml (malayalam)', 'cy (welsh)', 'sk (slovak)', 'te (telugu)', 'fa (persian)', 'lv (latvian)', 'bn (bengali)', 'sr (serbian)', 'az (azerbaijani)', 'sl (slovenian)', 'kn (kannada)', 'et (estonian)', 'mk (macedonian)', 'br (breton)', 'eu (basque)', 'is (icelandic)', 'hy (armenian)', 'ne (nepali)', 'mn (mongolian)', 'bs (bosnian)', 'kk (kazakh)', 'sq (albanian)', 'sw (swahili)', 'gl (galician)', 'mr (marathi)', 'pa (punjabi)', 'si (sinhala)', 'km (khmer)', 'sn (shona)', 'yo (yoruba)', 'so (somali)', 'af (afrikaans)', 'oc (occitan)', 'ka (georgian)', 'be (belarusian)', 'tg (tajik)', 'sd (sindhi)', 'gu (gujarati)', 'am (amharic)', 'yi (yiddish)', 'lo (lao)', 'uz (uzbek)', 'fo (faroese)', 'ht (haitian   creole)', 'ps (pashto)', 'tk (turkmen)', 'nn (nynorsk)', 'mt (maltese)', 'sa (sanskrit)', 'lb (luxembourgish)', 'my (myanmar)', 'bo (tibetan)', 'tl (tagalog)', 'mg (malagasy)', 'as (assamese)', 'tt (tatar)', 'haw (hawaiian)', 'ln (lingala)', 'ha (hausa)', 'ba (bashkir)', 'jw (javanese)', 'su (sundanese)')
-
-        self.option_menu_language = ctk.CTkOptionMenu(self.frame_options, width=100, values=self.langs, dynamic_resizing=False)
+        self.option_menu_language = ctk.CTkOptionMenu(self.frame_options, width=100, values=list(languages.keys()), dynamic_resizing=False)
         self.option_menu_language.grid(column=1, row=2, sticky='e', pady=5)
-        self.option_menu_language.set(get_config('last_language', 'auto'))
+        last_language = get_config('last_language', 'auto')
+        if last_language in languages.keys():
+            self.option_menu_language.set(last_language)
+        else:
+            self.option_menu_language.set('auto')
         
         # Whisper Model Selection   
         class CustomCTkOptionMenu(ctk.CTkOptionMenu):
@@ -887,11 +951,8 @@ class App(ctk.CTk):
 
             option_info += f'{t("label_whisper_model")} {sel_whisper_model} | '
 
-            self.language = self.option_menu_language.get()
-            if self.language != 'auto' and self.language != 'multilingual':
-                self.language = self.language[0:3].strip()
-
-            option_info += f'{t("label_language")} {self.language} | '
+            self.language_name = self.option_menu_language.get()
+            option_info += f'{t("label_language")} {self.language_name} ({languages[self.language_name]}) | '
 
             self.speaker_detection = self.option_menu_speaker.get()
             option_info += f'{t("label_speaker")} {self.speaker_detection} | '
@@ -1269,7 +1330,14 @@ class App(ctk.CTk):
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
 
-                    whisper_lang = self.language if self.language != 'auto' else None
+                    multilingual = False
+                    if self.language_name == 'Multilingual':
+                        multilingual = True
+                        whisper_lang = None
+                    elif self.language_name == 'Auto':
+                        whisper_lang = None
+                    else:
+                        whisper_lang = languages[self.language_name]
                     
                     # VAD 
                      
@@ -1325,7 +1393,7 @@ class App(ctk.CTk):
                     vad_parameters.speech_pad_ms = 400
 
                     # detect language                    
-                    if self.language == 'auto':
+                    if self.language_name == 'auto':
                         language, language_probability, all_language_probs = model.detect_language(
                             audio,
                             vad_filter=True,
@@ -1340,13 +1408,14 @@ class App(ctk.CTk):
                                 prompts = yaml.safe_load(file)
                         except:
                             prompts = {}
-                        self.prompt = prompts.get(self.language, '') # Fetch language prompt, default to empty string
+                        self.prompt = prompts.get(languages[self.language_name], '') # Fetch language prompt, default to empty string
                     else:
                         self.prompt = ''
                     
                     segments, info = model.transcribe(
                         audio, 
-                        language=whisper_lang, 
+                        language=whisper_lang,
+                        multilingual=multilingual, 
                         beam_size=5, 
                         #temperature=self.whisper_temperature, 
                         word_timestamps=True, 
@@ -1356,9 +1425,6 @@ class App(ctk.CTk):
                         vad_parameters=vad_parameters,
                         # length_penalty=0.5
                     )
-
-                    #if self.language == "auto":
-                    #    self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
 
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
