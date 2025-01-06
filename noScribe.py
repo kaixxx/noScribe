@@ -68,7 +68,7 @@ import urllib
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.5'
+app_version = '0.6'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 
 ctk.set_appearance_mode('dark')
@@ -416,7 +416,7 @@ class App(ctk.CTk):
         else:
             self.geometry(f"{1100}x{690}")
         if platform.system() in ("Darwin", "Windows"):
-            self.iconbitmap('noScribeLogo.ico')
+            self.iconbitmap(os.path.join(app_dir, 'noScribeLogo.ico'))
         if platform.system() == "Linux":
             if hasattr(sys, "_MEIPASS"):
                 self.iconphoto(True, tk.PhotoImage(file=os.path.join(sys._MEIPASS, "noScribeLogo.png")))
