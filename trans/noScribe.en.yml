@@ -46,6 +46,8 @@ en:
   stop_button: Cancel
   editor_button: Editor
 
+  overall_progress: 'Overall progress: '
+
   # log messages
   log_transcript_filename: 'Transcript filename: '
   log_audio_file_selected: 'Audio file selected: '

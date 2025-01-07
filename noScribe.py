@@ -855,12 +855,14 @@ class App(ctk.CTk):
                 progr = 0.05 # (step 1)
                 progr_factor = 0.95
             progr = progr + (value * progr_factor / 100)
+        if progr >= 1:
+            progr = 0.99 # whisper sometimes still needs some time to finish even if the progress is already at 100%. This can be confusing, so we never go above 99%...
 
         # Update progress_textbox
         if progr < 0:
             progr_str = ''
         else:
-            progr_str = f'({round(progr * 100)}%)'
+            progr_str = f'({t('overall_progress')}{round(progr * 100)}%)'
         self.progress_textbox.configure(state=ctk.NORMAL)        
         self.progress_textbox.delete('1.0', tk.END)
         self.progress_textbox.insert(tk.END, progr_str)

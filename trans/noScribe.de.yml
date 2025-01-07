@@ -44,6 +44,8 @@ de:
   start_button: Start
   stop_button: Abbrechen
 
+  overall_progress: 'Fortschritt insgesamt: '
+
   # log messages
   log_transcript_filename: 'Transkript-Dateiname: '
   log_audio_file_selected: 'Gewählte Audiodatei: '
