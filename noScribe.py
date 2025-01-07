@@ -521,7 +521,7 @@ class App(ctk.CTk):
         if last_language in languages.keys():
             self.option_menu_language.set(last_language)
         else:
-            self.option_menu_language.set('auto')
+            self.option_menu_language.set('Auto')
         
         # Whisper Model Selection   
         class CustomCTkOptionMenu(ctk.CTkOptionMenu):
