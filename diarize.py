@@ -29,6 +29,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
     
 app_dir = os.path.abspath(os.path.dirname(__file__))
+os.chdir(app_dir)
 
 device = sys.argv[1]
 audio_file = sys.argv[2]

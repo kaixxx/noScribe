@@ -1143,7 +1143,7 @@ class App(ctk.CTk):
 
                         diarize_output = os.path.join(tmpdir.name, 'diarize_out.yaml')
                         diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
-                        diarize_abspath_win = os.path.join(app_dir, 'diarize.exe')
+                        diarize_abspath_win = os.path.join(app_dir, '..', 'diarize.exe')
                         diarize_abspath_mac = os.path.join(app_dir, '..', 'MacOS', 'diarize')
                         diarize_abspath_lin = os.path.join(app_dir, 'diarize')
                         if platform.system() == 'Windows' and os.path.exists(diarize_abspath_win):
