@@ -3,7 +3,7 @@ zh-CN: &defaults
   welcome_message: 你好，noScribe已准备就绪！
   welcome_credits: >
 
-    版本号：%{v}，Kai Dröge 2023
+    版本号：%{v}，Kai Dröge %{y}
     
     由 Philipp Schneider 移植到 macOS
     

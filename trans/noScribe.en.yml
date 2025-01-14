@@ -3,7 +3,7 @@ en:
   welcome_message: Hi there, noScribe is ready!
   welcome_credits: >
     
-    Version %{v}, Kai Dröge 2023
+    Version %{v}, Kai Dröge %{y}
     
     ported to macOS by Philipp Schneider
     

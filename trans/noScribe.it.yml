@@ -3,7 +3,7 @@ it:
   welcome_message: Ciao! noScribe è pronto!
   welcome_credits: >
     
-    Versione %{v}, Kai Dröge 2023
+    Versione %{v}, Kai Dröge %{y}
     
     portato su macOS da Philipp Schneider
     

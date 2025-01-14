@@ -1,5 +1,5 @@
 # noScribe - AI-powered Audio Transcription
-# Copyright (C) 2023 Kai Dröge
+# Copyright (C) 2025 Kai Dröge
 # ported to MAC by Philipp Schneider (gernophil)
 
 # This program is free software: you can redistribute it and/or modify
@@ -69,6 +69,7 @@ logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
 app_version = '0.6'
+app_year = '2025'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 
 ctk.set_appearance_mode('dark')
@@ -669,7 +670,7 @@ class App(ctk.CTk):
         #self.frame_status.pack(padx=0, pady=[0,0], anchor='sw', fill='x', side='bottom')
 
         self.logn(t('welcome_message'), 'highlight')
-        self.log(t('welcome_credits', v=app_version))
+        self.log(t('welcome_credits', v=app_version, y=app_year))
         self.logn('https://github.com/kaixxx/noScribe', link='https://github.com/kaixxx/noScribe#readme')
         self.logn(t('welcome_instructions'))
         

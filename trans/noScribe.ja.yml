@@ -3,7 +3,7 @@ ja:
   welcome_message: こんにちは、noScribeが準備完了です！
   welcome_credits: >
     
-    バージョン %{v}、Kai Dröge 2023
+    バージョン %{v}、Kai Dröge %{y}
     
     ported to macOS by Philipp Schneider
     
