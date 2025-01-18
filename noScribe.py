@@ -64,6 +64,10 @@ if platform.system() == 'Darwin':
 import logging
 import json
 import urllib
+import multiprocessing
+
+ # Pyinstaller fix, used to open multiple instances on Mac
+multiprocessing.freeze_support()
 
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
