@@ -394,6 +394,7 @@ class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format h
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
+        self.intercative_mode = True  # False if started from command line
 
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         
@@ -869,6 +870,32 @@ class App(ctk.CTk):
         self.progress_textbox.insert(tk.END, progr_str)
         self.progress_textbox.configure(state=ctk.DISABLED)
 
+    def collect_job_options(self) -> dict:
+        # collect all the options from the ui
+        job = {}
+        job['audio_file'] = self.audio_file
+        job['transcript_file'] = self.transcript_file
+
+        # start / stop
+        val = self.entry_start.get()
+        if val == '':
+            job['start'] = 0
+        else:
+            job['start'] = millisec(val)
+        val = self.entry_stop.get()
+        if val == '':
+            job['stop'] = '0'
+        else:
+            job['stop'] = millisec(val)
+        
+        job['whisper_model'] = self.option_menu_whisper_model.get()        
+        job['language_name'] = self.option_menu_language.get()
+        job['speaker_detection'] = self.option_menu_speaker.get()
+        job['overlapping'] = self.check_box_overlapping.get()
+        job['timestamps'] = self.check_box_timestamps.get()
+        job['disfluencies'] = self.check_box_disfluencies.get()
+        job['pause'] = self.option_menu_pause._values.index(self.option_menu_pause.get())
+        return job
 
     ################################################################################################
     # Main function
@@ -894,26 +921,46 @@ class App(ctk.CTk):
         self.tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
 
         try:
+            job = self.collect_job_options()
+            print(job)
             # collect all the options
             option_info = ''
 
-            if self.audio_file == '':
+            if job['audio_file'] == '':
                 self.logn(t('err_no_audio_file'), 'error')
-                tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
+                if self.intercative_mode:
+                    tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
                 return
 
-            if self.transcript_file == '':
+            if job['transcript_file'] == '':
                 self.logn(t('err_no_transcript_file'), 'error')
-                tk.messagebox.showerror(title='noScribe', message=t('err_no_transcript_file'))
+                if self.intercative_mode:
+                    tk.messagebox.showerror(title='noScribe', message=t('err_no_transcript_file'))
                 return
 
-            self.my_transcript_file = self.transcript_file
-            self.file_ext = os.path.splitext(self.my_transcript_file)[1][1:]
+            self.file_ext = os.path.splitext(job['transcript_file'])[1][1:]
+
+#####################################################################################
+
+# Refactoring for new job dict done up to this point
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             # create log file
             if not os.path.exists(f'{config_dir}/log'):
                 os.makedirs(f'{config_dir}/log')
-            self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
+            self.log_file = open(f'{config_dir}/log/{Path(job['transcript_file']).stem}.log', 'w', encoding="utf-8")
 
             # options for faster-whisper
             self.whisper_beam_size = get_config('whisper_beam_size', 1)
@@ -1293,25 +1340,25 @@ class App(ctk.CTk):
                         raise TypeError(f'Invalid file type "{self.file_ext}".')
                     try:
                         if txt != '':
-                            with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
+                            with open(job['transcript_file'], 'w', encoding="utf-8") as f:
                                 f.write(txt)
                                 f.flush()
                             self.last_auto_save = datetime.datetime.now()
                     except Exception as e:
                         # other error while saving, maybe the file is already open in Word and cannot be overwritten
                         # try saving to a different filename
-                        transcript_path = Path(self.my_transcript_file)
-                        self.my_transcript_file = f'{transcript_path.parent}/{transcript_path.stem}_1{self.file_ext}'
-                        if os.path.exists(self.my_transcript_file):
+                        transcript_path = Path(job['transcript_file'])
+                        job['transcript_file'] = f'{transcript_path.parent}/{transcript_path.stem}_1{self.file_ext}'
+                        if os.path.exists(job['transcript_file']):
                             # the alternative filename also exists already, don't want to overwrite, giving up
                             raise Exception(t('rescue_saving_failed'))
                         else:
                             # htmlStr = d.asHTML()
-                            with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
+                            with open(job['transcript_file'], 'w', encoding="utf-8") as f:
                                 f.write(txt)
                                 f.flush()
                             self.logn()
-                            self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
+                            self.logn(t('rescue_saving', file=job['transcript_file']), 'error', link=f'file://{job['transcript_file']}')
                             self.last_auto_save = datetime.datetime.now()
 
                 try:
@@ -1446,7 +1493,7 @@ class App(ctk.CTk):
                                 save_doc()
                                 self.logn()
                                 self.log(t('transcription_saved'))
-                                self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
+                                self.logn(job['transcript_file'], link=f'file://{job['transcript_file']}')
 
                             raise Exception(t('err_user_cancelation')) 
 
@@ -1581,12 +1628,12 @@ class App(ctk.CTk):
                     self.logn()
                     self.logn()
                     self.logn(t('transcription_finished'), 'highlight')
-                    if self.transcript_file != self.my_transcript_file: # used alternative filename because saving under the initial name failed
+                    if self.intercative_mode and self.transcript_file != job['transcript_file']: # used alternative filename because saving under the initial name failed
                         self.log(t('rescue_saving'))
-                        self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
+                        self.logn(job['transcript_file'], link=f'file://{job['transcript_file']}')
                     else:
                         self.log(t('transcription_saved'))
-                        self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
+                        self.logn(job['transcript_file'], link=f'file://{job['transcript_file']}')
                     # log duration of the whole process
                     proc_time = datetime.datetime.now() - proc_start_time
                     proc_seconds = "{:02d}".format(int(proc_time.total_seconds() % 60))
@@ -1595,7 +1642,7 @@ class App(ctk.CTk):
 
                     # auto open transcript in editor
                     if (self.auto_edit_transcript == 'True') and (self.file_ext == 'html'):
-                        self.launch_editor(self.my_transcript_file)
+                        self.launch_editor(job['transcript_file'])
                 
                 except Exception as e:
                     self.logn()
