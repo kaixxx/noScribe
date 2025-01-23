@@ -867,7 +867,7 @@ class App(ctk.CTk):
         if progr < 0:
             progr_str = ''
         else:
-            progr_str = f'({t('overall_progress')}{round(progr * 100)}%)'
+            progr_str = f'({t("overall_progress")}{round(progr * 100)}%)'
         self.progress_textbox.configure(state=ctk.NORMAL)        
         self.progress_textbox.delete('1.0', tk.END)
         self.progress_textbox.insert(tk.END, progr_str)
