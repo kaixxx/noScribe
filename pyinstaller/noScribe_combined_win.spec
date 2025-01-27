@@ -9,23 +9,24 @@ block_cipher = None
 
 # noScribe:
 
-noScribe_datas = [('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/faster-whisper-large-v2', './models/faster-whisper-large-v2/'), 
-('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/faster-whisper-small', './models/faster-whisper-small/'), 
-('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/noScribeEdit', 'noScribeEdit/'), 
-('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/trans', 'trans/'), 
-('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/graphic_sw.png', '.'), 
-('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/LICENSE.txt', '.'), 
-('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/noScribeLogo.ico', '.'), 
-('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/prompt.yml', '.'), 
-('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/README.md', '.')]
+noScribe_datas = [
+('../models/precise/', './models/precise/'), 
+('../models/fast/', './models/fast/'), 
+('../noScribeEdit/', './noScribeEdit/'), 
+('../trans/', './trans/'), 
+('../graphic_sw.png', '.'), 
+('../LICENSE.txt', '.'), 
+('../noScribeLogo.ico', '.'), 
+('../prompt.yml', '.'), 
+('../README.md', '.')]
 noScribe_datas += collect_data_files('customtkinter')
 noScribe_datas += copy_metadata('AdvancedHTMLParser')
 noScribe_datas += collect_data_files('faster_whisper')
 
 noScribe_a = Analysis(
-    ['C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/noScribe.py'],
+    ['../noScribe.py'],
     pathex=[],
-    binaries=[('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/ffmpeg.exe', '.')],
+    binaries=[('../ffmpeg.exe', '.')],
     datas=noScribe_datas,
     hiddenimports=[],
     hookspath=[],
@@ -56,14 +57,12 @@ noScribe_exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['C:\\Users\\kai\\Documents\\Programmierung\\2023_WhisperTranscribe\\noScribe\\noScribeLogo.ico'],
+    icon=['../noScribeLogo.ico'],
 )
 
 # diarize:
 
-diarize_datas = [('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/pyannote_config.yaml', 'models/'), 
-    ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/pytorch_model.bin', 'models/'), 
-    ('C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/models/torch', 'models/torch/')]
+diarize_datas = [('../pyannote/', './pyannote/')] 
 diarize_binaries = []
 diarize_hiddenimports = []
 diarize_datas += collect_data_files('lightning')
@@ -73,10 +72,11 @@ diarize_datas += collect_data_files('librosa')
 diarize_datas += collect_data_files('pyannote')
 diarize_datas += copy_metadata('filelock')
 diarize_datas += copy_metadata('tqdm')
-diarize_datas += copy_metadata('regex')
+# diarize_datas += copy_metadata('regex')
 diarize_datas += copy_metadata('requests')
 diarize_datas += copy_metadata('packaging')
 diarize_datas += copy_metadata('numpy')
+diarize_datas += copy_metadata('scipy')
 diarize_datas += copy_metadata('tokenizers')
 diarize_datas += copy_metadata('pyannote.audio')
 diarize_datas += copy_metadata('pyannote.core')
@@ -85,11 +85,13 @@ diarize_datas += copy_metadata('pyannote.metrics')
 diarize_datas += copy_metadata('pyannote.pipeline')
 diarize_binaries += collect_dynamic_libs('pyannote')
 diarize_hiddenimports += collect_submodules('pyannote')
+diarize_hiddenimports += collect_submodules('scipy')
+# diarize_hiddenimports += ['scipy._lib.array_api_compat.numpy.fft']
 tmp_ret = collect_all('speechbrain')
 diarize_datas += tmp_ret[0]; diarize_binaries += tmp_ret[1]; diarize_hiddenimports += tmp_ret[2]
 
 diarize_a = Analysis(
-    ['C:/Users/kai/Documents/Programmierung/2023_WhisperTranscribe/noScribe/diarize.py'],
+    ['../diarize.py'],
     pathex=[],
     binaries=diarize_binaries,
     datas=diarize_datas,

@@ -3,7 +3,7 @@ zh-CN: &defaults
   welcome_message: 你好，noScribe已准备就绪！
   welcome_credits: >
 
-    版本号：%{v}，Kai Dröge 2023
+    版本号：%{v}，Kai Dröge %{y}
     
     由 Philipp Schneider 移植到 macOS
     
@@ -31,7 +31,8 @@ zh-CN: &defaults
 
   label_language: '语言：'
   label_speaker: '说话人识别：'
-  label_quality: '质量：'
+  label_whisper_model: '人工智能模型：'
+  label_add_custom_models: '添加人工智能模型...'  
   label_overlapping: '重叠发言：'
   label_pause: '马克停顿了一下：'
   label_timestamps: '时间戳：'

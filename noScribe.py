@@ -1,5 +1,5 @@
 # noScribe - AI-powered Audio Transcription
-# Copyright (C) 2023 Kai Dröge
+# Copyright (C) 2025 Kai Dröge
 # ported to MAC by Philipp Schneider (gernophil)
 
 # This program is free software: you can redistribute it and/or modify
@@ -46,7 +46,10 @@ if platform.system() == "Darwin": # = MAC
     if platform.machine() == "x86_64":
         os.environ['KMP_DUPLICATE_LIB_OK']='True' # prevent OMP: Error #15: Initializing libomp.dylib, but found libiomp5.dylib already initialized.
     # import torch.backends.mps # loading torch modules leads to segmentation fault later
+from faster_whisper.audio import decode_audio
+from faster_whisper.vad import VadOptions, get_speech_timestamps
 import AdvancedHTMLParser
+import html
 from threading import Thread
 import time
 from tempfile import TemporaryDirectory
@@ -61,12 +64,18 @@ if platform.system() == 'Darwin':
 import logging
 import json
 import urllib
+import multiprocessing
+
+ # Pyinstaller fix, used to open multiple instances on Mac
+multiprocessing.freeze_support()
 
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.5'
+app_version = '0.6'
+app_year = '2025'
 app_dir = os.path.abspath(os.path.dirname(__file__))
+
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
 
@@ -89,6 +98,68 @@ p, li { white-space: pre-wrap; }
 <body style="font-family: 'Arial'; font-weight: 400; font-style: normal" >
 </body>
 </html>"""
+
+languages = {
+    "Auto": "auto",
+    "Multilingual": "multilingual",
+    "Afrikaans": "af",
+    "Arabic": "ar",
+    "Armenian": "hy",
+    "Azerbaijani": "az",
+    "Belarusian": "be",
+    "Bosnian": "bs",
+    "Bulgarian": "bg",
+    "Catalan": "ca",
+    "Chinese": "zh",
+    "Croatian": "hr",
+    "Czech": "cs",
+    "Danish": "da",
+    "Dutch": "nl",
+    "English": "en",
+    "Estonian": "et",
+    "Finnish": "fi",
+    "French": "fr",
+    "Galician": "gl",
+    "German": "de",
+    "Greek": "el",
+    "Hebrew": "he",
+    "Hindi": "hi",
+    "Hungarian": "hu",
+    "Icelandic": "is",
+    "Indonesian": "id",
+    "Italian": "it",
+    "Japanese": "ja",
+    "Kannada": "kn",
+    "Kazakh": "kk",
+    "Korean": "ko",
+    "Latvian": "lv",
+    "Lithuanian": "lt",
+    "Macedonian": "mk",
+    "Malay": "ms",
+    "Marathi": "mr",
+    "Maori": "mi",
+    "Nepali": "ne",
+    "Norwegian": "no",
+    "Persian": "fa",
+    "Polish": "pl",
+    "Portuguese": "pt",
+    "Romanian": "ro",
+    "Russian": "ru",
+    "Serbian": "sr",
+    "Slovak": "sk",
+    "Slovenian": "sl",
+    "Spanish": "es",
+    "Swahili": "sw",
+    "Swedish": "sv",
+    "Tagalog": "tl",
+    "Tamil": "ta",
+    "Thai": "th",
+    "Turkish": "tr",
+    "Ukrainian": "uk",
+    "Urdu": "ur",
+    "Vietnamese": "vi",
+    "Welsh": "cy",
+}
 
 # config
 config_dir = appdirs.user_config_dir('noScribe')
@@ -230,7 +301,7 @@ def html_node_to_text(node: AdvancedHTMLParser.AdvancedTag) -> str:
     """
     # For text nodes, return their value directly
     if AdvancedHTMLParser.isTextNode(node): # node.nodeType == node.TEXT_NODE:
-        return node
+        return html.unescape(node)
     # For element nodes, recursively process their children
     elif AdvancedHTMLParser.isTagNode(node):
         text_parts = []
@@ -255,9 +326,7 @@ def html_to_text(parser: AdvancedHTMLParser.AdvancedHTMLParser) -> str:
 # Helper for WebVTT output
 
 def vtt_escape(txt: str) -> str:
-    txt = txt.replace('&', '&amp;')
-    txt = txt.replace('<', '&lt;')
-    txt = txt.replace('>', '&gt;')
+    txt = html.escape(txt)
     while txt.find('\n\n') > -1:
         txt = txt.replace('\n\n', '\n')
     return txt    
@@ -331,7 +400,15 @@ class App(ctk.CTk):
         super().__init__()
 
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
-
+        
+        self.user_models_dir = os.path.join(config_dir, 'whisper_models')
+        os.makedirs(self.user_models_dir, exist_ok=True)
+        whisper_models_readme = os.path.join(self.user_models_dir, 'readme.txt')
+        if not os.path.exists(whisper_models_readme):
+            with open(whisper_models_readme, 'w') as file:
+                file.write('You can download custom Whisper-models for the transcription into this folder. \n' 
+                           'See here for more information: https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription')            
+        
         self.audio_file = ''
         self.transcript_file = ''
         self.log_file = None
@@ -340,11 +417,11 @@ class App(ctk.CTk):
         # configure window
         self.title('noScribe - ' + t('app_header'))
         if platform.system() in ("Darwin", "Linux"):
-            self.geometry(f"{1100}x{725}")
+            self.geometry(f"{1100}x{765}")
         else:
-            self.geometry(f"{1100}x{650}")
+            self.geometry(f"{1100}x{690}")
         if platform.system() in ("Darwin", "Windows"):
-            self.iconbitmap('noScribeLogo.ico')
+            self.iconbitmap(os.path.join(app_dir, 'noScribeLogo.ico'))
         if platform.system() == "Linux":
             if hasattr(sys, "_MEIPASS"):
                 self.iconphoto(True, tk.PhotoImage(file=os.path.join(sys._MEIPASS, "noScribeLogo.png")))
@@ -376,14 +453,19 @@ class App(ctk.CTk):
         self.frame_main.pack(padx=0, pady=0, anchor='nw', expand=True, fill='both')
 
         # create sidebar frame for options
-        self.sidebar_frame = ctk.CTkFrame(self.frame_main, width=270, corner_radius=0, fg_color='transparent')
+        self.sidebar_frame = ctk.CTkFrame(self.frame_main, width=300, corner_radius=0, fg_color='transparent')
         self.sidebar_frame.pack(padx=0, pady=0, fill='y', expand=False, side='left')
 
+        # create options scrollable frame
+        self.scrollable_options = ctk.CTkScrollableFrame(self.sidebar_frame, width=300, corner_radius=0, fg_color='transparent')
+        self.scrollable_options.pack(padx=0, pady=0, anchor='w', fill='both', expand=True)
+        self.bind('<Configure>', self.on_resize) # Bind the configure event of options_frame to a check_scrollbar requirement function
+        
         # input audio file
-        self.label_audio_file = ctk.CTkLabel(self.sidebar_frame, text=t('label_audio_file'))
+        self.label_audio_file = ctk.CTkLabel(self.scrollable_options, text=t('label_audio_file'))
         self.label_audio_file.pack(padx=20, pady=[20,0], anchor='w')
 
-        self.frame_audio_file = ctk.CTkFrame(self.sidebar_frame, width=250, height=33, corner_radius=8, border_width=2)
+        self.frame_audio_file = ctk.CTkFrame(self.scrollable_options, width=260, height=33, corner_radius=8, border_width=2)
         self.frame_audio_file.pack(padx=20, pady=[0,10], anchor='w')
 
         self.button_audio_file_name = ctk.CTkButton(self.frame_audio_file, width=200, corner_radius=8, bg_color='transparent', 
@@ -393,13 +475,13 @@ class App(ctk.CTk):
         self.button_audio_file_name.place(x=3, y=3)
 
         self.button_audio_file = ctk.CTkButton(self.frame_audio_file, width=45, height=29, text='📂', command=self.button_audio_file_event)
-        self.button_audio_file.place(x=203, y=2)
+        self.button_audio_file.place(x=213, y=2)
 
         # input transcript file name
-        self.label_transcript_file = ctk.CTkLabel(self.sidebar_frame, text=t('label_transcript_file'))
+        self.label_transcript_file = ctk.CTkLabel(self.scrollable_options, text=t('label_transcript_file'))
         self.label_transcript_file.pack(padx=20, pady=[10,0], anchor='w')
 
-        self.frame_transcript_file = ctk.CTkFrame(self.sidebar_frame, width=250, height=33, corner_radius=8, border_width=2)
+        self.frame_transcript_file = ctk.CTkFrame(self.scrollable_options, width=260, height=33, corner_radius=8, border_width=2)
         self.frame_transcript_file.pack(padx=20, pady=[0,10], anchor='w')
 
         self.button_transcript_file_name = ctk.CTkButton(self.frame_transcript_file, width=200, corner_radius=8, bg_color='transparent', 
@@ -409,13 +491,15 @@ class App(ctk.CTk):
         self.button_transcript_file_name.place(x=3, y=3)
 
         self.button_transcript_file = ctk.CTkButton(self.frame_transcript_file, width=45, height=29, text='📂', command=self.button_transcript_file_event)
-        self.button_transcript_file.place(x=203, y=2)
+        self.button_transcript_file.place(x=213, y=2)
 
         # Options grid
-        self.frame_options = ctk.CTkFrame(self.sidebar_frame, width=250, fg_color='transparent')
+        self.frame_options = ctk.CTkFrame(self.scrollable_options, width=250, fg_color='transparent')
+        self.frame_options.pack_propagate(False)
         self.frame_options.pack(padx=20, pady=10, anchor='w', fill='x')
 
-        self.frame_options.grid_columnconfigure(0, weight=1)
+        # self.frame_options.grid_configure .resizable(width=False, height=True)
+        self.frame_options.grid_columnconfigure(0, weight=1, minsize=0)
         self.frame_options.grid_columnconfigure(1, weight=0)
 
         # Start/stop
@@ -436,19 +520,66 @@ class App(ctk.CTk):
         self.label_language = ctk.CTkLabel(self.frame_options, text=t('label_language'))
         self.label_language.grid(column=0, row=2, sticky='w', pady=5)
 
-        self.langs = ('auto', 'en (english)', 'zh (chinese)', 'de (german)', 'es (spanish)', 'ru (russian)', 'ko (korean)', 'fr (french)', 'ja (japanese)', 'pt (portuguese)', 'tr (turkish)', 'pl (polish)', 'ca (catalan)', 'nl (dutch)', 'ar (arabic)', 'sv (swedish)', 'it (italian)', 'id (indonesian)', 'hi (hindi)', 'fi (finnish)', 'vi (vietnamese)', 'he (hebrew)', 'uk (ukrainian)', 'el (greek)', 'ms (malay)', 'cs (czech)', 'ro (romanian)', 'da (danish)', 'hu (hungarian)', 'ta (tamil)', 'no (norwegian)', 'th (thai)', 'ur (urdu)', 'hr (croatian)', 'bg (bulgarian)', 'lt (lithuanian)', 'la (latin)', 'mi (maori)', 'ml (malayalam)', 'cy (welsh)', 'sk (slovak)', 'te (telugu)', 'fa (persian)', 'lv (latvian)', 'bn (bengali)', 'sr (serbian)', 'az (azerbaijani)', 'sl (slovenian)', 'kn (kannada)', 'et (estonian)', 'mk (macedonian)', 'br (breton)', 'eu (basque)', 'is (icelandic)', 'hy (armenian)', 'ne (nepali)', 'mn (mongolian)', 'bs (bosnian)', 'kk (kazakh)', 'sq (albanian)', 'sw (swahili)', 'gl (galician)', 'mr (marathi)', 'pa (punjabi)', 'si (sinhala)', 'km (khmer)', 'sn (shona)', 'yo (yoruba)', 'so (somali)', 'af (afrikaans)', 'oc (occitan)', 'ka (georgian)', 'be (belarusian)', 'tg (tajik)', 'sd (sindhi)', 'gu (gujarati)', 'am (amharic)', 'yi (yiddish)', 'lo (lao)', 'uz (uzbek)', 'fo (faroese)', 'ht (haitian   creole)', 'ps (pashto)', 'tk (turkmen)', 'nn (nynorsk)', 'mt (maltese)', 'sa (sanskrit)', 'lb (luxembourgish)', 'my (myanmar)', 'bo (tibetan)', 'tl (tagalog)', 'mg (malagasy)', 'as (assamese)', 'tt (tatar)', 'haw (hawaiian)', 'ln (lingala)', 'ha (hausa)', 'ba (bashkir)', 'jw (javanese)', 'su (sundanese)')
-
-        self.option_menu_language = ctk.CTkOptionMenu(self.frame_options, width=100, values=self.langs, dynamic_resizing=False)
+        self.option_menu_language = ctk.CTkOptionMenu(self.frame_options, width=100, values=list(languages.keys()), dynamic_resizing=False)
         self.option_menu_language.grid(column=1, row=2, sticky='e', pady=5)
-        self.option_menu_language.set(get_config('last_language', 'auto'))
+        last_language = get_config('last_language', 'auto')
+        if last_language in languages.keys():
+            self.option_menu_language.set(last_language)
+        else:
+            self.option_menu_language.set('Auto')
         
-        # Quality (Model Selection)
-        self.label_quality = ctk.CTkLabel(self.frame_options, text=t('label_quality'))
-        self.label_quality.grid(column=0, row=3, sticky='w', pady=5)
+        # Whisper Model Selection   
+        class CustomCTkOptionMenu(ctk.CTkOptionMenu):
+            # Custom version that reads available models on drop down
+            def __init__(self, noScribe_parent, master, width = 140, height = 28, corner_radius = None, bg_color = "transparent", fg_color = None, button_color = None, button_hover_color = None, text_color = None, text_color_disabled = None, dropdown_fg_color = None, dropdown_hover_color = None, dropdown_text_color = None, font = None, dropdown_font = None, values = None, variable = None, state = tk.NORMAL, hover = True, command = None, dynamic_resizing = True, anchor = "w", **kwargs):
+                super().__init__(master, width, height, corner_radius, bg_color, fg_color, button_color, button_hover_color, text_color, text_color_disabled, dropdown_fg_color, dropdown_hover_color, dropdown_text_color, font, dropdown_font, values, variable, state, hover, command, dynamic_resizing, anchor, **kwargs)
+                self.noScribe_parent = noScribe_parent
+                self.old_value = ''
 
-        self.option_menu_quality = ctk.CTkOptionMenu(self.frame_options, width=100, values=['precise', 'fast'])
-        self.option_menu_quality.grid(column=1, row=3, sticky='e', pady=5)
-        self.option_menu_quality.set(get_config('last_quality', 'precise'))
+            def _clicked(self, event=0):
+                self.old_value = self.get()
+                self._values = self.noScribe_parent.get_whisper_models()
+                self._values.append('--------------------')
+                self._values.append(t('label_add_custom_models'))
+                self._dropdown_menu.configure(values=self._values)
+                super()._clicked(event)
+                
+            def _dropdown_callback(self, value: str):
+                if value == self._values[-2]:  # divider
+                    return
+                if value == self._values[-1]:  # Add custom model
+                    # show custom model folder
+                    path = self.noScribe_parent.user_models_dir
+                    try:
+                        os_type = platform.system()
+                        if os_type == "Windows":
+                            os.startfile(path)
+                        elif os_type == "Darwin":
+                            run(["open", path])
+                        elif os_type == "Linux":
+                            run(["xdg-open", path])
+                        else:
+                            raise OSError(f"Unsupported operating system: {os_type}")
+                    except Exception as e:
+                        self.noScribe_parent.logn(f"Failed to open folder: {e}")
+                else:
+                    super()._dropdown_callback(value)
+        
+        self.label_whisper_model = ctk.CTkLabel(self.frame_options, text=t('label_whisper_model'))
+        self.label_whisper_model.grid(column=0, row=3, sticky='w', pady=5)
+
+        models = self.get_whisper_models()
+        self.option_menu_whisper_model = CustomCTkOptionMenu(self, 
+                                                       self.frame_options, 
+                                                       width=100,
+                                                       values=models,
+                                                       dynamic_resizing=False)
+        self.option_menu_whisper_model.grid(column=1, row=3, sticky='e', pady=5)
+        last_whisper_model = get_config('last_whisper_model', 'precise')
+        if last_whisper_model in models:
+            self.option_menu_whisper_model.set(last_whisper_model)
+        elif len(models) > 0:
+            self.option_menu_whisper_model.set(models[0])
 
         # Mark pauses
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
@@ -477,22 +608,34 @@ class App(ctk.CTk):
             self.check_box_overlapping.select()
         else:
             self.check_box_overlapping.deselect()
+            
+        # Disfluencies
+        self.label_disfluencies = ctk.CTkLabel(self.frame_options, text=t('label_disfluencies'))
+        self.label_disfluencies.grid(column=0, row=7, sticky='w', pady=5)
+
+        self.check_box_disfluencies = ctk.CTkCheckBox(self.frame_options, text = '')
+        self.check_box_disfluencies.grid(column=1, row=7, sticky='e', pady=5)
+        check_box_disfluencies = config.get('last_disfluencies', True)
+        if check_box_disfluencies:
+            self.check_box_disfluencies.select()
+        else:
+            self.check_box_disfluencies.deselect()
 
         # Timestamps in text
         self.label_timestamps = ctk.CTkLabel(self.frame_options, text=t('label_timestamps'))
-        self.label_timestamps.grid(column=0, row=7, sticky='w', pady=5)
+        self.label_timestamps.grid(column=0, row=8, sticky='w', pady=5)
 
         self.check_box_timestamps = ctk.CTkCheckBox(self.frame_options, text = '')
-        self.check_box_timestamps.grid(column=1, row=7, sticky='e', pady=5)
+        self.check_box_timestamps.grid(column=1, row=8, sticky='e', pady=5)
         check_box_timestamps = config.get('last_timestamps', False)
         if check_box_timestamps:
             self.check_box_timestamps.select()
         else:
             self.check_box_timestamps.deselect()
-
+        
         # Start Button
         self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
-        self.start_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
+        self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
 
         # Stop Button
         self.stop_button = ctk.CTkButton(self.sidebar_frame, height=42, fg_color='darkred', hover_color='darkred', text=t('stop_button'), command=self.button_stop_event)
@@ -520,7 +663,8 @@ class App(ctk.CTk):
         # Progress bar
         self.progress_textbox = ctk.CTkTextbox(self.frame_edit, wrap='none', height=15, state="disabled", font=("",16), text_color="lightgray")
         self.progress_textbox.pack(padx=[10,10], pady=[5,0], expand=True, fill='x', anchor='sw', side='left')
-        
+
+        self.update_scrollbar_visibility()        
         #self.progress_bar = ctk.CTkProgressBar(self.frame_edit, mode='determinate', progress_color='darkred', fg_color=self.log_textbox._fg_color)
         #self.progress_bar.set(0)
         # self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
@@ -530,7 +674,7 @@ class App(ctk.CTk):
         #self.frame_status.pack(padx=0, pady=[0,0], anchor='sw', fill='x', side='bottom')
 
         self.logn(t('welcome_message'), 'highlight')
-        self.log(t('welcome_credits', v=app_version))
+        self.log(t('welcome_credits', v=app_version, y=app_year))
         self.logn('https://github.com/kaixxx/noScribe', link='https://github.com/kaixxx/noScribe#readme')
         self.logn(t('welcome_instructions'))
         
@@ -553,6 +697,46 @@ class App(ctk.CTk):
             
     # Events and Methods
 
+    def get_whisper_models(self):
+        self.whisper_model_paths = {}
+        
+        def collect_models(dir):        
+            for entry in os.listdir(dir):
+                entry_path = os.path.join(dir, entry)
+                if os.path.isdir(entry_path):
+                    if entry in self.whisper_model_paths:
+                        self.logn(f'Ignored double name for whisper model: "{entry}"', 'error')
+                    else:
+                        self.whisper_model_paths[entry]=entry_path 
+       
+        # collect system models:
+        collect_models(os.path.join(app_dir, 'models'))
+        
+        # collect user defined models:        
+        collect_models(self.user_models_dir)
+
+        return list(self.whisper_model_paths.keys())
+    
+    def on_whisper_model_selected(self, value):
+        print(self.option_menu_whisper_model.old_value)
+        print(value)
+        
+    def on_resize(self, event):
+        self.update_scrollbar_visibility()
+
+    def update_scrollbar_visibility(self):
+        # Get the size of the scroll region and current canvas size
+        canvas = self.scrollable_options._parent_canvas  
+        scroll_region_height = canvas.bbox("all")[3]
+        canvas_height = canvas.winfo_height()        
+        
+        scrollbar = self.scrollable_options._scrollbar
+
+        if scroll_region_height > canvas_height:
+            scrollbar.grid()
+        else:
+            scrollbar.grid_remove()  # Hide the scrollbar if not needed    
+
     def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
@@ -568,7 +752,10 @@ class App(ctk.CTk):
         if platform.system() == 'Windows':
             program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit.exe')
         elif platform.system() == "Darwin": # = MAC
-            program = os.path.join(os.sep, 'Applications', 'noScribeEdit.app', 'Contents', 'MacOS', 'noScribeEdit')
+            # use local copy in development, installed one if used as an app:
+            program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit')
+            if not os.path.exists(program):
+                program = os.path.join(os.sep, 'Applications', 'noScribeEdit.app', 'Contents', 'MacOS', 'noScribeEdit')
         elif platform.system() == "Linux":
             if hasattr(sys, "_MEIPASS"):
                 program = os.path.join(sys._MEIPASS, 'noScribeEdit', "noScribeEdit")
@@ -599,7 +786,7 @@ class App(ctk.CTk):
 
     def log(self, txt: str = '', tags: list = [], where: str = 'both', link: str = '') -> None:
         """ Log to main window (where can be 'screen', 'file', or 'both') """
-        if where != 'file':
+        if where != 'file' and hasattr(self, 'log_textbox'):
             self.log_textbox.configure(state=ctk.NORMAL)
             if link != '':
                 tags = tags + self.hyperlink.add(partial(self.openLink, link))
@@ -673,12 +860,14 @@ class App(ctk.CTk):
                 progr = 0.05 # (step 1)
                 progr_factor = 0.95
             progr = progr + (value * progr_factor / 100)
+        if progr >= 1:
+            progr = 0.99 # whisper sometimes still needs some time to finish even if the progress is already at 100%. This can be confusing, so we never go above 99%...
 
         # Update progress_textbox
         if progr < 0:
             progr_str = ''
         else:
-            progr_str = f'({round(progr * 100)}%)'
+            progr_str = f'({t("overall_progress")}{round(progr * 100)}%)'
         self.progress_textbox.configure(state=ctk.NORMAL)        
         self.progress_textbox.delete('1.0', tk.END)
         self.progress_textbox.insert(tk.END, progr_str)
@@ -697,8 +886,8 @@ class App(ctk.CTk):
 
         # Show the stop button
         self.start_button.pack_forget() # hide
-        self.stop_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
-
+        self.stop_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+        
         # Show the progress bar
         # self.progress_bar.set(0)
         # self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
@@ -731,23 +920,14 @@ class App(ctk.CTk):
             self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
 
             # options for faster-whisper
-            self.whisper_precise_beam_size = get_config('whisper_precise_beam_size', 1)
-            self.logn(f'whisper precise beam size: {self.whisper_precise_beam_size}', where='file')
+            self.whisper_beam_size = get_config('whisper_beam_size', 1)
+            self.logn(f'whisper beam size: {self.whisper_beam_size}', where='file')
 
-            self.whisper_fast_beam_size = get_config('whisper_fast_beam_size', 1)
-            self.logn(f'whisper fast beam size: {self.whisper_fast_beam_size}', where='file')
+            self.whisper_temperature = get_config('whisper_temperature', 0.0)
+            self.logn(f'whisper temperature: {self.whisper_temperature}', where='file')
 
-            self.whisper_precise_temperature = get_config('whisper_precise_temperature', 0.0)
-            self.logn(f'whisper precise temperature: {self.whisper_precise_temperature}', where='file')
-
-            self.whisper_fast_temperature = get_config('whisper_fast_temperature', 0.0)
-            self.logn(f'whisper fast temperature: {self.whisper_fast_temperature}', where='file')
-
-            self.whisper_precise_compute_type = get_config('whisper_precise_compute_type', 'default')
-            self.logn(f'whisper precise compute type: {self.whisper_precise_compute_type}', where='file')
-
-            self.whisper_fast_compute_type = get_config('whisper_fast_compute_type', 'default')
-            self.logn(f'whisper fast compute type: {self.whisper_fast_compute_type}', where='file')
+            self.whisper_compute_type = get_config('whisper_compute_type', 'default')
+            self.logn(f'whisper compute type: {self.whisper_compute_type}', where='file')
 
             self.timestamp_interval = get_config('timestamp_interval', 60_000) # default: add a timestamp every minute
             self.logn(f'timestamp_interval: {self.timestamp_interval}', where='file')
@@ -768,33 +948,18 @@ class App(ctk.CTk):
                 self.stop = '0'
             else:
                 self.stop = millisec(val)
-                option_info += f'{t("label_stop")} {val} | '
+                option_info += f'{t("label_stop")} {val} | '          
+            
+            sel_whisper_model = self.option_menu_whisper_model.get()
+            if sel_whisper_model in self.whisper_model_paths.keys():
+                self.whisper_model = self.whisper_model_paths[sel_whisper_model]
+            else:                
+                raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
 
-            if self.option_menu_quality.get() == 'fast':
-                self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-small')
-                self.whisper_beam_size = self.whisper_fast_beam_size
-                self.whisper_temperature = self.whisper_fast_temperature
-                self.whisper_compute_type = self.whisper_fast_compute_type
-            else:
-                self.whisper_model = os.path.join(app_dir, 'models', 'faster-whisper-large-v2')
-                self.whisper_beam_size = self.whisper_precise_beam_size
-                self.whisper_temperature = self.whisper_precise_temperature
-                self.whisper_compute_type = self.whisper_precise_compute_type
-            option_info += f'{t("label_quality")} {self.option_menu_quality.get()} | '
+            option_info += f'{t("label_whisper_model")} {sel_whisper_model} | '
 
-            try:
-                with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
-                    prompts = yaml.safe_load(file)
-            except:
-                prompts = {}
-
-            self.language = self.option_menu_language.get()
-            if self.language != 'auto':
-                self.language = self.language[0:3].strip()
-
-            self.prompt = prompts.get(self.language, '') # Fetch language prompt, default to empty string
-
-            option_info += f'{t("label_language")} {self.language} | '
+            self.language_name = self.option_menu_language.get()
+            option_info += f'{t("label_language")} {self.language_name} ({languages[self.language_name]}) | '
 
             self.speaker_detection = self.option_menu_speaker.get()
             option_info += f'{t("label_speaker")} {self.speaker_detection} | '
@@ -804,6 +969,9 @@ class App(ctk.CTk):
 
             self.timestamps = self.check_box_timestamps.get()
             option_info += f'{t("label_timestamps")} {self.timestamps} | '
+            
+            self.disfluencies = self.check_box_disfluencies.get()
+            option_info += f'{t("label_disfluencies")} {self.disfluencies} | '
 
             self.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
             option_info += f'{t("label_pause")} {self.pause}'
@@ -875,7 +1043,7 @@ class App(ctk.CTk):
 
                     arguments = f' -loglevel warning -hwaccel auto -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le "{self.tmp_audio_file}"'
                     if platform.system() == 'Windows':
-                        ffmpeg_path = 'ffmpeg.exe'
+                        ffmpeg_path = os.path.join(app_dir, 'ffmpeg.exe')
                         ffmpeg_cmd = ffmpeg_path + arguments
                     elif platform.system() == "Darwin":  # = MAC
                         ffmpeg_path = os.path.join(app_dir, 'ffmpeg')
@@ -982,7 +1150,7 @@ class App(ctk.CTk):
 
                         diarize_output = os.path.join(tmpdir.name, 'diarize_out.yaml')
                         diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
-                        diarize_abspath_win = os.path.join(app_dir, 'diarize.exe')
+                        diarize_abspath_win = os.path.join(app_dir, '..', 'diarize.exe')
                         diarize_abspath_mac = os.path.join(app_dir, '..', 'MacOS', 'diarize')
                         diarize_abspath_lin = os.path.join(app_dir, 'diarize')
                         if platform.system() == 'Windows' and os.path.exists(diarize_abspath_win):
@@ -1105,7 +1273,7 @@ class App(ctk.CTk):
                 br = d.createElement('br')
                 s.appendChild(br)
 
-                s.appendText(f'({option_info})')
+                s.appendText(f'({html.escape(option_info)})')
 
                 p.appendChild(s)
                 main_body.appendChild(p)
@@ -1169,23 +1337,101 @@ class App(ctk.CTk):
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
 
-                    whisper_lang = self.language if self.language != 'auto' else None
-   
+                    multilingual = False
+                    if self.language_name == 'Multilingual':
+                        multilingual = True
+                        whisper_lang = None
+                    elif self.language_name == 'Auto':
+                        whisper_lang = None
+                    else:
+                        whisper_lang = languages[self.language_name]
+                    
+                    # VAD 
+                     
                     try:
                         self.vad_threshold = float(config['voice_activity_detection_threshold'])
                     except:
                         config['voice_activity_detection_threshold'] = '0.5'
-                        self.vad_threshold = 0.5
+                        self.vad_threshold = 0.5                     
+
+                    sampling_rate = model.feature_extractor.sampling_rate
+                    audio = decode_audio(self.tmp_audio_file, sampling_rate=sampling_rate)
+                    duration = audio.shape[0] / sampling_rate
+                    
+                    self.logn('Voice Activity Detection')
+                    try:
+                        vad_parameters = VadOptions(min_silence_duration_ms=1000, 
+                                                threshold=self.vad_threshold,
+                                                speech_pad_ms=0)
+                    except TypeError:
+                        # parameter threshold was temporarily renamed to 'onset' in pyannote 3.1:  
+                        vad_parameters = VadOptions(min_silence_duration_ms=1000, 
+                                                onset=self.vad_threshold,
+                                                speech_pad_ms=0)
+                    speech_chunks = get_speech_timestamps(audio, vad_parameters)
+                    
+                    def adjust_for_pause(segment):
+                        """Adjusts start and end of segment if it falls into a pause 
+                        identified by the VAD"""
+                        pause_extend = 0.2  # extend the pauses by 200ms to make the detection more robust
+                        
+                        # iterate through the pauses and adjust segment boundaries accordingly
+                        for i in range(0, len(speech_chunks)):
+                            pause_start = (speech_chunks[i]['end'] / sampling_rate) - pause_extend
+                            if i == (len(speech_chunks) - 1): 
+                                pause_end = duration + pause_extend # last segment, pause till the end
+                            else:
+                                pause_end = (speech_chunks[i+1]['start']  / sampling_rate) + pause_extend
+                            
+                            if pause_start > segment.end:
+                                break  # we moved beyond the segment, stop going further
+                            if segment.start > pause_start and segment.start < pause_end:
+                                segment.start = pause_end - pause_extend
+                            if segment.end > pause_start and segment.end < pause_end:
+                                segment.end = pause_start + pause_extend
+                        
+                        return segment
+                    
+                    # transcribe
+                    
+                    if self.cancel:
+                        raise Exception(t('err_user_cancelation')) 
+
+                    vad_parameters.speech_pad_ms = 400
+
+                    # detect language                    
+                    if self.language_name == 'auto':
+                        language, language_probability, all_language_probs = model.detect_language(
+                            audio,
+                            vad_filter=True,
+                            vad_parameters=vad_parameters
+                        )
+                        self.language = language
+                        self.logn("Detected language '%s' with probability %f" % (language, language_probability))
+
+                    if self.disfluencies:                    
+                        try:
+                            with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
+                                prompts = yaml.safe_load(file)
+                        except:
+                            prompts = {}
+                        self.prompt = prompts.get(languages[self.language_name], '') # Fetch language prompt, default to empty string
+                    else:
+                        self.prompt = ''
                     
                     segments, info = model.transcribe(
-                        self.tmp_audio_file, language=whisper_lang, 
-                        beam_size=1, temperature=self.whisper_temperature, word_timestamps=True, 
-                        initial_prompt=self.prompt, vad_filter=True,
-                        vad_parameters=dict(min_silence_duration_ms=200, 
-                                            onset=self.vad_threshold))
-
-                    if self.language == "auto":
-                        self.logn("Detected language '%s' with probability %f" % (info.language, info.language_probability))
+                        audio, 
+                        language=whisper_lang,
+                        multilingual=multilingual, 
+                        beam_size=5, 
+                        #temperature=self.whisper_temperature, 
+                        word_timestamps=True, 
+                        #initial_prompt=self.prompt,
+                        hotwords=self.prompt, 
+                        vad_filter=True,
+                        vad_parameters=vad_parameters,
+                        # length_penalty=0.5
+                    )
 
                     if self.cancel:
                         raise Exception(t('err_user_cancelation')) 
@@ -1205,8 +1451,10 @@ class App(ctk.CTk):
                                 self.logn()
                                 self.log(t('transcription_saved'))
                                 self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
-  
+
                             raise Exception(t('err_user_cancelation')) 
+
+                        segment = adjust_for_pause(segment)
 
                         # get time of the segment in milliseconds
                         start = round(segment.start * 1000.0)
@@ -1247,7 +1495,7 @@ class App(ctk.CTk):
                         # write text to the doc
                         # diarization (speaker detection)?
                         seg_text = segment.text
-                        seg_html = seg_text
+                        seg_html = html.escape(seg_text)
 
                         if self.speaker_detection != 'none':
                             new_speaker = find_speaker(diarization, start, end)
@@ -1256,11 +1504,11 @@ class App(ctk.CTk):
                                     prev_speaker = speaker
                                     speaker = new_speaker
                                     seg_text = f' {speaker}:{seg_text}'
-                                    seg_html = seg_text                                
+                                    seg_html = html.escape(seg_text)                                
                                 elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker 
                                     speaker = new_speaker
                                     seg_text = f'//{seg_text}'
-                                    seg_html = seg_text
+                                    seg_html = html.escape(seg_text)
                                 else: # new speaker, not overlapping
                                     if speaker[:2] == '//': # was overlapping speech, mark the end
                                         last_elem = p.lastElementChild
@@ -1277,33 +1525,33 @@ class App(ctk.CTk):
                                     speaker = new_speaker
                                     # add timestamp
                                     if self.timestamps:
-                                        seg_html = f'{speaker} <span style="color: {self.timestamp_color}" >{ts}</span>:{seg_text}'
-                                        seg_text = f'{speaker} {ts}:{seg_text}'
+                                        seg_html = f'{speaker}: <span style="color: {self.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
+                                        seg_text = f'{speaker}: {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
                                         if self.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
                                             seg_text = f'{speaker}:{seg_text}'
-                                            seg_html = seg_text
+                                            seg_html = html.escape(seg_text)
                                         else:
-                                            seg_html = seg_text.lstrip()
+                                            seg_html = html.escape(seg_text).lstrip()
                                             seg_text = f'{speaker}:{seg_text}'
                                         
                             else: # same speaker
                                 if self.timestamps:
                                     if (start - last_timestamp_ms) > self.timestamp_interval:
-                                        seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
+                                        seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
                                         seg_text = f' {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
-                                        seg_html = seg_text
+                                        seg_html = html.escape(seg_text)
 
                         else: # no speaker detection
                             if self.timestamps and (first_segment or (start - last_timestamp_ms) > self.timestamp_interval):
-                                seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{seg_text}'
+                                seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
                                 seg_text = f' {ts}{seg_text}'
                                 last_timestamp_ms = start
                             else:
-                                seg_html = seg_text
+                                seg_html = html.escape(seg_text)
                             # avoid leading whitespace in first paragraph
                             if first_segment:
                                 seg_text = seg_text.lstrip()
@@ -1371,7 +1619,7 @@ class App(ctk.CTk):
         finally:
             # hide the stop button
             self.stop_button.pack_forget() # hide
-            self.start_button.pack(padx=20, pady=[0,30], expand=True, fill='x', anchor='sw')
+            self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
 
             # hide progress
             self.set_progress(0, 0)
@@ -1400,10 +1648,11 @@ class App(ctk.CTk):
             # remember some settings for the next run
             config['last_language'] = self.option_menu_language.get()
             config['last_speaker'] = self.option_menu_speaker.get()
-            config['last_quality'] = self.option_menu_quality.get()
+            config['last_whisper_model'] = self.option_menu_whisper_model.get()
             config['last_pause'] = self.option_menu_pause.get()
             config['last_overlapping'] = self.check_box_overlapping.get()
             config['last_timestamps'] = self.check_box_timestamps.get()
+            config['last_disfluencies'] = self.check_box_disfluencies.get()
 
             save_config()
         finally:

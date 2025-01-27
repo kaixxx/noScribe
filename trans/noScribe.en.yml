@@ -3,7 +3,7 @@ en:
   welcome_message: Hi there, noScribe is ready!
   welcome_credits: >
     
-    Version %{v}, Kai Dröge 2023
+    Version %{v}, Kai Dröge %{y}
     
     ported to macOS by Philipp Schneider
     
@@ -34,15 +34,19 @@ en:
 
   label_language: 'Language:'
   label_speaker: 'Speaker detection:'
-  label_quality: 'Quality:'
+  label_whisper_model: 'Model:'
+  label_add_custom_models: 'Add AI model...'
   label_overlapping: 'Overlapping speech:'
   label_pause: 'Mark pause:'
   label_timestamps: 'Timestamps:'
+  label_disfluencies: 'Disfluencies:'
   
   
   start_button: Start 
   stop_button: Cancel
   editor_button: Editor
+
+  overall_progress: 'Overall progress: '
 
   # log messages
   log_transcript_filename: 'Transcript filename: '

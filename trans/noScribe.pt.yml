@@ -3,7 +3,7 @@ pt:
   welcome_message: Olá, o noScribe está pronto!
   welcome_credits: >
     
-    Versão %{v}, Kai Dröge 2023
+    Versão %{v}, Kai Dröge %{y}
     
     adaptado para macOS por Philipp Schneider
     
@@ -32,7 +32,8 @@ pt:
 
   label_language: 'Idioma:'
   label_speaker: 'Detecção de alto-falante:'
-  label_quality: 'Qualidade:'
+  label_whisper_model: 'Modelo:'
+  label_add_custom_models: 'Adicionar modelo de IA...'  
   label_overlapping: 'Sobreposição:'
   label_pause: 'Marcar pausas:'
   label_timestamps: 'Registos temporais:'

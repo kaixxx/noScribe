@@ -1,11 +1,11 @@
 # Install with `pip install -r requirements_linux.txt`
+torchaudio
 AdvancedHTMLParser
 appdirs
 customtkinter
 faster-whisper
 Pillow
-pyannote.audio @ git+https://github.com/kaixxx/pyannote-audio.git
+pyannote.audio>=3.3.2
 pyinstaller
 python-i18n
 PyYAML
-speechbrain==0.5.16 # incompatible with newer speechbrain versions

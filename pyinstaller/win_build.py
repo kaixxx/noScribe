@@ -3,16 +3,16 @@ import sys
 from subprocess import Popen
 from datetime import datetime
 
-noScribe_version = '0.5'
-clean_build = False
-run_pyinstaller_non_cuda = False
+noScribe_version = '0.6'
+clean_build = True
+run_pyinstaller_non_cuda = True
 run_pyinstaller_cuda = False
 run_nsis_non_cuda = True
 run_nsis_cuda = False
 
-conda_env_noncuda = 'noScribe_0_4'
-conda_env_cuda = 'noScribe_0_4_cuda'
-pyinstaller_path = 'C:\\users\\kai\\anaconda3\\envs\\noscribe_0_4\\lib\\site-packages\\pyinstaller'
+conda_env_noncuda = 'noScribe_0_6_non_cuda'
+conda_env_cuda = 'noScribe_0_6_cuda'
+pyinstaller_path = 'C:\\users\\kai\\anaconda3\\envs\\noScribe_0_6_non_cuda\\lib\\site-packages\\pyinstaller'
 nsis_path = 'C:\\Program Files (x86)\\NSIS\\makensis.exe'
 
 script_dir = os.path.abspath(os.path.dirname(__file__))

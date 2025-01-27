@@ -9,7 +9,7 @@
 !define VERSION "#*version*#"
 !define COPYRIGHT "Kai Dröge  (c) #*year*#"
 !define DESCRIPTION "noScribe - AI powered Audio Transcription"
-!define LICENSE_TXT "C:\Users\kai\Documents\Programmierung\2023_WhisperTranscribe\noScribe\dist\noScribe\LICENSE.txt"
+!define LICENSE_TXT "C:\Users\kai\Documents\Programmierung\2023_WhisperTranscribe\noScribe\LICENSE.txt"
 !define INSTALLER_NAME "#*installer_name*#"
 !define MAIN_APP_EXE "noScribe.exe"
 !define INSTALL_TYPE "SetShellVarContext current"
