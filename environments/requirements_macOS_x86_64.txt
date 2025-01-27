@@ -1,0 +1,12 @@
+# Install with `pip install -r requirements_macOS_x86_64.txt`
+AdvancedHTMLParser
+appdirs
+customtkinter
+faster-whisper
+Pillow
+pyannote.audio>=3.3.2
+pyinstaller
+pyobjc
+python-i18n
+PyYAML
+numpy<2

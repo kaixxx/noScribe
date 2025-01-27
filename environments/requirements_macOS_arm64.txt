@@ -1,4 +1,4 @@
-# Install with `pip install -r requirements_macOS.txt`
+# Install with `pip install -r requirements_macOS_arm64.txt`
 AdvancedHTMLParser
 appdirs
 customtkinter
