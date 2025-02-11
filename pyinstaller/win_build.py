@@ -6,9 +6,9 @@ from datetime import datetime
 noScribe_version = '0.6'
 clean_build = True
 run_pyinstaller_non_cuda = True
-run_pyinstaller_cuda = False
+run_pyinstaller_cuda = True
 run_nsis_non_cuda = True
-run_nsis_cuda = False
+run_nsis_cuda = True
 
 conda_env_noncuda = 'noScribe_0_6_non_cuda'
 conda_env_cuda = 'noScribe_0_6_cuda'
