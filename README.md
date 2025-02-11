@@ -5,7 +5,7 @@
 - An AI-based software that **transcribes interviews** for qualitative social research or journalistic use
 - noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html))
 - It runs **completely local** on your computer. No data is sent to the internet. No cloud, no worries
-- It can distinguish different **speakers** and understands 99 languages (more or less, see below)
+- It can distinguish different **speakers** and understands around 60 languages (more or less, see below)
 - It includes a **nice editor** to review, verify and correct the resulting transcript
 - It is standing on the shoulders of giants: [Whisper from OpenAI](https://github.com/openai/whisper), [faster-whisper by Guillaume Klein](https://github.com/guillaumekln/faster-whisper) and [pyannote from Hervé Bredin](https://github.com/pyannote/pyannote-audio)
 
@@ -15,11 +15,11 @@
 (The transcript is from [this interview](https://www.youtube.com/watch?v=vOwajAbvPzQ&t=2018s) which I did in May 2022 with the Russian sociologist Natalia Savelyeva.)
 
 ## Limitations 
-- noScribe needs a fairly up-to-date computer, or the transcription will take forever. (Consider letting it run over night on a slower machine.)
+- noScribe needs a fairly up-to-date computer, or the transcription will take very long. (Consider letting it run over night on a slower machine.)
 - Since it uses sophisticated AI models, the download is quite large – about 3.7 GB
 - Poor audio quality will lead to poor transcription results. 
 - No automatic transcription is perfect, there will always be some manual revision necessary. Use the [included Editor](#noscribeedit) to check your transcripts thouroughly. (See also ["Factors Influencing the Quality"](#factors-influencing-the-quality-of-the-transcription) and ["Known Issues"](#known-issues) below.)
-- If you want to know more an can understand German, Rebecca Schmidt from the University of Paderborn wrote a nice [review of noScribe,](https://sozmethode.hypotheses.org/2315) also discussing its limitations.
+- If you want to know more an can understand German, Rebecca Schmidt from the University of Paderborn wrote a nice [review of noScribe,](https://sozmethode.hypotheses.org/2315) also discussing its limitations. Also the German [computer magazine c't recommended noScribe in a recent review](https://www.heise.de/select/ct/2025/2/2433207582191637980). 
 
 ## Why the Name "noScribe"?
 The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) defines **scribe** as *"a person whose entire miserable existence has been reduced to academic grunge and pain".* I hope this software will make your academic life a little less painful and grungy, hence the name noScribe :)
@@ -76,17 +76,18 @@ Dröge, K. (2024). noScribe. AI-powered Audio Transcription (Version XXX) [Compu
 - Select your **audio file**. NoScribe supports almost any audio or video format.
 - Select the **filename for the transcript.** You can also choose the file type: *.html is the default, supported also by the noScribe editor. *.vtt is a video subtitles format and is especially useful if you want to import your transcript into [EXMARaLDA](https://exmaralda.org/) for further annotation. *.txt exports the transcript as plain text.
 - **Start** and **Stop** accept timestamps in the format hh:mm:ss. Use this to limit the transcription to a particular part of the recording. This is especially helpful for testing your settings with a small sample before committing to transcribing the whole interview, which may take several hours. Leave **Stop** empty if you want to transcribe until the end of the audio file.
-- **Language:** Select the language of your transcript or set it to 'auto'.
-- **Quality:** 'Precise' is the recommended setting for the most accurate transcript. On slower machines, you may opt for the 'fast' option. This will be quicker but might necessitate more manual revision later.
+- **Language:** Select the language of your transcript, set it to 'auto' to detect the language, or choose "multilingual" if your audio contains more than one language (experimental). 
+- **Quality:** 'Precise' is the recommended setting for the most accurate transcript. On slower machines, you may opt for the 'fast' option. This will be quicker but might necessitate more manual revision later. You can also [install custom models](https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription), fine-tuned for specific languages, etc. 
 - **Mark Pause**: If enabled, parts of your audio without voice activity will be marked as pauses. Pauses are transcribed as round brackets with one dot per second inside, e.g., '(..)' for a two-second pause. Pauses longer than 10 seconds are written out as '(XX seconds pause)' or '(XX minutes pause)'. You have the option to mark either pauses of one second and more ('1sec+'), two seconds and more ('2sec+'), or only the longer ones of three seconds and more ('3sec+'). Choose 'none' to disable this feature entirely.
 - **Speaker Detection:** This feature uses the Pyannote AI model to identify distinct speakers in your audio and organizes the transcript accordingly. Choose the number of speakers if known, or select 'auto.' Opting for 'none' bypasses this step altogether, reducing the processing time by approximately half. However, the resultant transcript will be a continuous block of text without any indicators of speaker transitions.
 - **Overlapping Speech**: If enabled, noScribe attempts to mark instances where two people speak simultaneously. The overlapping section is demarcated with //double slashes//. (Note: This is an experimental feature.)
+- **Disfluencies**: If enabled, common speech disfluencies like filler words ("um"), unfinished words or sentences, etc. will also be transcribed.    
 - **Timestamps**: When enabled, noScribe incorporates timestamps in the format [hh:mm:ss] into the transcript either at every change of speaker or every 60 seconds. I find these timestamps somewhat distracting, hence my decision to disable them by default. However, they can be quite useful in certain contexts. Even with timestamps disabled, determining the audio timecode for a specific segment is straightforward: simply open the transcript in the noScribe Editor, navigate through the text, and the corresponding timecode will appear in the bottom right corner of the app.
 
 ### Transcription process
 - If you are ready, click the **Start**-button in the bottom left. **Cancel** will abort the process. 
-- Be aware that **a one-hour interview can take two to five hours processing time** and will put a heavy load on your machine. Doing this on battery-power is not recommended.
-- A **progress bar** at the bottom of the app will show how far you are into the whole process. 
+- Be aware that **a one-hour interview can take up to three hours processing time** and will put a heavy load on your machine. Doing this on battery-power is not recommended.
+- A **progress indicator** at the bottom of the app will show how far you are into the whole process. 
 - The **main window** will log progress-messages and errors. It will also show the text of your interview during the last step of the transcription. 
 - The transcript will be auto saved every few seconds under the given filename.
 - By default, noScribe produces an HTML-file. This can be opened in every common word editor (including MS Word, LibreOffice) or QDA-package (MAXQDA, ATLAS.ti, QualCoder...). 
