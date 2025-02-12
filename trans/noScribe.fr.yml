@@ -32,7 +32,7 @@ fr:
   label_language: "Langue :"
   label_speaker: "Détection des locuteurs :"
   label_whisper_model: "Modèle :"
-  label_add_custom_models: 'Ajouter un modèle d'IA...'
+  label_add_custom_models: "Ajouter un modèle d'IA..."
   label_overlapping: 'Chevauchements de parole'
   label_pause: 'Marquer les pauses :'
   label_timestamps: 'Horodatage :'
