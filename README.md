@@ -100,37 +100,37 @@ The included editor to check the final transcript.
 ![The transcript in the noScribe Editor](img/noScribe_Editor.png)
 
 The noScribe Editor is a separate app. It will open automatically once the transcript is finished, but can also be run independent from noScribe. It contains some handy features to check your finished transcript for errors and correct them:
-- Press **Ctrl + Spacebar** or the **orange button in the toolbar** to hear the audio which corresponds to your current position in the text. 
+- Press **Ctrl + Spacebar** (^Space on Mac) or the **orange button in the toolbar** to hear the audio which corresponds to your current position in the text. 
 - The **selection of the text will follow the audio that you hear**. If you want to **make changes,** click anywhere in the text with your mouse or use the arrow keys to move the cursor. The audio will stop, and you can edit the text.
 - You can also **stop the audio** by pressing Ctrl + Spacebar again or clicking the orange button.
 - If you want to **speed up or slow down the audio**, change the "100%"-field next to the "Play/Pause Audio"-Button to the appropriate speed.
-- Use the loupe in the toolbar to **zoom in or out**
+- To change the **speaker names,** use the Search & Replace feature, accessible from the magnifying glass icon or the Edit menu.    
+- Use the plus und minus icons in the toolbar to **zoom in or out**
 - You will find the **most common features of a basic text editor** in the toolbar as well as in the menu at the top (basic text formatting, cut, copy & paste, undo & redo).
-- Your typical **hotkeys** will also work (e.g., Ctrl+S for Save). You can see all the hotkeys if you open the menu. As already mentioned, 'Ctrl+Space' is the hotkey you'll use the most as it starts or pauses the audio.
+- Your typical **hotkeys** will also work (e.g., Ctrl+S for Save, Ctrl+F for Find & Replace). You can see all the hotkeys if you open the menu. As already mentioned, 'Ctrl+Space' is the hotkey you'll use the most as it starts or pauses the audio.
 
 
 The source code of the editor can be found here: [https://github.com/kaixxx/noScribeEditor](https://github.com/kaixxx/noScribeEditor)
 
 ## Factors Influencing the Quality of the Transcription
 - A **good audio recording with clear voices and no ambient noise** is crucial for a high-quality transcription. Investing some effort in the quality of the recording will save you much time in the manual revision process later. 
-- Whisper (the AI powering noScribe) understands 99 different languages, but the quality of the transcription varies widely between them. **Spanish, Italian, English, Portuguese and German** are best supported (see [here for more info]( https://github.com/openai/whisper#available-models-and-languages)).
+- Whisper (the AI powering noScribe) understands around 60 different languages, but the quality of the transcription varies widely between them. **Spanish, Italian, English, Portuguese and German** are best supported (see [here for more info]( https://github.com/openai/whisper#available-models-and-languages)).
 - Whisper handles **dialects** fairly well (e.g., Swiss-German), but the transcript might need more manual work in the revision.
 
 ## Known Issues
 - The whisper AI can sometimes get **stuck in a loop of repeating text,** especially on longer audio files. If this happens, try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
-- **Multilingual audio** is not supported. If the language changes mid interview, whisper will actually try to translate the text, which is usually not what we want.
-- **Filler words** like "uhm" and especially **nonverbal expressions** like laughter are often not included in the transcript, although they are usually required for a good qualitative analysis. You must add these elements manually. (The identification of filler words works best if you select the correct language for the transcript, not "auto".) 
-- **Speaker identification:** In some recordings, the AI used by noScribe may not be able to tell the voices of certain speakers apart, even if they sound quite different to the human ear. It may also happen that noScribe identifies more speakers in a recording then there actually are. Check the results carefully.
-- The whisper AI can sometimes **hallucinate**, especially in silent parts of the recording when it interprets background noise as 'text' (see [this study from the Cornell University](https://facctconference.org/static/papers24/facct24-111.pdf) for more info about the issue). Check your transcripts carefully. 
+- **Multilingual audio**is now supported, but experimental.
+- **Nonverbal expressions** like laughter are not included in the transcript and must be added later in the editor if you need them. 
+- **Speaker identification:** In some recordings, the AI used by noScribe may not be able to tell the voices of certain speakers apart, even if they sound quite different to the human ear. Check the results carefully.
+- The whisper AI can sometimes **hallucinate**, especially in silent parts of the recording when it interprets background noise as 'text' (see [this study from the Cornell University](https://facctconference.org/static/papers24/facct24-111.pdf) for more info about the issue). 
 
 ## Advanced Options
 - After the app has run for the first time, you will find a file named **config.yml** in the user config directory (on windows: C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml; on Mac: "~/Library/Application Support/noscribe/config.yml"). Here, you can change a few **extra settings,** e.g., the language of the user interface.
-- **Prompts**: The whisper AI can be initialized with a short text-sequence called prompt (see [here for more info](https://platform.openai.com/docs/guides/speech-to-text/prompting)). This will influence the style of the following transcription. I tried to force the AI to include filler words like "uhm" in the transcription by giving it a prompt containing them (like "Umm, let me think like, hmm."). But this only worked on some occasions (whisper tends to 'forget' the prompt quite quickly). Prompts are language specific and will only be applied if you select a particular language (not 'auto'). You can change or add prompts for other languages in the file "prompt.yml" in the home directory of the app. Please don’t use prompts longer than one sentence since this will mess up the speaker separation.
 - Also in the user config directory you will find a folder named **log** with detailed log-files for every transcript (also unfinished ones). This can be helpful in the case of any errors. Be aware though that these files also contain the text of your transcripts which might include sensitive information. 
+- If you want to use **custom whisper models** with noScribe, follow the [instructions in the Wiki](https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription). 
 
 ## Development and Contribution
-- I developed noScribe in python 3.9
-- If you want to run noScribe directly from the source, I recommend setting up pyannote and all its dependencies first. You **must use my fork of pyannote,** which includes a small modification run on local files only.
+- I developed noScribe in python 3.12
 - I cannot host the whisper-models on GitHub because they are too large. There is a readme in the models-folder with instructions on how to get them. 
 - I am happy to review tests, bug reports and pull requests (if my time allows it)
 
