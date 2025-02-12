@@ -1,5 +1,13 @@
 # noScribe Changelog
 
+## version 0.6:
+- 3x faster transcription
+- new possibility to install custom models
+- new option: include or leave out speech disfluencies and filler words
+- Editor: Search & Replace feature to quickly change speaker names etc.
+- improved pause detection
+- many small fixes, improvements and updates
+
 ## version 0.5:
 - new WebVTT output (video subtitle format), allows also importing noScribe transcripts into EXMARaLDA
 - new plain text output (*.txt)
