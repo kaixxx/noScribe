@@ -32,9 +32,8 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 > All releases are hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 
 ### Windows
-**Note: Their seems to be an issue on Windows 10 (maybe even on some Win 11 maachines) that the blue start button in the bottom left is not be visible. If this happens to you, just make the window a little bigger (or go fullscreen). I will try to solve this issue in the next release.** 
-- The **general purpose version** for normal PCs without a NVIDIA graphics card: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fnon%20cuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fnon%20cuda) 
-- A special version using **CUDA acceleration on NVIDIA graphics cards** with at least 6 GB of VRAM: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fcuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FWindows%2Fcuda). You must also install the [CUDA toolkit from here](https://developer.nvidia.com/cuda-downloads?target_os=Windows) (a reboot is required afterwards).
+- The **general purpose version** for normal PCs without a NVIDIA graphics card: [https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fnormal](https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fnormal) 
+- A special version using **CUDA acceleration on NVIDIA graphics cards** with at least 6 GB of VRAM: [https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fcuda](https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fcuda). You must also install the [CUDA toolkit from here](https://developer.nvidia.com/cuda-downloads?target_os=Windows) (a reboot is required afterwards).
 - **Installation**: 
     - Start the downloaded setup file. This may take a while, be patient.
     - If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
@@ -43,7 +42,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 ### MacOS 
 ported by [gernophil](https://github.com/gernophil) </br>
 - **Newer Macs with Apple Silicon M1-M4 processors**
-    - Download: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Farm64%20(Apple%20Silicon)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Farm64%20(Apple%20Silicon))
+    - Download: [https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FmacOS%2Farm64%20(Apple%20Silicon)](https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FmacOS%2Farm64%20(Apple%20Silicon))
     - Double-click on the downloaded dmg-file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
     - You will need Apple's Rosetta2 Intel emulator since one component (ffmpeg) is still made the Intel CPUs. If you don't have it installed already, do this as follows:
         - Open the Terminal (located at `/Applications/Utilities/Terminal.app`).
@@ -51,6 +50,7 @@ ported by [gernophil](https://github.com/gernophil) </br>
         - Hit enter and follow the instructions on the screen.
     - Start noScribe and/or noScribeEdit by double-clicking the app within your applications.
 - **Older Macs with Intel processors**
+   **Note: V0.6 is currently not available for Intel-based Macs. The links below will lead to the previous version 0.5. We will update these links once we ironed out the issues.** 
     - for macOS Sonoma (14) and Sequoia (15): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel))
     - for macOS 11 (Big Sur), 12 (Monterey) and 13 (Ventura): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel))
     - Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
