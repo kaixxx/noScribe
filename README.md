@@ -28,7 +28,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 **Kai Dröge**, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).
 
 ## Download and Installation
-**Current Version Number: 0.5** (see [changelog](CHANGELOG.md))
+**Current Version Number: 0.6** (see [changelog](CHANGELOG.md))
 > All releases are hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 
 ### Windows
