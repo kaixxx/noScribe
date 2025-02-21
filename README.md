@@ -29,10 +29,6 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 
 ## Download and Installation
 
-----------------------------
-**IMPORTANT: The download provider, Switch Drive, may be unavailable today afternoon, Feb 21, 2025, from 14:00 to 18:00 for some important OS system updates. If you experience problems downloading noScribe, please try again later.**  
-----------------------------
-
 **Current Version Number: 0.6** (see [changelog](CHANGELOG.md))
 > All releases are hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 
