@@ -28,6 +28,11 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 **Kai Dröge**, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).
 
 ## Download and Installation
+
+----------------------------
+**IMPORTANT: The download provider, Switch Drive, may be unavailable today afternoon, Feb 21, 2025, from 14:00 to 18:00 for some important OS system updates. If you experience problems downloading noScribe, please try again later.**  
+----------------------------
+
 **Current Version Number: 0.6** (see [changelog](CHANGELOG.md))
 > All releases are hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 
