@@ -1627,9 +1627,9 @@ class App(ctk.CTk):
     def button_start_event(self):
         wkr = Thread(target=self.transcription_worker)
         wkr.start()
-        while wkr.is_alive():
-            self.update()
-            time.sleep(0.1)
+        #while wkr.is_alive():
+        #    self.update()
+        #    time.sleep(0.1)
     
     # End main function Button Start        
     ################################################################################################
