@@ -51,7 +51,8 @@ ported by [gernophil](https://github.com/gernophil) </br>
         - Hit enter and follow the instructions on the screen.
     - Start noScribe and/or noScribeEdit by double-clicking the app within your applications.
 - **Older Macs with Intel processors**</br>
-   **Note: Version 0.6 is currently not available for Intel-based Macs. The links below will lead to the previous version 0.5. We will update these links once we've ironed out the issues.** 
+   **Note: Version 0.6 on Intel based Macs is currently experimental and may not fully work. Please help us testing it. [You can download it here.](https://github.com/kaixxx/noScribe/discussions/143) </br> 
+    Otherwise, you can use the stable version version 0.5:** 
     - for macOS Sonoma (14) and Sequoia (15): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel))
     - for macOS 11 (Big Sur), 12 (Monterey) and 13 (Ventura): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel))
     - Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
