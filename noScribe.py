@@ -704,6 +704,9 @@ class App(ctk.CTk):
             for entry in os.listdir(dir):
                 entry_path = os.path.join(dir, entry)
                 if os.path.isdir(entry_path):
+                    if not os.path.isfile(os.path.join(entry_path, 'model.bin')):
+                        self.logn(f'Ignored model "{entry}" due to missing model.bin', 'error')
+                        continue
                     if entry in self.whisper_model_paths:
                         self.logn(f'Ignored double name for whisper model: "{entry}"', 'error')
                     else:
@@ -715,7 +718,10 @@ class App(ctk.CTk):
         # collect user defined models:        
         collect_models(self.user_models_dir)
 
-        return list(self.whisper_model_paths.keys())
+        models_list = list(self.whisper_model_paths.keys())
+        if not models_list:
+            raise Exception('Sorry, no way to run without any valid model')
+        return models_list
     
     def on_whisper_model_selected(self, value):
         print(self.option_menu_whisper_model.old_value)
