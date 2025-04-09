@@ -784,43 +784,39 @@ class App(ctk.CTk):
         else: 
             webbrowser.open(link)
     
-    def disable_log_textbox(self):
-        try:
-            if self.log_textbox.winfo_exists():
-                self.log_textbox.configure(state=tk.DISABLED)
-        except Exception as e:
-            print(f"Error disabling log_textbox: {e}")
 
 
     def log(self, txt: str = '', tags: list = [], where: str = 'both', link: str = '') -> None:
         """ Log to main window (where can be 'screen', 'file', or 'both') """
-        if where != 'file' and hasattr(self, 'log_textbox'):
+        
+        # Handle screen logging if requested and textbox exists
+        if where != 'file' and hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
             try:
-                # Ensure this is done on the main thread
-                if not self.log_textbox.winfo_exists():
-                    return  # Exit if widget does not exist
-
                 self.log_textbox.configure(state=tk.NORMAL)
-
+                
                 if link:
                     tags = tags + self.hyperlink.add(partial(self.openLink, link))
-
-
+                
                 self.log_textbox.insert(tk.END, txt, tags)
                 self.log_textbox.yview_moveto(1)  # Scroll to last line
-                self.log_textbox.after(0, self.disable_log_textbox)
+                self.log_textbox.configure(state=tk.DISABLED)
             except Exception as e:
-                print(f"Error updating log_textbox: {e}")
+                # Log screen errors only to file to prevent recursion
+                if where == 'both':
+                    self.log(f"Error updating log_textbox: {str(e)}", tags='error', where='file')
 
+        # Handle file logging if requested
         if where != 'screen' and self.log_file and not self.log_file.closed:
-
             try:
                 if tags == 'error':
                     txt = f'ERROR: {txt}'
                 self.log_file.write(txt)
                 self.log_file.flush()
             except Exception as e:
-                print(f"Error writing to log file: {e}")
+                # If we get here, both screen and file logging failed
+                # As a last resort, print to stderr to not lose the error
+                import sys
+                print(f"Critical error - both screen and file logging failed: {str(e)}", file=sys.stderr)
 
     def logn(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '') -> None:
         """ Log with a newline appended """
