@@ -783,21 +783,44 @@ class App(ctk.CTk):
             self.launch_editor(link[7:])
         else: 
             webbrowser.open(link)
+    
+    def disable_log_textbox(self):
+        try:
+            if self.log_textbox.winfo_exists():
+                self.log_textbox.configure(state=tk.DISABLED)
+        except Exception as e:
+            print(f"Error disabling log_textbox: {e}")
+
 
     def log(self, txt: str = '', tags: list = [], where: str = 'both', link: str = '') -> None:
         """ Log to main window (where can be 'screen', 'file', or 'both') """
         if where != 'file' and hasattr(self, 'log_textbox'):
-            self.log_textbox.configure(state=ctk.NORMAL)
-            if link != '':
-                tags = tags + self.hyperlink.add(partial(self.openLink, link))
-            self.log_textbox.insert(ctk.END, txt, tags)
-            self.log_textbox.yview_moveto(1) # scroll to last line
-            self.log_textbox.configure(state=ctk.DISABLED)
-        if (where != 'screen') and (self.log_file != None) and (self.log_file.closed == False):
-            if tags == 'error':
-                txt = f'ERROR: {txt}'
-            self.log_file.write(txt)
-            self.log_file.flush()
+            try:
+                # Ensure this is done on the main thread
+                if not self.log_textbox.winfo_exists():
+                    return  # Exit if widget does not exist
+
+                self.log_textbox.configure(state=tk.NORMAL)
+
+                if link:
+                    tags = tags + self.hyperlink.add(partial(self.openLink, link))
+
+
+                self.log_textbox.insert(tk.END, txt, tags)
+                self.log_textbox.yview_moveto(1)  # Scroll to last line
+                self.log_textbox.after(0, self.disable_log_textbox)
+            except Exception as e:
+                print(f"Error updating log_textbox: {e}")
+
+        if where != 'screen' and self.log_file and not self.log_file.closed:
+
+            try:
+                if tags == 'error':
+                    txt = f'ERROR: {txt}'
+                self.log_file.write(txt)
+                self.log_file.flush()
+            except Exception as e:
+                print(f"Error writing to log file: {e}")
 
     def logn(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '') -> None:
         """ Log with a newline appended """
