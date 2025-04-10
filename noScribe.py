@@ -799,7 +799,9 @@ class App(ctk.CTk):
                 
                 self.log_textbox.insert(tk.END, txt, tags)
                 self.log_textbox.yview_moveto(1)  # Scroll to last line
-                self.log_textbox.configure(state=tk.DISABLED)
+                
+                # Schedule disabling the textbox in the main thread
+                self.log_textbox.after(0, lambda: self.log_textbox.configure(state=tk.DISABLED))
             except Exception as e:
                 # Log screen errors only to file to prevent recursion
                 if where == 'both':
