@@ -65,6 +65,7 @@ import logging
 import json
 import urllib
 import multiprocessing
+import gc
 
  # Pyinstaller fix, used to open multiple instances on Mac
 multiprocessing.freeze_support()
@@ -72,7 +73,7 @@ multiprocessing.freeze_support()
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.6'
+app_version = '0.6.1'
 app_year = '2025'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -1419,8 +1420,11 @@ class App(ctk.CTk):
                     else:
                         self.prompt = ''
                     
+                    del audio
+                    gc.collect()
+                    
                     segments, info = model.transcribe(
-                        audio, 
+                        self.tmp_audio_file, # audio, 
                         language=whisper_lang,
                         multilingual=multilingual, 
                         beam_size=5, 
