@@ -63,7 +63,7 @@ ported by [gernophil](https://github.com/gernophil) </br>
     - From now on, both programs should start without issues.
 
 ### Linux
-ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](https://github.com/domna). Installation: [see these instructions by mael-lenoc](https://github.com/kaixxx/noScribe/discussions/83)
+ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](https://github.com/domna). Installation: [see these instructions by mael-lenoc](https://github.com/kaixxx/noScribe/discussions/83) (Please note that some Linux distributions encounter segfaults and the transcription fails. [Here](https://github.com/kaixxx/noScribe/pull/75) is a temporary workaround for that.)
 
 ### Old versions:
 - [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) 
