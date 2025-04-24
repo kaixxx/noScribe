@@ -29,8 +29,6 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 
 ## Download and Installation
 
-**Note: Since a power outage this morning in the SWITCHdrive data center, some people experience problems downloading noScribe (error message "Sorry for the short delay"). We are investigating the issue. Please leave a short note here if you have this issue: https://github.com/kaixxx/noScribe/issues/171. Thanks!** 
-
 **Current Version Number: 0.6** (see [changelog](CHANGELOG.md))
 > All releases are hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 
