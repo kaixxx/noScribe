@@ -761,7 +761,7 @@ class App(ctk.CTk):
             if hasattr(sys, "_MEIPASS"):
                 program = os.path.join(sys._MEIPASS, 'noScribeEdit', "noScribeEdit")
             else:
-                program = os.path.join(app_dir, 'noScribeEdit', "noScribeEdit")
+                program = os.path.join(app_dir, 'noScribeEdit', "noScribeEdit.py")
         kwargs = {}
         if platform.system() == 'Windows':
             # from msdn [1]
