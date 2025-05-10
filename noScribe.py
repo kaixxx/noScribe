@@ -772,10 +772,12 @@ class App(ctk.CTk):
             kwargs.update(start_new_session=True)
 
         if program is not None and os.path.exists(program):
+            popenargs = [program]
+            if platform.system() == "Linux":
+                popenargs = ['python3', program]
             if file != '':
-                Popen([program, file], **kwargs)
-            else:
-                Popen([program], **kwargs)
+                popenargs.append(file)
+            Popen(popenargs, **kwargs)
         else:
             self.logn(t('err_noScribeEdit_not_found'), 'error')
 
