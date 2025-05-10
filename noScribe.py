@@ -759,7 +759,7 @@ class App(ctk.CTk):
                 program = os.path.join(os.sep, 'Applications', 'noScribeEdit.app', 'Contents', 'MacOS', 'noScribeEdit')
         elif platform.system() == "Linux":
             if hasattr(sys, "_MEIPASS"):
-                program = os.path.join(sys._MEIPASS, 'noScribeEdit', "noScribeEdit")
+                program = os.path.join(sys._MEIPASS, 'noScribeEdit', "noScribeEdit.py")
             else:
                 program = os.path.join(app_dir, 'noScribeEdit', "noScribeEdit.py")
         kwargs = {}
