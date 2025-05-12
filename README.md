@@ -63,7 +63,44 @@ ported by [gernophil](https://github.com/gernophil) </br>
     - From now on, both programs should start without issues.
 
 ### Linux
-ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](https://github.com/domna). Installation: [see these instructions by mael-lenoc](https://github.com/kaixxx/noScribe/discussions/83) (Please note that some Linux distributions encounter segfaults and the transcription fails. [Here](https://github.com/kaixxx/noScribe/pull/75) is a temporary workaround for that.)
+ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](https://github.com/domna).
+
+**Installation:**
+
+Based on [instructions by mael-lenoc](https://github.com/kaixxx/noScribe/discussions/83)
+```shell
+# release ( must be > 0.6 in order to include the latest fixes for linux!)
+NOS_REL=0.6.1
+wget https://github.com/kaixxx/noScribe/archive/refs/tags/v${NOS_REL).tar.gz
+tar xvz -f v${NOS_REL).tar.gz
+cd noScribe-${NOS_REL)/  # from here on all happens in this directory
+
+# alternative: current main branch
+wget -O noScribe-main.zip https://github.com/kaixxx/noScribe/archive/refs/heads/main.zip
+unzip noScribe-main.zip
+cd noScribe-main # from here on all happens in this directory
+
+# install noScribeEdit
+rm -rf noScribeEdit/
+git clone https://github.com/kaixxx/noScribeEditor.git noScribeEdit
+
+# venv
+python3 -m venv .venv
+source .venv/bin/activate  # from here on all happens in the venv
+
+# requirements
+pip install -r environments/requirements_linux.txt
+pip install -r noScribeEdit/environments/requirements.txt
+
+# models/precise
+# this assumes you have git large file support enabled: apt install git-lfs
+rm -rf models/precise
+git clone https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo models/precise
+for f in config.json  model.bin  preprocessor_config.json  tokenizer.json  vocabulary.json; do wget -O models/fast/$f "https://huggingface.co/mukowaty/faster-whisper-int8/resolve/main/faster-whisper-large-v3-turbo-int8/${f}?download=true"; done
+
+# run
+python3 ./noScribe.py
+```
 
 ### Old versions:
 - [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) 
