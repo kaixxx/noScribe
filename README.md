@@ -69,10 +69,11 @@ ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](htt
 
 Based on [instructions by mael-lenoc](https://github.com/kaixxx/noScribe/discussions/83)
 ```shell
-# release v0.6 (is missing the latest patches for linux!)
-wget https://github.com/kaixxx/noScribe/archive/refs/tags/v0.6.tar.gz
-tar xvz -f v0.6.tar.gz
-cd noScribe-0.6/  # from here on all happens in this directory
+# release ( must be > 0.6 in order to include the latest fixes for linux!)
+NOS_REL=0.6.1
+wget https://github.com/kaixxx/noScribe/archive/refs/tags/v${NOS_REL).tar.gz
+tar xvz -f v${NOS_REL).tar.gz
+cd noScribe-${NOS_REL)/  # from here on all happens in this directory
 
 # alternative: current main branch
 wget -O noScribe-main.zip https://github.com/kaixxx/noScribe/archive/refs/heads/main.zip
