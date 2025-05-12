@@ -774,7 +774,7 @@ class App(ctk.CTk):
         if program is not None and os.path.exists(program):
             popenargs = [program]
             if platform.system() == "Linux":
-                popenargs = ['python3', program]
+                popenargs = [sys.executable, program]
             if file != '':
                 popenargs.append(file)
             Popen(popenargs, **kwargs)
