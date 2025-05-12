@@ -101,7 +101,6 @@ for f in config.json  model.bin  preprocessor_config.json  tokenizer.json  vocab
 # run
 python3 ./noScribe.py
 ```
-(Please note that some Linux distributions encounter segfaults and the transcription fails. [Here](https://github.com/kaixxx/noScribe/pull/75) is a temporary workaround for that.)
 
 ### Old versions:
 - [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) 
