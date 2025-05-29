@@ -1,19 +1,5 @@
-# for CPU:
-# torchaudio
-# for CUDA 12.1:
-torchaudio --index-url https://download.pytorch.org/whl/cu121 
-# If torch CPU has been installed before: 
-# pip uninstall torch torchaudio
-# pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121 --no-cache-dir
-AdvancedHTMLParser
-appdirs
-cpufeature
-customtkinter
-faster-whisper
-Pillow
-pyannote.audio>=3.3.2
-pyinstaller<=6.4.0 
-# The bootloader in the most recent version of pyinstaller is often falsely detected as malware
-# by anti virus software, so, it's safer to use a version that has been released a few months ago. 
-python-i18n
-PyYAML
+# First install torchaudio with one of the following:
+#   CUDA 11.8: `pip install --index-url https://download.pytorch.org/whl/cu118`
+#   CUDA 12.6: `pip install --index-url https://download.pytorch.org/whl/cu126`
+#   CUDA 12.8: `pip install --index-url https://download.pytorch.org/whl/cu128`
+# Second install the rest with `pip install -r requirements_win_cpu.txt`
