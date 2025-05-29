@@ -1,5 +1,5 @@
 # First install torchaudio with one of the following:
-#   CUDA 11.8: `pip install --index-url https://download.pytorch.org/whl/cu118`
-#   CUDA 12.6: `pip install --index-url https://download.pytorch.org/whl/cu126`
-#   CUDA 12.8: `pip install --index-url https://download.pytorch.org/whl/cu128`
+#   CUDA 11.8: `pip install torchaudio --index-url https://download.pytorch.org/whl/cu118`
+#   CUDA 12.6: `pip install torchaudio --index-url https://download.pytorch.org/whl/cu126`
+#   CUDA 12.8: `pip install torchaudio --index-url https://download.pytorch.org/whl/cu128`
 # Second install the rest with `pip install -r requirements_win_cpu.txt`
