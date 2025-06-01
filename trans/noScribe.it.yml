@@ -32,7 +32,7 @@ it:
   label_language: 'Lingua:'
   label_speaker: 'Rilevamento degli speaker:'
   label_whisper_model: 'Modello:'
-  label_add_custom_models: 'Aggiungi modello AI...'.
+  label_add_custom_models: 'Aggiungi modello AI...'
   label_overlapping: 'Discorso sovrapposto:'
   label_pause: 'Segna le pause:'
   label_timestamps: 'Timestamps:'
