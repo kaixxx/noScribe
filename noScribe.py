@@ -66,6 +66,7 @@ import json
 import urllib
 import multiprocessing
 import gc
+import traceback
 
  # Pyinstaller fix, used to open multiple instances on Mac
 multiprocessing.freeze_support()
@@ -73,7 +74,7 @@ multiprocessing.freeze_support()
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.6.1'
+app_version = '0.6.2'
 app_year = '2025'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -787,8 +788,10 @@ class App(ctk.CTk):
     
 
 
-    def log(self, txt: str = '', tags: list = [], where: str = 'both', link: str = '') -> None:
-        """ Log to main window (where can be 'screen', 'file', or 'both') """
+    def log(self, txt: str = '', tags: list = [], where: str = 'both', link: str = '', tb: str = '') -> None:
+        """ Log to main window (where can be 'screen', 'file', or 'both') 
+        tb = formatted traceback of the error, only logged to file
+        """
         
         # Handle screen logging if requested and textbox exists
         if where != 'file' and hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
@@ -806,31 +809,33 @@ class App(ctk.CTk):
             except Exception as e:
                 # Log screen errors only to file to prevent recursion
                 if where == 'both':
-                    self.log(f"Error updating log_textbox: {str(e)}", tags='error', where='file')
+                    self.log(f"Error updating log_textbox: {str(e)}\nOriginal error: {txt}", tags='error', where='file', tb=tb)
 
         # Handle file logging if requested
         if where != 'screen' and self.log_file and not self.log_file.closed:
             try:
                 if tags == 'error':
                     txt = f'ERROR: {txt}'
+                if tb != '':
+                    txt = f'{txt}\nTraceback:\n{tb}' 
                 self.log_file.write(txt)
                 self.log_file.flush()
             except Exception as e:
                 # If we get here, both screen and file logging failed
                 # As a last resort, print to stderr to not lose the error
                 import sys
-                print(f"Critical error - both screen and file logging failed: {str(e)}", file=sys.stderr)
+                print(f"Critical error - both screen and file logging failed: {str(e)}\nOriginal error: {txt}\nOriginal traceback:\n{tb}", file=sys.stderr)
 
-    def logn(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '') -> None:
+    def logn(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '', tb: str = '') -> None:
         """ Log with a newline appended """
-        self.log(f'{txt}\n', tags, where, link)
+        self.log(f'{txt}\n', tags, where, link, tb)
 
-    def logr(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '') -> None:
+    def logr(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '', tb: str = '') -> None:
         """ Replace the last line of the log """
         if where != 'file':
             self.log_textbox.configure(state=ctk.NORMAL)
             self.log_textbox.delete("end-1c linestart", "end-1c")
-        self.log(txt, tags, where, link)
+        self.log(txt, tags, where, link, tb)
 
     def button_audio_file_event(self):
         fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_file), initialfile=os.path.basename(self.audio_file))
@@ -1096,7 +1101,8 @@ class App(ctk.CTk):
                     self.set_progress(1, 50)
                 except Exception as e:
                     self.logn(t('err_converting_audio'), 'error')
-                    self.logn(e, 'error')
+                    traceback_str = traceback.format_exc()
+                    self.logn(e, 'error', tb=traceback_str)
                     return
 
                 #-------------------------------------------------------
@@ -1243,7 +1249,8 @@ class App(ctk.CTk):
 
                     except Exception as e:
                         self.logn(t('err_identifying_speakers'), 'error')
-                        self.logn(e, 'error')
+                        traceback_str = traceback.format_exc()
+                        self.logn(e, 'error', tb=traceback_str)
                         return
 
                 #-------------------------------------------------------
@@ -1629,7 +1636,8 @@ class App(ctk.CTk):
                 except Exception as e:
                     self.logn()
                     self.logn(t('err_transcription'), 'error')
-                    self.logn(e, 'error')
+                    traceback_str = traceback.format_exc()
+                    self.logn(e, 'error', tb=traceback_str)
                     return
 
             finally:
@@ -1638,7 +1646,8 @@ class App(ctk.CTk):
 
         except Exception as e:
             self.logn(t('err_options'), 'error')
-            self.logn(e, 'error')
+            traceback_str = traceback.format_exc()
+            self.logn(e, 'error', tb=traceback_str)
             return
 
         finally:
