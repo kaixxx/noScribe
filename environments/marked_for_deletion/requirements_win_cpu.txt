@@ -1,5 +1,7 @@
-# Install with `pip install -r requirements_win_cpu.txt`
-# torchaudio # install as dependency
+# for CPU:
+torchaudio
+# for CUDA 12.1:
+# torchaudio --index-url https://download.pytorch.org/whl/cu121 
 AdvancedHTMLParser
 appdirs
 cpufeature
