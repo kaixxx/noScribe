@@ -29,7 +29,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 
 ## Download and Installation
 
-**Current Version Number: 0.6** (see [changelog](CHANGELOG.md))
+**Current Version Number: 0.6.2** (see [changelog](CHANGELOG.md))
 > All releases are hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 
 ### Windows
@@ -51,7 +51,7 @@ ported by [gernophil](https://github.com/gernophil) </br>
         - Hit enter and follow the instructions on the screen.
     - Start noScribe and/or noScribeEdit by double-clicking the app within your applications.
 - **Older Macs with Intel processors**</br>
-   **Note: Version 0.6 on Intel based Macs is currently experimental and may not fully work. Please help us testing it. [You can download it here.](https://github.com/kaixxx/noScribe/discussions/143) </br> 
+   **Note: Version 0.6.2 on Intel based Macs is currently experimental and may not fully work. Please help us testing it. [You can download it here.](https://github.com/kaixxx/noScribe/discussions/143) </br> 
     Otherwise, you can use the stable version version 0.5:** 
     - for macOS Sonoma (14) and Sequoia (15): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel))
     - for macOS 11 (Big Sur), 12 (Monterey) and 13 (Ventura): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel))
@@ -64,43 +64,47 @@ ported by [gernophil](https://github.com/gernophil) </br>
 
 ### Linux
 ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](https://github.com/domna).
+- **Executable installation:**
+    - Download the CUDA or CPU version of noScribe 0.6.2 for Linux here: [https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FLinux](https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FLinux)
+    - Untar the file using the terminal command `tar -xzvf noScribe_0.6.2_cpu_linux_amd64.tar.gz` or `tar -xzvf noScribe_0.6.2_cuda_linux_amd64.tar.gz`.
+    - Execute noScribe using the terminal by `cd`ing into the noScribe folder and executing `./noScribe`.
+    - Optionally: Edit the files `noScribe.desktop` and `noScribeEdit.desktop` with a text editor and enter the complete path in the lines starting with `Exce=` and `Icon=`.
 
-**Installation:**
+- **Manual installation from source:**
+    Based on [instructions by mael-lenoc](https://github.com/kaixxx/noScribe/discussions/83)
+    ```shell
+    # release ( must be > 0.6 in order to include the latest fixes for linux!)
+    NOS_REL=0.6.1
+    wget https://github.com/kaixxx/noScribe/archive/refs/tags/v${NOS_REL).tar.gz
+    tar xvz -f v${NOS_REL).tar.gz
+    cd noScribe-${NOS_REL)/  # from here on all happens in this directory
 
-Based on [instructions by mael-lenoc](https://github.com/kaixxx/noScribe/discussions/83)
-```shell
-# release ( must be > 0.6 in order to include the latest fixes for linux!)
-NOS_REL=0.6.1
-wget https://github.com/kaixxx/noScribe/archive/refs/tags/v${NOS_REL).tar.gz
-tar xvz -f v${NOS_REL).tar.gz
-cd noScribe-${NOS_REL)/  # from here on all happens in this directory
+    # alternative: current main branch
+    wget -O noScribe-main.zip https://github.com/kaixxx/noScribe/archive/refs/heads/main.zip
+    unzip noScribe-main.zip
+    cd noScribe-main # from here on all happens in this directory
 
-# alternative: current main branch
-wget -O noScribe-main.zip https://github.com/kaixxx/noScribe/archive/refs/heads/main.zip
-unzip noScribe-main.zip
-cd noScribe-main # from here on all happens in this directory
+    # install noScribeEdit
+    rm -rf noScribeEdit/
+    git clone https://github.com/kaixxx/noScribeEditor.git noScribeEdit
 
-# install noScribeEdit
-rm -rf noScribeEdit/
-git clone https://github.com/kaixxx/noScribeEditor.git noScribeEdit
+    # venv
+    python3 -m venv .venv
+    source .venv/bin/activate  # from here on all happens in the venv
 
-# venv
-python3 -m venv .venv
-source .venv/bin/activate  # from here on all happens in the venv
+    # requirements
+    pip install -r environments/requirements_linux.txt
+    pip install -r noScribeEdit/environments/requirements.txt
 
-# requirements
-pip install -r environments/requirements_linux.txt
-pip install -r noScribeEdit/environments/requirements.txt
+    # models/precise
+    # this assumes you have git large file support enabled: apt install git-lfs
+    rm -rf models/precise
+    git clone https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo models/precise
+    for f in config.json  model.bin  preprocessor_config.json  tokenizer.json  vocabulary.json; do wget -O models/fast/$f "https://huggingface.co/mukowaty/faster-whisper-int8/resolve/main/faster-whisper-large-v3-turbo-int8/${f}?download=true"; done
 
-# models/precise
-# this assumes you have git large file support enabled: apt install git-lfs
-rm -rf models/precise
-git clone https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo models/precise
-for f in config.json  model.bin  preprocessor_config.json  tokenizer.json  vocabulary.json; do wget -O models/fast/$f "https://huggingface.co/mukowaty/faster-whisper-int8/resolve/main/faster-whisper-large-v3-turbo-int8/${f}?download=true"; done
-
-# run
-python3 ./noScribe.py
-```
+    # run
+    python3 ./noScribe.py
+    ```
 
 ### Old versions:
 - [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j) 
