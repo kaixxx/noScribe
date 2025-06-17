@@ -251,8 +251,7 @@ config['locale'] = app_locale
 if platform.system() == 'Windows':
     number_threads = cpufeature.CPUFeature["num_physical_cores"]
 elif platform.system() == "Linux":
-    number_threads = os.cpu_count()
-    number_threads = 4 if number_threads is None else number_threads
+    number_threads = os.cpu_count() if os.cpu_count() is not None else 4
 elif platform.system() == "Darwin": # = MAC
     if platform.machine() == "arm64":
         cpu_count = int(check_output(["sysctl", "-n", "hw.perflevel0.logicalcpu_max"]))
