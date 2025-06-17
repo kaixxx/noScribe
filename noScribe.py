@@ -247,11 +247,11 @@ i18n.set('fallback', 'en')
 i18n.set('locale', app_locale)
 config['locale'] = app_locale
 
-# determine optimal number of threads for faster-whisper (depending on cpu cores) 
+# determine optimal number of threads for faster-whisper (depending on cpu cores)
 if platform.system() == 'Windows':
-    number_threads = cpufeature.CPUFeature["num_physical_cores"]
+    number_threads = get_config('threads', cpufeature.CPUFeature["num_physical_cores"])
 elif platform.system() == "Linux":
-    number_threads = os.cpu_count() if os.cpu_count() is not None else 4
+    number_threads = get_config('threads', os.cpu_count() if os.cpu_count() is not None else 4)
 elif platform.system() == "Darwin": # = MAC
     if platform.machine() == "arm64":
         cpu_count = int(check_output(["sysctl", "-n", "hw.perflevel0.logicalcpu_max"]))
@@ -259,7 +259,7 @@ elif platform.system() == "Darwin": # = MAC
         cpu_count = int(check_output(["sysctl", "-n", "hw.logicalcpu_max"]))
     else:
         raise Exception("Unsupported mac")
-    number_threads = int(cpu_count * 0.75)
+    number_threads = get_config('threads', int(cpu_count * 0.75))
 else:
     raise Exception('Platform not supported yet.')
 
