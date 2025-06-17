@@ -774,7 +774,7 @@ class App(ctk.CTk):
 
         if program is not None and os.path.exists(program):
             popenargs = [program]
-            if platform.system() == "Linux":
+            if platform.system() == "Linux" and not hasattr(sys, "_MEIPASS"): # only do this, if you run as python script; Linux python vs. executable needs refinement
                 popenargs = [sys.executable, program]
             if file != '':
                 popenargs.append(file)
