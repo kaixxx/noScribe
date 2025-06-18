@@ -1,4 +1,5 @@
 #This defines an environment to execute Intel-accelerated Python on CPU
+# Prerequisite:  Intel Oneapi base toolkit
 #Intel reserves the cpu-only distro of pytorch to a separate pip index
 name: noscribe_intel_cpu # This will become the name of your environment
 channels:
