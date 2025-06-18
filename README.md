@@ -107,6 +107,11 @@ ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](htt
     ```
 
 - **Manual installation from source with conda:**
+  
+Optional: to get the Intel-accelerated Python and pytorch for CPU, you must first install the OneAPI base toolkit
+
+https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit-download.html?packages=oneapi-toolkit&oneapi-toolkit-os=linux&oneapi-lin=apt
+
     ```shell
     # release ( must be > 0.6 in order to include the latest fixes for linux!)
     NOS_REL=0.6
@@ -125,6 +130,9 @@ ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](htt
 
     # Create the conda environment and install requirements
     conda env create --file environments/requirements_linux.yaml
+
+    # Alternative: Create the conda environment and install Intel Python requirements
+    conda env create --file environments/requirements_intel_cpu.yaml
     
     # Activate the environment
     conda activate noscribe
