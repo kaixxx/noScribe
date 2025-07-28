@@ -37,3 +37,6 @@ diarize_x86_64_mod_unsigned
 
 .python-version
 /pyinstaller/win_installer
+
+# AI Assistant context files
+context.llm.md
