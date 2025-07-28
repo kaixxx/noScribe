@@ -414,6 +414,12 @@ class App(ctk.CTk):
         self.transcript_file = ''
         self.log_file = None
         self.cancel = False # if set to True, transcription will be canceled
+        
+        # Directory processing variables
+        self.directory_files = []  # List of files to process when directory is selected
+        self.current_file_index = 0  # Current file being processed
+        self.processing_directory = False  # Flag to indicate directory processing mode
+        self.audio_directory = ''  # Directory path when processing directory
 
         # configure window
         self.title('noScribe - ' + t('app_header'))
@@ -863,12 +869,157 @@ class App(ctk.CTk):
         
         return output_filename
 
+    def get_audio_files_from_directory(self, directory):
+        """Recursively find all audio files in directory"""
+        audio_extensions = {'.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aiff'}
+        audio_files = []
+        
+        for root, dirs, files in os.walk(directory):
+            for file in files:
+                if os.path.splitext(file)[1].lower() in audio_extensions:
+                    audio_files.append(os.path.join(root, file))
+        
+        return audio_files
+
+    def show_directory_warning(self, file_count):
+        """Show warning dialog for directory processing"""
+        result = tk.messagebox.askyesno(
+            title=t('dir_warning_title'),
+            message=t('dir_warning_message').replace('%{count}', str(file_count))
+        )
+        return result
+
+    def process_single_file(self, audio_file, transcript_file):
+        """Process a single audio file with the given transcript file path"""
+        # Set up for this file
+        self.audio_file = audio_file
+        self.transcript_file = transcript_file
+        self.my_transcript_file = transcript_file
+        self.file_ext = os.path.splitext(self.my_transcript_file)[1][1:]
+        
+        # Create log file for this file
+        if not os.path.exists(f'{config_dir}/log'):
+            os.makedirs(f'{config_dir}/log')
+        self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
+        
+        # Continue with normal transcription logic
+        # (The rest of transcription_worker will process this file)
+
+    def directory_processing_worker(self):
+        """Process all files in a directory"""
+        proc_start_time = datetime.datetime.now()
+        self.cancel = False
+
+        # Show the stop button
+        self.start_button.pack_forget() # hide
+        self.stop_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+
+        try:
+            if not self.directory_files:
+                self.logn(t('err_no_audio_file'), 'error')
+                tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
+                return
+            
+            # Process files in directory
+            self.logn(t('dir_processing_files', count=len(self.directory_files)))
+            
+            for i, audio_file in enumerate(self.directory_files):
+                if self.cancel:
+                    break
+                
+                self.logn(t('dir_file_progress', current=i+1, total=len(self.directory_files), filename=os.path.basename(audio_file)))
+                
+                # Auto-generate transcript filename if enabled
+                if self.check_box_auto_filename.get():
+                    if not ('last_filetype' in config):
+                        config['last_filetype'] = 'html'
+                    transcript_file = self.generate_auto_filename(audio_file, config['last_filetype'])
+                else:
+                    # For directory processing, we need a transcript file
+                    self.logn(t('err_no_transcript_file'), 'error')
+                    tk.messagebox.showerror(title='noScribe', message=t('err_no_transcript_file'))
+                    return
+                
+                # Process this file using the existing transcription logic
+                self.process_single_file(audio_file, transcript_file)
+                
+                # Call the transcription worker for this file
+                # We need to temporarily set the processing_directory flag to False
+                # so the transcription worker processes this single file
+                original_processing_directory = self.processing_directory
+                self.processing_directory = False
+                
+                try:
+                    # Call the transcription worker for this file
+                    self.transcription_worker()
+                finally:
+                    # Restore the processing directory flag
+                    self.processing_directory = original_processing_directory
+                
+                # Close the log file for this file
+                if self.log_file:
+                    self.log_file.close()
+                    self.log_file = None
+            
+            # Log completion
+            if not self.cancel:
+                self.logn()
+                self.logn(t('transcription_finished'), 'highlight')
+                proc_time = datetime.datetime.now() - proc_start_time
+                proc_seconds = "{:02d}".format(int(proc_time.total_seconds() % 60))
+                proc_time_str = f'{int(proc_time.total_seconds() // 60)}:{proc_seconds}' 
+                self.logn(t('trancription_time', duration=proc_time_str))
+        
+        except Exception as e:
+            self.logn(t('err_transcription'), 'error')
+            traceback_str = traceback.format_exc()
+            self.logn(e, 'error', tb=traceback_str)
+        
+        finally:
+            # hide the stop button
+            self.stop_button.pack_forget() # hide
+            self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+
+            # hide progress
+            self.set_progress(0, 0)
+
     def button_audio_file_event(self):
-        fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_file), initialfile=os.path.basename(self.audio_file))
+        # Allow both file and directory selection
+        fn = tk.filedialog.askopenfilename(
+            initialdir=os.path.dirname(self.audio_file), 
+            initialfile=os.path.basename(self.audio_file),
+            title="Select audio file or directory"
+        )
+        
         if fn:
-            self.audio_file = fn
-            self.logn(t('log_audio_file_selected') + self.audio_file)
-            self.button_audio_file_name.configure(text=os.path.basename(self.audio_file))
+            # Check if it's a directory
+            if os.path.isdir(fn):
+                # Get all audio files from directory
+                audio_files = self.get_audio_files_from_directory(fn)
+                
+                if not audio_files:
+                    tk.messagebox.showwarning("No Audio Files", "No audio files found in the selected directory.")
+                    return
+                
+                # Show warning dialog
+                if not self.show_directory_warning(len(audio_files)):
+                    return
+                
+                # Store directory and files for processing
+                self.audio_directory = fn
+                self.directory_files = audio_files
+                self.current_file_index = 0
+                self.processing_directory = True
+                
+                self.logn(f"Directory selected: {fn} ({len(audio_files)} files)")
+                self.button_audio_file_name.configure(text=f"📁 {os.path.basename(fn)} ({len(audio_files)} files)")
+                
+            else:
+                # Single file selection (existing behavior)
+                self.audio_file = fn
+                self.processing_directory = False
+                self.logn(t('log_audio_file_selected') + self.audio_file)
+                self.button_audio_file_name.configure(text=os.path.basename(self.audio_file))
 
     def button_transcript_file_event(self):
         # Check if auto-filename is enabled
@@ -968,6 +1119,7 @@ class App(ctk.CTk):
             # collect all the options
             option_info = ''
 
+            # Single file processing (existing logic)
             if self.audio_file == '':
                 self.logn(t('err_no_audio_file'), 'error')
                 tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
@@ -1699,8 +1851,14 @@ class App(ctk.CTk):
             self.set_progress(0, 0)
             
     def button_start_event(self):
-        wkr = Thread(target=self.transcription_worker)
-        wkr.start()
+        if self.processing_directory:
+            # Start directory processing worker
+            wkr = Thread(target=self.directory_processing_worker)
+            wkr.start()
+        else:
+            # Start single file processing worker
+            wkr = Thread(target=self.transcription_worker)
+            wkr.start()
         #while wkr.is_alive():
         #    self.update()
         #    time.sleep(0.1)
