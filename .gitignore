@@ -40,3 +40,6 @@ diarize_x86_64_mod_unsigned
 
 # AI Assistant context files
 context.llm.md
+
+# Virtual environment
+noScribe-env/
