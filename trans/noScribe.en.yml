@@ -85,7 +85,7 @@ en:
   
   # Directory processing
   dir_warning_title: 'Directory Processing Warning'
-  dir_warning_message: 'You have selected a directory. This will process all audio files in the directory and subdirectories.\n\nWarning: Existing transcript files will be overwritten.\n\nThis may take a long time to process. Do you want to continue?'
+  dir_warning_message: 'You have selected a directory. This will process all audio and video files in the directory and subdirectories.\n\nWarning: Existing transcript files will be overwritten.\n\nThis may take a long time to process. Do you want to continue?'
   dir_warning_start: 'Start Processing'
   dir_warning_cancel: 'Cancel'
   dir_processing_files: 'Processing %{count} files...'

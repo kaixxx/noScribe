@@ -870,13 +870,25 @@ class App(ctk.CTk):
         return output_filename
 
     def get_audio_files_from_directory(self, directory):
-        """Recursively find all audio files in directory"""
-        audio_extensions = {'.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aiff'}
+        """Recursively find all audio and video files in directory that ffmpeg can process"""
+        # Comprehensive list of file extensions that ffmpeg can handle
+        # This includes audio files, video files, and other media formats
+        supported_extensions = {
+            # Audio formats
+            '.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aiff', '.wma', '.opus', '.amr', '.ac3', '.dts',
+            # Video formats (ffmpeg can extract audio from these)
+            '.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v', '.3gp', '.ogv', '.ts', '.mts', '.m2ts',
+            # Other media formats
+            '.m4b', '.m4p', '.3g2', '.asf', '.divx', '.f4v', '.f4p', '.f4a', '.f4b',
+            # Professional formats
+            '.mxf', '.wav', '.bwf', '.aif', '.aiff', '.caf', '.pcm', '.raw', '.au', '.snd'
+        }
+        
         audio_files = []
         
         for root, dirs, files in os.walk(directory):
             for file in files:
-                if os.path.splitext(file)[1].lower() in audio_extensions:
+                if os.path.splitext(file)[1].lower() in supported_extensions:
                     audio_files.append(os.path.join(root, file))
         
         return audio_files
@@ -998,7 +1010,7 @@ class App(ctk.CTk):
                 audio_files = self.get_audio_files_from_directory(fn)
                 
                 if not audio_files:
-                    tk.messagebox.showwarning("No Audio Files", "No audio files found in the selected directory.")
+                    tk.messagebox.showwarning("No Media Files", "No audio or video files found in the selected directory.")
                     return
                 
                 # Show warning dialog
