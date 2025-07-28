@@ -41,6 +41,7 @@ en:
   label_timestamps: 'Timestamps:'
   label_disfluencies: 'Disfluencies:'
   
+  label_auto_filename: 'Use input file name as output'
   
   start_button: Start 
   stop_button: Cancel
