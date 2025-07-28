@@ -472,21 +472,24 @@ class App(ctk.CTk):
         self.label_audio_file = ctk.CTkLabel(self.scrollable_options, text=t('label_audio_file'))
         self.label_audio_file.pack(padx=20, pady=[20,0], anchor='w')
 
-        self.frame_audio_file = ctk.CTkFrame(self.scrollable_options, width=310, height=33, corner_radius=8, border_width=2)
+        self.frame_audio_file = ctk.CTkFrame(self.scrollable_options, width=260, height=33, corner_radius=8, border_width=2)
         self.frame_audio_file.pack(padx=20, pady=[0,10], anchor='w')
+        self.frame_audio_file.pack_propagate(False)  # Prevent frame from shrinking
 
-        self.button_audio_file_name = ctk.CTkButton(self.frame_audio_file, width=200, corner_radius=8, bg_color='transparent', 
+        self.button_audio_file_name = ctk.CTkButton(self.frame_audio_file, width=180, corner_radius=8, bg_color='transparent', 
                                                     fg_color='transparent', hover_color=self.frame_audio_file._bg_color, 
                                                     border_width=0, anchor='w',  
                                                     text=t('label_audio_file_name'), command=self.button_audio_file_event)
         self.button_audio_file_name.place(x=3, y=3)
 
-        self.button_audio_file = ctk.CTkButton(self.frame_audio_file, width=45, height=29, text='📂', command=self.button_audio_file_event)
-        self.button_audio_file.place(x=213, y=2)
-
-        # Add directory selection button
-        self.button_directory = ctk.CTkButton(self.frame_audio_file, width=45, height=29, text='📁', command=self.button_directory_event)
-        self.button_directory.place(x=263, y=2)
+        # File selection button (original functionality) - document icon for single file
+        self.button_audio_file = ctk.CTkButton(self.frame_audio_file, width=35, height=29, text='📄', command=self.button_audio_file_event)
+        self.button_audio_file.place(x=188, y=2)
+        
+        # Directory selection button (new functionality) - folder icon for directory (very compact)
+        self.button_directory = ctk.CTkButton(self.frame_audio_file, width=25, height=29, text='📁', 
+                                             command=self.button_directory_event)
+        self.button_directory.place(x=228, y=2)
 
         # input transcript file name
         self.label_transcript_file = ctk.CTkLabel(self.scrollable_options, text=t('label_transcript_file'))
@@ -501,7 +504,7 @@ class App(ctk.CTk):
                                                     text=t('label_transcript_file_name'), command=self.button_transcript_file_event)
         self.button_transcript_file_name.place(x=3, y=3)
 
-        self.button_transcript_file = ctk.CTkButton(self.frame_transcript_file, width=45, height=29, text='📂', command=self.button_transcript_file_event)
+        self.button_transcript_file = ctk.CTkButton(self.frame_transcript_file, width=45, height=29, text='📄', command=self.button_transcript_file_event)
         self.button_transcript_file.place(x=213, y=2)
 
         # Auto-filename checkbox
@@ -560,7 +563,6 @@ class App(ctk.CTk):
                 self.old_value = self.get()
                 self._values = self.noScribe_parent.get_whisper_models()
                 self._values.append('--------------------')
-                self._values.append(t('label_add_custom_models'))
                 self._dropdown_menu.configure(values=self._values)
                 super()._clicked(event)
                 
@@ -1041,6 +1043,8 @@ class App(ctk.CTk):
             
             self.logn(f"Directory selected: {dir_path} ({len(audio_files)} files)")
             self.button_audio_file_name.configure(text=f"📁 {os.path.basename(dir_path)} ({len(audio_files)} files)")
+
+
 
     def button_transcript_file_event(self):
         # Check if auto-filename is enabled
