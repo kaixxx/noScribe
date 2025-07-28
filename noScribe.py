@@ -494,6 +494,15 @@ class App(ctk.CTk):
         self.button_transcript_file = ctk.CTkButton(self.frame_transcript_file, width=45, height=29, text='📂', command=self.button_transcript_file_event)
         self.button_transcript_file.place(x=213, y=2)
 
+        # Auto-filename checkbox
+        self.check_box_auto_filename = ctk.CTkCheckBox(self.scrollable_options, text=t('label_auto_filename'))
+        self.check_box_auto_filename.pack(padx=20, pady=[0,10], anchor='w')
+        auto_filename = get_config('last_auto_filename', False)
+        if auto_filename:
+            self.check_box_auto_filename.select()
+        else:
+            self.check_box_auto_filename.deselect()
+
         # Options grid
         self.frame_options = ctk.CTkFrame(self.scrollable_options, width=250, fg_color='transparent')
         self.frame_options.pack_propagate(False)
@@ -838,6 +847,22 @@ class App(ctk.CTk):
             self.log_textbox.delete("end-1c linestart", "end-1c")
         self.log(txt, tags, where, link, tb)
 
+    def generate_auto_filename(self, input_file, output_format='html'):
+        """Generate output filename based on input file name"""
+        if not input_file:
+            return ''
+        
+        # Get the base name without extension
+        base_name = os.path.splitext(os.path.basename(input_file))[0]
+        
+        # Get the directory of the input file
+        input_dir = os.path.dirname(input_file)
+        
+        # Create output filename with correct extension
+        output_filename = os.path.join(input_dir, f"{base_name}.{output_format}")
+        
+        return output_filename
+
     def button_audio_file_event(self):
         fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_file), initialfile=os.path.basename(self.audio_file))
         if fn:
@@ -846,6 +871,20 @@ class App(ctk.CTk):
             self.button_audio_file_name.configure(text=os.path.basename(self.audio_file))
 
     def button_transcript_file_event(self):
+        # Check if auto-filename is enabled
+        if self.check_box_auto_filename.get() and self.audio_file:
+            # Auto-generate filename based on input file
+            if not ('last_filetype' in config):
+                config['last_filetype'] = 'html'
+            
+            auto_filename = self.generate_auto_filename(self.audio_file, config['last_filetype'])
+            if auto_filename:
+                self.transcript_file = auto_filename
+                self.logn(t('log_transcript_filename') + self.transcript_file)
+                self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_file))
+                return
+        
+        # Manual file selection (existing behavior)
         if self.transcript_file != '':
             _initialdir = os.path.dirname(self.transcript_file)
             _initialfile = os.path.basename(self.transcript_file)
@@ -1688,6 +1727,7 @@ class App(ctk.CTk):
             config['last_overlapping'] = self.check_box_overlapping.get()
             config['last_timestamps'] = self.check_box_timestamps.get()
             config['last_disfluencies'] = self.check_box_disfluencies.get()
+            config['last_auto_filename'] = self.check_box_auto_filename.get()
 
             save_config()
         finally:
