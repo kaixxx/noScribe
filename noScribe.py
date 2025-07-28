@@ -472,7 +472,7 @@ class App(ctk.CTk):
         self.label_audio_file = ctk.CTkLabel(self.scrollable_options, text=t('label_audio_file'))
         self.label_audio_file.pack(padx=20, pady=[20,0], anchor='w')
 
-        self.frame_audio_file = ctk.CTkFrame(self.scrollable_options, width=260, height=33, corner_radius=8, border_width=2)
+        self.frame_audio_file = ctk.CTkFrame(self.scrollable_options, width=310, height=33, corner_radius=8, border_width=2)
         self.frame_audio_file.pack(padx=20, pady=[0,10], anchor='w')
 
         self.button_audio_file_name = ctk.CTkButton(self.frame_audio_file, width=200, corner_radius=8, bg_color='transparent', 
@@ -483,6 +483,10 @@ class App(ctk.CTk):
 
         self.button_audio_file = ctk.CTkButton(self.frame_audio_file, width=45, height=29, text='📂', command=self.button_audio_file_event)
         self.button_audio_file.place(x=213, y=2)
+
+        # Add directory selection button
+        self.button_directory = ctk.CTkButton(self.frame_audio_file, width=45, height=29, text='📁', command=self.button_directory_event)
+        self.button_directory.place(x=263, y=2)
 
         # input transcript file name
         self.label_transcript_file = ctk.CTkLabel(self.scrollable_options, text=t('label_transcript_file'))
@@ -996,7 +1000,7 @@ class App(ctk.CTk):
             self.set_progress(0, 0)
 
     def button_audio_file_event(self):
-        # First try to select a file
+        """Single file selection event handler"""
         fn = tk.filedialog.askopenfilename(
             initialdir=os.path.dirname(self.audio_file), 
             initialfile=os.path.basename(self.audio_file),
@@ -1004,40 +1008,39 @@ class App(ctk.CTk):
         )
         
         if fn:
-            # Single file selection (existing behavior)
+            # Single file selection
             self.audio_file = fn
             self.processing_directory = False
             self.logn(t('log_audio_file_selected') + self.audio_file)
             self.button_audio_file_name.configure(text=os.path.basename(self.audio_file))
-        else:
-            # If no file selected, offer directory selection
-            dir_path = tk.filedialog.askdirectory(
-                initialdir=os.path.dirname(self.audio_file) if self.audio_file else os.path.expanduser("~"),
-                title="Select directory containing audio/video files"
-            )
+
+    def button_directory_event(self):
+        """Dedicated directory selection event handler"""
+        dir_path = tk.filedialog.askdirectory(
+            initialdir=os.path.dirname(self.audio_file) if self.audio_file else os.path.expanduser("~"),
+            title="Select directory containing audio/video files"
+        )
+        
+        if dir_path:
+            # Get all audio files from directory
+            audio_files = self.get_audio_files_from_directory(dir_path)
             
-            if dir_path:
-                # Check if it's a directory
-                if os.path.isdir(dir_path):
-                    # Get all audio files from directory
-                    audio_files = self.get_audio_files_from_directory(dir_path)
-                
-                    if not audio_files:
-                        tk.messagebox.showwarning("No Media Files", "No audio or video files found in the selected directory.")
-                        return
-                    
-                    # Show warning dialog
-                    if not self.show_directory_warning(len(audio_files)):
-                        return
-                    
-                    # Store directory and files for processing
-                    self.audio_directory = dir_path
-                    self.directory_files = audio_files
-                    self.current_file_index = 0
-                    self.processing_directory = True
-                    
-                    self.logn(f"Directory selected: {dir_path} ({len(audio_files)} files)")
-                    self.button_audio_file_name.configure(text=f"📁 {os.path.basename(dir_path)} ({len(audio_files)} files)")
+            if not audio_files:
+                tk.messagebox.showwarning("No Media Files", "No audio or video files found in the selected directory.")
+                return
+            
+            # Show warning dialog
+            if not self.show_directory_warning(len(audio_files)):
+                return
+            
+            # Store directory and files for processing
+            self.audio_directory = dir_path
+            self.directory_files = audio_files
+            self.current_file_index = 0
+            self.processing_directory = True
+            
+            self.logn(f"Directory selected: {dir_path} ({len(audio_files)} files)")
+            self.button_audio_file_name.configure(text=f"📁 {os.path.basename(dir_path)} ({len(audio_files)} files)")
 
     def button_transcript_file_event(self):
         # Check if auto-filename is enabled
