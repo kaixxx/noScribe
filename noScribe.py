@@ -416,8 +416,6 @@ class App(ctk.CTk):
         self.cancel = False
         self.processing_directory = False
         self.directory_files = []
-        self.paused = False
-        self.pause_requested = False
         
         # Directory processing variables
         self.current_file_index = 0  # Current file being processed
@@ -691,7 +689,7 @@ class App(ctk.CTk):
         self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
 
         # Stop Button
-        self.stop_button = ctk.CTkButton(self.sidebar_frame, height=42, fg_color='darkred', hover_color='darkred', text=t('pause_button'), command=self.button_pause_event)
+        self.stop_button = ctk.CTkButton(self.sidebar_frame, height=42, fg_color='darkred', hover_color='darkred', text=t('stop_button'), command=self.button_stop_event)
         
         # create log textbox
         self.log_frame = ctk.CTkFrame(self.frame_main, corner_radius=0, fg_color='transparent')
@@ -713,10 +711,7 @@ class App(ctk.CTk):
                                          text=t('editor_button'), command=self.launch_editor, width=140)
         self.edit_button.pack(padx=[20,10], pady=[10,10], expand=False, anchor='se', side='right')
 
-        # Batch Progress Label (floating in bottom right of log frame)
-        self.batch_progress_label = ctk.CTkLabel(self.log_frame, text="", fg_color='transparent', 
-                                                text_color='lightgray', font=("", 12))
-        self.batch_progress_label.pack_forget()  # Initially hidden
+
 
         # Progress bar
         self.progress_textbox = ctk.CTkTextbox(self.frame_edit, wrap='none', height=15, state="disabled", font=("",16), text_color="lightgray")
@@ -937,12 +932,9 @@ class App(ctk.CTk):
 
     def show_directory_warning(self, file_count):
         """Show warning dialog for directory processing"""
-        message = t('dir_warning_message').replace('%{count}', str(file_count))
-        # Fix newline characters
-        message = message.replace('\\n', '\n')
         result = tk.messagebox.askyesno(
             title=t('dir_warning_title'),
-            message=message
+            message=t('dir_warning_message').replace('%{count}', str(file_count))
         )
         return result
 
@@ -977,23 +969,14 @@ class App(ctk.CTk):
                 tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
                 return
             
-            # Verify settings before batch processing
-            if not self.verify_batch_settings():
-                self.logn(t('batch_canceled'), 'highlight')
-                return
+
             
             # Process files in directory
             self.logn(t('dir_processing_files', count=len(self.directory_files)))
             
-            # Show batch progress
-            self.show_batch_progress(1, len(self.directory_files))
-            
             for i, audio_file in enumerate(self.directory_files):
                 if self.cancel:
                     break
-                
-                # Update batch progress
-                self.update_batch_progress(i+1, len(self.directory_files))
                 
                 self.logn(t('dir_file_progress', current=i+1, total=len(self.directory_files), filename=os.path.basename(audio_file)))
                 
@@ -1038,8 +1021,7 @@ class App(ctk.CTk):
                 proc_time_str = f'{int(proc_time.total_seconds() // 60)}:{proc_seconds}' 
                 self.logn(t('trancription_time', duration=proc_time_str))
             
-            # Hide batch progress
-            self.hide_batch_progress()
+
         
         except Exception as e:
             self.logn(t('err_transcription'), 'error')
@@ -1182,9 +1164,7 @@ class App(ctk.CTk):
         self.start_button.pack_forget() # hide
         self.stop_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
         
-        # Reset pause state
-        self.paused = False
-        self.stop_button.configure(text=t('pause_button'), fg_color='darkred', hover_color='darkred')
+
         
         # Show the progress bar
         # self.progress_bar.set(0)
@@ -1758,14 +1738,7 @@ class App(ctk.CTk):
 
                             raise Exception(t('err_user_cancelation')) 
                         
-                        # check for pause
-                        if self.check_pause():
-                            if self.auto_save:
-                                save_doc()
-                                self.logn()
-                                self.log(t('transcription_saved'))
-                                self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
-                            raise Exception(t('err_user_cancelation'))
+
 
                         segment = adjust_for_pause(segment)
 
@@ -1962,17 +1935,7 @@ class App(ctk.CTk):
             self.update()
             self.cancel = True
 
-    def button_pause_event(self):
-        if not self.paused:
-            # Pause the transcription
-            self.paused = True
-            self.stop_button.configure(text=t('resume_button'), fg_color='darkgreen', hover_color='darkgreen')
-            self.logn(t('transcription_paused'), 'highlight')
-        else:
-            # Resume the transcription
-            self.paused = False
-            self.stop_button.configure(text=t('pause_button'), fg_color='darkred', hover_color='darkred')
-            self.logn(t('transcription_resumed'), 'highlight')
+
 
     def on_closing(self):
         # (see: https://stackoverflow.com/questions/111155/how-do-i-handle-the-window-close-event-in-tkinter)
@@ -2006,59 +1969,7 @@ class App(ctk.CTk):
             self.option_menu_auto_filename_format.grid_remove()
             self.check_box_auto_filename.configure(text=t('label_auto_filename'))
 
-    def check_pause(self):
-        """Check if transcription should be paused and wait if necessary"""
-        while self.paused and not self.cancel:
-            time.sleep(0.1)  # Small delay to prevent high CPU usage
-        return self.cancel  # Return True if canceled, False if resumed
 
-    def show_batch_progress(self, current, total):
-        """Show batch progress indicator"""
-        self.batch_progress_label.configure(text=f"File {current} of {total}")
-        self.batch_progress_label.pack(padx=20, pady=[0,10], anchor='se', side='bottom')
-
-    def update_batch_progress(self, current, total):
-        """Update batch progress indicator"""
-        self.batch_progress_label.configure(text=f"File {current} of {total}")
-
-    def hide_batch_progress(self):
-        """Hide batch progress indicator"""
-        self.batch_progress_label.pack_forget()
-
-    def verify_batch_settings(self):
-        """Verify settings before batch processing and show confirmation dialog"""
-        settings_summary = []
-        
-        # Check output format
-        if self.check_box_auto_filename.get():
-            selected_format = self.option_menu_auto_filename_format.get()
-            settings_summary.append(f"Output format: {selected_format}")
-        else:
-            settings_summary.append("Output format: Manual selection required")
-        
-        # Check language
-        language = self.option_menu_language.get()
-        settings_summary.append(f"Language: {language}")
-        
-        # Check model
-        model = self.option_menu_whisper_model.get()
-        settings_summary.append(f"Model: {model}")
-        
-        # Check speaker detection
-        speaker = self.option_menu_speaker.get()
-        settings_summary.append(f"Speaker detection: {speaker}")
-        
-        # Check other important settings
-        overlapping = "Enabled" if self.check_box_overlapping.get() else "Disabled"
-        settings_summary.append(f"Overlapping speech: {overlapping}")
-        
-        timestamps = "Enabled" if self.check_box_timestamps.get() else "Disabled"
-        settings_summary.append(f"Timestamps: {timestamps}")
-        
-        # Create message
-        message = "Batch processing settings:\n\n" + "\n".join(settings_summary) + "\n\nDo you want to continue with these settings?"
-        
-        return tk.messagebox.askyesno(title='Batch Settings Verification', message=message)
 
 if __name__ == "__main__":
 
