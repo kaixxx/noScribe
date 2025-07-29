@@ -413,13 +413,14 @@ class App(ctk.CTk):
         self.audio_file = ''
         self.transcript_file = ''
         self.log_file = None
-        self.cancel = False # if set to True, transcription will be canceled
+        self.cancel = False
+        self.processing_directory = False
+        self.directory_files = []
+        self.paused = False
+        self.pause_requested = False
         
         # Directory processing variables
-        self.directory_files = []  # List of files to process when directory is selected
         self.current_file_index = 0  # Current file being processed
-        self.processing_directory = False  # Flag to indicate directory processing mode
-        self.audio_directory = ''  # Directory path when processing directory
 
         # configure window
         self.title('noScribe - ' + t('app_header'))
@@ -507,14 +508,44 @@ class App(ctk.CTk):
         self.button_transcript_file = ctk.CTkButton(self.frame_transcript_file, width=45, height=29, text='📄', command=self.button_transcript_file_event)
         self.button_transcript_file.place(x=213, y=2)
 
-        # Auto-filename checkbox
-        self.check_box_auto_filename = ctk.CTkCheckBox(self.scrollable_options, text=t('label_auto_filename'))
-        self.check_box_auto_filename.pack(padx=20, pady=[0,10], anchor='w')
+        # Auto-filename checkbox and format dropdown (same line)
+        self.frame_auto_filename = ctk.CTkFrame(self.scrollable_options, fg_color='transparent')
+        self.frame_auto_filename.pack(padx=20, pady=[0,10], anchor='w', fill='x')
+        
+        # Configure grid for auto-filename frame
+        self.frame_auto_filename.grid_columnconfigure(0, weight=1, minsize=0)
+        self.frame_auto_filename.grid_columnconfigure(1, weight=0)
+        
+        self.check_box_auto_filename = ctk.CTkCheckBox(self.frame_auto_filename, text=t('label_auto_filename'))
+        self.check_box_auto_filename.grid(column=0, row=0, sticky='w', pady=5)
+        
+        self.option_menu_auto_filename_format = ctk.CTkOptionMenu(
+            self.frame_auto_filename, 
+            width=80,  # Wider width to fit "html" properly
+            values=['html', 'txt', 'vtt', 'srt'],
+            dynamic_resizing=False
+        )
+        self.option_menu_auto_filename_format.grid(column=1, row=0, sticky='e', pady=5)
+        
+        # Set default format
+        last_filetype = get_config('last_filetype', 'html')
+        if last_filetype in ['html', 'txt', 'vtt', 'srt']:
+            self.option_menu_auto_filename_format.set(last_filetype)
+        else:
+            self.option_menu_auto_filename_format.set('html')
+        
+        # Initialize checkbox state
         auto_filename = get_config('last_auto_filename', False)
         if auto_filename:
             self.check_box_auto_filename.select()
         else:
             self.check_box_auto_filename.deselect()
+        
+        # Bind checkbox to show/hide format dropdown
+        self.check_box_auto_filename.configure(command=self.on_auto_filename_checkbox_change)
+        
+        # Initially show/hide based on checkbox state
+        self.on_auto_filename_checkbox_change()
 
         # Options grid
         self.frame_options = ctk.CTkFrame(self.scrollable_options, width=250, fg_color='transparent')
@@ -660,7 +691,7 @@ class App(ctk.CTk):
         self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
 
         # Stop Button
-        self.stop_button = ctk.CTkButton(self.sidebar_frame, height=42, fg_color='darkred', hover_color='darkred', text=t('stop_button'), command=self.button_stop_event)
+        self.stop_button = ctk.CTkButton(self.sidebar_frame, height=42, fg_color='darkred', hover_color='darkred', text=t('pause_button'), command=self.button_pause_event)
         
         # create log textbox
         self.log_frame = ctk.CTkFrame(self.frame_main, corner_radius=0, fg_color='transparent')
@@ -681,6 +712,11 @@ class App(ctk.CTk):
         self.edit_button = ctk.CTkButton(self.frame_edit, fg_color=self.log_textbox._scrollbar_button_color, 
                                          text=t('editor_button'), command=self.launch_editor, width=140)
         self.edit_button.pack(padx=[20,10], pady=[10,10], expand=False, anchor='se', side='right')
+
+        # Batch Progress Label (floating in bottom right of log frame)
+        self.batch_progress_label = ctk.CTkLabel(self.log_frame, text="", fg_color='transparent', 
+                                                text_color='lightgray', font=("", 12))
+        self.batch_progress_label.pack_forget()  # Initially hidden
 
         # Progress bar
         self.progress_textbox = ctk.CTkTextbox(self.frame_edit, wrap='none', height=15, state="disabled", font=("",16), text_color="lightgray")
@@ -901,9 +937,12 @@ class App(ctk.CTk):
 
     def show_directory_warning(self, file_count):
         """Show warning dialog for directory processing"""
+        message = t('dir_warning_message').replace('%{count}', str(file_count))
+        # Fix newline characters
+        message = message.replace('\\n', '\n')
         result = tk.messagebox.askyesno(
             title=t('dir_warning_title'),
-            message=t('dir_warning_message').replace('%{count}', str(file_count))
+            message=message
         )
         return result
 
@@ -938,20 +977,31 @@ class App(ctk.CTk):
                 tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
                 return
             
+            # Verify settings before batch processing
+            if not self.verify_batch_settings():
+                self.logn(t('batch_canceled'), 'highlight')
+                return
+            
             # Process files in directory
             self.logn(t('dir_processing_files', count=len(self.directory_files)))
+            
+            # Show batch progress
+            self.show_batch_progress(1, len(self.directory_files))
             
             for i, audio_file in enumerate(self.directory_files):
                 if self.cancel:
                     break
                 
+                # Update batch progress
+                self.update_batch_progress(i+1, len(self.directory_files))
+                
                 self.logn(t('dir_file_progress', current=i+1, total=len(self.directory_files), filename=os.path.basename(audio_file)))
                 
                 # Auto-generate transcript filename if enabled
                 if self.check_box_auto_filename.get():
-                    if not ('last_filetype' in config):
-                        config['last_filetype'] = 'html'
-                    transcript_file = self.generate_auto_filename(audio_file, config['last_filetype'])
+                    # Use the selected format from the dropdown
+                    selected_format = self.option_menu_auto_filename_format.get()
+                    transcript_file = self.generate_auto_filename(audio_file, selected_format)
                 else:
                     # For directory processing, we need a transcript file
                     self.logn(t('err_no_transcript_file'), 'error')
@@ -987,6 +1037,9 @@ class App(ctk.CTk):
                 proc_seconds = "{:02d}".format(int(proc_time.total_seconds() % 60))
                 proc_time_str = f'{int(proc_time.total_seconds() // 60)}:{proc_seconds}' 
                 self.logn(t('trancription_time', duration=proc_time_str))
+            
+            # Hide batch progress
+            self.hide_batch_progress()
         
         except Exception as e:
             self.logn(t('err_transcription'), 'error')
@@ -1049,11 +1102,9 @@ class App(ctk.CTk):
     def button_transcript_file_event(self):
         # Check if auto-filename is enabled
         if self.check_box_auto_filename.get() and self.audio_file:
-            # Auto-generate filename based on input file
-            if not ('last_filetype' in config):
-                config['last_filetype'] = 'html'
-            
-            auto_filename = self.generate_auto_filename(self.audio_file, config['last_filetype'])
+            # Auto-generate filename based on input file and selected format
+            selected_format = self.option_menu_auto_filename_format.get()
+            auto_filename = self.generate_auto_filename(self.audio_file, selected_format)
             if auto_filename:
                 self.transcript_file = auto_filename
                 self.logn(t('log_transcript_filename') + self.transcript_file)
@@ -1130,6 +1181,10 @@ class App(ctk.CTk):
         # Show the stop button
         self.start_button.pack_forget() # hide
         self.stop_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+        
+        # Reset pause state
+        self.paused = False
+        self.stop_button.configure(text=t('pause_button'), fg_color='darkred', hover_color='darkred')
         
         # Show the progress bar
         # self.progress_bar.set(0)
@@ -1702,6 +1757,15 @@ class App(ctk.CTk):
                                 self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
 
                             raise Exception(t('err_user_cancelation')) 
+                        
+                        # check for pause
+                        if self.check_pause():
+                            if self.auto_save:
+                                save_doc()
+                                self.logn()
+                                self.log(t('transcription_saved'))
+                                self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
+                            raise Exception(t('err_user_cancelation'))
 
                         segment = adjust_for_pause(segment)
 
@@ -1898,6 +1962,18 @@ class App(ctk.CTk):
             self.update()
             self.cancel = True
 
+    def button_pause_event(self):
+        if not self.paused:
+            # Pause the transcription
+            self.paused = True
+            self.stop_button.configure(text=t('resume_button'), fg_color='darkgreen', hover_color='darkgreen')
+            self.logn(t('transcription_paused'), 'highlight')
+        else:
+            # Resume the transcription
+            self.paused = False
+            self.stop_button.configure(text=t('pause_button'), fg_color='darkred', hover_color='darkred')
+            self.logn(t('transcription_resumed'), 'highlight')
+
     def on_closing(self):
         # (see: https://stackoverflow.com/questions/111155/how-do-i-handle-the-window-close-event-in-tkinter)
         #if messagebox.askokcancel("Quit", "Do you want to quit?"):
@@ -1911,10 +1987,78 @@ class App(ctk.CTk):
             config['last_timestamps'] = self.check_box_timestamps.get()
             config['last_disfluencies'] = self.check_box_disfluencies.get()
             config['last_auto_filename'] = self.check_box_auto_filename.get()
+            if self.check_box_auto_filename.get():
+                config['last_filetype'] = self.option_menu_auto_filename_format.get()
 
             save_config()
         finally:
             self.destroy()
+
+    def on_auto_filename_checkbox_change(self):
+        if self.check_box_auto_filename.get():
+            # Show dropdown and change checkbox text
+            self.option_menu_auto_filename_format.grid(column=1, row=0, sticky='e', pady=5)
+            self.check_box_auto_filename.configure(text=t('label_autoname'))
+            # Force refresh to ensure widgets render properly
+            self.option_menu_auto_filename_format.update()
+        else:
+            # Hide dropdown and restore original checkbox text
+            self.option_menu_auto_filename_format.grid_remove()
+            self.check_box_auto_filename.configure(text=t('label_auto_filename'))
+
+    def check_pause(self):
+        """Check if transcription should be paused and wait if necessary"""
+        while self.paused and not self.cancel:
+            time.sleep(0.1)  # Small delay to prevent high CPU usage
+        return self.cancel  # Return True if canceled, False if resumed
+
+    def show_batch_progress(self, current, total):
+        """Show batch progress indicator"""
+        self.batch_progress_label.configure(text=f"File {current} of {total}")
+        self.batch_progress_label.pack(padx=20, pady=[0,10], anchor='se', side='bottom')
+
+    def update_batch_progress(self, current, total):
+        """Update batch progress indicator"""
+        self.batch_progress_label.configure(text=f"File {current} of {total}")
+
+    def hide_batch_progress(self):
+        """Hide batch progress indicator"""
+        self.batch_progress_label.pack_forget()
+
+    def verify_batch_settings(self):
+        """Verify settings before batch processing and show confirmation dialog"""
+        settings_summary = []
+        
+        # Check output format
+        if self.check_box_auto_filename.get():
+            selected_format = self.option_menu_auto_filename_format.get()
+            settings_summary.append(f"Output format: {selected_format}")
+        else:
+            settings_summary.append("Output format: Manual selection required")
+        
+        # Check language
+        language = self.option_menu_language.get()
+        settings_summary.append(f"Language: {language}")
+        
+        # Check model
+        model = self.option_menu_whisper_model.get()
+        settings_summary.append(f"Model: {model}")
+        
+        # Check speaker detection
+        speaker = self.option_menu_speaker.get()
+        settings_summary.append(f"Speaker detection: {speaker}")
+        
+        # Check other important settings
+        overlapping = "Enabled" if self.check_box_overlapping.get() else "Disabled"
+        settings_summary.append(f"Overlapping speech: {overlapping}")
+        
+        timestamps = "Enabled" if self.check_box_timestamps.get() else "Disabled"
+        settings_summary.append(f"Timestamps: {timestamps}")
+        
+        # Create message
+        message = "Batch processing settings:\n\n" + "\n".join(settings_summary) + "\n\nDo you want to continue with these settings?"
+        
+        return tk.messagebox.askyesno(title='Batch Settings Verification', message=message)
 
 if __name__ == "__main__":
 
