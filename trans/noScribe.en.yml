@@ -40,13 +40,13 @@ en:
   label_pause: 'Mark pause:'
   label_timestamps: 'Timestamps:'
   label_disfluencies: 'Disfluencies:'
-  label_auto_filename: 'Use input file name as output'
-  label_autoname: 'Autoname format:'
   label_output_format: 'Output format:'
   
   
   start_button: Start 
   stop_button: Cancel
+  pause_button: Pause
+  resume_button: Resume
   editor_button: Editor
 
   overall_progress: 'Overall progress: '
@@ -77,6 +77,9 @@ en:
   err_converting_audio: Error in step 1 - converting the audio.
   err_identifying_speakers: Error in step 2 - identifiying the speakers.
   transcription_canceled: 'Do you really want to cancel the transcription?'   
+  transcription_paused: 'Transcription paused'
+  transcription_resumed: 'Transcription resumed'
+  batch_canceled: 'Batch processing canceled by user.'
   err_user_cancelation: 'Process has been canceled by the user.'
   err_whisper_main: whisper terminated with the error code %{e}
   err_transcription: 'Error in step 3 - transcription'
