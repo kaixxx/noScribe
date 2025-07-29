@@ -40,8 +40,10 @@ en:
   label_pause: 'Mark pause:'
   label_timestamps: 'Timestamps:'
   label_disfluencies: 'Disfluencies:'
-  
   label_auto_filename: 'Use input file name as output'
+  label_autoname: 'Autoname format:'
+  label_output_format: 'Output format:'
+  
   
   start_button: Start 
   stop_button: Cancel
@@ -84,9 +86,16 @@ en:
   err_vtt_invalid_options: 'Warning: The options "overlapping speech", "Mark pause" and "Timestamps" are not supported in VTT files.'
   err_editor_invalid_format: 'The editor can only be used with html files. Do you want to start it anyway?'
   
+  # Directory processing
+  dir_warning_title: 'Directory Processing Warning'
+  dir_warning_message: 'You have selected a directory. This will process all audio and video files in the directory and subdirectories.\n\nWarning: Existing transcript files will be overwritten.\n\nThis may take a long time to process. Do you want to continue?'
+  dir_warning_start: 'Start Processing'
+  dir_warning_cancel: 'Cancel'
+  dir_processing_files: 'Processing %{count} files...'
+  dir_file_progress: 'File %{current} of %{total}: %{filename}'
+  
   # Doc contents
   doc_header: 'Transcribed with noScribe vers. %{version}'
   doc_header_audio: 'Audio file: %{file}'
   pause_minutes: '(%{minutes} minute[s] pause)'
   pause_seconds: '(%{seconds} seconds pause)'
-                      

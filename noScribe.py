@@ -413,7 +413,7 @@ class App(ctk.CTk):
         self.audio_file = ''
         self.transcript_file = ''
         self.log_file = None
-        self.cancel = False # if set to True, transcription will be canceled
+        self.cancel = False
 
         # configure window
         self.title('noScribe - ' + t('app_header'))
@@ -468,15 +468,19 @@ class App(ctk.CTk):
 
         self.frame_audio_file = ctk.CTkFrame(self.scrollable_options, width=260, height=33, corner_radius=8, border_width=2)
         self.frame_audio_file.pack(padx=20, pady=[0,10], anchor='w')
+        self.frame_audio_file.pack_propagate(False)  # Prevent frame from shrinking
 
-        self.button_audio_file_name = ctk.CTkButton(self.frame_audio_file, width=200, corner_radius=8, bg_color='transparent', 
+        self.button_audio_file_name = ctk.CTkButton(self.frame_audio_file, width=180, corner_radius=8, bg_color='transparent', 
                                                     fg_color='transparent', hover_color=self.frame_audio_file._bg_color, 
                                                     border_width=0, anchor='w',  
                                                     text=t('label_audio_file_name'), command=self.button_audio_file_event)
         self.button_audio_file_name.place(x=3, y=3)
 
-        self.button_audio_file = ctk.CTkButton(self.frame_audio_file, width=45, height=29, text='📂', command=self.button_audio_file_event)
-        self.button_audio_file.place(x=213, y=2)
+        # File selection button (original functionality) - document icon for single file
+        self.button_audio_file = ctk.CTkButton(self.frame_audio_file, width=35, height=29, text='📄', command=self.button_audio_file_event)
+        self.button_audio_file.place(x=188, y=2)
+        
+
 
         # input transcript file name
         self.label_transcript_file = ctk.CTkLabel(self.scrollable_options, text=t('label_transcript_file'))
@@ -491,17 +495,47 @@ class App(ctk.CTk):
                                                     text=t('label_transcript_file_name'), command=self.button_transcript_file_event)
         self.button_transcript_file_name.place(x=3, y=3)
 
-        self.button_transcript_file = ctk.CTkButton(self.frame_transcript_file, width=45, height=29, text='📂', command=self.button_transcript_file_event)
+        self.button_transcript_file = ctk.CTkButton(self.frame_transcript_file, width=45, height=29, text='📄', command=self.button_transcript_file_event)
         self.button_transcript_file.place(x=213, y=2)
 
-        # Auto-filename checkbox
-        self.check_box_auto_filename = ctk.CTkCheckBox(self.scrollable_options, text=t('label_auto_filename'))
-        self.check_box_auto_filename.pack(padx=20, pady=[0,10], anchor='w')
+        # Auto-filename checkbox and format dropdown (same line)
+        self.frame_auto_filename = ctk.CTkFrame(self.scrollable_options, fg_color='transparent')
+        self.frame_auto_filename.pack(padx=20, pady=[0,10], anchor='w', fill='x')
+        
+        # Configure grid for auto-filename frame
+        self.frame_auto_filename.grid_columnconfigure(0, weight=1, minsize=0)
+        self.frame_auto_filename.grid_columnconfigure(1, weight=0)
+        
+        self.check_box_auto_filename = ctk.CTkCheckBox(self.frame_auto_filename, text=t('label_auto_filename'))
+        self.check_box_auto_filename.grid(column=0, row=0, sticky='w', pady=5)
+        
+        self.option_menu_auto_filename_format = ctk.CTkOptionMenu(
+            self.frame_auto_filename, 
+            width=80,  # Wider width to fit "html" properly
+            values=['html', 'txt', 'vtt', 'srt'],
+            dynamic_resizing=False
+        )
+        self.option_menu_auto_filename_format.grid(column=1, row=0, sticky='e', pady=5)
+        
+        # Set default format
+        last_filetype = get_config('last_filetype', 'html')
+        if last_filetype in ['html', 'txt', 'vtt', 'srt']:
+            self.option_menu_auto_filename_format.set(last_filetype)
+        else:
+            self.option_menu_auto_filename_format.set('html')
+        
+        # Initialize checkbox state
         auto_filename = get_config('last_auto_filename', False)
         if auto_filename:
             self.check_box_auto_filename.select()
         else:
             self.check_box_auto_filename.deselect()
+        
+        # Bind checkbox to show/hide format dropdown
+        self.check_box_auto_filename.configure(command=self.on_auto_filename_checkbox_change)
+        
+        # Initially show/hide based on checkbox state
+        self.on_auto_filename_checkbox_change()
 
         # Options grid
         self.frame_options = ctk.CTkFrame(self.scrollable_options, width=250, fg_color='transparent')
@@ -550,7 +584,6 @@ class App(ctk.CTk):
                 self.old_value = self.get()
                 self._values = self.noScribe_parent.get_whisper_models()
                 self._values.append('--------------------')
-                self._values.append(t('label_add_custom_models'))
                 self._dropdown_menu.configure(values=self._values)
                 super()._clicked(event)
                 
@@ -670,6 +703,8 @@ class App(ctk.CTk):
                                          text=t('editor_button'), command=self.launch_editor, width=140)
         self.edit_button.pack(padx=[20,10], pady=[10,10], expand=False, anchor='se', side='right')
 
+
+
         # Progress bar
         self.progress_textbox = ctk.CTkTextbox(self.frame_edit, wrap='none', height=15, state="disabled", font=("",16), text_color="lightgray")
         self.progress_textbox.pack(padx=[10,10], pady=[5,0], expand=True, fill='x', anchor='sw', side='left')
@@ -762,7 +797,7 @@ class App(ctk.CTk):
         if platform.system() == 'Windows':
             program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit.exe')
         elif platform.system() == "Darwin": # = MAC
-            # use local copy in development, installed one if used as an app:
+            # use local copy in development, installed one if used as an app:
             program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit')
             if not os.path.exists(program):
                 program = os.path.join(os.sep, 'Applications', 'noScribeEdit.app', 'Contents', 'MacOS', 'noScribeEdit')
@@ -863,21 +898,39 @@ class App(ctk.CTk):
         
         return output_filename
 
+
+
+
+
+
+
+
+
     def button_audio_file_event(self):
-        fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_file), initialfile=os.path.basename(self.audio_file))
+        """Single file selection event handler"""
+        fn = tk.filedialog.askopenfilename(
+            initialdir=os.path.dirname(self.audio_file), 
+            initialfile=os.path.basename(self.audio_file),
+            title="Select audio file"
+        )
+        
         if fn:
+            # Single file selection
             self.audio_file = fn
+            self.processing_directory = False
             self.logn(t('log_audio_file_selected') + self.audio_file)
             self.button_audio_file_name.configure(text=os.path.basename(self.audio_file))
+
+
+
+
 
     def button_transcript_file_event(self):
         # Check if auto-filename is enabled
         if self.check_box_auto_filename.get() and self.audio_file:
-            # Auto-generate filename based on input file
-            if not ('last_filetype' in config):
-                config['last_filetype'] = 'html'
-            
-            auto_filename = self.generate_auto_filename(self.audio_file, config['last_filetype'])
+            # Auto-generate filename based on input file and selected format
+            selected_format = self.option_menu_auto_filename_format.get()
+            auto_filename = self.generate_auto_filename(self.audio_file, selected_format)
             if auto_filename:
                 self.transcript_file = auto_filename
                 self.logn(t('log_transcript_filename') + self.transcript_file)
@@ -955,6 +1008,8 @@ class App(ctk.CTk):
         self.start_button.pack_forget() # hide
         self.stop_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
         
+
+        
         # Show the progress bar
         # self.progress_bar.set(0)
         # self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
@@ -968,6 +1023,7 @@ class App(ctk.CTk):
             # collect all the options
             option_info = ''
 
+            # Single file processing (existing logic)
             if self.audio_file == '':
                 self.logn(t('err_no_audio_file'), 'error')
                 tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
@@ -1525,6 +1581,8 @@ class App(ctk.CTk):
                                 self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
 
                             raise Exception(t('err_user_cancelation')) 
+                        
+
 
                         segment = adjust_for_pause(segment)
 
@@ -1699,8 +1757,14 @@ class App(ctk.CTk):
             self.set_progress(0, 0)
             
     def button_start_event(self):
-        wkr = Thread(target=self.transcription_worker)
-        wkr.start()
+        if self.processing_directory:
+            # Start directory processing worker
+            wkr = Thread(target=self.directory_processing_worker)
+            wkr.start()
+        else:
+            # Start single file processing worker
+            wkr = Thread(target=self.transcription_worker)
+            wkr.start()
         #while wkr.is_alive():
         #    self.update()
         #    time.sleep(0.1)
@@ -1715,6 +1779,8 @@ class App(ctk.CTk):
             self.update()
             self.cancel = True
 
+
+
     def on_closing(self):
         # (see: https://stackoverflow.com/questions/111155/how-do-i-handle-the-window-close-event-in-tkinter)
         #if messagebox.askokcancel("Quit", "Do you want to quit?"):
@@ -1728,10 +1794,26 @@ class App(ctk.CTk):
             config['last_timestamps'] = self.check_box_timestamps.get()
             config['last_disfluencies'] = self.check_box_disfluencies.get()
             config['last_auto_filename'] = self.check_box_auto_filename.get()
+            if self.check_box_auto_filename.get():
+                config['last_filetype'] = self.option_menu_auto_filename_format.get()
 
             save_config()
         finally:
             self.destroy()
+
+    def on_auto_filename_checkbox_change(self):
+        if self.check_box_auto_filename.get():
+            # Show dropdown and change checkbox text
+            self.option_menu_auto_filename_format.grid(column=1, row=0, sticky='e', pady=5)
+            self.check_box_auto_filename.configure(text=t('label_autoname'))
+            # Force refresh to ensure widgets render properly
+            self.option_menu_auto_filename_format.update()
+        else:
+            # Hide dropdown and restore original checkbox text
+            self.option_menu_auto_filename_format.grid_remove()
+            self.check_box_auto_filename.configure(text=t('label_auto_filename'))
+
+
 
 if __name__ == "__main__":
 
