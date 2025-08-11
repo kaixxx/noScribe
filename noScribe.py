@@ -1134,7 +1134,7 @@ class App(ctk.CTk):
                 if self.cancel:
                     # Mark all waiting jobs as cancelled
                     for job in transcription_queue.get_waiting_jobs():
-                        job.set_error("User cancelled")
+                        job.set_error(t('err_user_cancelation'))
                     break
                 
                 # Get next job
@@ -1157,7 +1157,7 @@ class App(ctk.CTk):
                         self.logn(f"Job completed in {duration_str}")
                     
                 except Exception as e:
-                    error_msg = str(e)
+                    error_msg = job.error_message or str(e)
                     job.set_error(error_msg)
                     self.logn(f"Job failed: {error_msg}", 'error')
                     traceback_str = traceback.format_exc()
@@ -1290,7 +1290,8 @@ class App(ctk.CTk):
                     self.logn(t('err_converting_audio'), 'error')
                     traceback_str = traceback.format_exc()
                     self.logn(e, 'error', tb=traceback_str)
-                    return
+                    job.set_error(f"{t('err_converting_audio')}: {e}")
+                    raise Exception(job.error_message)
 
                 #-------------------------------------------------------
                 # 2) Speaker identification (diarization) with pyannote
@@ -1438,7 +1439,8 @@ class App(ctk.CTk):
                         self.logn(t('err_identifying_speakers'), 'error')
                         traceback_str = traceback.format_exc()
                         self.logn(e, 'error', tb=traceback_str)
-                        return
+                        job.set_error(f"{t('err_identifying_speakers')}: {e}")
+                        raise Exception(job.error_message)
 
                 #-------------------------------------------------------
                 # 3) Transcribe with faster-whisper
@@ -1826,7 +1828,8 @@ class App(ctk.CTk):
                     self.logn(t('err_transcription'), 'error')
                     traceback_str = traceback.format_exc()
                     self.logn(e, 'error', tb=traceback_str)
-                    return
+                    job.set_error(f"{t('err_transcription')}: {e}")
+                    raise Exception(job.error_message)
 
             finally:
                 self.log_file.close()
@@ -1836,7 +1839,8 @@ class App(ctk.CTk):
             self.logn(t('err_options'), 'error')
             traceback_str = traceback.format_exc()
             self.logn(e, 'error', tb=traceback_str)
-            return
+            job.set_error(f"{t('err_options')}: {e}")
+            raise Exception(job.error_message)
 
         finally:
             # hide the stop button
