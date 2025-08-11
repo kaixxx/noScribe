@@ -67,6 +67,8 @@ import urllib
 import multiprocessing
 import gc
 import traceback
+from enum import Enum
+from typing import Optional, List
 
  # Pyinstaller fix, used to open multiple instances on Mac
 multiprocessing.freeze_support()
@@ -368,7 +370,136 @@ def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: st
                 txt = vtt_escape(html_node_to_text(segment))
                 vtt += f'{i+1}\n{start} --> {end}\n<v {spkr}>{txt.lstrip()}\n\n'
     return vtt
+
+# Transcription Job Management Classes
+
+class JobStatus(Enum):
+    WAITING = "waiting"
+    RUNNING = "running"
+    FINISHED = "finished"
+    ERROR = "error"
+
+class TranscriptionJob:
+    """Represents a single transcription job with all its parameters and status"""
     
+    def __init__(self):
+        # Status tracking
+        self.status: JobStatus = JobStatus.WAITING
+        self.error_message: Optional[str] = None
+        self.created_at: datetime.datetime = datetime.datetime.now()
+        self.started_at: Optional[datetime.datetime] = None
+        self.finished_at: Optional[datetime.datetime] = None
+        
+        # File paths
+        self.audio_file: str = ''
+        self.transcript_file: str = ''
+        
+        # Time range
+        self.start: int = 0  # milliseconds
+        self.stop: int = 0   # milliseconds (0 means until end)
+        
+        # Language and model settings
+        self.language_name: str = 'Auto'
+        self.whisper_model: str = ''  # path to the model
+        
+        # Processing options
+        self.speaker_detection: str = 'auto'
+        self.overlapping: bool = True
+        self.timestamps: bool = False
+        self.disfluencies: bool = True
+        self.pause: int = 0  # index value (0=none, 1=1sec+, etc.)
+        
+        # Config-based options
+        self.whisper_beam_size: int = 1
+        self.whisper_temperature: float = 0.0
+        self.whisper_compute_type: str = 'default'
+        self.timestamp_interval: int = 60_000
+        self.timestamp_color: str = '#78909C'
+        self.pause_marker: str = '.'
+        self.auto_save: bool = True
+        self.auto_edit_transcript: bool = True
+        self.pyannote_xpu: str = 'cpu'
+        self.whisper_xpu: str = 'cpu'  # Windows/Linux only
+        self.vad_threshold: float = 0.5
+        
+        # Derived properties
+        self.file_ext: str = ''
+    
+    def set_running(self):
+        """Mark job as running and record start time"""
+        self.status = JobStatus.RUNNING
+        self.started_at = datetime.datetime.now()
+    
+    def set_finished(self):
+        """Mark job as finished and record completion time"""
+        self.status = JobStatus.FINISHED
+        self.finished_at = datetime.datetime.now()
+    
+    def set_error(self, error_message: str):
+        """Mark job as failed and store error message"""
+        self.status = JobStatus.ERROR
+        self.error_message = error_message
+        self.finished_at = datetime.datetime.now()
+    
+    def get_duration(self) -> Optional[datetime.timedelta]:
+        """Get processing duration if job is completed"""
+        if self.started_at and self.finished_at:
+            return self.finished_at - self.started_at
+        return None
+    
+    def is_completed(self) -> bool:
+        """Check if job is completed (finished or error)"""
+        return self.status in [JobStatus.FINISHED, JobStatus.ERROR]
+
+class TranscriptionQueue:
+    """Manages a queue of transcription jobs"""
+    
+    def __init__(self):
+        self.jobs: List[TranscriptionJob] = []
+    
+    def add_job(self, job: TranscriptionJob):
+        """Add a job to the queue"""
+        self.jobs.append(job)
+    
+    def get_waiting_jobs(self) -> List[TranscriptionJob]:
+        """Get all jobs with WAITING status"""
+        return [job for job in self.jobs if job.status == JobStatus.WAITING]
+    
+    def get_running_jobs(self) -> List[TranscriptionJob]:
+        """Get all jobs currently being processed"""
+        return [job for job in self.jobs if job.status == JobStatus.RUNNING]
+    
+    def get_finished_jobs(self) -> List[TranscriptionJob]:
+        """Get all successfully completed jobs"""
+        return [job for job in self.jobs if job.status == JobStatus.FINISHED]
+    
+    def get_failed_jobs(self) -> List[TranscriptionJob]:
+        """Get all jobs that encountered errors"""
+        return [job for job in self.jobs if job.status == JobStatus.ERROR]
+    
+    def has_pending_jobs(self) -> bool:
+        """Check if there are jobs waiting to be processed"""
+        return len(self.get_waiting_jobs()) > 0
+    
+    def get_next_waiting_job(self) -> Optional[TranscriptionJob]:
+        """Get the next job to process"""
+        waiting_jobs = self.get_waiting_jobs()
+        return waiting_jobs[0] if waiting_jobs else None
+    
+    def get_queue_summary(self) -> dict:
+        """Get summary statistics of the queue"""
+        return {
+            'total': len(self.jobs),
+            'waiting': len(self.get_waiting_jobs()),
+            'running': len(self.get_running_jobs()),
+            'finished': len(self.get_finished_jobs()),
+            'errors': len(self.get_failed_jobs())
+        }
+    
+    def is_empty(self) -> bool:
+        """Check if queue is empty"""
+        return len(self.jobs) == 0
+
 class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format hh:mm:ss
                                # based on https://stackoverflow.com/questions/63622880/how-to-make-python-automatically-put-colon-in-the-format-of-time-hhmmss
     def __init__(self, master, **kwargs):
@@ -872,7 +1003,7 @@ class App(ctk.CTk):
             self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_file))
             config['last_filetype'] = os.path.splitext(self.transcript_file)[1][1:]
             
-    def set_progress(self, step, value):
+    def set_progress(self, step, value, speaker_detection='none'):
         """ Update state of the progress bar """
         progr = -1
         if step == 1:
@@ -881,7 +1012,7 @@ class App(ctk.CTk):
             progr = 0.05 # (step 1)
             progr = progr + (value * 0.45 / 100)
         elif step == 3:
-            if self.speaker_detection != 'none':
+            if speaker_detection != 'none':
                 progr = 0.05 + 0.45 # (step 1 + step 2)
                 progr_factor = 0.5
             else:
@@ -901,143 +1032,198 @@ class App(ctk.CTk):
         self.progress_textbox.insert(tk.END, progr_str)
         self.progress_textbox.configure(state=ctk.DISABLED)
 
+    def collect_transcription_options(self) -> TranscriptionJob:
+        """Collect all transcription options from UI and config into a TranscriptionJob object"""
+        job = TranscriptionJob()
+        
+        # Validate required inputs
+        if self.audio_file == '':
+            raise ValueError(t('err_no_audio_file'))
+        
+        if self.transcript_file == '':
+            raise ValueError(t('err_no_transcript_file'))
+        
+        # File paths
+        job.audio_file = self.audio_file
+        job.transcript_file = self.transcript_file
+        job.file_ext = os.path.splitext(job.transcript_file)[1][1:]
+        
+        # Time range
+        val = self.entry_start.get()
+        if val == '':
+            job.start = 0
+        else:
+            job.start = millisec(val)
+        
+        val = self.entry_stop.get()
+        if val == '':
+            job.stop = 0
+        else:
+            job.stop = millisec(val)
+        
+        # Language and model settings
+        job.language_name = self.option_menu_language.get()
+        
+        sel_whisper_model = self.option_menu_whisper_model.get()
+        if sel_whisper_model in self.whisper_model_paths.keys():
+            job.whisper_model = self.whisper_model_paths[sel_whisper_model]
+        else:
+            raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
+        
+        # Processing options
+        job.speaker_detection = self.option_menu_speaker.get()
+        job.overlapping = self.check_box_overlapping.get()
+        job.timestamps = self.check_box_timestamps.get()
+        job.disfluencies = self.check_box_disfluencies.get()
+        job.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
+        
+        # Config-based options
+        job.whisper_beam_size = get_config('whisper_beam_size', 1)
+        job.whisper_temperature = get_config('whisper_temperature', 0.0)
+        job.whisper_compute_type = get_config('whisper_compute_type', 'default')
+        job.timestamp_interval = get_config('timestamp_interval', 60_000)
+        job.timestamp_color = get_config('timestamp_color', '#78909C')
+        job.pause_marker = get_config('pause_seconds_marker', '.')
+        job.auto_save = False if get_config('auto_save', 'True') == 'False' else True
+        job.auto_edit_transcript = get_config('auto_edit_transcript', 'True')
+        job.vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
+        
+        # Platform-specific XPU settings
+        if platform.system() == "Darwin":  # MAC
+            xpu = get_config('pyannote_xpu', 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu')
+            job.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
+        elif platform.system() in ('Windows', 'Linux'):
+            cuda_available = torch.cuda.is_available() and get_cuda_device_count() > 0
+            xpu = get_config('pyannote_xpu', 'cuda' if cuda_available else 'cpu')
+            job.pyannote_xpu = 'cuda' if xpu == 'cuda' else 'cpu'
+            whisper_xpu = get_config('whisper_xpu', 'cuda' if cuda_available else 'cpu')
+            job.whisper_xpu = 'cuda' if whisper_xpu == 'cuda' else 'cpu'
+        else:
+            raise Exception('Platform not supported yet.')
+        
+        # Check for invalid VTT options
+        if job.file_ext == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
+            self.logn()
+            self.logn(t('err_vtt_invalid_options'), 'error')
+            job.pause = 0
+            job.overlapping = False
+            job.timestamps = False
+                
+        return job
+
 
     ################################################################################################
     # Main function
 
-    def transcription_worker(self):
-        # This is the main function where all the magic happens
-        # We put this in a seperate thread so that it does not block the main ui
-
-        proc_start_time = datetime.datetime.now()
+    def transcription_worker(self, transcription_queue: TranscriptionQueue):
+        """Process transcription jobs from the queue"""
+        queue_start_time = datetime.datetime.now()
         self.cancel = False
 
         # Show the stop button
         self.start_button.pack_forget() # hide
         self.stop_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
-        
-        # Show the progress bar
-        # self.progress_bar.set(0)
-        # self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
-        # self.progress_bar.pack(padx=[0,10], pady=[10,25], expand=True, fill='x', anchor='sw', side='left')
-        # self.progress_bar.pack(padx=20, pady=[10,20], expand=True, fill='both')
-
-        tmpdir = TemporaryDirectory('noScribe')
-        self.tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
 
         try:
-            # collect all the options
+            # Log queue summary
+            summary = transcription_queue.get_queue_summary()
+            self.logn(f"Processing {summary['total']} transcription job(s)")
+            
+            # Process each job in the queue
+            while transcription_queue.has_pending_jobs():
+                if self.cancel:
+                    # Mark all waiting jobs as cancelled
+                    for job in transcription_queue.get_waiting_jobs():
+                        job.set_error("User cancelled")
+                    break
+                
+                # Get next job
+                job = transcription_queue.get_next_waiting_job()
+                if not job:
+                    break
+                
+                # Process the job
+                try:
+                    job.set_running()
+                    self.logn(f"Starting job: {os.path.basename(job.audio_file)}")
+                    
+                    # Process single job
+                    self._process_single_job(job)
+                    
+                    job.set_finished()
+                    duration = job.get_duration()
+                    if duration:
+                        duration_str = f"{int(duration.total_seconds() // 60)}:{int(duration.total_seconds() % 60):02d}"
+                        self.logn(f"Job completed in {duration_str}")
+                    
+                except Exception as e:
+                    error_msg = str(e)
+                    job.set_error(error_msg)
+                    self.logn(f"Job failed: {error_msg}", 'error')
+                    traceback_str = traceback.format_exc()
+                    self.logn(f"Job error details: {traceback_str}", where='file')
+            
+            # Log final summary
+            final_summary = transcription_queue.get_queue_summary()
+            self.logn()
+            self.logn("=== QUEUE PROCESSING COMPLETE ===", 'highlight')
+            self.logn(f"Total jobs: {final_summary['total']}")
+            self.logn(f"Completed: {final_summary['finished']}")
+            self.logn(f"Failed: {final_summary['errors']}")
+            
+            # Log total processing time
+            total_time = datetime.datetime.now() - queue_start_time
+            total_seconds = "{:02d}".format(int(total_time.total_seconds() % 60))
+            total_time_str = f'{int(total_time.total_seconds() // 60)}:{total_seconds}'
+            self.logn(f"Total processing time: {total_time_str}")
+            
+        except Exception as e:
+            self.logn(f"Queue processing error: {str(e)}", 'error')
+            traceback_str = traceback.format_exc()
+            self.logn(f"Queue error details: {traceback_str}", where='file')
+        
+        finally:
+            # Hide the stop button
+            self.stop_button.pack_forget() # hide
+            self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+            # Hide progress
+            self.set_progress(0, 0)
+
+    def _process_single_job(self, job: TranscriptionJob):
+        """Process a single transcription job"""
+        proc_start_time = datetime.datetime.now()
+        
+        tmpdir = TemporaryDirectory('noScribe')
+        tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
+        my_transcript_file = job.transcript_file
+
+        try:
+            # Create option info string for logging
             option_info = ''
+            if job.start > 0:
+                option_info += f'{t("label_start")} {ms_to_str(job.start)} | '
+            if job.stop > 0:
+                option_info += f'{t("label_stop")} {ms_to_str(job.stop)} | '
+            option_info += f'{t("label_language")} {job.language_name} ({languages[job.language_name]}) | '
+            option_info += f'{t("label_speaker")} {job.speaker_detection} | '
+            option_info += f'{t("label_overlapping")} {job.overlapping} | '
+            option_info += f'{t("label_timestamps")} {job.timestamps} | '
+            option_info += f'{t("label_disfluencies")} {job.disfluencies} | '
+            option_info += f'{t("label_pause")} {job.pause}'
 
-            if self.audio_file == '':
-                self.logn(t('err_no_audio_file'), 'error')
-                tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
-                return
-
-            if self.transcript_file == '':
-                self.logn(t('err_no_transcript_file'), 'error')
-                tk.messagebox.showerror(title='noScribe', message=t('err_no_transcript_file'))
-                return
-
-            self.my_transcript_file = self.transcript_file
-            self.file_ext = os.path.splitext(self.my_transcript_file)[1][1:]
-
-            # create log file
+            # Create log file
             if not os.path.exists(f'{config_dir}/log'):
                 os.makedirs(f'{config_dir}/log')
-            self.log_file = open(f'{config_dir}/log/{Path(self.my_transcript_file).stem}.log', 'w', encoding="utf-8")
+            self.log_file = open(f'{config_dir}/log/{Path(my_transcript_file).stem}.log', 'w', encoding="utf-8")
 
-            # options for faster-whisper
-            self.whisper_beam_size = get_config('whisper_beam_size', 1)
-            self.logn(f'whisper beam size: {self.whisper_beam_size}', where='file')
+            # Log job configuration
+            self.logn(f'whisper beam size: {job.whisper_beam_size}', where='file')
+            self.logn(f'whisper temperature: {job.whisper_temperature}', where='file')
+            self.logn(f'whisper compute type: {job.whisper_compute_type}', where='file')
+            self.logn(f'timestamp_interval: {job.timestamp_interval}', where='file')
+            self.logn(f'timestamp_color: {job.timestamp_color}', where='file')
 
-            self.whisper_temperature = get_config('whisper_temperature', 0.0)
-            self.logn(f'whisper temperature: {self.whisper_temperature}', where='file')
-
-            self.whisper_compute_type = get_config('whisper_compute_type', 'default')
-            self.logn(f'whisper compute type: {self.whisper_compute_type}', where='file')
-
-            self.timestamp_interval = get_config('timestamp_interval', 60_000) # default: add a timestamp every minute
-            self.logn(f'timestamp_interval: {self.timestamp_interval}', where='file')
-
-            self.timestamp_color = get_config('timestamp_color', '#78909C') # default: light gray/blue
-            self.logn(f'timestamp_color: {self.timestamp_color}', where='file')
-
-            # get UI settings
-            val = self.entry_start.get()
-            if val == '':
-                self.start = 0
-            else:
-                self.start = millisec(val)
-                option_info += f'{t("label_start")} {val} | ' 
-
-            val = self.entry_stop.get()
-            if val == '':
-                self.stop = '0'
-            else:
-                self.stop = millisec(val)
-                option_info += f'{t("label_stop")} {val} | '          
-            
-            sel_whisper_model = self.option_menu_whisper_model.get()
-            if sel_whisper_model in self.whisper_model_paths.keys():
-                self.whisper_model = self.whisper_model_paths[sel_whisper_model]
-            else:                
-                raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
-
-            option_info += f'{t("label_whisper_model")} {sel_whisper_model} | '
-
-            self.language_name = self.option_menu_language.get()
-            option_info += f'{t("label_language")} {self.language_name} ({languages[self.language_name]}) | '
-
-            self.speaker_detection = self.option_menu_speaker.get()
-            option_info += f'{t("label_speaker")} {self.speaker_detection} | '
-
-            self.overlapping = self.check_box_overlapping.get()
-            option_info += f'{t("label_overlapping")} {self.overlapping} | '
-
-            self.timestamps = self.check_box_timestamps.get()
-            option_info += f'{t("label_timestamps")} {self.timestamps} | '
-            
-            self.disfluencies = self.check_box_disfluencies.get()
-            option_info += f'{t("label_disfluencies")} {self.disfluencies} | '
-
-            self.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
-            option_info += f'{t("label_pause")} {self.pause}'
-
-            self.pause_marker = get_config('pause_seconds_marker', '.') # Default to . if marker not in config
-
-            # Default to True if auto save not in config or invalid value
-            self.auto_save = False if get_config('auto_save', 'True') == 'False' else True 
-            
-            # Open the finished transript in the editor automatically?
-            self.auto_edit_transcript = get_config('auto_edit_transcript', 'True')
-            
-            # Check for invalid vtt options
-            if self.file_ext == 'vtt' and (self.pause > 0 or self.overlapping or self.timestamps):
-                self.logn()
-                self.logn(t('err_vtt_invalid_options'), 'error')
-                self.pause = 0
-                self.overlapping = False
-                self.timestamps = False           
-
-            if platform.system() == "Darwin": # = MAC
-                # if (platform.mac_ver()[0] >= '12.3' and
-                #     # torch.backends.mps.is_built() and # not necessary since depends on packaged PyTorch
-                #     torch.backends.mps.is_available()):
-                # Default to mps on 12.3 and newer, else cpu
-                xpu = get_config('pyannote_xpu', 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu')
-                self.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
-            elif platform.system() in ('Windows', 'Linux'):
-                # Use cuda if available and not set otherwise in config.yml, fallback to cpu: 
-                cuda_available = torch.cuda.is_available() and get_cuda_device_count() > 0
-                xpu = get_config('pyannote_xpu', 'cuda' if cuda_available else 'cpu')
-                self.pyannote_xpu = 'cuda' if xpu == 'cuda' else 'cpu'
-                whisper_xpu = get_config('whisper_xpu', 'cuda' if cuda_available else 'cpu')
-                self.whisper_xpu = 'cuda' if whisper_xpu == 'cuda' else 'cpu'
-            else:
-                raise Exception('Platform not supported yet.')
-
-            # log CPU capabilities
+            # Log CPU capabilities
             self.logn("=== CPU FEATURES ===", where="file")
             if platform.system() == 'Windows':
                 self.logn("System: Windows", where="file")
@@ -1046,9 +1232,9 @@ class App(ctk.CTk):
             elif platform.system() == "Darwin": # = MAC
                 self.logn(f"System: MAC {platform.machine()}", where="file")
                 if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
-                    if config['pyannote_xpu'] == 'mps':
+                    if job.pyannote_xpu == 'mps':
                         self.logn("macOS version >= 12.3:\nUsing MPS (with PYTORCH_ENABLE_MPS_FALLBACK enabled)", where="file")
-                    elif config['pyannote_xpu'] == 'cpu':
+                    elif job.pyannote_xpu == 'cpu':
                         self.logn("macOS version >= 12.3:\nUser selected to use CPU (results will be better, but you might wanna make yourself a coffee)", where="file")
                     else:
                         self.logn("macOS version >= 12.3:\nInvalid option for 'pyannote_xpu' in config.yml (should be 'mps' or 'cpu')\nYou might wanna change this\nUsing MPS anyway (with PYTORCH_ENABLE_MPS_FALLBACK enabled)", where="file")
@@ -1064,12 +1250,12 @@ class App(ctk.CTk):
                     self.logn()
                     self.logn(t('start_audio_conversion'), 'highlight')
                 
-                    if int(self.stop) > 0: # transcribe only part of the audio
-                        end_pos_cmd = f'-to {self.stop}ms'
+                    if int(job.stop) > 0: # transcribe only part of the audio
+                        end_pos_cmd = f'-to {job.stop}ms'
                     else: # tranbscribe until the end
                         end_pos_cmd = ''
 
-                    arguments = f' -loglevel warning -hwaccel auto -y -ss {self.start}ms {end_pos_cmd} -i \"{self.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le "{self.tmp_audio_file}"'
+                    arguments = f' -loglevel warning -hwaccel auto -y -ss {job.start}ms {end_pos_cmd} -i \"{job.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le "{tmp_audio_file}"'
                     if platform.system() == 'Windows':
                         ffmpeg_path = os.path.join(app_dir, 'ffmpeg.exe')
                         ffmpeg_cmd = ffmpeg_path + arguments
@@ -1099,7 +1285,7 @@ class App(ctk.CTk):
                     if ffmpeg_proc.returncode > 0:
                         raise Exception(t('err_ffmpeg'))
                     self.logn(t('audio_conversion_finished'))
-                    self.set_progress(1, 50)
+                    self.set_progress(1, 50, job.speaker_detection)
                 except Exception as e:
                     self.logn(t('err_converting_audio'), 'error')
                     traceback_str = traceback.format_exc()
@@ -1163,19 +1349,19 @@ class App(ctk.CTk):
                             segment_len = current_segment_len
                             spkr = current_segment_spkr
                         
-                    if self.overlapping and is_overlapping:
+                    if job.overlapping and is_overlapping:
                         return f"//{spkr}"
                     else:
                         return spkr
 
                 # Start Diarization:
 
-                if self.speaker_detection != 'none':
+                if job.speaker_detection != 'none':
                     try:
                         self.logn()
                         self.logn(t('start_identifiying_speakers'), 'highlight')
                         self.logn(t('loading_pyannote'))
-                        self.set_progress(1, 100)
+                        self.set_progress(1, 100, job.speaker_detection)
 
                         diarize_output = os.path.join(tmpdir.name, 'diarize_out.yaml')
                         diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
@@ -1188,9 +1374,9 @@ class App(ctk.CTk):
                             diarize_abspath = diarize_abspath_mac
                         elif platform.system() == 'Linux' and os.path.exists(diarize_abspath_lin):
                             diarize_abspath = diarize_abspath_lin
-                        diarize_cmd = f'{diarize_abspath} {self.pyannote_xpu} "{self.tmp_audio_file}" "{diarize_output}" {self.speaker_detection}'
+                        diarize_cmd = f'{diarize_abspath} {job.pyannote_xpu} "{tmp_audio_file}" "{diarize_output}" {job.speaker_detection}'
                         diarize_env = None
-                        if self.pyannote_xpu == 'mps':
+                        if job.pyannote_xpu == 'mps':
                             diarize_env = os.environ.copy()
                             diarize_env["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1) # Necessary since some operators are not implemented for MPS yet.
                         self.logn(diarize_cmd, where='file')
@@ -1223,15 +1409,15 @@ class App(ctk.CTk):
                                     progress_percent = int(progress[2])
                                     self.logr(f'{step_name}: {progress_percent}%')                       
                                     if step_name == 'segmentation':
-                                        self.set_progress(2, progress_percent * 0.3)
+                                        self.set_progress(2, progress_percent * 0.3, job.speaker_detection)
                                     elif step_name == 'embeddings':
-                                        self.set_progress(2, 30 + (progress_percent * 0.7))
+                                        self.set_progress(2, 30 + (progress_percent * 0.7), job.speaker_detection)
                                 elif line.startswith('error '):
                                     self.logn('PyAnnote error: ' + line[5:], 'error')
                                 elif line.startswith('log: '):
                                     self.logn('PyAnnote ' + line, where='file')
                                     if line.strip() == "log: 'pyannote_xpu: cpu' was set.": # The string needs to be the same as in diarize.py `print("log: 'pyannote_xpu: cpu' was set.")`.
-                                        self.pyannote_xpu = 'cpu'
+                                        job.pyannote_xpu = 'cpu'
                                         config['pyannote_xpu'] = 'cpu'
 
                         if pyannote_proc.returncode > 0:
@@ -1243,7 +1429,7 @@ class App(ctk.CTk):
 
                         # write segments to log file 
                         for segment in diarization:
-                            line = f'{ms_to_str(self.start + segment["start"], include_ms=True)} - {ms_to_str(self.start + segment["end"], include_ms=True)} {segment["label"]}'
+                            line = f'{ms_to_str(job.start + segment["start"], include_ms=True)} - {ms_to_str(job.start + segment["end"], include_ms=True)} {segment["label"]}'
                             self.logn(line, where='file')
 
                         self.logn()
@@ -1268,7 +1454,7 @@ class App(ctk.CTk):
                 # add audio file path:
                 tag = d.createElement("meta")
                 tag.name = "audio_source"
-                tag.content = self.audio_file
+                tag.content = job.audio_file
                 d.head.appendChild(tag)
 
                 # add app version:
@@ -1287,7 +1473,7 @@ class App(ctk.CTk):
                 # header               
                 p = d.createElement('p')
                 p.setStyle('font-weight', '600')
-                p.appendText(Path(self.audio_file).stem) # use the name of the audio file (without extension) as the title
+                p.appendText(Path(job.audio_file).stem) # use the name of the audio file (without extension) as the title
                 main_body.appendChild(p)
 
                 # subheader
@@ -1299,7 +1485,7 @@ class App(ctk.CTk):
                 br = d.createElement('br')
                 s.appendChild(br)
 
-                s.appendText(t('doc_header_audio', file=self.audio_file))
+                s.appendText(t('doc_header_audio', file=job.audio_file))
                 br = d.createElement('br')
                 s.appendChild(br)
 
@@ -1313,40 +1499,41 @@ class App(ctk.CTk):
 
                 speaker = ''
                 prev_speaker = ''
-                self.last_auto_save = datetime.datetime.now()
+                last_auto_save = datetime.datetime.now()
 
                 def save_doc():
+                    nonlocal my_transcript_file  # Tell Python we’re modifying the outer variable
                     txt = ''
-                    if self.file_ext == 'html':
+                    if job.file_ext == 'html':
                         txt = d.asHTML()
-                    elif self.file_ext == 'txt':
+                    elif job.file_ext == 'txt':
                         txt = html_to_text(d)
-                    elif self.file_ext == 'vtt':
-                        txt = html_to_webvtt(d, self.audio_file)
+                    elif job.file_ext == 'vtt':
+                        txt = html_to_webvtt(d, job.audio_file)
                     else:
-                        raise TypeError(f'Invalid file type "{self.file_ext}".')
+                        raise TypeError(f'Invalid file type "{job.file_ext}".')
                     try:
                         if txt != '':
-                            with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
+                            with open(my_transcript_file, 'w', encoding="utf-8") as f:
                                 f.write(txt)
                                 f.flush()
-                            self.last_auto_save = datetime.datetime.now()
+                            last_auto_save = datetime.datetime.now()
                     except Exception as e:
                         # other error while saving, maybe the file is already open in Word and cannot be overwritten
                         # try saving to a different filename
-                        transcript_path = Path(self.my_transcript_file)
-                        self.my_transcript_file = f'{transcript_path.parent}/{transcript_path.stem}_1{self.file_ext}'
-                        if os.path.exists(self.my_transcript_file):
+                        transcript_path = Path(my_transcript_file)
+                        my_transcript_file = f'{transcript_path.parent}/{transcript_path.stem}_1{job.file_ext}'
+                        if os.path.exists(my_transcript_file):
                             # the alternative filename also exists already, don't want to overwrite, giving up
                             raise Exception(t('rescue_saving_failed'))
                         else:
                             # htmlStr = d.asHTML()
-                            with open(self.my_transcript_file, 'w', encoding="utf-8") as f:
+                            with open(my_transcript_file, 'w', encoding="utf-8") as f:
                                 f.write(txt)
                                 f.flush()
                             self.logn()
-                            self.logn(t('rescue_saving', file=self.my_transcript_file), 'error', link=f'file://{self.my_transcript_file}')
-                            self.last_auto_save = datetime.datetime.now()
+                            self.logn(t('rescue_saving', file=my_transcript_file), 'error', link=f'file://{my_transcript_file}')
+                            last_auto_save = datetime.datetime.now()
 
                 try:
                     from faster_whisper import WhisperModel
@@ -1354,13 +1541,13 @@ class App(ctk.CTk):
                         whisper_device = 'auto'
                     elif platform.system() in ('Windows', 'Linux'):
                         whisper_device = 'cpu'
-                        whisper_device = self.whisper_xpu
+                        whisper_device = job.whisper_xpu
                     else:
                         raise Exception('Platform not supported yet.')
-                    model = WhisperModel(self.whisper_model,
+                    model = WhisperModel(job.whisper_model,
                                          device=whisper_device,  
                                          cpu_threads=number_threads, 
-                                         compute_type=self.whisper_compute_type, 
+                                         compute_type=job.whisper_compute_type, 
                                          local_files_only=True)
                     self.logn('model loaded', where='file')
 
@@ -1368,35 +1555,35 @@ class App(ctk.CTk):
                         raise Exception(t('err_user_cancelation')) 
 
                     multilingual = False
-                    if self.language_name == 'Multilingual':
+                    if job.language_name == 'Multilingual':
                         multilingual = True
                         whisper_lang = None
-                    elif self.language_name == 'Auto':
+                    elif job.language_name == 'Auto':
                         whisper_lang = None
                     else:
-                        whisper_lang = languages[self.language_name]
+                        whisper_lang = languages[job.language_name]
                     
                     # VAD 
                      
                     try:
-                        self.vad_threshold = float(config['voice_activity_detection_threshold'])
+                        job.vad_threshold = float(config['voice_activity_detection_threshold'])
                     except:
                         config['voice_activity_detection_threshold'] = '0.5'
-                        self.vad_threshold = 0.5                     
+                        job.vad_threshold = 0.5                     
 
                     sampling_rate = model.feature_extractor.sampling_rate
-                    audio = decode_audio(self.tmp_audio_file, sampling_rate=sampling_rate)
+                    audio = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
                     duration = audio.shape[0] / sampling_rate
                     
                     self.logn('Voice Activity Detection')
                     try:
                         vad_parameters = VadOptions(min_silence_duration_ms=1000, 
-                                                threshold=self.vad_threshold,
+                                                threshold=job.vad_threshold,
                                                 speech_pad_ms=0)
                     except TypeError:
                         # parameter threshold was temporarily renamed to 'onset' in pyannote 3.1:  
                         vad_parameters = VadOptions(min_silence_duration_ms=1000, 
-                                                onset=self.vad_threshold,
+                                                onset=job.vad_threshold,
                                                 speech_pad_ms=0)
                     speech_chunks = get_speech_timestamps(audio, vad_parameters)
                     
@@ -1430,37 +1617,37 @@ class App(ctk.CTk):
                     vad_parameters.speech_pad_ms = 400
 
                     # detect language                    
-                    if self.language_name == 'auto':
+                    if job.language_name == 'auto':
                         language, language_probability, all_language_probs = model.detect_language(
                             audio,
                             vad_filter=True,
                             vad_parameters=vad_parameters
                         )
-                        self.language = language
                         self.logn("Detected language '%s' with probability %f" % (language, language_probability))
+                        whisper_lang = language
 
-                    if self.disfluencies:                    
+                    if job.disfluencies:                    
                         try:
                             with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
                                 prompts = yaml.safe_load(file)
                         except:
                             prompts = {}
-                        self.prompt = prompts.get(languages[self.language_name], '') # Fetch language prompt, default to empty string
+                        prompt = prompts.get(whisper_lang, '') # Fetch language prompt, default to empty string
                     else:
-                        self.prompt = ''
+                        prompt = ''
                     
                     del audio
                     gc.collect()
                     
                     segments, info = model.transcribe(
-                        self.tmp_audio_file, # audio, 
+                        tmp_audio_file, # audio, 
                         language=whisper_lang,
                         multilingual=multilingual, 
                         beam_size=5, 
-                        #temperature=self.whisper_temperature, 
+                        #temperature=job.whisper_temperature, 
                         word_timestamps=True, 
-                        #initial_prompt=self.prompt,
-                        hotwords=self.prompt, 
+                        #initial_prompt=prompt,
+                        hotwords=prompt, 
                         vad_filter=True,
                         vad_parameters=vad_parameters,
                         # length_penalty=0.5
@@ -1479,11 +1666,11 @@ class App(ctk.CTk):
                     for segment in segments:
                         # check for user cancelation
                         if self.cancel:
-                            if self.auto_save:
+                            if job.auto_save:
                                 save_doc()
                                 self.logn()
                                 self.log(t('transcription_saved'))
-                                self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
+                                self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
 
                             raise Exception(t('err_user_cancelation')) 
 
@@ -1493,28 +1680,28 @@ class App(ctk.CTk):
                         start = round(segment.start * 1000.0)
                         end = round(segment.end * 1000.0)
                         # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestaps will not match the original audio:
-                        orig_audio_start = self.start + start
-                        orig_audio_end = self.start + end
+                        orig_audio_start = job.start + start
+                        orig_audio_end = job.start + end
 
-                        if self.timestamps:
+                        if job.timestamps:
                             ts = ms_to_str(orig_audio_start)
                             ts = f'[{ts}]'
 
                         # check for pauses and mark them in the transcript
-                        if (self.pause > 0) and (start - last_segment_end >= self.pause * 1000): # (more than x seconds with no speech)
+                        if (job.pause > 0) and (start - last_segment_end >= job.pause * 1000): # (more than x seconds with no speech)
                             pause_len = round((start - last_segment_end)/1000)
                             if pause_len >= 60: # longer than 60 seconds
                                 pause_str = ' ' + t('pause_minutes', minutes=round(pause_len/60))
                             elif pause_len >= 10: # longer than 10 seconds
                                 pause_str = ' ' + t('pause_seconds', seconds=pause_len)
                             else: # less than 10 seconds
-                                pause_str = ' (' + (self.pause_marker * pause_len) + ')'
+                                pause_str = ' (' + (job.pause_marker * pause_len) + ')'
 
                             if first_segment:
                                 pause_str = pause_str.lstrip() + ' '
 
-                            orig_audio_start_pause = self.start + last_segment_end
-                            orig_audio_end_pause = self.start + start
+                            orig_audio_start_pause = job.start + last_segment_end
+                            orig_audio_end_pause = job.start + start
                             a = d.createElement('a')
                             a.name = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}_{speaker}'
                             a.appendText(pause_str)
@@ -1530,7 +1717,7 @@ class App(ctk.CTk):
                         seg_text = segment.text
                         seg_html = html.escape(seg_text)
 
-                        if self.speaker_detection != 'none':
+                        if job.speaker_detection != 'none':
                             new_speaker = find_speaker(diarization, start, end)
                             if (speaker != new_speaker) and (new_speaker != ''): # speaker change
                                 if new_speaker[:2] == '//': # is overlapping speech, create no new paragraph
@@ -1557,12 +1744,12 @@ class App(ctk.CTk):
                                         self.logn()
                                     speaker = new_speaker
                                     # add timestamp
-                                    if self.timestamps:
-                                        seg_html = f'{speaker}: <span style="color: {self.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
+                                    if job.timestamps:
+                                        seg_html = f'{speaker}: <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
                                         seg_text = f'{speaker}: {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
-                                        if self.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
+                                        if job.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
                                             seg_text = f'{speaker}:{seg_text}'
                                             seg_html = html.escape(seg_text)
                                         else:
@@ -1570,17 +1757,17 @@ class App(ctk.CTk):
                                             seg_text = f'{speaker}:{seg_text}'
                                         
                             else: # same speaker
-                                if self.timestamps:
-                                    if (start - last_timestamp_ms) > self.timestamp_interval:
-                                        seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
+                                if job.timestamps:
+                                    if (start - last_timestamp_ms) > job.timestamp_interval:
+                                        seg_html = f' <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
                                         seg_text = f' {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
                                         seg_html = html.escape(seg_text)
 
                         else: # no speaker detection
-                            if self.timestamps and (first_segment or (start - last_timestamp_ms) > self.timestamp_interval):
-                                seg_html = f' <span style="color: {self.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
+                            if job.timestamps and (first_segment or (start - last_timestamp_ms) > job.timestamp_interval):
+                                seg_html = f' <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
                                 seg_text = f' {ts}{seg_text}'
                                 last_timestamp_ms = start
                             else:
@@ -1607,23 +1794,23 @@ class App(ctk.CTk):
                         first_segment = False
 
                         # auto save
-                        if self.auto_save:
-                            if (datetime.datetime.now() - self.last_auto_save).total_seconds() > 20:
+                        if job.auto_save:
+                            if (datetime.datetime.now() - last_auto_save).total_seconds() > 20:
                                 save_doc()
 
                         progr = round((segment.end/info.duration) * 100)
-                        self.set_progress(3, progr)
+                        self.set_progress(3, progr, job.speaker_detection)
 
                     save_doc()
                     self.logn()
                     self.logn()
                     self.logn(t('transcription_finished'), 'highlight')
-                    if self.transcript_file != self.my_transcript_file: # used alternative filename because saving under the initial name failed
+                    if job.transcript_file != my_transcript_file: # used alternative filename because saving under the initial name failed
                         self.log(t('rescue_saving'))
-                        self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
+                        self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
                     else:
                         self.log(t('transcription_saved'))
-                        self.logn(self.my_transcript_file, link=f'file://{self.my_transcript_file}')
+                        self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
                     # log duration of the whole process
                     proc_time = datetime.datetime.now() - proc_start_time
                     proc_seconds = "{:02d}".format(int(proc_time.total_seconds() % 60))
@@ -1631,8 +1818,8 @@ class App(ctk.CTk):
                     self.logn(t('trancription_time', duration=proc_time_str)) 
 
                     # auto open transcript in editor
-                    if (self.auto_edit_transcript == 'True') and (self.file_ext == 'html'):
-                        self.launch_editor(self.my_transcript_file)
+                    if (job.auto_edit_transcript == 'True') and (job.file_ext == 'html'):
+                        self.launch_editor(my_transcript_file)
                 
                 except Exception as e:
                     self.logn()
@@ -1660,11 +1847,26 @@ class App(ctk.CTk):
             self.set_progress(0, 0)
             
     def button_start_event(self):
-        wkr = Thread(target=self.transcription_worker)
-        wkr.start()
-        #while wkr.is_alive():
-        #    self.update()
-        #    time.sleep(0.1)
+        try:
+            # Collect transcription options from UI
+            job = self.collect_transcription_options()
+            
+            # Create queue and add the job
+            queue = TranscriptionQueue()
+            queue.add_job(job)
+            
+            # Start transcription worker with the queue
+            wkr = Thread(target=self.transcription_worker, args=(queue,))
+            wkr.start()
+            
+        except (ValueError, FileNotFoundError) as e:
+            # Handle validation errors from collect_transcription_options
+            self.logn(str(e), 'error')
+            tk.messagebox.showerror(title='noScribe', message=str(e))
+        except Exception as e:
+            # Handle unexpected errors
+            self.logn(f'Error starting transcription: {str(e)}', 'error')
+            tk.messagebox.showerror(title='noScribe', message=f'Error starting transcription: {str(e)}')
     
     # End main function Button Start        
     ################################################################################################
