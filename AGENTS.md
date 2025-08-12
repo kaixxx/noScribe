@@ -1,0 +1,1 @@
+Do not install any requirements, do not run any tests, just fulfill the coding task.
