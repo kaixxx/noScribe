@@ -4,7 +4,10 @@ import sys
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files, copy_metadata
 
-BASE = Path(__file__).resolve().parent.parent
+if "__file__" in globals():
+    BASE = Path(__file__).resolve().parent.parent
+else:
+    BASE = Path.cwd().resolve()
 
 
 def common_datas():
