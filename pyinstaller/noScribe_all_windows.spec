@@ -59,7 +59,7 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 gui = EXE(
     pyz,
-    a.scripts[0],
+    [a.scripts[0]],
     [],
     exclude_binaries=True,
     name="noScribe",
@@ -69,7 +69,7 @@ gui = EXE(
 
 cli = EXE(
     pyz,
-    a.scripts[1],
+    [a.scripts[1]],
     [],
     exclude_binaries=True,
     name="noScribe-cli",
