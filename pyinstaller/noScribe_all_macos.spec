@@ -3,10 +3,10 @@
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files, copy_metadata
 
-if "__file__" in globals():
-    BASE = Path(__file__).resolve().parent.parent
-else:
-    BASE = Path.cwd().resolve()
+# Resolve repository root regardless of current working directory
+BASE = Path.cwd().resolve()
+while not (BASE / ".git").exists() and BASE != BASE.parent:
+    BASE = BASE.parent
 
 
 def common_datas():
