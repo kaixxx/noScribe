@@ -386,6 +386,7 @@ class TranscriptionJob:
         # Status tracking
         self.status: JobStatus = JobStatus.WAITING
         self.error_message: Optional[str] = None
+        self.error_tb: Optional[str] = None
         self.created_at: datetime.datetime = datetime.datetime.now()
         self.started_at: Optional[datetime.datetime] = None
         self.finished_at: Optional[datetime.datetime] = None
@@ -435,10 +436,11 @@ class TranscriptionJob:
         self.status = JobStatus.FINISHED
         self.finished_at = datetime.datetime.now()
     
-    def set_error(self, error_message: str):
+    def set_error(self, error_message: str, error_tb: str = ''):
         """Mark job as failed and store error message"""
         self.status = JobStatus.ERROR
         self.error_message = error_message
+        self.error_tb = error_tb
         self.finished_at = datetime.datetime.now()
     
     def get_duration(self) -> Optional[datetime.timedelta]:
@@ -1159,8 +1161,8 @@ class App(ctk.CTk):
                 except Exception as e:
                     error_msg = job.error_message or str(e)
                     job.set_error(error_msg)
-                    self.logn(f"Job failed: {error_msg}", 'error')
-                    traceback_str = traceback.format_exc()
+                    self.logn(error_msg, 'error')
+                    traceback_str = job.error_tb or traceback.format_exc()
                     self.logn(f"Job error details: {traceback_str}", where='file')
             
             # Log final summary
@@ -1287,10 +1289,8 @@ class App(ctk.CTk):
                     self.logn(t('audio_conversion_finished'))
                     self.set_progress(1, 50, job.speaker_detection)
                 except Exception as e:
-                    self.logn(t('err_converting_audio'), 'error')
                     traceback_str = traceback.format_exc()
-                    self.logn(e, 'error', tb=traceback_str)
-                    job.set_error(f"{t('err_converting_audio')}: {e}")
+                    job.set_error(f"{t('err_converting_audio')}: {e}", traceback_str)
                     raise Exception(job.error_message)
 
                 #-------------------------------------------------------
@@ -1436,10 +1436,8 @@ class App(ctk.CTk):
                         self.logn()
 
                     except Exception as e:
-                        self.logn(t('err_identifying_speakers'), 'error')
                         traceback_str = traceback.format_exc()
-                        self.logn(e, 'error', tb=traceback_str)
-                        job.set_error(f"{t('err_identifying_speakers')}: {e}")
+                        job.set_error(f"{t('err_identifying_speakers')}: {e}", traceback_str)
                         raise Exception(job.error_message)
 
                 #-------------------------------------------------------
@@ -1537,310 +1535,294 @@ class App(ctk.CTk):
                             self.logn(t('rescue_saving', file=my_transcript_file), 'error', link=f'file://{my_transcript_file}')
                             last_auto_save = datetime.datetime.now()
 
-                try:
-                    from faster_whisper import WhisperModel
-                    if platform.system() == "Darwin": # = MAC
-                        whisper_device = 'auto'
-                    elif platform.system() in ('Windows', 'Linux'):
-                        whisper_device = 'cpu'
-                        whisper_device = job.whisper_xpu
-                    else:
-                        raise Exception('Platform not supported yet.')
-                    model = WhisperModel(job.whisper_model,
-                                         device=whisper_device,  
-                                         cpu_threads=number_threads, 
-                                         compute_type=job.whisper_compute_type, 
-                                         local_files_only=True)
-                    self.logn('model loaded', where='file')
+                from faster_whisper import WhisperModel
+                if platform.system() == "Darwin": # = MAC
+                    whisper_device = 'auto'
+                elif platform.system() in ('Windows', 'Linux'):
+                    whisper_device = 'cpu'
+                    whisper_device = job.whisper_xpu
+                else:
+                    raise Exception('Platform not supported yet.')
+                model = WhisperModel(job.whisper_model,
+                                        device=whisper_device,  
+                                        cpu_threads=number_threads, 
+                                        compute_type=job.whisper_compute_type, 
+                                        local_files_only=True)
+                self.logn('model loaded', where='file')
 
-                    if self.cancel:
-                        raise Exception(t('err_user_cancelation')) 
+                if self.cancel:
+                    raise Exception(t('err_user_cancelation')) 
 
-                    multilingual = False
-                    if job.language_name == 'Multilingual':
-                        multilingual = True
-                        whisper_lang = None
-                    elif job.language_name == 'Auto':
-                        whisper_lang = None
-                    else:
-                        whisper_lang = languages[job.language_name]
-                    
-                    # VAD 
-                     
-                    try:
-                        job.vad_threshold = float(config['voice_activity_detection_threshold'])
-                    except:
-                        config['voice_activity_detection_threshold'] = '0.5'
-                        job.vad_threshold = 0.5                     
-
-                    sampling_rate = model.feature_extractor.sampling_rate
-                    audio = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
-                    duration = audio.shape[0] / sampling_rate
-                    
-                    self.logn('Voice Activity Detection')
-                    try:
-                        vad_parameters = VadOptions(min_silence_duration_ms=1000, 
-                                                threshold=job.vad_threshold,
-                                                speech_pad_ms=0)
-                    except TypeError:
-                        # parameter threshold was temporarily renamed to 'onset' in pyannote 3.1:  
-                        vad_parameters = VadOptions(min_silence_duration_ms=1000, 
-                                                onset=job.vad_threshold,
-                                                speech_pad_ms=0)
-                    speech_chunks = get_speech_timestamps(audio, vad_parameters)
-                    
-                    def adjust_for_pause(segment):
-                        """Adjusts start and end of segment if it falls into a pause 
-                        identified by the VAD"""
-                        pause_extend = 0.2  # extend the pauses by 200ms to make the detection more robust
-                        
-                        # iterate through the pauses and adjust segment boundaries accordingly
-                        for i in range(0, len(speech_chunks)):
-                            pause_start = (speech_chunks[i]['end'] / sampling_rate) - pause_extend
-                            if i == (len(speech_chunks) - 1): 
-                                pause_end = duration + pause_extend # last segment, pause till the end
-                            else:
-                                pause_end = (speech_chunks[i+1]['start']  / sampling_rate) + pause_extend
-                            
-                            if pause_start > segment.end:
-                                break  # we moved beyond the segment, stop going further
-                            if segment.start > pause_start and segment.start < pause_end:
-                                segment.start = pause_end - pause_extend
-                            if segment.end > pause_start and segment.end < pause_end:
-                                segment.end = pause_start + pause_extend
-                        
-                        return segment
-                    
-                    # transcribe
-                    
-                    if self.cancel:
-                        raise Exception(t('err_user_cancelation')) 
-
-                    vad_parameters.speech_pad_ms = 400
-
-                    # detect language                    
-                    if job.language_name == 'auto':
-                        language, language_probability, all_language_probs = model.detect_language(
-                            audio,
-                            vad_filter=True,
-                            vad_parameters=vad_parameters
-                        )
-                        self.logn("Detected language '%s' with probability %f" % (language, language_probability))
-                        whisper_lang = language
-
-                    if job.disfluencies:                    
-                        try:
-                            with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
-                                prompts = yaml.safe_load(file)
-                        except:
-                            prompts = {}
-                        prompt = prompts.get(whisper_lang, '') # Fetch language prompt, default to empty string
-                    else:
-                        prompt = ''
-                    
-                    del audio
-                    gc.collect()
-                    
-                    segments, info = model.transcribe(
-                        tmp_audio_file, # audio, 
-                        language=whisper_lang,
-                        multilingual=multilingual, 
-                        beam_size=5, 
-                        #temperature=job.whisper_temperature, 
-                        word_timestamps=True, 
-                        #initial_prompt=prompt,
-                        hotwords=prompt, 
-                        vad_filter=True,
-                        vad_parameters=vad_parameters,
-                        # length_penalty=0.5
-                    )
-
-                    if self.cancel:
-                        raise Exception(t('err_user_cancelation')) 
-
-                    self.logn(t('start_transcription'))
-                    self.logn()
-
-                    last_segment_end = 0
-                    last_timestamp_ms = 0
-                    first_segment = True
-
-                    for segment in segments:
-                        # check for user cancelation
-                        if self.cancel:
-                            if job.auto_save:
-                                save_doc()
-                                self.logn()
-                                self.log(t('transcription_saved'))
-                                self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
-
-                            raise Exception(t('err_user_cancelation')) 
-
-                        segment = adjust_for_pause(segment)
-
-                        # get time of the segment in milliseconds
-                        start = round(segment.start * 1000.0)
-                        end = round(segment.end * 1000.0)
-                        # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestaps will not match the original audio:
-                        orig_audio_start = job.start + start
-                        orig_audio_end = job.start + end
-
-                        if job.timestamps:
-                            ts = ms_to_str(orig_audio_start)
-                            ts = f'[{ts}]'
-
-                        # check for pauses and mark them in the transcript
-                        if (job.pause > 0) and (start - last_segment_end >= job.pause * 1000): # (more than x seconds with no speech)
-                            pause_len = round((start - last_segment_end)/1000)
-                            if pause_len >= 60: # longer than 60 seconds
-                                pause_str = ' ' + t('pause_minutes', minutes=round(pause_len/60))
-                            elif pause_len >= 10: # longer than 10 seconds
-                                pause_str = ' ' + t('pause_seconds', seconds=pause_len)
-                            else: # less than 10 seconds
-                                pause_str = ' (' + (job.pause_marker * pause_len) + ')'
-
-                            if first_segment:
-                                pause_str = pause_str.lstrip() + ' '
-
-                            orig_audio_start_pause = job.start + last_segment_end
-                            orig_audio_end_pause = job.start + start
-                            a = d.createElement('a')
-                            a.name = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}_{speaker}'
-                            a.appendText(pause_str)
-                            p.appendChild(a)
-                            self.log(pause_str)
-                            if first_segment:
-                                self.logn()
-                                self.logn()
-                        last_segment_end = end
-
-                        # write text to the doc
-                        # diarization (speaker detection)?
-                        seg_text = segment.text
-                        seg_html = html.escape(seg_text)
-
-                        if job.speaker_detection != 'none':
-                            new_speaker = find_speaker(diarization, start, end)
-                            if (speaker != new_speaker) and (new_speaker != ''): # speaker change
-                                if new_speaker[:2] == '//': # is overlapping speech, create no new paragraph
-                                    prev_speaker = speaker
-                                    speaker = new_speaker
-                                    seg_text = f' {speaker}:{seg_text}'
-                                    seg_html = html.escape(seg_text)                                
-                                elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker 
-                                    speaker = new_speaker
-                                    seg_text = f'//{seg_text}'
-                                    seg_html = html.escape(seg_text)
-                                else: # new speaker, not overlapping
-                                    if speaker[:2] == '//': # was overlapping speech, mark the end
-                                        last_elem = p.lastElementChild
-                                        if last_elem:
-                                            last_elem.appendText('//')
-                                        else:
-                                            p.appendText('//')
-                                        self.log('//')
-                                    p = d.createElement('p')
-                                    main_body.appendChild(p)
-                                    if not first_segment:
-                                        self.logn()
-                                        self.logn()
-                                    speaker = new_speaker
-                                    # add timestamp
-                                    if job.timestamps:
-                                        seg_html = f'{speaker}: <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
-                                        seg_text = f'{speaker}: {ts}{seg_text}'
-                                        last_timestamp_ms = start
-                                    else:
-                                        if job.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
-                                            seg_text = f'{speaker}:{seg_text}'
-                                            seg_html = html.escape(seg_text)
-                                        else:
-                                            seg_html = html.escape(seg_text).lstrip()
-                                            seg_text = f'{speaker}:{seg_text}'
-                                        
-                            else: # same speaker
-                                if job.timestamps:
-                                    if (start - last_timestamp_ms) > job.timestamp_interval:
-                                        seg_html = f' <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
-                                        seg_text = f' {ts}{seg_text}'
-                                        last_timestamp_ms = start
-                                    else:
-                                        seg_html = html.escape(seg_text)
-
-                        else: # no speaker detection
-                            if job.timestamps and (first_segment or (start - last_timestamp_ms) > job.timestamp_interval):
-                                seg_html = f' <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
-                                seg_text = f' {ts}{seg_text}'
-                                last_timestamp_ms = start
-                            else:
-                                seg_html = html.escape(seg_text)
-                            # avoid leading whitespace in first paragraph
-                            if first_segment:
-                                seg_text = seg_text.lstrip()
-                                seg_html = seg_html.lstrip()
-
-                        # Mark confidence level (not implemented yet in html)
-                        # cl_level = round((segment.avg_logprob + 1) * 10)
-                        # TODO: better cl_level for words based on https://github.com/Softcatala/whisper-ctranslate2/blob/main/src/whisper_ctranslate2/transcribe.py
-                        # if cl_level > 0:
-                        #     r.style = d.styles[f'noScribe_cl{cl_level}']
-
-                        # Create bookmark with audio timestamps start to end and add the current segment.
-                        # This way, we can jump to the according audio position and play it later in the editor.
-                        a_html = f'<a name="ts_{orig_audio_start}_{orig_audio_end}_{speaker}" >{seg_html}</a>'
-                        a = d.createElementFromHTML(a_html)
-                        p.appendChild(a)
-
-                        self.log(seg_text)
-
-                        first_segment = False
-
-                        # auto save
-                        if job.auto_save:
-                            if (datetime.datetime.now() - last_auto_save).total_seconds() > 20:
-                                save_doc()
-
-                        progr = round((segment.end/info.duration) * 100)
-                        self.set_progress(3, progr, job.speaker_detection)
-
-                    save_doc()
-                    self.logn()
-                    self.logn()
-                    self.logn(t('transcription_finished'), 'highlight')
-                    if job.transcript_file != my_transcript_file: # used alternative filename because saving under the initial name failed
-                        self.log(t('rescue_saving'))
-                        self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
-                    else:
-                        self.log(t('transcription_saved'))
-                        self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
-                    # log duration of the whole process
-                    proc_time = datetime.datetime.now() - proc_start_time
-                    proc_seconds = "{:02d}".format(int(proc_time.total_seconds() % 60))
-                    proc_time_str = f'{int(proc_time.total_seconds() // 60)}:{proc_seconds}' 
-                    self.logn(t('trancription_time', duration=proc_time_str)) 
-
-                    # auto open transcript in editor
-                    if (job.auto_edit_transcript == 'True') and (job.file_ext == 'html'):
-                        self.launch_editor(my_transcript_file)
+                multilingual = False
+                if job.language_name == 'Multilingual':
+                    multilingual = True
+                    whisper_lang = None
+                elif job.language_name == 'Auto':
+                    whisper_lang = None
+                else:
+                    whisper_lang = languages[job.language_name]
                 
-                except Exception as e:
-                    self.logn()
-                    self.logn(t('err_transcription'), 'error')
-                    traceback_str = traceback.format_exc()
-                    self.logn(e, 'error', tb=traceback_str)
-                    job.set_error(f"{t('err_transcription')}: {e}")
-                    raise Exception(job.error_message)
+                # VAD 
+                    
+                try:
+                    job.vad_threshold = float(config['voice_activity_detection_threshold'])
+                except:
+                    config['voice_activity_detection_threshold'] = '0.5'
+                    job.vad_threshold = 0.5                     
 
+                sampling_rate = model.feature_extractor.sampling_rate
+                audio = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
+                duration = audio.shape[0] / sampling_rate
+                
+                self.logn('Voice Activity Detection')
+                try:
+                    vad_parameters = VadOptions(min_silence_duration_ms=1000, 
+                                            threshold=job.vad_threshold,
+                                            speech_pad_ms=0)
+                except TypeError:
+                    # parameter threshold was temporarily renamed to 'onset' in pyannote 3.1:  
+                    vad_parameters = VadOptions(min_silence_duration_ms=1000, 
+                                            onset=job.vad_threshold,
+                                            speech_pad_ms=0)
+                speech_chunks = get_speech_timestamps(audio, vad_parameters)
+                
+                def adjust_for_pause(segment):
+                    """Adjusts start and end of segment if it falls into a pause 
+                    identified by the VAD"""
+                    pause_extend = 0.2  # extend the pauses by 200ms to make the detection more robust
+                    
+                    # iterate through the pauses and adjust segment boundaries accordingly
+                    for i in range(0, len(speech_chunks)):
+                        pause_start = (speech_chunks[i]['end'] / sampling_rate) - pause_extend
+                        if i == (len(speech_chunks) - 1): 
+                            pause_end = duration + pause_extend # last segment, pause till the end
+                        else:
+                            pause_end = (speech_chunks[i+1]['start']  / sampling_rate) + pause_extend
+                        
+                        if pause_start > segment.end:
+                            break  # we moved beyond the segment, stop going further
+                        if segment.start > pause_start and segment.start < pause_end:
+                            segment.start = pause_end - pause_extend
+                        if segment.end > pause_start and segment.end < pause_end:
+                            segment.end = pause_start + pause_extend
+                    
+                    return segment
+                
+                # transcribe
+                
+                if self.cancel:
+                    raise Exception(t('err_user_cancelation')) 
+
+                vad_parameters.speech_pad_ms = 400
+
+                # detect language                    
+                if job.language_name == 'auto':
+                    language, language_probability, all_language_probs = model.detect_language(
+                        audio,
+                        vad_filter=True,
+                        vad_parameters=vad_parameters
+                    )
+                    self.logn("Detected language '%s' with probability %f" % (language, language_probability))
+                    whisper_lang = language
+
+                if job.disfluencies:                    
+                    try:
+                        with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
+                            prompts = yaml.safe_load(file)
+                    except:
+                        prompts = {}
+                    prompt = prompts.get(whisper_lang, '') # Fetch language prompt, default to empty string
+                else:
+                    prompt = ''
+                
+                del audio
+                gc.collect()
+                
+                segments, info = model.transcribe(
+                    tmp_audio_file, # audio, 
+                    language=whisper_lang,
+                    multilingual=multilingual, 
+                    beam_size=5, 
+                    #temperature=job.whisper_temperature, 
+                    word_timestamps=True, 
+                    #initial_prompt=prompt,
+                    hotwords=prompt, 
+                    vad_filter=True,
+                    vad_parameters=vad_parameters,
+                    # length_penalty=0.5
+                )
+
+                if self.cancel:
+                    raise Exception(t('err_user_cancelation')) 
+
+                self.logn(t('start_transcription'))
+                self.logn()
+
+                last_segment_end = 0
+                last_timestamp_ms = 0
+                first_segment = True
+
+                for segment in segments:
+                    # check for user cancelation
+                    if self.cancel:
+                        if job.auto_save:
+                            save_doc()
+                            self.logn()
+                            self.log(t('transcription_saved'))
+                            self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
+
+                        raise Exception(t('err_user_cancelation')) 
+
+                    segment = adjust_for_pause(segment)
+
+                    # get time of the segment in milliseconds
+                    start = round(segment.start * 1000.0)
+                    end = round(segment.end * 1000.0)
+                    # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestaps will not match the original audio:
+                    orig_audio_start = job.start + start
+                    orig_audio_end = job.start + end
+
+                    if job.timestamps:
+                        ts = ms_to_str(orig_audio_start)
+                        ts = f'[{ts}]'
+
+                    # check for pauses and mark them in the transcript
+                    if (job.pause > 0) and (start - last_segment_end >= job.pause * 1000): # (more than x seconds with no speech)
+                        pause_len = round((start - last_segment_end)/1000)
+                        if pause_len >= 60: # longer than 60 seconds
+                            pause_str = ' ' + t('pause_minutes', minutes=round(pause_len/60))
+                        elif pause_len >= 10: # longer than 10 seconds
+                            pause_str = ' ' + t('pause_seconds', seconds=pause_len)
+                        else: # less than 10 seconds
+                            pause_str = ' (' + (job.pause_marker * pause_len) + ')'
+
+                        if first_segment:
+                            pause_str = pause_str.lstrip() + ' '
+
+                        orig_audio_start_pause = job.start + last_segment_end
+                        orig_audio_end_pause = job.start + start
+                        a = d.createElement('a')
+                        a.name = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}_{speaker}'
+                        a.appendText(pause_str)
+                        p.appendChild(a)
+                        self.log(pause_str)
+                        if first_segment:
+                            self.logn()
+                            self.logn()
+                    last_segment_end = end
+
+                    # write text to the doc
+                    # diarization (speaker detection)?
+                    seg_text = segment.text
+                    seg_html = html.escape(seg_text)
+
+                    if job.speaker_detection != 'none':
+                        new_speaker = find_speaker(diarization, start, end)
+                        if (speaker != new_speaker) and (new_speaker != ''): # speaker change
+                            if new_speaker[:2] == '//': # is overlapping speech, create no new paragraph
+                                prev_speaker = speaker
+                                speaker = new_speaker
+                                seg_text = f' {speaker}:{seg_text}'
+                                seg_html = html.escape(seg_text)                                
+                            elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker 
+                                speaker = new_speaker
+                                seg_text = f'//{seg_text}'
+                                seg_html = html.escape(seg_text)
+                            else: # new speaker, not overlapping
+                                if speaker[:2] == '//': # was overlapping speech, mark the end
+                                    last_elem = p.lastElementChild
+                                    if last_elem:
+                                        last_elem.appendText('//')
+                                    else:
+                                        p.appendText('//')
+                                    self.log('//')
+                                p = d.createElement('p')
+                                main_body.appendChild(p)
+                                if not first_segment:
+                                    self.logn()
+                                    self.logn()
+                                speaker = new_speaker
+                                # add timestamp
+                                if job.timestamps:
+                                    seg_html = f'{speaker}: <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
+                                    seg_text = f'{speaker}: {ts}{seg_text}'
+                                    last_timestamp_ms = start
+                                else:
+                                    if job.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
+                                        seg_text = f'{speaker}:{seg_text}'
+                                        seg_html = html.escape(seg_text)
+                                    else:
+                                        seg_html = html.escape(seg_text).lstrip()
+                                        seg_text = f'{speaker}:{seg_text}'
+                                    
+                        else: # same speaker
+                            if job.timestamps:
+                                if (start - last_timestamp_ms) > job.timestamp_interval:
+                                    seg_html = f' <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
+                                    seg_text = f' {ts}{seg_text}'
+                                    last_timestamp_ms = start
+                                else:
+                                    seg_html = html.escape(seg_text)
+
+                    else: # no speaker detection
+                        if job.timestamps and (first_segment or (start - last_timestamp_ms) > job.timestamp_interval):
+                            seg_html = f' <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
+                            seg_text = f' {ts}{seg_text}'
+                            last_timestamp_ms = start
+                        else:
+                            seg_html = html.escape(seg_text)
+                        # avoid leading whitespace in first paragraph
+                        if first_segment:
+                            seg_text = seg_text.lstrip()
+                            seg_html = seg_html.lstrip()
+
+                    # Mark confidence level (not implemented yet in html)
+                    # cl_level = round((segment.avg_logprob + 1) * 10)
+                    # TODO: better cl_level for words based on https://github.com/Softcatala/whisper-ctranslate2/blob/main/src/whisper_ctranslate2/transcribe.py
+                    # if cl_level > 0:
+                    #     r.style = d.styles[f'noScribe_cl{cl_level}']
+
+                    # Create bookmark with audio timestamps start to end and add the current segment.
+                    # This way, we can jump to the according audio position and play it later in the editor.
+                    a_html = f'<a name="ts_{orig_audio_start}_{orig_audio_end}_{speaker}" >{seg_html}</a>'
+                    a = d.createElementFromHTML(a_html)
+                    p.appendChild(a)
+
+                    self.log(seg_text)
+
+                    first_segment = False
+
+                    # auto save
+                    if job.auto_save:
+                        if (datetime.datetime.now() - last_auto_save).total_seconds() > 20:
+                            save_doc()
+
+                    progr = round((segment.end/info.duration) * 100)
+                    self.set_progress(3, progr, job.speaker_detection)
+
+                save_doc()
+                self.logn()
+                self.logn()
+                self.logn(t('transcription_finished'), 'highlight')
+                if job.transcript_file != my_transcript_file: # used alternative filename because saving under the initial name failed
+                    self.log(t('rescue_saving'))
+                    self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
+                else:
+                    self.log(t('transcription_saved'))
+                    self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
+                # log duration of the whole process
+                proc_time = datetime.datetime.now() - proc_start_time
+                proc_seconds = "{:02d}".format(int(proc_time.total_seconds() % 60))
+                proc_time_str = f'{int(proc_time.total_seconds() // 60)}:{proc_seconds}' 
+                self.logn(t('trancription_time', duration=proc_time_str)) 
+
+                # auto open transcript in editor
+                if (job.auto_edit_transcript == 'True') and (job.file_ext == 'html'):
+                    self.launch_editor(my_transcript_file)
+            
             finally:
                 self.log_file.close()
                 self.log_file = None
-
-        except Exception as e:
-            self.logn(t('err_options'), 'error')
-            traceback_str = traceback.format_exc()
-            self.logn(e, 'error', tb=traceback_str)
-            job.set_error(f"{t('err_options')}: {e}")
-            raise Exception(job.error_message)
 
         finally:
             # hide the stop button
