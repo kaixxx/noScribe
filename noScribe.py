@@ -505,56 +505,59 @@ class TranscriptionQueue:
 
 # Command Line Interface
 
-def create_job_from_cli_args(args) -> TranscriptionJob:
-    """Create a TranscriptionJob from command line arguments"""
+def create_transcription_job(audio_file=None, transcript_file=None, start_time=None, stop_time=None,
+                           language_name=None, whisper_model_name=None, speaker_detection=None,
+                           overlapping=None, timestamps=None, disfluencies=None, pause=None,
+                           auto_edit_transcript=None, cli_mode=False) -> TranscriptionJob:
+    """Create a TranscriptionJob with all default values set in one place.
+    
+    This function handles both CLI and GUI job creation, ensuring all defaults
+    are consistent between both modes.
+    """
     job = TranscriptionJob()
     
-    # Required arguments
-    job.audio_file = args.audio_file
-    job.transcript_file = args.output_file
-    job.file_ext = os.path.splitext(job.transcript_file)[1][1:]
+    # File paths
+    job.audio_file = audio_file or ''
+    job.transcript_file = transcript_file or ''
+    if job.transcript_file:
+        job.file_ext = os.path.splitext(job.transcript_file)[1][1:]
     
     # Time range
-    if args.start:
-        job.start = millisec(args.start)
-    else:
-        job.start = 0
-        
-    if args.stop:
-        job.stop = millisec(args.stop)
-    else:
-        job.stop = 0
+    job.start = start_time if start_time is not None else 0
+    job.stop = stop_time if stop_time is not None else 0
     
-    # Language
-    if args.language:
-        if args.language in languages.values():
+    # Language - handle both language names and codes
+    if language_name:
+        if language_name in languages.values():
             # Find language name by code
-            job.language_name = next(name for name, code in languages.items() if code == args.language)
-        elif args.language in languages.keys():
+            job.language_name = next(name for name, code in languages.items() if code == language_name)
+        elif language_name in languages.keys():
             # Language name provided directly
-            job.language_name = args.language
+            job.language_name = language_name
         else:
-            raise ValueError(f"Unknown language: {args.language}")
+            raise ValueError(f"Unknown language: {language_name}")
     else:
         job.language_name = 'Auto'
     
-    # Model - we need to get available models
-    if args.model:
-        # We'll validate this later when we have access to the app instance
-        job.whisper_model = args.model
-    else:
-        job.whisper_model = 'precise'  # default
+    # Model (will be validated later when we have access to the app instance)
+    job.whisper_model = whisper_model_name or 'precise'
     
-    # Processing options
-    job.speaker_detection = args.speaker_detection if args.speaker_detection else 'auto'
-    job.overlapping = args.overlapping
-    job.timestamps = args.timestamps
-    job.disfluencies = args.disfluencies
+    # Processing options with defaults
+    job.speaker_detection = speaker_detection if speaker_detection is not None else 'auto'
+    job.overlapping = overlapping if overlapping is not None else True
+    job.timestamps = timestamps if timestamps is not None else False
+    job.disfluencies = disfluencies if disfluencies is not None else True
     
     # Pause setting
-    pause_options = ['none', '1sec+', '2sec+', '3sec+']
-    if args.pause in pause_options:
-        job.pause = pause_options.index(args.pause)
+    if pause is not None:
+        if isinstance(pause, str):
+            pause_options = ['none', '1sec+', '2sec+', '3sec+']
+            if pause in pause_options:
+                job.pause = pause_options.index(pause)
+            else:
+                job.pause = 1  # default to '1sec+'
+        else:
+            job.pause = pause
     else:
         job.pause = 1  # default to '1sec+'
     
@@ -566,7 +569,15 @@ def create_job_from_cli_args(args) -> TranscriptionJob:
     job.timestamp_color = get_config('timestamp_color', '#78909C')
     job.pause_marker = get_config('pause_seconds_marker', '.')
     job.auto_save = False if get_config('auto_save', 'True') == 'False' else True
-    job.auto_edit_transcript = 'False'  # Don't auto-open editor in CLI mode
+    
+    # Auto-edit transcript setting
+    if auto_edit_transcript is not None:
+        job.auto_edit_transcript = auto_edit_transcript
+    elif cli_mode:
+        job.auto_edit_transcript = 'False'  # Don't auto-open editor in CLI mode
+    else:
+        job.auto_edit_transcript = get_config('auto_edit_transcript', 'True')
+    
     job.vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
     
     # Platform-specific XPU settings
@@ -587,12 +598,34 @@ def create_job_from_cli_args(args) -> TranscriptionJob:
     
     # Check for invalid VTT options
     if job.file_ext == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
-        print("Warning: VTT format doesn't support pause markers, overlapping speech, or timestamps. These options will be disabled.")
+        if cli_mode:
+            print("Warning: VTT format doesn't support pause markers, overlapping speech, or timestamps. These options will be disabled.")
         job.pause = 0
         job.overlapping = False
         job.timestamps = False
     
     return job
+
+def create_job_from_cli_args(args) -> TranscriptionJob:
+    """Create a TranscriptionJob from command line arguments"""
+    # Parse time arguments
+    start_time = millisec(args.start) if args.start else None
+    stop_time = millisec(args.stop) if args.stop else None
+    
+    return create_transcription_job(
+        audio_file=args.audio_file,
+        transcript_file=args.output_file,
+        start_time=start_time,
+        stop_time=stop_time,
+        language_name=args.language,
+        whisper_model_name=args.model,
+        speaker_detection=args.speaker_detection,
+        overlapping=args.overlapping,
+        timestamps=args.timestamps,
+        disfluencies=args.disfluencies,
+        pause=args.pause,
+        cli_mode=True
+    )
 
 def parse_cli_args():
     """Parse command line arguments"""
@@ -1069,22 +1102,24 @@ class App(ctk.CTk):
         """
         
         # Handle screen logging if requested and textbox exists
-        if where != 'file' and hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
-            try:
-                self.log_textbox.configure(state=tk.NORMAL)
-                
-                if link:
-                    tags = tags + self.hyperlink.add(partial(self.openLink, link))
-                
-                self.log_textbox.insert(tk.END, txt, tags)
-                self.log_textbox.yview_moveto(1)  # Scroll to last line
-                
-                # Schedule disabling the textbox in the main thread
-                self.log_textbox.after(0, lambda: self.log_textbox.configure(state=tk.DISABLED))
-            except Exception as e:
-                # Log screen errors only to file to prevent recursion
-                if where == 'both':
-                    self.log(f"Error updating log_textbox: {str(e)}\nOriginal error: {txt}", tags='error', where='file', tb=tb)
+        if where != 'file': 
+            print(txt)
+            if hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
+                try:
+                    self.log_textbox.configure(state=tk.NORMAL)
+                    
+                    if link:
+                        tags = tags + self.hyperlink.add(partial(self.openLink, link))
+                    
+                    self.log_textbox.insert(tk.END, txt, tags)
+                    self.log_textbox.yview_moveto(1)  # Scroll to last line
+                    
+                    # Schedule disabling the textbox in the main thread
+                    self.log_textbox.after(0, lambda: self.log_textbox.configure(state=tk.DISABLED))
+                except Exception as e:
+                    # Log screen errors only to file to prevent recursion
+                    if where == 'both':
+                        self.log(f"Error updating log_textbox: {str(e)}\nOriginal error: {txt}", tags='error', where='file', tb=tb)
 
         # Handle file logging if requested
         if where != 'screen' and self.log_file and not self.log_file.closed:
@@ -1177,8 +1212,6 @@ class App(ctk.CTk):
 
     def collect_transcription_options(self) -> TranscriptionJob:
         """Collect all transcription options from UI and config into a TranscriptionJob object"""
-        job = TranscriptionJob()
-        
         # Validate required inputs
         if self.audio_file == '':
             raise ValueError(t('err_no_audio_file'))
@@ -1186,72 +1219,44 @@ class App(ctk.CTk):
         if self.transcript_file == '':
             raise ValueError(t('err_no_transcript_file'))
         
-        # File paths
-        job.audio_file = self.audio_file
-        job.transcript_file = self.transcript_file
-        job.file_ext = os.path.splitext(job.transcript_file)[1][1:]
-        
-        # Time range
+        # Parse time range from UI
+        start_time = None
         val = self.entry_start.get()
-        if val == '':
-            job.start = 0
-        else:
-            job.start = millisec(val)
+        if val != '':
+            start_time = millisec(val)
         
+        stop_time = None
         val = self.entry_stop.get()
-        if val == '':
-            job.stop = 0
-        else:
-            job.stop = millisec(val)
+        if val != '':
+            stop_time = millisec(val)
         
-        # Language and model settings
-        job.language_name = self.option_menu_language.get()
-        
+        # Get whisper model path
         sel_whisper_model = self.option_menu_whisper_model.get()
-        if sel_whisper_model in self.whisper_model_paths.keys():
-            job.whisper_model = self.whisper_model_paths[sel_whisper_model]
-        else:
+        if sel_whisper_model not in self.whisper_model_paths.keys():
             raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
+        whisper_model_path = self.whisper_model_paths[sel_whisper_model]
         
-        # Processing options
-        job.speaker_detection = self.option_menu_speaker.get()
-        job.overlapping = self.check_box_overlapping.get()
-        job.timestamps = self.check_box_timestamps.get()
-        job.disfluencies = self.check_box_disfluencies.get()
-        job.pause = self.option_menu_pause._values.index(self.option_menu_pause.get())
+        # Create job using unified function
+        job = create_transcription_job(
+            audio_file=self.audio_file,
+            transcript_file=self.transcript_file,
+            start_time=start_time,
+            stop_time=stop_time,
+            language_name=self.option_menu_language.get(),
+            whisper_model_name=whisper_model_path,  # Pass the full path
+            speaker_detection=self.option_menu_speaker.get(),
+            overlapping=self.check_box_overlapping.get(),
+            timestamps=self.check_box_timestamps.get(),
+            disfluencies=self.check_box_disfluencies.get(),
+            pause=self.option_menu_pause.get(),  # Pass string value
+            cli_mode=False
+        )
         
-        # Config-based options
-        job.whisper_beam_size = get_config('whisper_beam_size', 1)
-        job.whisper_temperature = get_config('whisper_temperature', 0.0)
-        job.whisper_compute_type = get_config('whisper_compute_type', 'default')
-        job.timestamp_interval = get_config('timestamp_interval', 60_000)
-        job.timestamp_color = get_config('timestamp_color', '#78909C')
-        job.pause_marker = get_config('pause_seconds_marker', '.')
-        job.auto_save = False if get_config('auto_save', 'True') == 'False' else True
-        job.auto_edit_transcript = get_config('auto_edit_transcript', 'True')
-        job.vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
-        
-        # Platform-specific XPU settings
-        if platform.system() == "Darwin":  # MAC
-            xpu = get_config('pyannote_xpu', 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu')
-            job.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
-        elif platform.system() in ('Windows', 'Linux'):
-            cuda_available = torch.cuda.is_available() and get_cuda_device_count() > 0
-            xpu = get_config('pyannote_xpu', 'cuda' if cuda_available else 'cpu')
-            job.pyannote_xpu = 'cuda' if xpu == 'cuda' else 'cpu'
-            whisper_xpu = get_config('whisper_xpu', 'cuda' if cuda_available else 'cpu')
-            job.whisper_xpu = 'cuda' if whisper_xpu == 'cuda' else 'cpu'
-        else:
-            raise Exception('Platform not supported yet.')
-        
-        # Check for invalid VTT options
+        # Handle VTT format warnings in GUI mode
         if job.file_ext == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
             self.logn()
             self.logn(t('err_vtt_invalid_options'), 'error')
-            job.pause = 0
-            job.overlapping = False
-            job.timestamps = False
-                
+        
         return job
 
 
