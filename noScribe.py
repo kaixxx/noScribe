@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
+import argparse
 # In the compiled version (no command line), stdout is None which might lead to errors
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w")
@@ -266,7 +267,7 @@ else:
     raise Exception('Platform not supported yet.')
 
 # timestamp regex
-timestamp_re = re.compile('\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]')
+timestamp_re = re.compile(r'\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]')
 
 # Helper functions
 
@@ -502,6 +503,146 @@ class TranscriptionQueue:
         """Check if queue is empty"""
         return len(self.jobs) == 0
 
+# Command Line Interface
+
+def create_job_from_cli_args(args) -> TranscriptionJob:
+    """Create a TranscriptionJob from command line arguments"""
+    job = TranscriptionJob()
+    
+    # Required arguments
+    job.audio_file = args.audio_file
+    job.transcript_file = args.output_file
+    job.file_ext = os.path.splitext(job.transcript_file)[1][1:]
+    
+    # Time range
+    if args.start:
+        job.start = millisec(args.start)
+    else:
+        job.start = 0
+        
+    if args.stop:
+        job.stop = millisec(args.stop)
+    else:
+        job.stop = 0
+    
+    # Language
+    if args.language:
+        if args.language in languages.values():
+            # Find language name by code
+            job.language_name = next(name for name, code in languages.items() if code == args.language)
+        elif args.language in languages.keys():
+            # Language name provided directly
+            job.language_name = args.language
+        else:
+            raise ValueError(f"Unknown language: {args.language}")
+    else:
+        job.language_name = 'Auto'
+    
+    # Model - we need to get available models
+    if args.model:
+        # We'll validate this later when we have access to the app instance
+        job.whisper_model = args.model
+    else:
+        job.whisper_model = 'precise'  # default
+    
+    # Processing options
+    job.speaker_detection = args.speaker_detection if args.speaker_detection else 'auto'
+    job.overlapping = args.overlapping
+    job.timestamps = args.timestamps
+    job.disfluencies = args.disfluencies
+    
+    # Pause setting
+    pause_options = ['none', '1sec+', '2sec+', '3sec+']
+    if args.pause in pause_options:
+        job.pause = pause_options.index(args.pause)
+    else:
+        job.pause = 1  # default to '1sec+'
+    
+    # Config-based options (use defaults from config)
+    job.whisper_beam_size = get_config('whisper_beam_size', 1)
+    job.whisper_temperature = get_config('whisper_temperature', 0.0)
+    job.whisper_compute_type = get_config('whisper_compute_type', 'default')
+    job.timestamp_interval = get_config('timestamp_interval', 60_000)
+    job.timestamp_color = get_config('timestamp_color', '#78909C')
+    job.pause_marker = get_config('pause_seconds_marker', '.')
+    job.auto_save = False if get_config('auto_save', 'True') == 'False' else True
+    job.auto_edit_transcript = 'False'  # Don't auto-open editor in CLI mode
+    job.vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
+    
+    # Platform-specific XPU settings
+    if platform.system() == "Darwin":  # MAC
+        xpu = get_config('pyannote_xpu', 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu')
+        job.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
+    elif platform.system() in ('Windows', 'Linux'):
+        try:
+            cuda_available = torch.cuda.is_available() and get_cuda_device_count() > 0
+        except:
+            cuda_available = False
+        xpu = get_config('pyannote_xpu', 'cuda' if cuda_available else 'cpu')
+        job.pyannote_xpu = 'cuda' if xpu == 'cuda' else 'cpu'
+        whisper_xpu = get_config('whisper_xpu', 'cuda' if cuda_available else 'cpu')
+        job.whisper_xpu = 'cuda' if whisper_xpu == 'cuda' else 'cpu'
+    else:
+        raise Exception('Platform not supported yet.')
+    
+    # Check for invalid VTT options
+    if job.file_ext == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
+        print("Warning: VTT format doesn't support pause markers, overlapping speech, or timestamps. These options will be disabled.")
+        job.pause = 0
+        job.overlapping = False
+        job.timestamps = False
+    
+    return job
+
+def parse_cli_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(
+        description='noScribe - AI-powered Audio Transcription',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python noScribe.py audio.wav transcript.html
+  python noScribe.py audio.mp3 transcript.txt --language en --speaker-detection 2
+  python noScribe.py audio.wav transcript.vtt --start 00:01:30 --stop 00:05:00
+  python noScribe.py --help-models  # Show available models
+        """
+    )
+    
+    # Special argument to show available models
+    parser.add_argument('--help-models', action='store_true',
+                       help='Show available Whisper models and exit')
+    
+    # Required arguments (when not using --help-models)
+    parser.add_argument('audio_file', nargs='?',
+                       help='Input audio file path')
+    parser.add_argument('output_file', nargs='?', 
+                       help='Output transcript file path (.html, .txt, or .vtt)')
+    
+    # Optional arguments
+    parser.add_argument('--start', 
+                       help='Start time (format: HH:MM:SS)')
+    parser.add_argument('--stop',
+                       help='Stop time (format: HH:MM:SS)')
+    parser.add_argument('--language', 
+                       help='Language code (e.g., en, de, fr) or "auto" for auto-detection')
+    parser.add_argument('--model',
+                       help='Whisper model to use (use --help-models to see available models)')
+    parser.add_argument('--speaker-detection', choices=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+                       help='Speaker detection/diarization setting')
+    parser.add_argument('--overlapping', action='store_true',
+                       help='Enable overlapping speech detection')
+    parser.add_argument('--timestamps', action='store_true',
+                       help='Include timestamps in transcript')
+    parser.add_argument('--disfluencies', action='store_true', default=True,
+                       help='Include disfluencies (uh, um, etc.) in transcript')
+    parser.add_argument('--no-disfluencies', action='store_false', dest='disfluencies',
+                       help='Exclude disfluencies from transcript')
+    parser.add_argument('--pause', choices=['none', '1sec+', '2sec+', '3sec+'],
+                       help='Mark pauses in transcript')
+    
+    return parser.parse_args()
+
+
 class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format hh:mm:ss
                                # based on https://stackoverflow.com/questions/63622880/how-to-make-python-automatically-put-colon-in-the-format-of-time-hhmmss
     def __init__(self, master, **kwargs):
@@ -511,7 +652,7 @@ class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format h
         self.bind('<Key>', self.format)
         self.configure(validate="all", validatecommand=(vcmd, '%P'))
 
-        self.valid = re.compile('^\d{0,2}(:\d{0,2}(:\d{0,2})?)?$', re.I)
+        self.valid = re.compile(r'^\d{0,2}(:\d{0,2}(:\d{0,2})?)?$', re.I)
 
     def validate(self, text):
         if text == '':
@@ -1881,8 +2022,117 @@ class App(ctk.CTk):
         finally:
             self.destroy()
 
+def run_cli_mode(args):
+    """Run noScribe in CLI mode"""
+    try:
+        # Create a minimal app instance to access model paths and logging
+        app = App()
+        
+        # Validate and set the whisper model
+        available_models = app.get_whisper_models()
+        if args.model:
+            if args.model not in available_models:
+                print(f"Error: Model '{args.model}' not found.")
+                print(f"Available models: {', '.join(available_models)}")
+                return 1
+        else:
+            # Use default model
+            if 'precise' in available_models:
+                args.model = 'precise'
+            elif available_models:
+                args.model = available_models[0]
+            else:
+                print("Error: No Whisper models found.")
+                return 1
+        
+        # Create job from CLI arguments
+        job = create_job_from_cli_args(args)
+        
+        # Set the whisper model path
+        job.whisper_model = app.whisper_model_paths[args.model]
+        
+        # Validate files
+        if not os.path.exists(job.audio_file):
+            print(f"Error: Audio file '{job.audio_file}' not found.")
+            return 1
+        
+        # Check output directory exists
+        output_dir = os.path.dirname(os.path.abspath(job.transcript_file))
+        if not os.path.exists(output_dir):
+            try:
+                os.makedirs(output_dir)
+            except Exception as e:
+                print(f"Error: Cannot create output directory '{output_dir}': {e}")
+                return 1
+        
+        # Create queue and add the job
+        queue = TranscriptionQueue()
+        queue.add_job(job)
+        
+        print(f"Starting transcription of '{job.audio_file}'...")
+        print(f"Output will be saved to '{job.transcript_file}'")
+        print(f"Language: {job.language_name}")
+        print(f"Model: {args.model}")
+        print(f"Speaker detection: {job.speaker_detection}")
+        print()
+        
+        # Start transcription worker with the queue
+        app.transcription_worker(queue)
+        
+        # Check results
+        final_summary = queue.get_queue_summary()
+        if final_summary['finished'] > 0:
+            print(f"\nTranscription completed successfully!")
+            print(f"Output saved to: {job.transcript_file}")
+            return 0
+        else:
+            print(f"\nTranscription failed!")
+            failed_jobs = queue.get_failed_jobs()
+            if failed_jobs:
+                print(f"Error: {failed_jobs[0].error_message}")
+            return 1
+            
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return 1
+
+def show_available_models():
+    """Show available Whisper models"""
+    try:
+        # Create minimal app instance to get models
+        app = App()
+        models = app.get_whisper_models()
+        
+        print("Available Whisper models:")
+        for model in models:
+            print(f"  - {model}")
+        
+        if not models:
+            print("  No models found. Please check your installation.")
+            
+    except Exception as e:
+        print(f"Error getting models: {str(e)}")
+
 if __name__ == "__main__":
-
-    app = App()
-
-    app.mainloop()
+    # Parse command line arguments
+    args = parse_cli_args()
+    
+    # Handle special case: show available models
+    if args.help_models:
+        show_available_models()
+        sys.exit(0)
+    
+    # Check if we have required arguments for CLI mode
+    if args.audio_file and args.output_file:
+        # CLI mode
+        exit_code = run_cli_mode(args)
+        sys.exit(exit_code)
+    elif args.audio_file or args.output_file:
+        # Partial arguments provided - show error
+        print("Error: Both audio_file and output_file are required for CLI mode.")
+        print("Use --help for usage information.")
+        sys.exit(1)
+    else:
+        # No CLI arguments - run GUI mode
+        app = App()
+        app.mainloop()
