@@ -18,6 +18,8 @@ es:
     ¡Disfruta!
 
   setup_message: 'Primera ejecución: Completa la configuración...'
+  new_release: 'Hay una nueva versión de noScribe disponible (%{v}):'
+  new_release_download: 'Descargar: '
 
   # Elementos de la interfaz de usuario
   label_audio_file: 'Archivo de audio:'
@@ -36,13 +38,19 @@ es:
   label_overlapping: 'Discurso solapado:'
   label_pause: 'Marca pausas:'
   label_timestamps: 'Timestamps:'
+  label_disfluencies: 'Disfluencias:'
   
-  start_button: Iniciar 
+  start_button: Iniciar
   stop_button: Cancelar
+  editor_button: Editor
 
+  overall_progress: 'Progreso total: '
   # Mensajes de registro
   log_transcript_filename: 'Nombre de archivo de transcripción: '
   log_audio_file_selected: 'Archivo de audio seleccionado: '
+  queue_start: '=== Iniciando cola ==='
+  queue_start_jobs: 'Procesando %{total} trabajo(s) de transcripción'
+  start_job: 'Iniciando trabajo: %{audio_file}'
   start_audio_conversion: 'Convirtiendo audio...'
   audio_conversion_finished: 'Conversión de audio finalizada'
   start_identifiying_speakers: 'Identificación de oradores...'
@@ -50,9 +58,14 @@ es:
   start_canceling: 'Cancelando... (por favor, espera un momento)'
   start_transcription: 'Transcribiendo...'
   loading_whisper: 'Cargando whisper'
-  transcription_finished: 'Transcripción finalizada.' 
+  vad: 'Detección de actividad de voz...'
+  transcription_finished: 'Transcripción finalizada.'
   transcription_saved: 'Guardado en '
   trancription_time: 'Duración: %{duration} minutos'
+  queue_complete: '=== Procesamiento de la cola completado ==='
+  total_jobs: 'Trabajos totales: %{total}'
+  completed: 'Completados: %{finished}'
+  failed: 'Fallidos: %{errors}'
 
   # Mensajes de error
   err_setup: 'Se produjo un error durante la configuración. Verifica tu conexión a Internet y reinicia el programa.'
@@ -69,6 +82,10 @@ es:
   err_transcription: 'Error en el paso 3: transcripción'
   rescue_saving: 'Fallo al guardar con el nombre de archivo original. Guardado en este archivo en su lugar: %{file}'
   rescue_saving_failed: 'Error: Fallo al guardar con el nombre de archivo original. El nombre de archivo alternativo también existe. Tengo que salir. (¡Asegúrate de que tu transcripción no esté abierta en Word!)'
+  err_noScribeEdit_not_found: 'Error: No se pudo encontrar el editor de noScribe.'
+  err_vtt_invalid_options: 'Advertencia: Las opciones "Discurso solapado", "Marca pausas" y "Timestamps" no están soportadas en archivos VTT.'
+  err_editor_invalid_format: 'El editor solo puede usarse con archivos HTML. ¿Deseas iniciarlo de todas formas?'
+  err_invalid_model: 'Nombre duplicado ignorado para el modelo whisper: "%{model_name}"'
 
   # Contenido del documento
   doc_header: 'Transcrito con noScribe ver. %{version}'
