@@ -1,7 +1,6 @@
 old/
 build/
 dist/
-src/
 __pycache__/
 .vscode/
 noScribeEdit/*
