@@ -9,6 +9,7 @@ from controller import (
     start_transcription,
     stop_transcription,
 )
+from translator import set_language, t
 
 
 class NoScribeApp(QtWidgets.QMainWindow):
@@ -16,6 +17,10 @@ class NoScribeApp(QtWidgets.QMainWindow):
         super().__init__()
         base_dir = Path(__file__).resolve().parent.parent
         uic.loadUi(base_dir / "ui" / "noScribe.ui", self)
+
+        # default to English; could be extended to load from settings
+        set_language("en")
+        self._retranslate_ui()
 
         style_path = base_dir / "resources" / "style.qss"
         if style_path.exists():
@@ -30,15 +35,22 @@ class NoScribeApp(QtWidgets.QMainWindow):
     def append_log(self, message: str) -> None:
         self.txtLog.append(message)
 
+    def _retranslate_ui(self) -> None:
+        """Apply translations to UI elements."""
+        self.btnAudioFile.setText(t("Audio File"))
+        self.btnTranscriptFile.setText(t("Transcript File"))
+        self.btnStart.setText(t("Start"))
+        self.btnStop.setText(t("Stop"))
+
     def select_audio_file(self) -> None:
         file_name, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Select Audio File"
+            self, t("Select Audio File")
         )
         self.append_log(handle_audio_file(file_name))
 
     def select_transcript_file(self) -> None:
         file_name, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Select Transcript File"
+            self, t("Select Transcript File")
         )
         self.append_log(handle_transcript_file(file_name))
 

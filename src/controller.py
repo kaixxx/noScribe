@@ -1,26 +1,28 @@
 """Application logic for noScribe PyQt6 interface."""
 from pathlib import Path
 
+from translator import t
+
 
 def handle_audio_file(path: str) -> str:
     """Handle selected audio file and return log message."""
     if path:
-        return f"Selected audio file: {Path(path).name}"
-    return "No audio file selected"
+        return t("Selected audio file: {name}", name=Path(path).name)
+    return t("No audio file selected")
 
 
 def handle_transcript_file(path: str) -> str:
     """Handle selected transcript file and return log message."""
     if path:
-        return f"Selected transcript file: {Path(path).name}"
-    return "No transcript file selected"
+        return t("Selected transcript file: {name}", name=Path(path).name)
+    return t("No transcript file selected")
 
 
 def start_transcription() -> str:
     """Placeholder for starting transcription."""
-    return "Transcription started"
+    return t("Transcription started")
 
 
 def stop_transcription() -> str:
     """Placeholder for stopping transcription."""
-    return "Transcription stopped"
+    return t("Transcription stopped")
