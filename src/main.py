@@ -25,7 +25,7 @@ class NoScribeApp(QtWidgets.QMainWindow):
 
         self.btnAudioFile.clicked.connect(self.select_audio_file)
         self.btnTranscriptFile.clicked.connect(self.select_transcript_file)
-        self.btnStart.clicked.connect(self.controller.start_transcription)
+        self.btnStart.clicked.connect(self.start_transcription)
         self.btnStop.clicked.connect(self.controller.stop_transcription)
         self.cmbLanguage.currentIndexChanged.connect(self.change_language)
         self.chkDiarization.toggled.connect(self.controller.set_diarization)
@@ -41,6 +41,8 @@ class NoScribeApp(QtWidgets.QMainWindow):
         self.btnStop.setText(t("Stop"))
         self.lblLanguage.setText(t("Language"))
         self.chkDiarization.setText(t("Diarization"))
+        self.lblStartTime.setText(t("Start Time"))
+        self.lblStopTime.setText(t("Stop Time"))
         self.cmbLanguage.blockSignals(True)
         current = self.controller.language
         self.cmbLanguage.clear()
@@ -62,6 +64,11 @@ class NoScribeApp(QtWidgets.QMainWindow):
             self, t("Select Transcript File")
         )
         self.controller.handle_transcript_file(file_name)
+
+    def start_transcription(self) -> None:
+        start = self.txtStartTime.text()
+        stop = self.txtStopTime.text()
+        self.controller.start_transcription(start, stop)
 
     def change_language(self) -> None:
         data = self.cmbLanguage.currentData()

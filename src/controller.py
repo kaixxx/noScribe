@@ -23,6 +23,18 @@ def _format_timestamp(seconds: float) -> str:
     return f"{hours_marker}{minutes:02d}:{secs:02d}.{milliseconds:03d}"
 
 
+def _parse_timecode(value: str) -> Optional[float]:
+    """Parse hh:mm:ss string into seconds."""
+    try:
+        parts = [int(p) for p in value.split(":")]
+        while len(parts) < 3:
+            parts.insert(0, 0)
+        hours, minutes, seconds = parts
+        return hours * 3600 + minutes * 60 + seconds
+    except Exception:
+        return None
+
+
 class TranscriptionThread(QThread):
     """Background transcription worker."""
 
@@ -34,12 +46,16 @@ class TranscriptionThread(QThread):
         transcript_path: str,
         language: str,
         diarization: bool = False,
+        start_time: float = 0.0,
+        stop_time: float = float("inf"),
     ) -> None:
         super().__init__()
         self.audio_path = audio_path
         self.transcript_path = transcript_path
         self.language = language
         self.diarization = diarization
+        self.start_time = start_time
+        self.stop_time = stop_time
         self._stop_requested = False
 
     def stop(self) -> None:
@@ -61,6 +77,8 @@ class TranscriptionThread(QThread):
                     if self._stop_requested:
                         self.log.emit(t("Transcription stopped"))
                         break
+                    if seg.end < self.start_time or seg.start > self.stop_time:
+                        continue
                     line = f"[{_format_timestamp(seg.start)} -> {_format_timestamp(seg.end)}] {seg.text}\n"
                     out.write(line)
                     self.log.emit(seg.text)
@@ -106,13 +124,26 @@ class NoScribeController(QObject):
         self.diarization = enabled
 
     # --------------------- actions ---------------------
-    def start_transcription(self) -> None:
+    def start_transcription(self, start: str, stop: str) -> None:
         if not self.audio_file or not self.transcript_file:
             self.log.emit(t("Please select audio and transcript file"))
             return
+        start_sec = _parse_timecode(start)
+        if start_sec is None:
+            self.log.emit(t("Invalid time format: {time}", time=start))
+            start_sec = 0.0
+        stop_sec = _parse_timecode(stop)
+        if stop_sec is None:
+            self.log.emit(t("Invalid time format: {time}", time=stop))
+            stop_sec = float("inf")
         if self.worker is None:
             self.worker = TranscriptionThread(
-                self.audio_file, self.transcript_file, self.language, self.diarization
+                self.audio_file,
+                self.transcript_file,
+                self.language,
+                self.diarization,
+                start_sec,
+                stop_sec,
             )
             self.worker.log.connect(self.log.emit)
             self.worker.finished.connect(self._worker_finished)

@@ -88,17 +88,51 @@
           </widget>
          </item>
          <item>
-          <widget class="QCheckBox" name="chkDiarization">
-           <property name="text">
-            <string>Diarization</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="btnStart">
-           <property name="text">
-            <string>Start</string>
-           </property>
+         <widget class="QCheckBox" name="chkDiarization">
+          <property name="text">
+           <string>Diarization</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblStartTime">
+          <property name="text">
+           <string>Start Time</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="txtStartTime">
+          <property name="inputMask">
+           <string>00:00:00;_</string>
+          </property>
+          <property name="text">
+           <string>00:00:00</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblStopTime">
+          <property name="text">
+           <string>Stop Time</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="txtStopTime">
+          <property name="inputMask">
+           <string>00:00:00;_</string>
+          </property>
+          <property name="text">
+           <string>00:00:00</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnStart">
+          <property name="text">
+           <string>Start</string>
+          </property>
           </widget>
          </item>
          <item>

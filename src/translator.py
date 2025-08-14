@@ -27,6 +27,9 @@ _TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "Diarization": {"de": "Diarisierung"},
     "English": {"de": "Englisch"},
     "German": {"de": "Deutsch"},
+    "Start Time": {"de": "Startzeit"},
+    "Stop Time": {"de": "Stoppzeit"},
+    "Invalid time format: {time}": {"de": "Ungültiges Zeitformat: {time}"},
 }
 
 _language: str = "en"
