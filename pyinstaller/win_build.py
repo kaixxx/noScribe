@@ -4,11 +4,11 @@ from subprocess import Popen
 from datetime import datetime
 
 noScribe_version = '0.6.2'
-clean_build = True
-run_pyinstaller_non_cuda = False
-run_pyinstaller_cuda = True
+clean_build = False
+run_pyinstaller_non_cuda = True
+run_pyinstaller_cuda = False
 run_nsis_non_cuda = False
-run_nsis_cuda = True
+run_nsis_cuda = False
 
 conda_env_noncuda = 'noScribe_0_6_non_cuda'
 conda_env_cuda = 'noScribe_0_6_cuda'
