@@ -18,6 +18,8 @@ fr:
     Profitez-en !
 
   setup_message: "Première exécution : Termine la configuration..."
+  new_release: "Une nouvelle version de noScribe est disponible (%{v}) :"
+  new_release_download: "Télécharger : "
 
   # Éléments de l'interface utilisateur
   label_audio_file: "Fichier audio :"
@@ -36,13 +38,19 @@ fr:
   label_overlapping: 'Chevauchements de parole'
   label_pause: 'Marquer les pauses :'
   label_timestamps: 'Horodatage :'
+  label_disfluencies: 'Mots de remplissage :'
   
   start_button: "Démarrer"
   stop_button: "Annuler"
+  editor_button: "Éditeur"
 
+  overall_progress: 'Progression totale : '
   # Messages de journalisation
   log_transcript_filename: "Nom du fichier de transcription : "
   log_audio_file_selected: "Fichier audio sélectionné : "
+  queue_start: '=== Démarrage de la file d'attente ==='
+  queue_start_jobs: 'Traitement de %{total} tâche(s) de transcription'
+  start_job: 'Démarrage de la tâche : %{audio_file}'
   start_audio_conversion: "Conversion audio en cours..."
   audio_conversion_finished: "Conversion audio terminée"
   start_identifiying_speakers: "Identification des locuteurs en cours..."
@@ -50,9 +58,14 @@ fr:
   start_canceling: "Annulation en cours... (veuillez patienter un instant)"
   start_transcription: "Transcription en cours..."
   loading_whisper: "Chargement de whisper"
-  transcription_finished: "Transcription terminée." 
+  vad: 'Détection d\'activité vocale...'
+  transcription_finished: "Transcription terminée."
   transcription_saved: "Enregistré sous "
   trancription_time: "Durée : %{duration} minutes"
+  queue_complete: '=== Traitement de la file d\'attente terminé ==='
+  total_jobs: 'Tâches totales : %{total}'
+  completed: 'Terminées : %{finished}'
+  failed: 'Échouées : %{errors}'
 
   # Messages d'erreur
   err_setup: "Une erreur s'est produite pendant la configuration. Vérifiez votre connexion internet et redémarrez le programme."
@@ -69,6 +82,10 @@ fr:
   err_transcription: "Erreur à l'étape 3 - transcription"
   rescue_saving: "Échec de l'enregistrement sous le nom de fichier d'origine. Enregistré sous ce fichier à la place : %{file}"
   rescue_saving_failed: "Erreur : Échec de l'enregistrement sous le nom de fichier d'origine. Le nom de fichier alternatif existe également. Je dois quitter. (Assurez-vous que votre transcription n'est pas déjà ouverte dans Word !)"
+  err_noScribeEdit_not_found: "Erreur : Impossible de trouver l'éditeur noScribe."
+  err_vtt_invalid_options: 'Avertissement : les options "Chevauchements de parole", "Marquer les pauses" et "Horodatage" ne sont pas prises en charge dans les fichiers VTT.'
+  err_editor_invalid_format: "L'éditeur ne peut être utilisé qu'avec des fichiers HTML. Voulez-vous quand même le lancer ?"
+  err_invalid_model: 'Nom en double ignoré pour le modèle whisper : "%{model_name}"'
 
   # Contenu du document
   doc_header: "Transcrit avec noScribe vers. %{version}"
