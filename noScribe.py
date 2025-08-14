@@ -1013,7 +1013,7 @@ class App(ctk.CTk):
                 entry_path = os.path.join(dir, entry)
                 if os.path.isdir(entry_path):
                     if entry in self.whisper_model_paths:
-                        self.logn(f'Ignored double name for whisper model: "{entry}"', 'error')
+                        self.logn(t('err_invalid_model', entry), 'error')
                     else:
                         self.whisper_model_paths[entry]=entry_path 
        
@@ -1104,7 +1104,7 @@ class App(ctk.CTk):
         # Handle screen logging if requested and textbox exists
         if where != 'file': 
             if txt[:-1] != t('welcome_instructions'):
-                print(txt, end=None)            
+                print(txt, end='')            
             if hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
                 try:
                     self.log_textbox.configure(state=tk.NORMAL)
@@ -1276,8 +1276,9 @@ class App(ctk.CTk):
         try:
             # Log queue summary
             summary = transcription_queue.get_queue_summary()
-            self.logn(f"Processing {summary['total']} transcription job(s)")
-            
+            self.logn()
+            self.logn(t('queue_start'), 'highlight')
+            self.logn(t('queue_start_jobs', total=summary['total']))
             # Process each job in the queue
             while transcription_queue.has_pending_jobs():
                 if self.cancel:
@@ -1294,16 +1295,13 @@ class App(ctk.CTk):
                 # Process the job
                 try:
                     job.set_running()
-                    self.logn(f"Starting job: {os.path.basename(job.audio_file)}")
+                    self.logn()
+                    self.logn(t('start_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
                     
                     # Process single job
                     self._process_single_job(job)
                     
                     job.set_finished()
-                    duration = job.get_duration()
-                    if duration:
-                        duration_str = f"{int(duration.total_seconds() // 60)}:{int(duration.total_seconds() % 60):02d}"
-                        self.logn(f"Job completed in {duration_str}")
                     
                 except Exception as e:
                     error_msg = job.error_message or str(e)
@@ -1311,14 +1309,15 @@ class App(ctk.CTk):
                     self.logn(error_msg, 'error')
                     traceback_str = job.error_tb or traceback.format_exc()
                     self.logn(f"Job error details: {traceback_str}", where='file')
+                    print(f"Job error details: {traceback_str}")
             
             # Log final summary
             final_summary = transcription_queue.get_queue_summary()
             self.logn()
-            self.logn("=== QUEUE PROCESSING COMPLETE ===", 'highlight')
-            self.logn(f"Total jobs: {final_summary['total']}")
-            self.logn(f"Completed: {final_summary['finished']}")
-            self.logn(f"Failed: {final_summary['errors']}")
+            self.logn(t('queue_complete'), 'highlight')
+            self.logn(t('total_jobs', total=final_summary['total']))
+            self.logn(t('completed', finished=final_summary['finished']))
+            self.logn(t('failed', errors=final_summary['errors']))
             
             # Log total processing time
             total_time = datetime.datetime.now() - queue_start_time
