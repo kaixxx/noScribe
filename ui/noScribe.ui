@@ -14,35 +14,33 @@
    <string>NoScribe</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QVBoxLayout" name="verticalLayoutMain">
     <item>
-     <widget class="QWidget" name="sidebar">
-      <layout class="QVBoxLayout" name="verticalLayoutSidebar">
+     <widget class="QWidget" name="header">
+      <layout class="QHBoxLayout" name="horizontalLayoutHeader">
        <item>
-        <widget class="QPushButton" name="btnAudioFile">
-         <property name="text">
-          <string>Audio File</string>
+        <widget class="QLabel" name="lblLogo">
+         <property name="pixmap">
+          <pixmap>../noScribeLogo.png</pixmap>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>64</width>
+           <height>64</height>
+          </size>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btnTranscriptFile">
+        <widget class="QLabel" name="lblTitle">
          <property name="text">
-          <string>Transcript File</string>
+          <string>noScribe</string>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btnStart">
-         <property name="text">
-          <string>Start</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btnStop">
-         <property name="text">
-          <string>Stop</string>
+         <property name="alignment">
+          <set>Qt::AlignLeft|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -50,7 +48,86 @@
      </widget>
     </item>
     <item>
-     <widget class="QTextEdit" name="txtLog"/>
+     <layout class="QHBoxLayout" name="horizontalLayoutBody">
+      <item>
+       <widget class="QWidget" name="sidebar">
+        <layout class="QVBoxLayout" name="verticalLayoutSidebar">
+         <item>
+          <widget class="QPushButton" name="btnAudioFile">
+           <property name="text">
+            <string>Audio File</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnTranscriptFile">
+           <property name="text">
+            <string>Transcript File</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblLanguage">
+           <property name="text">
+            <string>Language</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cmbLanguage">
+           <item>
+            <property name="text">
+             <string>English</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>German</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="chkDiarization">
+           <property name="text">
+            <string>Diarization</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnStart">
+           <property name="text">
+            <string>Start</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnStop">
+           <property name="text">
+            <string>Stop</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTextEdit" name="txtLog"/>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>

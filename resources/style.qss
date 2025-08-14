@@ -15,3 +15,21 @@ QPushButton {
 QPushButton:hover {
     background-color: #274cbf;
 }
+
+QComboBox {
+    background-color: #1e3a8a;
+    color: #ffffff;
+    padding: 5px;
+    border: none;
+    border-radius: 4px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #1e3a8a;
+    selection-background-color: #274cbf;
+    color: #ffffff;
+}
+
+QCheckBox {
+    padding: 5px 0px;
+}

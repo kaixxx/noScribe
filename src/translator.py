@@ -19,6 +19,14 @@ _TRANSLATIONS: Dict[str, Dict[str, str]] = {
     },
     "Transcription started": {"de": "Transkription gestartet"},
     "Transcription stopped": {"de": "Transkription gestoppt"},
+    "Transcription finished": {"de": "Transkription abgeschlossen"},
+    "Please select audio and transcript file": {
+        "de": "Bitte Audio- und Transkriptdatei wählen"
+    },
+    "Language": {"de": "Sprache"},
+    "Diarization": {"de": "Diarisierung"},
+    "English": {"de": "Englisch"},
+    "German": {"de": "Deutsch"},
 }
 
 _language: str = "en"
