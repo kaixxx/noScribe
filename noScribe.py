@@ -1103,8 +1103,8 @@ class App(ctk.CTk):
         
         # Handle screen logging if requested and textbox exists
         if where != 'file': 
-            if txt != t('welcome_message'):
-                print(txt)            
+            if txt[:-1] != t('welcome_instructions'):
+                print(txt, end=None)            
             if hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
                 try:
                     self.log_textbox.configure(state=tk.NORMAL)
