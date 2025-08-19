@@ -949,14 +949,20 @@ class App(ctk.CTk):
         # Stop Button
         self.stop_button = ctk.CTkButton(self.sidebar_frame, height=42, fg_color='darkred', hover_color='darkred', text=t('stop_button'), command=self.button_stop_event)
         
-        # create log textbox
-        self.log_frame = ctk.CTkFrame(self.frame_main, corner_radius=0, fg_color='transparent')
-        self.log_frame.pack(padx=0, pady=0, fill='both', expand=True, side='top')
+        # create queue view and log textbox
+        self.frame_right = ctk.CTkFrame(self.frame_main, corner_radius=0, fg_color='transparent')
+        self.frame_right.pack(padx=0, pady=0, fill='both', expand=True, side='top')
+        
+        self.tabview = ctk.CTkTabview(self.frame_right, anchor="nw", border_width=2)
+        self.tabview.pack(padx=20, pady=[20,20], fill='both', expand=True, side='top')
+        self.tab_log = self.tabview.add(t("tab_log")) 
+        self.tab_queue = self.tabview.add(t("tab_queue")) 
+        self.tabview.set(t("tab_log"))  # set currently visible tab
 
-        self.log_textbox = ctk.CTkTextbox(self.log_frame, wrap='word', state="disabled", font=("",16), text_color="lightgray")
+        self.log_textbox = ctk.CTkTextbox(self.tab_log, wrap='word', state="disabled", font=("",16), text_color="lightgray")
         self.log_textbox.tag_config('highlight', foreground='darkorange')
         self.log_textbox.tag_config('error', foreground='yellow')
-        self.log_textbox.pack(padx=20, pady=[20,0], expand=True, fill='both')
+        self.log_textbox.pack(padx=0, pady=[0,0], expand=True, fill='both')
 
         self.hyperlink = HyperlinkManager(self.log_textbox._textbox)
 

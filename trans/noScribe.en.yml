@@ -23,6 +23,9 @@ en:
   new_release_download: 'Download: '
 
   # UI Elements
+  tab_log: Log
+  tab_queue: Queue
+
   label_audio_file: 'Audio file:'
   label_audio_file_name: <select file>
   
