@@ -717,6 +717,7 @@ class App(ctk.CTk):
                 file.write('You can download custom Whisper-models for the transcription into this folder. \n' 
                            'See here for more information: https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription')            
         
+        self.queue = TranscriptionQueue()
         self.audio_file = ''
         self.transcript_file = ''
         self.log_file = None
@@ -1264,7 +1265,7 @@ class App(ctk.CTk):
     ################################################################################################
     # Main function
 
-    def transcription_worker(self, transcription_queue: TranscriptionQueue):
+    def transcription_worker(self):
         """Process transcription jobs from the queue"""
         queue_start_time = datetime.datetime.now()
         self.cancel = False
@@ -1275,20 +1276,20 @@ class App(ctk.CTk):
 
         try:
             # Log queue summary
-            summary = transcription_queue.get_queue_summary()
+            summary = self.queue.get_queue_summary()
             self.logn()
             self.logn(t('queue_start'), 'highlight')
             self.logn(t('queue_start_jobs', total=summary['total']))
             # Process each job in the queue
-            while transcription_queue.has_pending_jobs():
+            while self.queue.has_pending_jobs():
                 if self.cancel:
                     # Mark all waiting jobs as cancelled
-                    for job in transcription_queue.get_waiting_jobs():
+                    for job in self.queue.get_waiting_jobs():
                         job.set_error(t('err_user_cancelation'))
                     break
                 
                 # Get next job
-                job = transcription_queue.get_next_waiting_job()
+                job = self.queue.get_next_waiting_job()
                 if not job:
                     break
                 
@@ -1312,7 +1313,7 @@ class App(ctk.CTk):
                     print(f"Job error details: {traceback_str}")
             
             # Log final summary
-            final_summary = transcription_queue.get_queue_summary()
+            final_summary = self.queue.get_queue_summary()
             self.logn()
             self.logn(t('queue_complete'), 'highlight')
             self.logn(t('total_jobs', total=final_summary['total']))
@@ -1983,12 +1984,11 @@ class App(ctk.CTk):
             # Collect transcription options from UI
             job = self.collect_transcription_options()
             
-            # Create queue and add the job
-            queue = TranscriptionQueue()
-            queue.add_job(job)
+            # Add the job to the queue
+            self.queue.add_job(job)
             
             # Start transcription worker with the queue
-            wkr = Thread(target=self.transcription_worker, args=(queue,))
+            wkr = Thread(target=self.transcription_worker, args=())
             wkr.start()
             
         except (ValueError, FileNotFoundError) as e:
@@ -2070,9 +2070,8 @@ def run_cli_mode(args):
                 print(f"Error: Cannot create output directory '{output_dir}': {e}")
                 return 1
         
-        # Create queue and add the job
-        queue = TranscriptionQueue()
-        queue.add_job(job)
+        # Add the job to the queue
+        app.queue.add_job(job)
         
         print(f"Starting transcription of '{job.audio_file}'...")
         print(f"Output will be saved to '{job.transcript_file}'")
@@ -2082,17 +2081,17 @@ def run_cli_mode(args):
         print()
         
         # Start transcription worker with the queue
-        app.transcription_worker(queue)
+        app.transcription_worker()
         
         # Check results
-        final_summary = queue.get_queue_summary()
+        final_summary = app.queue.get_queue_summary()
         if final_summary['finished'] > 0:
             print(f"\nTranscription completed successfully!")
             print(f"Output saved to: {job.transcript_file}")
             return 0
         else:
             print(f"\nTranscription failed!")
-            failed_jobs = queue.get_failed_jobs()
+            failed_jobs = app.queue.get_failed_jobs()
             if failed_jobs:
                 print(f"Error: {failed_jobs[0].error_message}")
             return 1
