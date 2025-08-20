@@ -19,6 +19,8 @@ ja:
     お楽しみください！
 
   setup_message: '初回実行：セットアップを完了してください...'
+  new_release: 'noScribe の新しいバージョンが利用可能です (%{v}):'
+  new_release_download: 'ダウンロード: '
 
   # UI要素
   label_audio_file: '音声ファイル：'
@@ -34,45 +36,60 @@ ja:
   label_speaker: '話者検出：'
   label_whisper_model: 'モデル：'
   label_add_custom_models: 'AIモデルを追加...'
-  label_overlapping: 'オーバーラッピング・スピーチ：'
-  label_pause: 'マークはポーズをとる：'
+  label_overlapping: '重複発話：'
+  label_pause: 'ポーズをマーク：'
   label_timestamps: 'タイムスタンプ：'
-  
-  start_button: 開始 
+  label_disfluencies: 'フィラー：'
+
+  start_button: 開始
   stop_button: キャンセル
+  editor_button: エディター
+  overall_progress: '全体の進行状況：'
 
   # ログメッセージ
   log_transcript_filename: '転写ファイル名：'
   log_audio_file_selected: '選択された音声ファイル：'
+  queue_start: '=== キューを開始 ==='
+  queue_start_jobs: '%{total} 個の転写ジョブを処理中'
+  start_job: 'ジョブを開始: %{audio_file}'
   start_audio_conversion: '音声の変換を開始中...'
   audio_conversion_finished: '音声の変換が完了しました'
   start_identifiying_speakers: '話者の識別を開始中...'
   loading_pyannote: 'pyannoteの読み込み中'
   start_canceling: 'キャンセル中...（しばらくお待ちください）'
   start_transcription: '転写を開始中...'
-  loading_whisper: 'whisperの読み込み中'
-  transcription_finished: '転写が完了しました。' 
-  transcription_saved: '%{file}に保存されました'
+  loading_whisper: 'Whisperの読み込み中'
+  vad: '音声活動検出...'
+  transcription_finished: '転写が完了しました。'
+  transcription_saved: '保存先: '
   trancription_time: '所要時間：%{duration}分'
+  queue_complete: '=== キュー処理が完了 ==='
+  total_jobs: '総ジョブ: %{total}'
+  completed: '完了: %{finished}'
+  failed: '失敗: %{errors}'
 
   # エラーメッセージ
   err_setup: 'セットアップ中にエラーが発生しました。インターネット接続が正常か確認し、プログラムを再起動してください。'
-  err_invalid_time_string: '無効な時間です：" %{time}"'
+  err_invalid_time_string: '無効な時間です: "%{time}"'
   err_options: 'オプションのエラー'
   err_no_audio_file: 'エラー：音声ファイルを選択してください。'
   err_no_transcript_file: 'エラー：転写が完了したファイル名を選択してください。'
   err_ffmpeg: 'ffmpegでエラーが発生しました'
-  err_converting_audio: 'ステップ1でエラーが発生しました-音声の変換。'
-  err_identifying_speakers: 'ステップ2でエラーが発生しました-話者の識別。'
+  err_converting_audio: 'ステップ1でエラーが発生しました - 音声の変換。'
+  err_identifying_speakers: 'ステップ2でエラーが発生しました - 話者の識別。'
   transcription_canceled: '本当に転写をキャンセルしますか？'   
   err_user_cancelation: 'ユーザーによってプロセスがキャンセルされました。'
   err_whisper_main: 'Whisperメインがエラーコード %{e} で終了しました'
-  err_transcription: 'ステップ3でエラーが発生しました-転写'
+  err_transcription: 'ステップ3でエラーが発生しました - 転写。'
   rescue_saving: '元のファイル名への保存に失敗しました。代わりにこのファイルに保存されました：%{file}'
   rescue_saving_failed: 'エラー：元のファイル名への保存に失敗しました。代替のファイル名も存在します。終了する必要があります。（Wordでトランスクリプトが既に開かれていないことを確認してください！）'
+  err_noScribeEdit_not_found: 'エラー: noScribe エディターが見つかりませんでした。'
+  err_vtt_invalid_options: '警告: 「重複発話」、「ポーズをマーク」と「タイムスタンプ」は VTT ファイルでサポートされていません。'
+  err_editor_invalid_format: 'エディターは html ファイルでのみ使用できます。それでも起動しますか？'
+  err_invalid_model: 'Whisper モデルの重複名を無視しました: "%{model_name}"'
 
   # ドキュメント内容
   doc_header: 'noScribe vers. %{version}で転写されました'
   doc_header_audio: '音声ファイル：%{file}'
-  pause_minutes: '(%{minutes}分[秒]休止)'
-  pause_seconds: '(%{seconds}秒休止)'
+  pause_minutes: '(%{minutes}分の休止)'
+  pause_seconds: '(%{seconds}秒の休止)'

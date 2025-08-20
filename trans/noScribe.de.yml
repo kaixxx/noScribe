@@ -40,15 +40,19 @@ de:
   label_pause: 'Pausen markieren:'
   label_timestamps: 'Zeitmarken:'
   label_disfluencies: 'Füllworte:'
-  
+
   start_button: Start
   stop_button: Abbrechen
+  editor_button: Editor
 
   overall_progress: 'Fortschritt insgesamt: '
 
   # log messages
   log_transcript_filename: 'Transkript-Dateiname: '
   log_audio_file_selected: 'Gewählte Audiodatei: '
+  queue_start: '=== Warteschlange wird gestartet ==='
+  queue_start_jobs: 'Bearbeite %{total} Transkriptionsauftrag/-aufträge'
+  start_job: 'Starte Auftrag: %{audio_file}'
   start_audio_conversion: 'Audioumwandlung...'
   audio_conversion_finished: 'Umwandlung fertig.'
   start_identifiying_speakers: 'Sprecher:innen identifizieren...'
@@ -56,12 +60,17 @@ de:
   start_canceling: 'Abbrechen läuft...'
   start_transcription: 'Transkription...'
   loading_whisper: 'Whisper laden'
-  transcription_finished: 'Transkription beendet.' 
+  vad: 'Sprachaktivitätserkennung...'
+  transcription_finished: 'Transkription beendet.'
   transcription_saved: 'Gespeichert unter: '
   trancription_time: 'Dauer: %{duration} Minuten'
+  queue_complete: '=== Warteschlangenverarbeitung abgeschlossen ==='
+  total_jobs: 'Aufträge insgesamt: %{total}'
+  completed: 'Abgeschlossen: %{finished}'
+  failed: 'Fehlgeschlagen: %{errors}'
 
   # Error messages
-  err_setup: 'Während des Einrichtung ist ein Fehler aufgetreten. Bitte die Internetverbindung prüfen.'
+  err_setup: 'Während der Einrichtung ist ein Fehler aufgetreten. Bitte die Internetverbindung prüfen.'
   err_invalid_time_string: 'Das ist keine korrekte Zeitangabe: "%{time}"'
   err_options: 'Fehler in den Optionen'
   err_no_audio_file: 'Fehler: Bitte eine Audiodatei wählen.'
@@ -75,8 +84,10 @@ de:
   err_transcription: 'Fehler im 3. Schritt - Transkription'
   rescue_saving: 'Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Stattdessen wurde das Transkript in dieser Datei gesichert: %{file}'
   rescue_saving_failed: 'Fehler: Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Der alternative Dateiname existiert ebenso bereits. Die Transkription wird beendet. (Das Transkript darf nicht bereits in Word geöffnet sein!)'
-  err_noScribeEdit_not_found: 'Fehler: Der noScribe-Editor konnte nicht gefunden werden.' 
+  err_noScribeEdit_not_found: 'Fehler: Der noScribe-Editor konnte nicht gefunden werden.'
   err_vtt_invalid_options: 'Achtung: Die Optionen "Überlappende Sprache", "Pausen markieren" und "Zeitmarken" werden bei der VTT-Ausgabe nicht unterstützt.'
+  err_editor_invalid_format: 'Der Editor kann nur mit html-Dateien verwendet werden. Trotzdem starten?'
+  err_invalid_model: 'Ignorierter doppelter Name für whisper-Modell: "%{model_name}"'
 
 
   # Doc contents

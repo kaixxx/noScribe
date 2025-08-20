@@ -19,6 +19,8 @@ ru:
     Приятной работы!
 
   setup_message: 'Первый запуск: Завершите настройку...'
+  new_release: 'Доступна новая версия noScribe (%{v}):'
+  new_release_download: 'Загрузить: '
 
   # Элементы пользовательского интерфейса
   label_audio_file: 'Аудиофайл:'
@@ -37,23 +39,34 @@ ru:
   label_overlapping: 'Перекрытие речи:'
   label_pause: 'Отметьте паузы:'
   label_timestamps: 'Временные метки:'
+  label_disfluencies: 'Паразитные слова:'
   
-  start_button: Старт 
+  start_button: Старт
   stop_button: Отмена
+  editor_button: Редактор
 
+  overall_progress: 'Общий прогресс: '
   # Сообщения журнала
   log_transcript_filename: 'Имя файла транскрипции: '
   log_audio_file_selected: 'Выбран аудиофайл: '
+  queue_start: '=== Запуск очереди ==='
+  queue_start_jobs: 'Обработка %{total} задания(ий) на транскрипцию'
+  start_job: 'Запуск задания: %{audio_file}'
   start_audio_conversion: 'Преобразование аудио...'
   audio_conversion_finished: 'Преобразование аудио завершено'
   start_identifiying_speakers: 'Определение дикторов...'
   loading_pyannote: 'Загрузка pyannote'
   start_canceling: 'Отмена... (пожалуйста, подождите)'
   start_transcription: 'Транскрибация...'
-  loading_whisper: 'Загрузка whisper'
-  transcription_finished: 'Транскрибация завершена.' 
-  transcription_saved: 'Сохранено в '
+  loading_whisper: 'Загрузка Whisper'
+  vad: 'Обнаружение голосовой активности...'
+  transcription_finished: 'Транскрибация завершена.'
+  transcription_saved: 'Сохранено в: '
   trancription_time: 'Продолжительность: %{duration} минут'
+  queue_complete: '=== Обработка очереди завершена ==='
+  total_jobs: 'Всего заданий: %{total}'
+  completed: 'Завершено: %{finished}'
+  failed: 'Неудачных: %{errors}'
 
   # Сообщения об ошибках
   err_setup: 'Произошла ошибка при настройке. Проверьте подключение к интернету и перезапустите программу.'
@@ -70,6 +83,10 @@ ru:
   err_transcription: 'Ошибка на шаге 3 - транскрипция'
   rescue_saving: 'Не удалось сохранить в оригинальный файл. Сохранено в файл: %{file}'
   rescue_saving_failed: 'Ошибка: Не удалось сохранить в оригинальный файл. Файл с альтернативным именем также существует. Приложение будет закрыто. (Убедитесь, что ваша транскрипция не открыта в Word!)'
+  err_noScribeEdit_not_found: 'Ошибка: не удалось найти редактор noScribe.'
+  err_vtt_invalid_options: 'Предупреждение: параметры "Перекрытие речи", "Отметьте паузы" и "Временные метки" не поддерживаются в файлах VTT.'
+  err_editor_invalid_format: 'Редактор может использоваться только с HTML-файлами. Запустить его все равно?'
+  err_invalid_model: 'Игнорируется повторяющееся имя модели whisper: "%{model_name}"'
 
   # Содержимое документа
   doc_header: 'Транскрибировано с помощью noScribe версии %{version}'

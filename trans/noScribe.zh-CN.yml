@@ -38,7 +38,7 @@ zh-CN: &defaults
   label_overlapping: '重叠发言：'
   label_pause: '标记停顿：'
   label_timestamps: '时间戳：'
-  label_disfluencies: '语言停顿：'
+  label_disfluencies: '填充词：'
   
   start_button: 开始 
   stop_button: 取消
@@ -49,20 +49,25 @@ zh-CN: &defaults
   # 日志信息
   log_transcript_filename: '转录文件名：'
   log_audio_file_selected: '已选择音频文件：'
+  queue_start: '=== 开始队列 ==='
+  queue_start_jobs: '正在处理 %{total} 个转录任务'
+  start_job: '开始任务：%{audio_file}'
   start_audio_conversion: '正在转换音频...'
   audio_conversion_finished: '音频转换完成'
   start_identifiying_speakers: '正在识别说话人...'
-  loading_pyannote: '加载pyannote中'
+  loading_pyannote: '正在加载 pyannote'
   start_canceling: '正在取消...（请稍候）'
   start_transcription: '正在转录...'
-  loading_whisper: '加载whisper中'
-  start_transcription: '转录...'
-  loading_whisper: '正在加载whisper'
+  loading_whisper: '正在加载 Whisper'
   vad: '语音活动检测...'
-  
-  transcription_finished: '转录完成。' 
-  transcription_saved: '已保存至'
+
+  transcription_finished: '转录完成。'
+  transcription_saved: '已保存至：'
   trancription_time: '时长：%{duration}分钟'
+  queue_complete: '=== 队列处理完成 ==='
+  total_jobs: '任务总数：%{total}'
+  completed: '已完成：%{finished}'
+  failed: '失败：%{errors}'
 
   # 错误信息
   err_setup: '设置过程中发生错误。请检查您的网络连接并重新启动程序。'
@@ -82,6 +87,7 @@ zh-CN: &defaults
   err_noScribeEdit_not_found: '错误：找不到noScribe编辑器。'
   err_vtt_invalid_options: '警告：VTT文件不支持“重叠发言”、“标记停顿”和“时间戳”选项。'
   err_editor_invalid_format: '编辑器只能用于html文件。你仍然要启动它吗？'
+  err_invalid_model: '忽略了重复的 whisper 模型名称："%{model_name}"'
 
   # 文档内容
   doc_header: '使用noScribe %{version} 版本转录'

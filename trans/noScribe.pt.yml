@@ -19,6 +19,8 @@ pt:
     Aproveite!
 
   setup_message: 'Primeira execução: Complete a configuração...'
+  new_release: 'Uma nova versão do noScribe está disponível (%{v}):'
+  new_release_download: 'Download: '
 
   # Elementos da interface
   label_audio_file: 'Arquivo de áudio:'
@@ -31,29 +33,40 @@ pt:
   label_stop: 'Parar (hh:mm:ss): ' 
 
   label_language: 'Idioma:'
-  label_speaker: 'Detecção de alto-falante:'
+  label_speaker: 'Detecção de locutor:'
   label_whisper_model: 'Modelo:'
-  label_add_custom_models: 'Adicionar modelo de IA...'  
+  label_add_custom_models: 'Adicionar modelo de IA...'
   label_overlapping: 'Sobreposição:'
   label_pause: 'Marcar pausas:'
   label_timestamps: 'Registos temporais:'
+  label_disfluencies: 'Disfluências:'
   
-  start_button: Iniciar 
+  start_button: Iniciar
   stop_button: Cancelar
+  editor_button: Editor
 
+  overall_progress: 'Progresso geral: '
   # Mensagens de log
   log_transcript_filename: 'Nome do arquivo de transcrição: '
   log_audio_file_selected: 'Arquivo de áudio selecionado: '
+  queue_start: '=== Iniciando fila ==='
+  queue_start_jobs: 'Processando %{total} tarefa(s) de transcrição'
+  start_job: 'Iniciando tarefa: %{audio_file}'
   start_audio_conversion: 'Convertendo áudio...'
   audio_conversion_finished: 'Conversão de áudio concluída'
-  start_identifiying_speakers: 'Identificação de alto-falantes...'
+  start_identifiying_speakers: 'Identificação de locutores...'
   loading_pyannote: 'Carregando pyannote'
   start_canceling: 'Cancelando... (aguarde um segundo)'
   start_transcription: 'Transcrição...'
-  loading_whisper: 'Carregando whisper'
-  transcription_finished: 'Transcrição concluída.' 
-  transcription_saved: 'Salvo em '
+  loading_whisper: 'Carregando Whisper'
+  vad: 'Detecção de atividade de voz...'
+  transcription_finished: 'Transcrição concluída.'
+  transcription_saved: 'Salvo em: '
   trancription_time: 'Duração: %{duration} minutos'
+  queue_complete: '=== Processamento da fila concluído ==='
+  total_jobs: 'Total de tarefas: %{total}'
+  completed: 'Concluídas: %{finished}'
+  failed: 'Falhas: %{errors}'
 
   # Mensagens de erro
   err_setup: 'Ocorreu um erro durante a configuração. Verifique se você possui uma conexão de internet funcionando e reinicie o programa.'
@@ -70,6 +83,10 @@ pt:
   err_transcription: 'Erro na etapa 3 - transcrição'
   rescue_saving: 'Falha ao salvar com o nome de arquivo original. Salvo em vez disso neste arquivo: %{file}'
   rescue_saving_failed: 'Erro: Falha ao salvar com o nome de arquivo original. O nome alternativo também existe. Preciso sair. (Certifique-se de que sua transcrição não esteja aberta no Word!)'
+  err_noScribeEdit_not_found: 'Erro: não foi possível encontrar o editor do noScribe.'
+  err_vtt_invalid_options: 'Aviso: as opções "Sobreposição", "Marcar pausas" e "Registos temporais" não são suportadas em arquivos VTT.'
+  err_editor_invalid_format: 'O editor só pode ser usado com arquivos HTML. Deseja iniciá-lo mesmo assim?'
+  err_invalid_model: 'Nome duplicado ignorado para o modelo whisper: "%{model_name}"'
 
   # Conteúdo do documento
   doc_header: 'Transcrito com noScribe versão %{version}'
