@@ -22,6 +22,8 @@ it:
   new_release_download: 'Scarica: '
 
   # Elementi dell'interfaccia utente
+  tab_log: Registro
+  tab_queue: Coda
   label_audio_file: 'File audio:'
   label_audio_file_name: <seleziona file>
   
@@ -43,8 +45,23 @@ it:
   start_button: Avvia
   stop_button: Annulla
   editor_button: Editor
-
+  
   overall_progress: 'Progresso totale: '
+
+  # Stato del lavoro
+  waiting: 'in attesa'
+  audio_conversion: 'conversione audio'
+  speaker_identification: 'identificazione parlanti'
+  transcription: 'trascrizione'
+  finished: 'completato'
+  error: 'errore'
+
+  # Suggerimenti della coda di lavori
+  job_tt_waiting: 'Processo in attesa...'
+  job_tt_running: 'Processo in esecuzione. Vedi la scheda registro per i dettagli.'
+  job_tt_finished: 'Completato. Clicca per aprire l\'output nell\'editor noScribe.'
+  job_tt_error: 'Si è verificato un errore durante l\'elaborazione: %{error_msg}'
+
   # Messaggi di log
   log_transcript_filename: 'Nome file trascrizione: '
   log_audio_file_selected: 'File audio selezionato: '

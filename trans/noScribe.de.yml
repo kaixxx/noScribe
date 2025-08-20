@@ -21,8 +21,10 @@ de:
   setup_message: 'Einrichtung abschließen...'
   new_release: 'Eine neue Version von noScribe ist verfügbar (%{v}):'
   new_release_download: 'Download: '
-  
+
   # UI Elements
+  tab_log: Protokoll
+  tab_queue: Warteschlange
   label_audio_file: 'Audiodatei:'
   label_audio_file_name: <Audiodatei wählen>
   
@@ -46,6 +48,20 @@ de:
   editor_button: Editor
 
   overall_progress: 'Fortschritt insgesamt: '
+
+  # job status
+  waiting: 'wartend'
+  audio_conversion: 'Audiokonvertierung'
+  speaker_identification: 'Sprecher:innenidentifikation'
+  transcription: 'Transkription'
+  finished: 'abgeschlossen'
+  error: 'Fehler'
+
+  # job queue tooltips
+  job_tt_waiting: 'Auftrag wartet...'
+  job_tt_running: 'Auftrag läuft. Details im Protokoll-Tab.'
+  job_tt_finished: 'Erfolgreich. Klicken, um im noScribe-Editor zu öffnen.'
+  job_tt_error: 'Fehler bei der Auftragsverarbeitung: %{error_msg}'
 
   # log messages
   log_transcript_filename: 'Transkript-Dateiname: '
