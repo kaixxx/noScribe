@@ -959,12 +959,33 @@ class App(ctk.CTk):
         self.tab_queue = self.tabview.add(t("tab_queue")) 
         self.tabview.set(t("tab_log"))  # set currently visible tab
 
-        self.log_textbox = ctk.CTkTextbox(self.tab_log, wrap='word', state="disabled", font=("",16), text_color="lightgray")
+        self.log_textbox = ctk.CTkTextbox(self.tab_log, wrap='word', state="disabled", font=("",16), text_color="lightgray", bg_color='transparent', fg_color='transparent')
         self.log_textbox.tag_config('highlight', foreground='darkorange')
         self.log_textbox.tag_config('error', foreground='yellow')
         self.log_textbox.pack(padx=0, pady=[0,0], expand=True, fill='both')
 
         self.hyperlink = HyperlinkManager(self.log_textbox._textbox)
+
+        # Queue table
+        self.queue_frame = ctk.CTkFrame(self.tab_queue)
+        self.queue_frame.pack(padx=0, pady=0, fill='both', expand=True)
+        
+        # Queue table header
+        #self.queue_header_frame = ctk.CTkFrame(self.queue_frame)
+        #self.queue_header_frame.pack(fill='x', padx=0, pady=0)
+        
+        #self.queue_header_name = ctk.CTkLabel(self.queue_header_frame, text="Name", font=ctk.CTkFont(weight="bold"))
+        #self.queue_header_name.pack(side='left', padx=(20, 0))
+        
+        #self.queue_header_status = ctk.CTkLabel(self.queue_header_frame, text="Status", font=ctk.CTkFont(weight="bold"))
+        #self.queue_header_status.pack(side='right', padx=(0, 20))
+        
+        # Scrollable frame for queue entries
+        self.queue_scrollable = ctk.CTkScrollableFrame(self.queue_frame, bg_color='transparent', fg_color='transparent')
+        self.queue_scrollable.pack(fill='both', expand=True, padx=0, pady=(0, 0))
+        
+        # List to keep track of queue entry widgets
+        self.queue_entry_widgets = []
 
         # Frame progress bar / edit button
         self.frame_edit = ctk.CTkFrame(self.frame_main, height=20, corner_radius=0, fg_color=self.log_textbox._fg_color)
@@ -1051,6 +1072,46 @@ class App(ctk.CTk):
             scrollbar.grid()
         else:
             scrollbar.grid_remove()  # Hide the scrollbar if not needed    
+            
+    def update_queue_table(self):
+        """Update the queue table with current entries"""
+        # Clear existing widgets
+        for widget_frame in self.queue_entry_widgets:
+            widget_frame.destroy()
+        self.queue_entry_widgets.clear()
+        
+        # Add current queue entries
+        for i in range(len(self.queue.jobs)):
+            job = self.queue.jobs[i]
+            # Create frame for this entry
+            entry_frame = ctk.CTkFrame(self.queue_scrollable, fg_color='#4A4A4A') # #1D1E1E
+            entry_frame.pack(fill='x', padx=0, pady=2)
+            
+            # Get audio filename without path
+            audio_name = os.path.basename(job.audio_file) if job.audio_file else "No file"
+            
+            # Get status with appropriate color
+            status_text = job.status.value.title()
+            status_color = "lightgray"
+            if job.status == JobStatus.WAITING:
+                status_color = "yellow"
+            elif job.status == JobStatus.RUNNING:
+                status_color = "orange"
+            elif job.status == JobStatus.FINISHED:
+                status_color = "lightgreen"
+            elif job.status == JobStatus.ERROR:
+                status_color = "red"
+            
+            # Name label (left side)
+            name_label = ctk.CTkLabel(entry_frame, text=audio_name, anchor='w', text_color="lightgray")
+            name_label.pack(side='left', padx=(10, 0), pady=2, fill='x', expand=True)
+            
+            # Status label (right side)
+            status_label = ctk.CTkLabel(entry_frame, text=status_text, text_color=status_color, anchor='e')
+            status_label.pack(side='right', padx=(0, 10), pady=2)
+            
+            # Keep track of the widget
+            self.queue_entry_widgets.append(entry_frame)    
 
     def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
@@ -1292,6 +1353,7 @@ class App(ctk.CTk):
                     # Mark all waiting jobs as cancelled
                     for job in self.queue.get_waiting_jobs():
                         job.set_error(t('err_user_cancelation'))
+                        self.update_queue_table()
                     break
                 
                 # Get next job
@@ -1302,6 +1364,7 @@ class App(ctk.CTk):
                 # Process the job
                 try:
                     job.set_running()
+                    self.update_queue_table()
                     self.logn()
                     self.logn(t('start_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
                     
@@ -1309,10 +1372,12 @@ class App(ctk.CTk):
                     self._process_single_job(job)
                     
                     job.set_finished()
+                    self.update_queue_table()
                     
                 except Exception as e:
                     error_msg = job.error_message or str(e)
                     job.set_error(error_msg)
+                    self.update_queue_table()
                     self.logn(error_msg, 'error')
                     traceback_str = job.error_tb or traceback.format_exc()
                     self.logn(f"Job error details: {traceback_str}", where='file')
@@ -1444,6 +1509,7 @@ class App(ctk.CTk):
                 except Exception as e:
                     traceback_str = traceback.format_exc()
                     job.set_error(f"{t('err_converting_audio')}: {e}", traceback_str)
+                    self.update_queue_table()
                     raise Exception(job.error_message)
 
                 #-------------------------------------------------------
@@ -1591,6 +1657,7 @@ class App(ctk.CTk):
                     except Exception as e:
                         traceback_str = traceback.format_exc()
                         job.set_error(f"{t('err_identifying_speakers')}: {e}", traceback_str)
+                        self.update_queue_table()
                         raise Exception(job.error_message)
 
                 #-------------------------------------------------------
@@ -1992,6 +2059,7 @@ class App(ctk.CTk):
             
             # Add the job to the queue
             self.queue.add_job(job)
+            self.update_queue_table()
             
             # Start transcription worker with the queue
             wkr = Thread(target=self.transcription_worker, args=())
