@@ -655,6 +655,8 @@ Examples:
                        help='Output transcript file path (.html, .txt, or .vtt)')
     
     # Optional arguments
+    parser.add_argument('--no-gui', action='store_true',
+                       help='Run without showing the GUI (headless mode)')
     parser.add_argument('--start', 
                        help='Start time (format: HH:MM:SS)')
     parser.add_argument('--stop',
@@ -2145,6 +2147,11 @@ def run_cli_mode(args):
     try:
         # Create a minimal app instance to access model paths and logging
         app = App()
+        # Hide GUI window for headless execution
+        try:
+            app.withdraw()
+        except Exception:
+            pass
         
         # Validate and set the whisper model
         available_models = app.get_whisper_models()
@@ -2233,23 +2240,100 @@ def show_available_models():
 if __name__ == "__main__":
     # Parse command line arguments
     args = parse_cli_args()
-    
+
     # Handle special case: show available models
     if args.help_models:
         show_available_models()
         sys.exit(0)
-    
-    # Check if we have required arguments for CLI mode
-    if args.audio_file and args.output_file:
-        # CLI mode
-        exit_code = run_cli_mode(args)
-        sys.exit(exit_code)
-    elif args.audio_file or args.output_file:
-        # Partial arguments provided - show error
-        print("Error: Both audio_file and output_file are required for CLI mode.")
-        print("Use --help for usage information.")
-        sys.exit(1)
-    else:
-        # No CLI arguments - run GUI mode
-        app = App()
-        app.mainloop()
+
+    # If explicit headless requested, keep old CLI behavior
+    if getattr(args, 'no_gui', False):
+        if args.audio_file and args.output_file:
+            exit_code = run_cli_mode(args)
+            sys.exit(exit_code)
+        else:
+            print("Error: --no-gui requires both audio_file and output_file.")
+            print("Usage: python noScribe.py <audio_file> <output_file> [options] --no-gui")
+            sys.exit(1)
+
+    # Default: show GUI and keep it usable, even with CLI args
+    app = App()
+
+    # If arguments were provided, prefill and optionally auto-start
+    try:
+        # Prefill selected model if provided
+        desired_model_name = None
+        available_models = app.get_whisper_models()
+        if getattr(args, 'model', None):
+            if args.model in available_models:
+                desired_model_name = args.model
+            else:
+                print(f"Warning: Model '{args.model}' not found. Using default GUI selection.")
+
+        if desired_model_name:
+            try:
+                app.option_menu_whisper_model.set(desired_model_name)
+            except Exception:
+                pass
+
+        # Prefill files if provided
+        if getattr(args, 'audio_file', None):
+            app.audio_file = args.audio_file
+            try:
+                app.button_audio_file_name.configure(text=os.path.basename(app.audio_file))
+            except Exception:
+                pass
+            app.logn(t('log_audio_file_selected') + app.audio_file)
+
+        if getattr(args, 'output_file', None):
+            app.transcript_file = args.output_file
+            try:
+                app.button_transcript_file_name.configure(text=os.path.basename(app.transcript_file))
+            except Exception:
+                pass
+            app.logn(t('log_transcript_filename') + app.transcript_file)
+
+        # If both files provided, create a job and auto-start in GUI
+        if getattr(args, 'audio_file', None) and getattr(args, 'output_file', None):
+            # Build job from args but use GUI defaults (not headless)
+            start_time = millisec(args.start) if getattr(args, 'start', None) else None
+            stop_time = millisec(args.stop) if getattr(args, 'stop', None) else None
+
+            # Resolve model path: preferred from CLI if available, otherwise from current GUI selection
+            model_name = desired_model_name or app.option_menu_whisper_model.get()
+            if model_name in getattr(app, 'whisper_model_paths', {}):
+                model_path = app.whisper_model_paths[model_name]
+            else:
+                # Ensure model paths are populated
+                app.get_whisper_models()
+                model_path = app.whisper_model_paths.get(model_name, None)
+
+            job = create_transcription_job(
+                audio_file=args.audio_file,
+                transcript_file=args.output_file,
+                start_time=start_time,
+                stop_time=stop_time,
+                language_name=getattr(args, 'language', None),
+                whisper_model_name=model_path if model_path else None,
+                speaker_detection=getattr(args, 'speaker_detection', None),
+                overlapping=getattr(args, 'overlapping', None),
+                timestamps=getattr(args, 'timestamps', None),
+                disfluencies=getattr(args, 'disfluencies', None),
+                pause=getattr(args, 'pause', None),
+                cli_mode=False,
+            )
+
+            # Add job to queue and start worker thread
+            app.queue.add_job(job)
+            try:
+                app.update_queue_table()
+            except Exception:
+                pass
+            wkr = Thread(target=app.transcription_worker, args=())
+            wkr.start()
+    except Exception as e:
+        # Non-fatal: continue to show GUI
+        print(f"Warning: Failed to prefill GUI from CLI args: {e}")
+
+    # Enter GUI main loop
+    app.mainloop()
