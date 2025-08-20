@@ -23,6 +23,8 @@ ru:
   new_release_download: 'Загрузить: '
 
   # Элементы пользовательского интерфейса
+  tab_log: Журнал
+  tab_queue: Очередь
   label_audio_file: 'Аудиофайл:'
   label_audio_file_name: <выберите файл>
   
@@ -44,8 +46,23 @@ ru:
   start_button: Старт
   stop_button: Отмена
   editor_button: Редактор
-
+ 
   overall_progress: 'Общий прогресс: '
+
+  # Статус задания
+  waiting: 'ожидание'
+  audio_conversion: 'преобразование аудио'
+  speaker_identification: 'определение дикторов'
+  transcription: 'транскрибация'
+  finished: 'завершено'
+  error: 'ошибка'
+
+  # Подсказки очереди заданий
+  job_tt_waiting: 'Задача ожидает...'
+  job_tt_running: 'Задача выполняется. Подробности смотрите во вкладке журнала.'
+  job_tt_finished: 'Успешно. Нажмите, чтобы открыть результат в редакторе noScribe.'
+  job_tt_error: 'Во время обработки задачи произошла ошибка: %{error_msg}'
+
   # Сообщения журнала
   log_transcript_filename: 'Имя файла транскрипции: '
   log_audio_file_selected: 'Выбран аудиофайл: '

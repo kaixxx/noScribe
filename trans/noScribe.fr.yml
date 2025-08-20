@@ -22,6 +22,8 @@ fr:
   new_release_download: "Télécharger : "
 
   # Éléments de l'interface utilisateur
+  tab_log: Journal
+  tab_queue: File d'attente
   label_audio_file: "Fichier audio :"
   label_audio_file_name: <sélectionner un fichier>
   
@@ -45,6 +47,21 @@ fr:
   editor_button: "Éditeur"
 
   overall_progress: 'Progression totale : '
+
+  # Statut de la tâche
+  waiting: 'en attente'
+  audio_conversion: 'conversion audio'
+  speaker_identification: 'identification des locuteurs'
+  transcription: 'transcription'
+  finished: 'terminé'
+  error: 'erreur'
+
+  # Info-bulles de la file d'attente
+  job_tt_waiting: 'Tâche en attente...'
+  job_tt_running: "La tâche est en cours. Voir l'onglet journal pour les détails."
+  job_tt_finished: "Succès. Cliquez pour ouvrir le résultat dans l'éditeur noScribe."
+  job_tt_error: "Une erreur est survenue lors du traitement de la tâche : %{error_msg}"
+
   # Messages de journalisation
   log_transcript_filename: "Nom du fichier de transcription : "
   log_audio_file_selected: "Fichier audio sélectionné : "

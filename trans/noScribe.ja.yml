@@ -23,6 +23,8 @@ ja:
   new_release_download: 'ダウンロード: '
 
   # UI要素
+  tab_log: ログ
+  tab_queue: キュー
   label_audio_file: '音声ファイル：'
   label_audio_file_name: <ファイルを選択>
   
@@ -45,6 +47,20 @@ ja:
   stop_button: キャンセル
   editor_button: エディター
   overall_progress: '全体の進行状況：'
+
+  # ジョブの状態
+  waiting: '待機中'
+  audio_conversion: 'オーディオ変換'
+  speaker_identification: '話者識別'
+  transcription: '転写'
+  finished: '完了'
+  error: 'エラー'
+
+  # ジョブキューのツールチップ
+  job_tt_waiting: 'ジョブ待機中...'
+  job_tt_running: 'ジョブ実行中。詳細はログタブを参照してください。'
+  job_tt_finished: '成功。クリックして noScribe エディターで出力を開きます。'
+  job_tt_error: 'ジョブ処理中にエラーが発生しました: %{error_msg}'
 
   # ログメッセージ
   log_transcript_filename: '転写ファイル名：'

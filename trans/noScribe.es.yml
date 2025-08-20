@@ -22,6 +22,8 @@ es:
   new_release_download: 'Descargar: '
 
   # Elementos de la interfaz de usuario
+  tab_log: Registro
+  tab_queue: Cola
   label_audio_file: 'Archivo de audio:'
   label_audio_file_name: <seleccionar archivo>
   
@@ -45,6 +47,21 @@ es:
   editor_button: Editor
 
   overall_progress: 'Progreso total: '
+
+  # Estado de la tarea
+  waiting: 'esperando'
+  audio_conversion: 'conversión de audio'
+  speaker_identification: 'identificación de hablantes'
+  transcription: 'transcripción'
+  finished: 'finalizado'
+  error: 'error'
+
+  # Información sobre la cola de trabajos
+  job_tt_waiting: 'Tarea en espera...'
+  job_tt_running: 'La tarea se está ejecutando. Vea la pestaña de registro para detalles.'
+  job_tt_finished: 'Éxito. Haz clic para abrir la salida en el editor de noScribe.'
+  job_tt_error: 'Se produjo un error durante el procesamiento: %{error_msg}'
+
   # Mensajes de registro
   log_transcript_filename: 'Nombre de archivo de transcripción: '
   log_audio_file_selected: 'Archivo de audio seleccionado: '

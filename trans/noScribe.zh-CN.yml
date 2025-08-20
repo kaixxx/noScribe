@@ -22,6 +22,8 @@ zh-CN: &defaults
   new_release_download: '下载：'
 
   # 用户界面元素
+  tab_log: 日志
+  tab_queue: 队列
   label_audio_file: '音频文件：'
   label_audio_file_name: <选择文件>
   
@@ -45,6 +47,20 @@ zh-CN: &defaults
   editor_button: 编辑器
 
   overall_progress: '总进度：'
+
+  # 任务状态
+  waiting: '等待中'
+  audio_conversion: '音频转换'
+  speaker_identification: '说话人识别'
+  transcription: '转录'
+  finished: '完成'
+  error: '错误'
+
+  # 队列提示
+  job_tt_waiting: '任务等待中...'
+  job_tt_running: '任务运行中。详情请查看日志标签。'
+  job_tt_finished: '成功。点击在 noScribe 编辑器中打开输出。'
+  job_tt_error: '处理任务时发生错误：%{error_msg}'
 
   # 日志信息
   log_transcript_filename: '转录文件名：'
