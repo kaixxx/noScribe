@@ -25,7 +25,8 @@ if sys.stderr is None:
 
 import tkinter as tk
 import customtkinter as ctk
-from CTkToolTip import CTkToolTip
+# from CTkToolTip import CTkToolTip
+from CTkToolTips import CTkToolTip
 from tkHyperlinkManager import HyperlinkManager
 import webbrowser
 from functools import partial
@@ -988,9 +989,9 @@ class App(ctk.CTk):
         # Scrollable frame for queue entries
         self.queue_scrollable = ctk.CTkScrollableFrame(self.queue_frame, bg_color='transparent', fg_color='transparent')
         self.queue_scrollable.pack(fill='both', expand=True, padx=0, pady=(0, 0))
-        
-        # List to keep track of queue entry widgets
-        self.queue_entry_widgets = []
+
+        # Mapping for diff-based queue rows (job_key -> widgets)
+        self.queue_row_widgets = {}
 
         # Frame progress bar / edit button
         self.frame_edit = ctk.CTkFrame(self.frame_main, height=20, corner_radius=0, fg_color=self.log_textbox._fg_color)
@@ -1079,23 +1080,15 @@ class App(ctk.CTk):
             scrollbar.grid_remove()  # Hide the scrollbar if not needed    
             
     def update_queue_table(self):
-        """Update the queue table with current entries"""
-        # Clear existing widgets
-        for widget_frame in self.queue_entry_widgets:
-            widget_frame.destroy()
-        self.queue_entry_widgets.clear()
-        
-        # Add current queue entries
+        """Update the queue table by diffing: update existing rows, add new ones, remove missing."""
+        current_keys = []
         for i in range(len(self.queue.jobs)):
             job = self.queue.jobs[i]
-            # Create frame for this entry
-            entry_frame = ctk.CTkFrame(self.queue_scrollable, fg_color='#4A4A4A') # #1D1E1E
-            entry_frame.pack(fill='x', padx=0, pady=2)
-            
-            # Get audio filename without path
+            job_key = id(job)
+            current_keys.append(job_key)
+
+            # Compute display values
             audio_name = os.path.basename(job.audio_file) if job.audio_file else "No file"
-            
-            # Get status with appropriate color
             status_color = "lightgray"
             job_tooltip = ''
             if job.status == JobStatus.WAITING:
@@ -1112,41 +1105,98 @@ class App(ctk.CTk):
                 status_color = "yellow"
                 msg = job.error_message if job.error_message else ''
                 job_tooltip = t('job_tt_error', error_msg=msg)
-            
-            # Name label (left side)
-            name_label = ctk.CTkLabel(entry_frame, text=audio_name, anchor='w', text_color="lightgray")
-            name_label.pack(side='left', padx=(10, 0), pady=2, fill='x', expand=True)
-            
-            # Status label (right side)
-            status_label = ctk.CTkLabel(entry_frame, text=t(str(job.status.value)), text_color=status_color, anchor='e')
-            status_label.pack(side='right', padx=(0, 10), pady=2)
-            
-            # Tooltips
-            CTkToolTip(entry_frame, message=job_tooltip, bg_color='gray', x_offset=0)
-            CTkToolTip(name_label, message=job_tooltip, bg_color='gray', x_offset=0)
-            CTkToolTip(status_label, message=job_tooltip, bg_color='gray', x_offset=0)
-            
-            # Add click functionality for finished jobs
-            if job.status == JobStatus.FINISHED:
-                # Make the frame clickable and change cursor to indicate it's clickable
-                entry_frame.configure(cursor="hand2")
-                
-                # Create click handler that launches editor with the transcript file
-                def on_click(event, transcript_file=job.transcript_file):
-                    if transcript_file and os.path.exists(transcript_file):
-                        self.after(100, lambda: self.launch_editor(transcript_file))
-                
-                # Bind click event to the frame and all its children
-                entry_frame.bind("<Button-1>", on_click)
-                name_label.bind("<Button-1>", on_click)
-                status_label.bind("<Button-1>", on_click)
-                
-                # Change cursor for child widgets too
-                name_label.configure(cursor="hand2")
-                status_label.configure(cursor="hand2")
-            
-            # Keep track of the widget
-            self.queue_entry_widgets.append(entry_frame)    
+
+            status_text = t(str(job.status.value))
+
+            if hasattr(self, 'queue_row_widgets') and job_key in self.queue_row_widgets:
+                # Update existing row
+                row = self.queue_row_widgets[job_key]
+                row['name_label'].configure(text=audio_name)
+                row['status_label'].configure(text=status_text, text_color=status_color)
+
+                # Update click bindings only on transition to/from FINISHED
+                was_finished = row.get('status') == JobStatus.FINISHED
+                is_finished = job.status == JobStatus.FINISHED
+                if is_finished and not was_finished:
+                    def on_click(event, transcript_file=job.transcript_file):
+                        if transcript_file and os.path.exists(transcript_file):
+                            self.after(100, lambda: self.launch_editor(transcript_file))
+                    row['frame'].configure(cursor="hand2")
+                    row['name_label'].configure(cursor="hand2")
+                    row['status_label'].configure(cursor="hand2")
+                    row['frame'].bind("<Button-1>", on_click)
+                    row['name_label'].bind("<Button-1>", on_click)
+                    row['status_label'].bind("<Button-1>", on_click)
+                elif was_finished and not is_finished:
+                    row['frame'].configure(cursor="")
+                    row['name_label'].configure(cursor="")
+                    row['status_label'].configure(cursor="")
+                    row['frame'].unbind("<Button-1>")
+                    row['name_label'].unbind("<Button-1>")
+                    row['status_label'].unbind("<Button-1>")
+
+                row['status'] = job.status
+                row['tooltip_text'] = job_tooltip
+                # Update tooltip messages if available
+                if 'tooltips' in row:
+                    for tt in row['tooltips']:
+                        tt.set_text(job_tooltip)
+                        """
+                        try:
+                            if hasattr(tt, 'message'):
+                                tt.message = job_tooltip
+                            elif hasattr(tt, 'text'):
+                                tt.text = job_tooltip
+                            elif hasattr(tt, 'configure'):
+                                tt.configure(message=job_tooltip)
+                        except Exception:
+                            pass
+                        """
+            else:
+                # Create new row
+                entry_frame = ctk.CTkFrame(self.queue_scrollable, fg_color='#4A4A4A')  # #1D1E1E
+                entry_frame.pack(fill='x', padx=0, pady=2)
+
+                name_label = ctk.CTkLabel(entry_frame, text=audio_name, anchor='w', text_color="lightgray")
+                name_label.pack(side='left', padx=(10, 0), pady=2, fill='x', expand=True)
+
+                status_label = ctk.CTkLabel(entry_frame, text=status_text, text_color=status_color, anchor='e')
+                status_label.pack(side='right', padx=(0, 10), pady=2)
+
+                # Tooltips (create once per row)
+                tt_frame = CTkToolTip(entry_frame, text=job_tooltip) #, bg_color='gray')
+                tt_name = CTkToolTip(name_label, text=job_tooltip) #, bg_color='gray')
+                tt_status = CTkToolTip(status_label, text=job_tooltip) #, bg_color='gray')
+
+                if job.status == JobStatus.FINISHED:
+                    entry_frame.configure(cursor="hand2")
+                    name_label.configure(cursor="hand2")
+                    status_label.configure(cursor="hand2")
+                    def on_click(event, transcript_file=job.transcript_file):
+                        if transcript_file and os.path.exists(transcript_file):
+                            self.after(100, lambda: self.launch_editor(transcript_file))
+                    entry_frame.bind("<Button-1>", on_click)
+                    name_label.bind("<Button-1>", on_click)
+                    status_label.bind("<Button-1>", on_click)
+
+                if not hasattr(self, 'queue_row_widgets'):
+                    self.queue_row_widgets = {}
+                self.queue_row_widgets[job_key] = {
+                    'frame': entry_frame,
+                    'name_label': name_label,
+                    'status_label': status_label,
+                    'status': job.status,
+                    'tooltip_text': job_tooltip,
+                    'tooltips': [tt_frame, tt_name, tt_status],
+                }
+
+        # Remove rows no longer present
+        if hasattr(self, 'queue_row_widgets'):
+            to_remove = [key for key in list(self.queue_row_widgets.keys()) if key not in current_keys]
+            for key in to_remove:
+                row = self.queue_row_widgets.pop(key)
+                if row['frame'].winfo_exists():
+                    row['frame'].destroy()
 
     def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
