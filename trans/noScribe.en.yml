@@ -58,6 +58,12 @@ en:
   transcription: 'transcription'
   finished: 'finished'
   error: 'error'
+
+  # job queue tooltips
+  job_tt_waiting: 'Job waiting...'
+  job_tt_running: 'Job is running. See the log tab for details.'
+  job_tt_finished: 'Success. Click to open the output in the noScribe Editor.'
+  job_tt_error: 'An error occured during job processing: %{error_msg}'
  
   # log messages
   log_transcript_filename: 'Transcript filename: '

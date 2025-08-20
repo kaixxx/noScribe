@@ -25,6 +25,7 @@ if sys.stderr is None:
 
 import tkinter as tk
 import customtkinter as ctk
+from CTkToolTip import CTkToolTip
 from tkHyperlinkManager import HyperlinkManager
 import webbrowser
 from functools import partial
@@ -1093,25 +1094,54 @@ class App(ctk.CTk):
             audio_name = os.path.basename(job.audio_file) if job.audio_file else "No file"
             
             # Get status with appropriate color
-            status_text = job.status.value.title()
             status_color = "lightgray"
+            job_tooltip = ''
             if job.status == JobStatus.WAITING:
                 status_color = "gray"
+                job_tooltip = t('job_tt_waiting')
             elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
                 status_color = "orange"
                 audio_name = '\u23F5 ' + audio_name
+                job_tooltip = t('job_tt_running')
             elif job.status == JobStatus.FINISHED:
                 status_color = "lightgreen"
+                job_tooltip = t('job_tt_finished')
             elif job.status == JobStatus.ERROR:
                 status_color = "yellow"
+                msg = job.error_message if job.error_message else ''
+                job_tooltip = t('job_tt_error', error_msg=msg)
             
             # Name label (left side)
             name_label = ctk.CTkLabel(entry_frame, text=audio_name, anchor='w', text_color="lightgray")
             name_label.pack(side='left', padx=(10, 0), pady=2, fill='x', expand=True)
             
             # Status label (right side)
-            status_label = ctk.CTkLabel(entry_frame, text=t(status_text), text_color=status_color, anchor='e')
+            status_label = ctk.CTkLabel(entry_frame, text=t(str(job.status.value)), text_color=status_color, anchor='e')
             status_label.pack(side='right', padx=(0, 10), pady=2)
+            
+            # Tooltips
+            CTkToolTip(entry_frame, message=job_tooltip, bg_color='gray', x_offset=0)
+            CTkToolTip(name_label, message=job_tooltip, bg_color='gray', x_offset=0)
+            CTkToolTip(status_label, message=job_tooltip, bg_color='gray', x_offset=0)
+            
+            # Add click functionality for finished jobs
+            if job.status == JobStatus.FINISHED:
+                # Make the frame clickable and change cursor to indicate it's clickable
+                entry_frame.configure(cursor="hand2")
+                
+                # Create click handler that launches editor with the transcript file
+                def on_click(event, transcript_file=job.transcript_file):
+                    if transcript_file and os.path.exists(transcript_file):
+                        self.after(100, lambda: self.launch_editor(transcript_file))
+                
+                # Bind click event to the frame and all its children
+                entry_frame.bind("<Button-1>", on_click)
+                name_label.bind("<Button-1>", on_click)
+                status_label.bind("<Button-1>", on_click)
+                
+                # Change cursor for child widgets too
+                name_label.configure(cursor="hand2")
+                status_label.configure(cursor="hand2")
             
             # Keep track of the widget
             self.queue_entry_widgets.append(entry_frame)    

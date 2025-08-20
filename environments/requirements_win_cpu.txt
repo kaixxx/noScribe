@@ -4,6 +4,7 @@ AdvancedHTMLParser
 appdirs
 cpufeature
 customtkinter
+CTkToolTip
 faster-whisper
 Pillow
 pyannote.audio>=3.3.2
