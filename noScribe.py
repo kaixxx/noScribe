@@ -376,7 +376,9 @@ def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: st
 
 class JobStatus(Enum):
     WAITING = "waiting"
-    RUNNING = "running"
+    AUDIO_CONVERSION = "audio_conversion"
+    SPEAKER_IDENTIFICATION = "speaker_identification"
+    TRANSCRIPTION = "transcription"
     FINISHED = "finished"
     ERROR = "error"
 
@@ -429,7 +431,7 @@ class TranscriptionJob:
     
     def set_running(self):
         """Mark job as running and record start time"""
-        self.status = JobStatus.RUNNING
+        self.status = JobStatus.AUDIO_CONVERSION
         self.started_at = datetime.datetime.now()
     
     def set_finished(self):
@@ -470,7 +472,7 @@ class TranscriptionQueue:
     
     def get_running_jobs(self) -> List[TranscriptionJob]:
         """Get all jobs currently being processed"""
-        return [job for job in self.jobs if job.status == JobStatus.RUNNING]
+        return [job for job in self.jobs if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]]
     
     def get_finished_jobs(self) -> List[TranscriptionJob]:
         """Get all successfully completed jobs"""
@@ -1095,7 +1097,7 @@ class App(ctk.CTk):
             status_color = "lightgray"
             if job.status == JobStatus.WAITING:
                 status_color = "yellow"
-            elif job.status == JobStatus.RUNNING:
+            elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
                 status_color = "orange"
             elif job.status == JobStatus.FINISHED:
                 status_color = "lightgreen"
@@ -1363,8 +1365,6 @@ class App(ctk.CTk):
                 
                 # Process the job
                 try:
-                    job.set_running()
-                    self.update_queue_table()
                     self.logn()
                     self.logn(t('start_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
                     
@@ -1412,6 +1412,8 @@ class App(ctk.CTk):
     def _process_single_job(self, job: TranscriptionJob):
         """Process a single transcription job"""
         proc_start_time = datetime.datetime.now()
+        job.set_running()
+        self.update_queue_table()
         
         tmpdir = TemporaryDirectory('noScribe')
         tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
@@ -1578,6 +1580,9 @@ class App(ctk.CTk):
 
                 if job.speaker_detection != 'none':
                     try:
+                        job.status = JobStatus.SPEAKER_IDENTIFICATION
+                        self.update_queue_table()
+
                         self.logn()
                         self.logn(t('start_identifiying_speakers'), 'highlight')
                         self.logn(t('loading_pyannote'))
@@ -1662,6 +1667,9 @@ class App(ctk.CTk):
 
                 #-------------------------------------------------------
                 # 3) Transcribe with faster-whisper
+
+                job.status = JobStatus.TRANSCRIPTION
+                self.update_queue_table()
 
                 self.logn()
                 self.logn(t('start_transcription'), 'highlight')
