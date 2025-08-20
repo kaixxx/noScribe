@@ -51,6 +51,14 @@ en:
 
   overall_progress: 'Overall progress: '
 
+  # job status
+  waiting: 'waiting'
+  audio_conversion: 'audio conversion'
+  speaker_identification: 'speaker identification'
+  transcription: 'transcription'
+  finished: 'finished'
+  error: 'error'
+ 
   # log messages
   log_transcript_filename: 'Transcript filename: '
   log_audio_file_selected: 'Audio file selected: '

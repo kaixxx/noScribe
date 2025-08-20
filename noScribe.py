@@ -1096,20 +1096,21 @@ class App(ctk.CTk):
             status_text = job.status.value.title()
             status_color = "lightgray"
             if job.status == JobStatus.WAITING:
-                status_color = "yellow"
+                status_color = "gray"
             elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
                 status_color = "orange"
+                audio_name = '\u23F5 ' + audio_name
             elif job.status == JobStatus.FINISHED:
                 status_color = "lightgreen"
             elif job.status == JobStatus.ERROR:
-                status_color = "red"
+                status_color = "yellow"
             
             # Name label (left side)
             name_label = ctk.CTkLabel(entry_frame, text=audio_name, anchor='w', text_color="lightgray")
             name_label.pack(side='left', padx=(10, 0), pady=2, fill='x', expand=True)
             
             # Status label (right side)
-            status_label = ctk.CTkLabel(entry_frame, text=status_text, text_color=status_color, anchor='e')
+            status_label = ctk.CTkLabel(entry_frame, text=t(status_text), text_color=status_color, anchor='e')
             status_label.pack(side='right', padx=(0, 10), pady=2)
             
             # Keep track of the widget
