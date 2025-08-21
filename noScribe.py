@@ -728,6 +728,8 @@ class App(ctk.CTk):
         self.transcript_file = ''
         self.log_file = None
         self.cancel = False # if set to True, transcription will be canceled
+        # If True, cancel only the currently running job (triggered from queue row "X")
+        self._cancel_job_only = False
 
         # configure window
         self.title('noScribe - ' + t('app_header'))
@@ -1116,6 +1118,22 @@ class App(ctk.CTk):
                 row['name_label'].configure(text=audio_name)
                 row['status_label'].configure(text=status_text, text_color=status_color)
 
+                # Show or hide cancel/delete button depending on status
+                is_unfinished = job.status not in [JobStatus.FINISHED, JobStatus.ERROR]
+                if 'cancel_btn' in row and row['cancel_btn'] is not None:
+                    try:
+                        if is_unfinished:
+                            row['cancel_btn'].configure(command=lambda j=job: self._on_queue_row_action(j))
+                            # Ensure it is visible
+                            if not row['cancel_btn'].winfo_ismapped():
+                                row['cancel_btn'].pack(side='right', padx=(0, 6), pady=2)
+                        else:
+                            # Hide the button for finished/error jobs
+                            if row['cancel_btn'].winfo_ismapped():
+                                row['cancel_btn'].pack_forget()
+                    except Exception:
+                        pass
+
                 # Update click bindings only on transition to/from FINISHED
                 was_finished = row.get('status') == JobStatus.FINISHED
                 is_finished = job.status == JobStatus.FINISHED
@@ -1151,6 +1169,20 @@ class App(ctk.CTk):
                 name_label = ctk.CTkLabel(entry_frame, text=audio_name, anchor='w', text_color="lightgray")
                 name_label.pack(side='left', padx=(10, 0), pady=2, fill='x', expand=True)
 
+                # Add small cancel/delete button for unfinished jobs
+                cancel_btn = None
+                if job.status not in [JobStatus.FINISHED, JobStatus.ERROR]:
+                    cancel_btn = ctk.CTkButton(
+                        entry_frame,
+                        text='X',
+                        width=24,
+                        height=20,
+                        fg_color='#6b6b6b',
+                        hover_color='#8a2a2a',
+                        command=lambda j=job: self._on_queue_row_action(j)
+                    )
+                    cancel_btn.pack(side='right', padx=(0, 6), pady=2)
+
                 status_label = ctk.CTkLabel(entry_frame, text=status_text, text_color=status_color, anchor='e')
                 status_label.pack(side='right', padx=(0, 10), pady=2)
 
@@ -1158,6 +1190,8 @@ class App(ctk.CTk):
                 tt_frame = CTkToolTip(entry_frame, text=job_tooltip) #, bg_color='gray')
                 tt_name = CTkToolTip(name_label, text=job_tooltip) #, bg_color='gray')
                 tt_status = CTkToolTip(status_label, text=job_tooltip) #, bg_color='gray')
+                if cancel_btn is not None:
+                    CTkToolTip(cancel_btn, text=t('transcription_canceled'))
 
                 if job.status == JobStatus.FINISHED:
                     entry_frame.configure(cursor="hand2")
@@ -1179,6 +1213,7 @@ class App(ctk.CTk):
                     'status': job.status,
                     'tooltip_text': job_tooltip,
                     'tooltips': [tt_frame, tt_name, tt_status],
+                    'cancel_btn': cancel_btn,
                 }
 
         # Remove rows no longer present
@@ -1194,6 +1229,33 @@ class App(ctk.CTk):
         old_name = self.tabview._name_list[1]
         if new_name != old_name:
             self.tabview.rename(old_name, new_name)
+
+    def _on_queue_row_action(self, job: TranscriptionJob):
+        """Handle click on the small X button for a job row."""
+        try:
+            if job.status == JobStatus.WAITING:
+                # Confirm deletion of waiting job
+                if tk.messagebox.askyesno(title='noScribe', message='Remove this job from the queue?'):
+                    try:
+                        self.queue.jobs.remove(job)
+                    except ValueError:
+                        pass
+                    self.update_queue_table()
+            elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
+                # Confirm cancel of running job
+                if tk.messagebox.askyesno(title='noScribe', message=t('transcription_canceled')):
+                    self.logn()
+                    self.logn(t('start_canceling'))
+                    self.update()
+                    # Only cancel the current job, not the entire queue
+                    self._cancel_job_only = True
+                    self.cancel = True
+            else:
+                # Do nothing for finished/error
+                pass
+        except Exception as e:
+            # Log any UI handling error silently
+            self.logn(f'Queue action error: {e}', 'error')
 
     def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
@@ -1431,8 +1493,8 @@ class App(ctk.CTk):
             self.logn(t('queue_start_jobs', total=summary['total']))
             # Process each job in the queue
             while self.queue.has_pending_jobs():
-                if self.cancel:
-                    # Mark all waiting jobs as cancelled
+                # If global cancel was requested (via Stop button), cancel all waiting jobs
+                if self.cancel and not self._cancel_job_only:
                     for job in self.queue.get_waiting_jobs():
                         job.set_error(t('err_user_cancelation'))
                         self.update_queue_table()
@@ -1462,6 +1524,11 @@ class App(ctk.CTk):
                     traceback_str = job.error_tb or traceback.format_exc()
                     self.logn(f"Job error details: {traceback_str}", where='file')
                     print(f"Job error details: {traceback_str}")
+                finally:
+                    # If we were canceling only the current job, reset flags after it stops
+                    if self._cancel_job_only:
+                        self.cancel = False
+                        self._cancel_job_only = False
             
             # Log final summary
             final_summary = self.queue.get_queue_summary()
