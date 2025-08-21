@@ -1052,10 +1052,36 @@ class App(ctk.CTk):
         self.queue_scrollable = ctk.CTkScrollableFrame(self.queue_frame, bg_color='transparent', fg_color='transparent')
         self.queue_scrollable.pack(fill='both', expand=True, padx=0, pady=(0, 0))
 
+        # Controls row at the bottom of the queue tab
+        self.queue_controls_frame = ctk.CTkFrame(self.tab_queue, fg_color='transparent')
+        self.queue_controls_frame.pack(fill='x', side='bottom', padx=0, pady=(0, 0))
+
+        self.queue_stop_btn = ctk.CTkButton(
+            self.queue_controls_frame,
+            text=t('stop_button') if 't' in globals() else 'Stop',
+            fg_color='darkred',
+            hover_color='darkred',
+            width=100,
+            command=lambda: self.on_queue_stop()
+        )
+        self.queue_stop_btn.pack(side='right', padx=(0, 10), pady=8)
+
+        self.queue_run_btn = ctk.CTkButton(
+            self.queue_controls_frame,
+            text=t('queue_run_button'),
+            width=100,
+            command=lambda: self.on_queue_run()
+        )
+        self.queue_run_btn.pack(side='right', padx=(0, 10), pady=8)
+
         # Mapping for diff-based queue rows (job_key -> widgets)
         self.queue_row_widgets = {}
-        
+
         self.update_queue_table()
+        try:
+            self.update_queue_controls()
+        except Exception:
+            pass
 
         # Frame progress bar / edit button
         self.frame_edit = ctk.CTkFrame(self.frame_main, height=20, corner_radius=0, fg_color=self.log_textbox._fg_color)
@@ -1313,6 +1339,66 @@ class App(ctk.CTk):
             self.tabview.rename(old_name, new_name)
             if self.tabview.get() == old_name:
                 self.tabview.set(new_name)
+        # Update controls state
+        try:
+            self.update_queue_controls()
+        except Exception:
+            pass
+
+    def update_queue_controls(self):
+        """Enable/disable and label the queue control buttons based on state."""
+        try:
+            has_running = len(self.queue.get_running_jobs()) > 0
+            has_pending = self.queue.has_pending_jobs()
+
+            # Run button: enabled only if there are pending jobs and nothing is running
+            self.queue_run_btn.configure(text=t('queue_run_button'))
+            if (not has_running) and has_pending:
+                self.queue_run_btn.configure(state=ctk.NORMAL)
+            else:
+                self.queue_run_btn.configure(state=ctk.DISABLED)
+
+            # Stop button: enabled if something is running or pending
+            if has_running or has_pending:
+                self.queue_stop_btn.configure(state=ctk.NORMAL)
+            else:
+                self.queue_stop_btn.configure(state=ctk.DISABLED)
+        except Exception:
+            pass
+
+    def on_queue_run(self):
+        """Start processing pending jobs if idle."""
+        try:
+            has_running = len(self.queue.get_running_jobs()) > 0
+            has_pending = self.queue.has_pending_jobs()
+            if (not has_running) and has_pending:
+                wkr = Thread(target=self.transcription_worker, args=())
+                wkr.start()
+            self.update_queue_controls()
+        except Exception:
+            pass
+
+    def on_queue_stop(self):
+        """Ask for confirmation, then cancel running job and mark all pending jobs as canceled."""
+        try:
+            if not tk.messagebox.askyesno(title='noScribe', message=t('queue_cancel_all_confirm')):
+                return
+            # Mark waiting jobs as canceled immediately
+            for job in self.queue.get_waiting_jobs():
+                try:
+                    job.set_error(t('err_user_cancelation'))
+                except Exception:
+                    job.set_error('Canceled by user')
+            # If something is running, reflect canceling state and signal cancel
+            for job in self.queue.get_running_jobs():
+                if job.status != JobStatus.CANCELING:
+                    job.status = JobStatus.CANCELING
+            self.cancel = True
+            self._cancel_job_only = False
+            self.update_queue_table()
+            self.update_queue_controls()
+        except Exception:
+            pass
 
     def _on_queue_row_action(self, job: TranscriptionJob):
         """Handle click on the small X button for a job row."""
@@ -1656,6 +1742,10 @@ class App(ctk.CTk):
             self.start_button_container.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
             # Hide progress
             self.set_progress(0, 0)
+            try:
+                self.update_queue_controls()
+            except Exception:
+                pass
 
     def _process_single_job(self, job: TranscriptionJob):
         """Process a single transcription job"""
@@ -2316,6 +2406,10 @@ class App(ctk.CTk):
             # Add the job to the queue
             self.queue.add_job(job)
             self.update_queue_table()
+            try:
+                self.update_queue_controls()
+            except Exception:
+                pass
             
             # Start transcription worker with the queue
             wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": len(self.queue.jobs) - 1})
@@ -2336,6 +2430,10 @@ class App(ctk.CTk):
             job = self.collect_transcription_options()
             self.queue.add_job(job)
             self.update_queue_table()
+            try:
+                self.update_queue_controls()
+            except Exception:
+                pass
             # Switch to queue tab to give visual feedback
             try:
                 self.tabview.set(t("tab_queue"))
@@ -2359,6 +2457,10 @@ class App(ctk.CTk):
             self.logn(t('start_canceling'))
             self.update()
             self.cancel = True
+            try:
+                self.update_queue_controls()
+            except Exception:
+                pass
 
     def on_closing(self):
         # (see: https://stackoverflow.com/questions/111155/how-do-i-handle-the-window-close-event-in-tkinter)
