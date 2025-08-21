@@ -951,9 +951,68 @@ class App(ctk.CTk):
         else:
             self.check_box_timestamps.deselect()
         
-        # Start Button
-        self.start_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('start_button'), command=self.button_start_event)
-        self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+        # Start control: single CTkOptionMenu styled like a button
+        # Create a container so we can show/hide as one control
+        self.start_button_container = ctk.CTkFrame(self.sidebar_frame, fg_color='transparent')
+        self.start_button_container.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+
+        class StartActionOptionMenu(ctk.CTkOptionMenu):
+            """A full-width option menu that looks like a button.
+            - Left-click (main area) runs Start immediately.
+            - Clicking the arrow opens a dropdown with 'Send to queue'.
+            """
+            def __init__(self, noScribe_parent, master, **kwargs):
+                # Style to match CTkButton
+                btn_theme = ctk.ThemeManager.theme.get('CTkButton', {})
+                kwargs.setdefault('height', 42)
+                kwargs.setdefault('dynamic_resizing', False)
+                kwargs.setdefault('anchor', 'center')
+                kwargs.setdefault('fg_color', btn_theme.get('fg_color'))
+                kwargs.setdefault('button_color', btn_theme.get('hover_color'))
+                kwargs.setdefault('button_hover_color', btn_theme.get('hover_color'))
+
+                super().__init__(master, values=['Start'], **kwargs)
+                self.noScribe_parent = noScribe_parent
+                try:
+                    self.set(t('start_button'))
+                except Exception:
+                    self.set('Start')
+                # Bind click on the text label to run Start immediately
+                try:
+                    self._text_label.bind("<Button-1>", self._on_text_label_click)
+                except Exception:
+                    pass
+
+            def _clicked(self, event=None):
+                # Open dropdown with the single queue action for non-text-label clicks
+                try:
+                    self._values = [t('send_queue')]
+                    self._dropdown_menu.configure(values=self._values)
+                except Exception:
+                    pass
+                super()._clicked(event)
+
+            def _dropdown_callback(self, value: str):
+                if value == t('send_queue'):
+                    try:
+                        self.noScribe_parent.button_send_to_queue_event()
+                    finally:
+                        try:
+                            self.set(t('start_button'))
+                        except Exception:
+                            self.set('Start')
+                else:
+                    super()._dropdown_callback(value)
+
+            def _on_text_label_click(self, event):
+                try:
+                    self.noScribe_parent.button_start_event()
+                except Exception:
+                    pass
+                return "break"
+
+        self.start_action_menu = StartActionOptionMenu(self, self.start_button_container)
+        self.start_action_menu.pack(fill='x', expand=True)
 
         # Stop Button
         self.stop_button = ctk.CTkButton(self.sidebar_frame, height=42, fg_color='darkred', hover_color='darkred', text=t('stop_button'), command=self.button_stop_event)
@@ -1512,13 +1571,13 @@ class App(ctk.CTk):
     ################################################################################################
     # Main function
 
-    def transcription_worker(self):
+    def transcription_worker(self, start_job_index=None):
         """Process transcription jobs from the queue"""
         queue_start_time = datetime.datetime.now()
         self.cancel = False
 
         # Show the stop button
-        self.start_button.pack_forget() # hide
+        self.start_button_container.pack_forget() # hide
         self.stop_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
 
         try:
@@ -1537,7 +1596,13 @@ class App(ctk.CTk):
                     break
                 
                 # Get next job
-                job = self.queue.get_next_waiting_job()
+                job = None
+                if start_job_index and start_job_index < len(self.queue.jobs):
+                    job = self.queue.jobs[start_job_index]
+                    if job.status != JobStatus.WAITING:
+                        job = None
+                if job is None:
+                    job = self.queue.get_next_waiting_job()
                 if not job:
                     break
                 
@@ -1588,7 +1653,7 @@ class App(ctk.CTk):
         finally:
             # Hide the stop button
             self.stop_button.pack_forget() # hide
-            self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+            self.start_button_container.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
             # Hide progress
             self.set_progress(0, 0)
 
@@ -2238,7 +2303,7 @@ class App(ctk.CTk):
         finally:
             # hide the stop button
             self.stop_button.pack_forget() # hide
-            self.start_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+            self.start_button_container.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
 
             # hide progress
             self.set_progress(0, 0)
@@ -2253,7 +2318,7 @@ class App(ctk.CTk):
             self.update_queue_table()
             
             # Start transcription worker with the queue
-            wkr = Thread(target=self.transcription_worker, args=())
+            wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": len(self.queue.jobs) - 1})
             wkr.start()
             
         except (ValueError, FileNotFoundError) as e:
@@ -2264,6 +2329,26 @@ class App(ctk.CTk):
             # Handle unexpected errors
             self.logn(f'Error starting transcription: {str(e)}', 'error')
             tk.messagebox.showerror(title='noScribe', message=f'Error starting transcription: {str(e)}')
+
+    def button_send_to_queue_event(self):
+        """Collect options and enqueue the job without starting processing."""
+        try:
+            job = self.collect_transcription_options()
+            self.queue.add_job(job)
+            self.update_queue_table()
+            # Switch to queue tab to give visual feedback
+            try:
+                self.tabview.set(t("tab_queue"))
+            except Exception:
+                pass
+            self.logn()
+            self.logn(t('queue_added_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
+        except (ValueError, FileNotFoundError) as e:
+            self.logn(str(e), 'error')
+            tk.messagebox.showerror(title='noScribe', message=str(e))
+        except Exception as e:
+            self.logn(f'Error queuing transcription: {str(e)}', 'error')
+            tk.messagebox.showerror(title='noScribe', message=f'Error queuing transcription: {str(e)}')
     
     # End main function Button Start        
     ################################################################################################

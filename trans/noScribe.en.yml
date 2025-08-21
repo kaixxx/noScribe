@@ -46,6 +46,7 @@ en:
   
   
   start_button: Start 
+  send_queue: '> Send to queue'
   stop_button: Cancel
   editor_button: Editor
 
@@ -70,6 +71,7 @@ en:
   # log messages
   log_transcript_filename: 'Transcript filename: '
   log_audio_file_selected: 'Audio file selected: '
+  queue_added_job: 'Added job "%{audio_file}"" to queue.'
   queue_start: === Starting queue ===
   queue_start_jobs: Processing %{total} transcription job(s)
   start_job: 'Starting job: %{audio_file}'
