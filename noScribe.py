@@ -1131,6 +1131,18 @@ class App(ctk.CTk):
                         # Make sure it is visible
                         if not row['cancel_btn'].winfo_ismapped():
                             row['cancel_btn'].pack(side='right', padx=(0, 6), pady=2)
+                        # Update tooltip on the X button to reflect current status
+                        if job.status == JobStatus.WAITING:
+                            cancel_tt_text = t('queue_tt_remove_waiting')
+                        elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
+                            cancel_tt_text = t('queue_tt_cancel_running')
+                        else:
+                            cancel_tt_text = t('queue_tt_remove_entry')
+                        if 'cancel_tt' in row and row['cancel_tt'] is not None:
+                            try:
+                                row['cancel_tt'].set_text(cancel_tt_text)
+                            except Exception:
+                                pass
                     except Exception:
                         pass
 
@@ -1188,7 +1200,14 @@ class App(ctk.CTk):
                 tt_frame = CTkToolTip(entry_frame, text=job_tooltip) #, bg_color='gray')
                 tt_name = CTkToolTip(name_label, text=job_tooltip) #, bg_color='gray')
                 tt_status = CTkToolTip(status_label, text=job_tooltip) #, bg_color='gray')
-                CTkToolTip(cancel_btn, text=t('transcription_canceled'))
+                # Tooltip for X button per status
+                if job.status == JobStatus.WAITING:
+                    cancel_tt_text = t('queue_tt_remove_waiting')
+                elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
+                    cancel_tt_text = t('queue_tt_cancel_running')
+                else:
+                    cancel_tt_text = t('queue_tt_remove_entry')
+                cancel_tt = CTkToolTip(cancel_btn, text=cancel_tt_text)
 
                 if job.status == JobStatus.FINISHED:
                     entry_frame.configure(cursor="hand2")
@@ -1211,6 +1230,7 @@ class App(ctk.CTk):
                     'tooltip_text': job_tooltip,
                     'tooltips': [tt_frame, tt_name, tt_status],
                     'cancel_btn': cancel_btn,
+                    'cancel_tt': cancel_tt,
                 }
 
         # Remove rows no longer present

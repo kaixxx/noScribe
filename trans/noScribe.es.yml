@@ -109,3 +109,10 @@ es:
   doc_header_audio: 'Archivo de audio: %{file}'
   pause_minutes: '(%{minutes} minuto[s] pausa)'
   pause_seconds: '(%{seconds} segundos de pausa)'
+  
+  # Acciones de la cola
+  queue_remove_waiting: '¿Eliminar este trabajo de la cola?'
+  queue_remove_entry: '¿Eliminar esta entrada de la lista?'
+  queue_tt_cancel_running: 'Cancelar este trabajo'
+  queue_tt_remove_waiting: 'Eliminar de la cola'
+  queue_tt_remove_entry: 'Eliminar de la lista'

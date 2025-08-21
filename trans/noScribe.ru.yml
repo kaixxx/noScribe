@@ -110,3 +110,10 @@ ru:
   doc_header_audio: 'Аудиофайл: %{file}'
   pause_minutes: '(%{minutes} минуты паузы)'
   pause_seconds: '(%{seconds} секунд паузы)'
+  
+  # Действия с очередью
+  queue_remove_waiting: 'Удалить это задание из очереди?'
+  queue_remove_entry: 'Удалить эту запись из списка?'
+  queue_tt_cancel_running: 'Отменить это задание'
+  queue_tt_remove_waiting: 'Удалить из очереди'
+  queue_tt_remove_entry: 'Удалить из списка'

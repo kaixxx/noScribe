@@ -112,6 +112,13 @@ zh-CN: &defaults
   doc_header_audio: '音频文件：%{file}'
   pause_minutes: '(%{minutes} 分钟 暂停)'
   pause_seconds: '(%{seconds} 秒暂停)'
+  
+  # 队列操作
+  queue_remove_waiting: '从队列中移除此任务？'
+  queue_remove_entry: '从列表中移除此条目？'
+  queue_tt_cancel_running: '取消此任务'
+  queue_tt_remove_waiting: '从队列中移除'
+  queue_tt_remove_entry: '从列表中移除'
 
 zh:
   <<: *defaults

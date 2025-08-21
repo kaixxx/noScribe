@@ -110,3 +110,10 @@ pt:
   doc_header_audio: 'Arquivo de áudio: %{file}'
   pause_minutes: '(%{minutes} minuto[s] pausa)'
   pause_seconds: '(%{seconds} segundos de pausa)'
+  
+  # Ações da fila
+  queue_remove_waiting: 'Remover esta tarefa da fila?'
+  queue_remove_entry: 'Remover esta entrada da lista?'
+  queue_tt_cancel_running: 'Cancelar esta tarefa'
+  queue_tt_remove_waiting: 'Remover da fila'
+  queue_tt_remove_entry: 'Remover da lista'

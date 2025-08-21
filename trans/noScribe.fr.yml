@@ -109,3 +109,10 @@ fr:
   doc_header_audio: "Fichier audio : %{file}"
   pause_minutes: '(%{minutes} minute[s] pause)'
   pause_seconds: '(%{seconds} secondes pause)'
+  
+  # Actions de file d'attente
+  queue_remove_waiting: 'Retirer cette tâche de la file d’attente ?'
+  queue_remove_entry: 'Retirer cette entrée de la liste ?'
+  queue_tt_cancel_running: 'Annuler cette tâche'
+  queue_tt_remove_waiting: 'Retirer de la file'
+  queue_tt_remove_entry: 'Retirer de la liste'

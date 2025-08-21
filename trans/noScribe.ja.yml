@@ -109,3 +109,10 @@ ja:
   doc_header_audio: '音声ファイル：%{file}'
   pause_minutes: '(%{minutes}分[秒]休止)'
   pause_seconds: '(%{seconds}秒休止)'
+  
+  # キュー操作
+  queue_remove_waiting: 'このジョブをキューから削除しますか？'
+  queue_remove_entry: 'この項目をリストから削除しますか？'
+  queue_tt_cancel_running: 'このジョブをキャンセル'
+  queue_tt_remove_waiting: 'キューから削除'
+  queue_tt_remove_entry: 'リストから削除'
