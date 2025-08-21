@@ -1242,10 +1242,12 @@ class App(ctk.CTk):
                     row['frame'].destroy()
                     
         # Udate queue tab title
-        new_name = f'{t("tab_queue")} ({len(self.queue.get_finished_jobs())}/{len(self.queue.jobs)})'
+        new_name = f'{t("tab_queue")} ({len(self.queue.get_failed_jobs()) + len(self.queue.get_finished_jobs())}/{len(self.queue.jobs)})'
         old_name = self.tabview._name_list[1]
         if new_name != old_name:
             self.tabview.rename(old_name, new_name)
+            if self.tabview.get() == old_name:
+                self.tabview.set(new_name)
 
     def _on_queue_row_action(self, job: TranscriptionJob):
         """Handle click on the small X button for a job row."""
