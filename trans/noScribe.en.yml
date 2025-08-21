@@ -56,6 +56,7 @@ en:
   audio_conversion: 'audio conversion'
   speaker_identification: 'speaker identification'
   transcription: 'transcription'
+  canceling: 'canceling in progress'
   finished: 'finished'
   error: 'error'
 
@@ -63,6 +64,7 @@ en:
   job_tt_waiting: 'Job waiting...'
   job_tt_running: 'Job is running. See the log tab for details.'
   job_tt_finished: 'Success. Click to open the output in the noScribe Editor.'
+  job_tt_canceling: 'Canceling...'
   job_tt_error: 'An error occured during job processing: %{error_msg}'
  
   # log messages

@@ -50,17 +50,18 @@ de:
   overall_progress: 'Fortschritt insgesamt: '
 
   # job status
-  waiting: 'wartend'
+  waiting: 'Wartend'
   audio_conversion: 'Audiokonvertierung'
   speaker_identification: 'Sprecher:innenidentifikation'
   transcription: 'Transkription'
-  finished: 'abgeschlossen'
+  canceling: 'Abbruch läuft' 
+  finished: 'Abgeschlossen'
   error: 'Fehler'
 
   # job queue tooltips
-  job_tt_waiting: 'Auftrag wartet...'
+  job_tt_waiting: 'Auftrag wartet.'
   job_tt_running: 'Auftrag läuft. Details im Protokoll-Tab.'
-  job_tt_finished: 'Erfolgreich. Klicken, um im noScribe-Editor zu öffnen.'
+  job_tt_finished: 'Fertig. Klicken, um Ergebnis im noScribe-Editor zu öffnen.'
   job_tt_error: 'Fehler bei der Auftragsverarbeitung: %{error_msg}'
 
   # log messages

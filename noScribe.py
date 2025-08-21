@@ -381,6 +381,7 @@ class JobStatus(Enum):
     AUDIO_CONVERSION = "audio_conversion"
     SPEAKER_IDENTIFICATION = "speaker_identification"
     TRANSCRIPTION = "transcription"
+    CANCELING = "canceling"
     FINISHED = "finished"
     ERROR = "error"
 
@@ -474,7 +475,7 @@ class TranscriptionQueue:
     
     def get_running_jobs(self) -> List[TranscriptionJob]:
         """Get all jobs currently being processed"""
-        return [job for job in self.jobs if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]]
+        return [job for job in self.jobs if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION, JobStatus.CANCELING]]
     
     def get_finished_jobs(self) -> List[TranscriptionJob]:
         """Get all successfully completed jobs"""
@@ -1102,6 +1103,10 @@ class App(ctk.CTk):
                 status_color = "orange"
                 audio_name = '\u23F5 ' + audio_name
                 job_tooltip = t('job_tt_running')
+            elif job.status == JobStatus.CANCELING:
+                status_color = "yellow"
+                audio_name = '\u23F5 ' + audio_name
+                job_tooltip = t('job_tt_canceling')
             elif job.status == JobStatus.FINISHED:
                 status_color = "lightgreen"
                 job_tooltip = t('job_tt_finished')
@@ -1111,6 +1116,8 @@ class App(ctk.CTk):
                 job_tooltip = t('job_tt_error', error_msg=msg)
 
             status_text = t(str(job.status.value))
+            
+            btn_color = ctk.ThemeManager.theme['CTkScrollbar']['button_color']
 
             if hasattr(self, 'queue_row_widgets') and job_key in self.queue_row_widgets:
                 # Update existing row
@@ -1121,21 +1128,20 @@ class App(ctk.CTk):
                 # Ensure cancel/delete button exists, is visible and styled per status
                 if 'cancel_btn' in row and row['cancel_btn'] is not None:
                     try:
-                        default_color = ctk.ThemeManager.theme['CTkScrollbar']['button_color']
                         row['cancel_btn'].configure(command=lambda j=job: self._on_queue_row_action(j))
                         # Color: red if running, gray otherwise
                         if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
                             row['cancel_btn'].configure(fg_color='darkred', hover_color='darkred')
                         else:
-                            row['cancel_btn'].configure(fg_color=default_color, hover_color='darkred')
+                            row['cancel_btn'].configure(fg_color=btn_color, hover_color='darkred')
                         # Make sure it is visible
                         if not row['cancel_btn'].winfo_ismapped():
                             row['cancel_btn'].pack(side='right', padx=(0, 6), pady=2)
                         # Update tooltip on the X button to reflect current status
                         if job.status == JobStatus.WAITING:
                             cancel_tt_text = t('queue_tt_remove_waiting')
-                        elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
-                            cancel_tt_text = t('queue_tt_cancel_running')
+                        elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION, JobStatus.CANCELING]:
+                            cancel_tt_text = t('queue_tt_remove_entry')
                         else:
                             cancel_tt_text = t('queue_tt_remove_entry')
                         if 'cancel_tt' in row and row['cancel_tt'] is not None:
@@ -1187,8 +1193,8 @@ class App(ctk.CTk):
                     text='X',
                     width=24,
                     height=20,
-                    fg_color=('darkred' if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION] else '#6b6b6b'),
-                    hover_color=('darkred' if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION] else '#8a2a2a'),
+                    fg_color=('darkred' if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION] else btn_color),
+                    hover_color=('darkred'),
                     command=lambda j=job: self._on_queue_row_action(j)
                 )
                 cancel_btn.pack(side='right', padx=(0, 6), pady=2)
@@ -1266,11 +1272,17 @@ class App(ctk.CTk):
                     self.logn()
                     self.logn(t('start_canceling'))
                     self.update()
+                    # reflect canceling state in queue immediately
+                    try:
+                        job.status = JobStatus.CANCELING
+                        self.update_queue_table()
+                    except Exception:
+                        pass
                     # Only cancel the current job, not the entire queue
                     self._cancel_job_only = True
                     self.cancel = True
             else:
-                # Finished or error -> remove from list after confirmation
+                # Finished, canceling or error -> remove from list after confirmation
                 if tk.messagebox.askyesno(title='noScribe', message=t('queue_remove_entry')):
                     try:
                         self.queue.jobs.remove(job)
