@@ -992,6 +992,8 @@ class App(ctk.CTk):
 
         # Mapping for diff-based queue rows (job_key -> widgets)
         self.queue_row_widgets = {}
+        
+        self.update_queue_table()
 
         # Frame progress bar / edit button
         self.frame_edit = ctk.CTkFrame(self.frame_main, height=20, corner_radius=0, fg_color=self.log_textbox._fg_color)
@@ -1141,17 +1143,6 @@ class App(ctk.CTk):
                 if 'tooltips' in row:
                     for tt in row['tooltips']:
                         tt.set_text(job_tooltip)
-                        """
-                        try:
-                            if hasattr(tt, 'message'):
-                                tt.message = job_tooltip
-                            elif hasattr(tt, 'text'):
-                                tt.text = job_tooltip
-                            elif hasattr(tt, 'configure'):
-                                tt.configure(message=job_tooltip)
-                        except Exception:
-                            pass
-                        """
             else:
                 # Create new row
                 entry_frame = ctk.CTkFrame(self.queue_scrollable, fg_color='#4A4A4A')  # #1D1E1E
@@ -1197,6 +1188,12 @@ class App(ctk.CTk):
                 row = self.queue_row_widgets.pop(key)
                 if row['frame'].winfo_exists():
                     row['frame'].destroy()
+                    
+        # Udate queue tab title
+        new_name = f'{t("tab_queue")} ({len(self.queue.get_finished_jobs())}/{len(self.queue.jobs)})'
+        old_name = self.tabview._name_list[1]
+        if new_name != old_name:
+            self.tabview.rename(old_name, new_name)
 
     def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
