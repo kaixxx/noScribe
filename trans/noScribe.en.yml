@@ -114,4 +114,8 @@ en:
   doc_header_audio: 'Audio file: %{file}'
   pause_minutes: '(%{minutes} minute[s] pause)'
   pause_seconds: '(%{seconds} seconds pause)'
+  
+  # Queue actions
+  queue_remove_waiting: 'Remove this job from the queue?'
+  queue_remove_entry: 'Remove this entry from the list?'
                       

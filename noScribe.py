@@ -1232,7 +1232,7 @@ class App(ctk.CTk):
         try:
             if job.status == JobStatus.WAITING:
                 # Confirm deletion of waiting job
-                if tk.messagebox.askyesno(title='noScribe', message='Remove this job from the queue?'):
+                if tk.messagebox.askyesno(title='noScribe', message=t('queue_remove_waiting')):
                     try:
                         self.queue.jobs.remove(job)
                     except ValueError:
@@ -1249,7 +1249,7 @@ class App(ctk.CTk):
                     self.cancel = True
             else:
                 # Finished or error -> remove from list after confirmation
-                if tk.messagebox.askyesno(title='noScribe', message='Remove this entry from the list?'):
+                if tk.messagebox.askyesno(title='noScribe', message=t('queue_remove_entry')):
                     try:
                         self.queue.jobs.remove(job)
                     except ValueError:
