@@ -1118,19 +1118,19 @@ class App(ctk.CTk):
                 row['name_label'].configure(text=audio_name)
                 row['status_label'].configure(text=status_text, text_color=status_color)
 
-                # Show or hide cancel/delete button depending on status
-                is_unfinished = job.status not in [JobStatus.FINISHED, JobStatus.ERROR]
+                # Ensure cancel/delete button exists, is visible and styled per status
                 if 'cancel_btn' in row and row['cancel_btn'] is not None:
                     try:
-                        if is_unfinished:
-                            row['cancel_btn'].configure(command=lambda j=job: self._on_queue_row_action(j))
-                            # Ensure it is visible
-                            if not row['cancel_btn'].winfo_ismapped():
-                                row['cancel_btn'].pack(side='right', padx=(0, 6), pady=2)
+                        default_color = ctk.ThemeManager.theme['CTkScrollbar']['button_color']
+                        row['cancel_btn'].configure(command=lambda j=job: self._on_queue_row_action(j))
+                        # Color: red if running, gray otherwise
+                        if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
+                            row['cancel_btn'].configure(fg_color='darkred', hover_color='darkred')
                         else:
-                            # Hide the button for finished/error jobs
-                            if row['cancel_btn'].winfo_ismapped():
-                                row['cancel_btn'].pack_forget()
+                            row['cancel_btn'].configure(fg_color=default_color, hover_color='darkred')
+                        # Make sure it is visible
+                        if not row['cancel_btn'].winfo_ismapped():
+                            row['cancel_btn'].pack(side='right', padx=(0, 6), pady=2)
                     except Exception:
                         pass
 
@@ -1169,19 +1169,17 @@ class App(ctk.CTk):
                 name_label = ctk.CTkLabel(entry_frame, text=audio_name, anchor='w', text_color="lightgray")
                 name_label.pack(side='left', padx=(10, 0), pady=2, fill='x', expand=True)
 
-                # Add small cancel/delete button for unfinished jobs
-                cancel_btn = None
-                if job.status not in [JobStatus.FINISHED, JobStatus.ERROR]:
-                    cancel_btn = ctk.CTkButton(
-                        entry_frame,
-                        text='X',
-                        width=24,
-                        height=20,
-                        fg_color='#6b6b6b',
-                        hover_color='#8a2a2a',
-                        command=lambda j=job: self._on_queue_row_action(j)
-                    )
-                    cancel_btn.pack(side='right', padx=(0, 6), pady=2)
+                # Add small action button (always visible)
+                cancel_btn = ctk.CTkButton(
+                    entry_frame,
+                    text='X',
+                    width=24,
+                    height=20,
+                    fg_color=('darkred' if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION] else '#6b6b6b'),
+                    hover_color=('darkred' if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION] else '#8a2a2a'),
+                    command=lambda j=job: self._on_queue_row_action(j)
+                )
+                cancel_btn.pack(side='right', padx=(0, 6), pady=2)
 
                 status_label = ctk.CTkLabel(entry_frame, text=status_text, text_color=status_color, anchor='e')
                 status_label.pack(side='right', padx=(0, 10), pady=2)
@@ -1190,8 +1188,7 @@ class App(ctk.CTk):
                 tt_frame = CTkToolTip(entry_frame, text=job_tooltip) #, bg_color='gray')
                 tt_name = CTkToolTip(name_label, text=job_tooltip) #, bg_color='gray')
                 tt_status = CTkToolTip(status_label, text=job_tooltip) #, bg_color='gray')
-                if cancel_btn is not None:
-                    CTkToolTip(cancel_btn, text=t('transcription_canceled'))
+                CTkToolTip(cancel_btn, text=t('transcription_canceled'))
 
                 if job.status == JobStatus.FINISHED:
                     entry_frame.configure(cursor="hand2")
@@ -1251,8 +1248,13 @@ class App(ctk.CTk):
                     self._cancel_job_only = True
                     self.cancel = True
             else:
-                # Do nothing for finished/error
-                pass
+                # Finished or error -> remove from list after confirmation
+                if tk.messagebox.askyesno(title='noScribe', message='Remove this entry from the list?'):
+                    try:
+                        self.queue.jobs.remove(job)
+                    except ValueError:
+                        pass
+                    self.update_queue_table()
         except Exception as e:
             # Log any UI handling error silently
             self.logn(f'Queue action error: {e}', 'error')
