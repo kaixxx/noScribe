@@ -53,6 +53,8 @@ ja:
   audio_conversion: 'オーディオ変換'
   speaker_identification: '話者識別'
   transcription: '転写'
+  canceling: 'キャンセル中'
+  canceled: 'キャンセル済み'
   finished: '完了'
   error: 'エラー'
 
@@ -60,6 +62,8 @@ ja:
   job_tt_waiting: 'ジョブ待機中...'
   job_tt_running: 'ジョブ実行中。詳細はログタブを参照してください。'
   job_tt_finished: '成功。クリックして noScribe エディターで出力を開きます。'
+  job_tt_canceling: 'キャンセル中...'
+  job_tt_canceled: 'ユーザーによりジョブがキャンセルされました。'
   job_tt_error: 'ジョブ処理中にエラーが発生しました: %{error_msg}'
 
   # ログメッセージ
@@ -83,6 +87,7 @@ ja:
   total_jobs: '総ジョブ: %{total}'
   completed: '完了: %{finished}'
   failed: '失敗: %{errors}'
+  canceled_summary: 'キャンセル: %{canceled}'
 
   # エラーメッセージ
   err_setup: 'セットアップ中にエラーが発生しました。インターネット接続が正常か確認し、プログラムを再起動してください。'

@@ -53,6 +53,8 @@ es:
   audio_conversion: 'conversión de audio'
   speaker_identification: 'identificación de hablantes'
   transcription: 'transcripción'
+  canceling: 'cancelando'
+  canceled: 'cancelado'
   finished: 'finalizado'
   error: 'error'
 
@@ -60,6 +62,8 @@ es:
   job_tt_waiting: 'Tarea en espera...'
   job_tt_running: 'La tarea se está ejecutando. Vea la pestaña de registro para detalles.'
   job_tt_finished: 'Éxito. Haz clic para abrir la salida en el editor de noScribe.'
+  job_tt_canceling: 'Cancelando...'
+  job_tt_canceled: 'Trabajo cancelado por el usuario.'
   job_tt_error: 'Se produjo un error durante el procesamiento: %{error_msg}'
 
   # Mensajes de registro
@@ -83,6 +87,7 @@ es:
   total_jobs: 'Trabajos totales: %{total}'
   completed: 'Completados: %{finished}'
   failed: 'Fallidos: %{errors}'
+  canceled_summary: 'Cancelados: %{canceled}'
 
   # Mensajes de error
   err_setup: 'Se produjo un error durante la configuración. Verifica tu conexión a Internet y reinicia el programa.'

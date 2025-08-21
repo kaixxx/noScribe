@@ -59,6 +59,7 @@ en:
   speaker_identification: 'speaker identification'
   transcription: 'transcription'
   canceling: 'canceling in progress'
+  canceled: 'canceled'
   finished: 'finished'
   error: 'error'
 
@@ -67,6 +68,7 @@ en:
   job_tt_running: 'Job is running. See the log tab for details.'
   job_tt_finished: 'Success. Click to open the output in the noScribe Editor.'
   job_tt_canceling: 'Canceling...'
+  job_tt_canceled: 'Job was canceled by the user.'
   job_tt_error: 'An error occured during job processing: %{error_msg}'
  
   # log messages
@@ -93,6 +95,8 @@ en:
   total_jobs: 'Total jobs: %{total}'
   completed: 'Completed: %{finished}'
   failed: 'Failed: %{errors}'
+  canceled_summary: 'Canceled: %{canceled}'
+  processing_time: 'Total processing time: %{total_time_str}'
 
   # Error messages
   err_setup: 'An error occured during the setup. Check if you have a working internet connection and restart the program.'

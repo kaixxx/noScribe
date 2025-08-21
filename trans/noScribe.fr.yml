@@ -53,6 +53,8 @@ fr:
   audio_conversion: 'conversion audio'
   speaker_identification: 'identification des locuteurs'
   transcription: 'transcription'
+  canceling: 'annulation en cours'
+  canceled: 'annulé'
   finished: 'terminé'
   error: 'erreur'
 
@@ -60,6 +62,8 @@ fr:
   job_tt_waiting: 'Tâche en attente...'
   job_tt_running: "La tâche est en cours. Voir l'onglet journal pour les détails."
   job_tt_finished: "Succès. Cliquez pour ouvrir le résultat dans l'éditeur noScribe."
+  job_tt_canceling: 'Annulation en cours...'
+  job_tt_canceled: 'Tâche annulée par l’utilisateur.'
   job_tt_error: "Une erreur est survenue lors du traitement de la tâche : %{error_msg}"
 
   # Messages de journalisation
@@ -83,6 +87,7 @@ fr:
   total_jobs: 'Tâches totales : %{total}'
   completed: 'Terminées : %{finished}'
   failed: 'Échouées : %{errors}'
+  canceled_summary: 'Annulées : %{canceled}'
 
   # Messages d'erreur
   err_setup: "Une erreur s'est produite pendant la configuration. Vérifiez votre connexion internet et redémarrez le programme."

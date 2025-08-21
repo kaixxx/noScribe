@@ -54,6 +54,8 @@ pt:
   audio_conversion: 'conversão de áudio'
   speaker_identification: 'identificação de locutores'
   transcription: 'transcrição'
+  canceling: 'cancelando'
+  canceled: 'cancelado'
   finished: 'concluído'
   error: 'erro'
 
@@ -61,6 +63,8 @@ pt:
   job_tt_waiting: 'Tarefa aguardando...'
   job_tt_running: 'Tarefa em execução. Veja a aba de registro para detalhes.'
   job_tt_finished: 'Sucesso. Clique para abrir o resultado no editor noScribe.'
+  job_tt_canceling: 'Cancelando...'
+  job_tt_canceled: 'Tarefa cancelada pelo usuário.'
   job_tt_error: 'Ocorreu um erro durante o processamento: %{error_msg}'
 
   # Mensagens de log
@@ -84,6 +88,7 @@ pt:
   total_jobs: 'Total de tarefas: %{total}'
   completed: 'Concluídas: %{finished}'
   failed: 'Falhas: %{errors}'
+  canceled_summary: 'Canceladas: %{canceled}'
 
   # Mensagens de erro
   err_setup: 'Ocorreu um erro durante a configuração. Verifique se você possui uma conexão de internet funcionando e reinicie o programa.'

@@ -53,6 +53,8 @@ it:
   audio_conversion: 'conversione audio'
   speaker_identification: 'identificazione parlanti'
   transcription: 'trascrizione'
+  canceling: 'annullamento in corso'
+  canceled: 'annullato'
   finished: 'completato'
   error: 'errore'
 
@@ -60,6 +62,8 @@ it:
   job_tt_waiting: 'Processo in attesa...'
   job_tt_running: 'Processo in esecuzione. Vedi la scheda registro per i dettagli.'
   job_tt_finished: 'Completato. Clicca per aprire l\'output nell\'editor noScribe.'
+  job_tt_canceling: 'Annullamento in corso...'
+  job_tt_canceled: 'Attività annullata dall’utente.'
   job_tt_error: 'Si è verificato un errore durante l\'elaborazione: %{error_msg}'
 
   # Messaggi di log
@@ -83,6 +87,7 @@ it:
   total_jobs: 'Attività totali: %{total}'
   completed: 'Completate: %{finished}'
   failed: 'Fallite: %{errors}'
+  canceled_summary: 'Annullate: %{canceled}'
 
   # Messaggi di errore
   err_setup: 'Si è verificato un errore durante la configurazione. Controlla la tua connessione internet e riavvia il programma.'

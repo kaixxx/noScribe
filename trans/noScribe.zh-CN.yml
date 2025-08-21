@@ -53,6 +53,8 @@ zh-CN: &defaults
   audio_conversion: '音频转换'
   speaker_identification: '说话人识别'
   transcription: '转录'
+  canceling: '正在取消'
+  canceled: '已取消'
   finished: '完成'
   error: '错误'
 
@@ -60,6 +62,8 @@ zh-CN: &defaults
   job_tt_waiting: '任务等待中...'
   job_tt_running: '任务运行中。详情请查看日志标签。'
   job_tt_finished: '成功。点击在 noScribe 编辑器中打开输出。'
+  job_tt_canceling: '正在取消...'
+  job_tt_canceled: '作业已被用户取消。'
   job_tt_error: '处理任务时发生错误：%{error_msg}'
 
   # 日志信息
@@ -86,6 +90,7 @@ zh-CN: &defaults
   total_jobs: '任务总数：%{total}'
   completed: '已完成：%{finished}'
   failed: '失败：%{errors}'
+  canceled_summary: '已取消：%{canceled}'
 
   # 错误信息
   err_setup: '设置过程中发生错误。请检查您的网络连接并重新启动程序。'

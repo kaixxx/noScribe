@@ -382,6 +382,7 @@ class JobStatus(Enum):
     SPEAKER_IDENTIFICATION = "speaker_identification"
     TRANSCRIPTION = "transcription"
     CANCELING = "canceling"
+    CANCELED = "canceled"
     FINISHED = "finished"
     ERROR = "error"
 
@@ -448,6 +449,12 @@ class TranscriptionJob:
         self.error_message = error_message
         self.error_tb = error_tb
         self.finished_at = datetime.datetime.now()
+
+    def set_canceled(self, message: Optional[str] = None):
+        """Mark job as canceled by the user"""
+        self.status = JobStatus.CANCELED
+        self.error_message = message
+        self.finished_at = datetime.datetime.now()
     
     def get_duration(self) -> Optional[datetime.timedelta]:
         """Get processing duration if job is completed"""
@@ -457,7 +464,7 @@ class TranscriptionJob:
     
     def is_completed(self) -> bool:
         """Check if job is completed (finished or error)"""
-        return self.status in [JobStatus.FINISHED, JobStatus.ERROR]
+        return self.status in [JobStatus.FINISHED, JobStatus.ERROR, JobStatus.CANCELED]
 
 class TranscriptionQueue:
     """Manages a queue of transcription jobs"""
@@ -484,6 +491,10 @@ class TranscriptionQueue:
     def get_failed_jobs(self) -> List[TranscriptionJob]:
         """Get all jobs that encountered errors"""
         return [job for job in self.jobs if job.status == JobStatus.ERROR]
+
+    def get_canceled_jobs(self) -> List[TranscriptionJob]:
+        """Get all jobs that were canceled by the user"""
+        return [job for job in self.jobs if job.status == JobStatus.CANCELED]
     
     def has_pending_jobs(self) -> bool:
         """Check if there are jobs waiting to be processed"""
@@ -501,7 +512,8 @@ class TranscriptionQueue:
             'waiting': len(self.get_waiting_jobs()),
             'running': len(self.get_running_jobs()),
             'finished': len(self.get_finished_jobs()),
-            'errors': len(self.get_failed_jobs())
+            'errors': len(self.get_failed_jobs()),
+            'canceled': len(self.get_canceled_jobs()),
         }
     
     def is_empty(self) -> bool:
@@ -1192,6 +1204,9 @@ class App(ctk.CTk):
                 status_color = "yellow"
                 audio_name = '\u23F5 ' + audio_name
                 job_tooltip = t('job_tt_canceling')
+            elif job.status == JobStatus.CANCELED:
+                status_color = "yellow"
+                job_tooltip = t('job_tt_canceled')
             elif job.status == JobStatus.FINISHED:
                 status_color = "lightgreen"
                 job_tooltip = t('job_tt_finished')
@@ -1386,9 +1401,9 @@ class App(ctk.CTk):
             # Mark waiting jobs as canceled immediately
             for job in self.queue.get_waiting_jobs():
                 try:
-                    job.set_error(t('err_user_cancelation'))
+                    job.set_canceled(t('err_user_cancelation'))
                 except Exception:
-                    job.set_error('Canceled by user')
+                    job.set_canceled('Canceled by user')
             # If something is running, reflect canceling state and signal cancel
             for job in self.queue.get_running_jobs():
                 if job.status != JobStatus.CANCELING:
@@ -1677,7 +1692,7 @@ class App(ctk.CTk):
                 # If global cancel was requested (via Stop button), cancel all waiting jobs
                 if self.cancel and not self._cancel_job_only:
                     for job in self.queue.get_waiting_jobs():
-                        job.set_error(t('err_user_cancelation'))
+                        job.set_canceled(t('err_user_cancelation'))
                         self.update_queue_table()
                     break
                 
@@ -1704,8 +1719,12 @@ class App(ctk.CTk):
                     self.update_queue_table()
                     
                 except Exception as e:
+                    # Distinguish cancellation from real errors
                     error_msg = job.error_message or str(e)
-                    job.set_error(error_msg)
+                    if str(e) == t('err_user_cancelation') or self.cancel:
+                        job.set_canceled(t('err_user_cancelation'))
+                    else:
+                        job.set_error(error_msg)
                     self.update_queue_table()
                     self.logn(error_msg, 'error')
                     traceback_str = job.error_tb or traceback.format_exc()
@@ -1724,12 +1743,13 @@ class App(ctk.CTk):
             self.logn(t('total_jobs', total=final_summary['total']))
             self.logn(t('completed', finished=final_summary['finished']))
             self.logn(t('failed', errors=final_summary['errors']))
+            self.logn(t('canceled_summary', canceled=final_summary['canceled']))
             
             # Log total processing time
             total_time = datetime.datetime.now() - queue_start_time
             total_seconds = "{:02d}".format(int(total_time.total_seconds() % 60))
             total_time_str = f'{int(total_time.total_seconds() // 60)}:{total_seconds}'
-            self.logn(f"Total processing time: {total_time_str}")
+            self.logn(t('processing_time', total_time_str=total_time_str))
             
         except Exception as e:
             self.logn(f"Queue processing error: {str(e)}", 'error')
@@ -1999,9 +2019,14 @@ class App(ctk.CTk):
 
                     except Exception as e:
                         traceback_str = traceback.format_exc()
-                        job.set_error(f"{t('err_identifying_speakers')}: {e}", traceback_str)
-                        self.update_queue_table()
-                        raise Exception(job.error_message)
+                        if str(e) == t('err_user_cancelation') or self.cancel:
+                            job.set_canceled(t('err_user_cancelation'))
+                            self.update_queue_table()
+                            raise Exception(t('err_user_cancelation'))
+                        else:
+                            job.set_error(f"{t('err_identifying_speakers')}: {e}", traceback_str)
+                            self.update_queue_table()
+                            raise Exception(job.error_message)
 
                 #-------------------------------------------------------
                 # 3) Transcribe with faster-whisper
@@ -2547,6 +2572,9 @@ def run_cli_mode(args):
             print(f"Output saved to: {job.transcript_file}")
             return 0
         else:
+            if final_summary.get('canceled', 0) > 0:
+                print(f"\nTranscription canceled by user.")
+                return 1
             print(f"\nTranscription failed!")
             failed_jobs = app.queue.get_failed_jobs()
             if failed_jobs:
