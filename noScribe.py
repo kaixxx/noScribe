@@ -25,6 +25,7 @@ if sys.stderr is None:
 
 import tkinter as tk
 import customtkinter as ctk
+from customtkinter.windows.widgets.scaling import CTkScalingBaseClass
 # from CTkToolTip import CTkToolTip
 from CTkToolTips import CTkToolTip
 from tkHyperlinkManager import HyperlinkManager
@@ -398,6 +399,9 @@ class TranscriptionJob:
         self.started_at: Optional[datetime.datetime] = None
         self.finished_at: Optional[datetime.datetime] = None
         
+        # Progress tracking
+        self.progress: float = 0.0  # Progress from 0.0 to 1.0
+        
         # File paths
         self.audio_file: str = ''
         self.transcript_file: str = ''
@@ -471,6 +475,7 @@ class TranscriptionQueue:
     
     def __init__(self):
         self.jobs: List[TranscriptionJob] = []
+        self.current_job: Optional[TranscriptionJob] = None  # Track currently running job
     
     def add_job(self, job: TranscriptionJob):
         """Add a job to the queue"""
@@ -721,6 +726,127 @@ class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format h
                 if event.char != ':':
                     if self.get()[i:i+1] != ':':
                         self.insert(i, ':')
+
+class ProgressFrame(ctk.CTkFrame, CTkScalingBaseClass):
+    """A custom frame that can display a progress bar as its background with text overlays"""
+    
+    def __init__(self, master, progress=0.0, progress_color=None, **kwargs):
+        ctk.CTkFrame.__init__(self, master, **kwargs)
+        CTkScalingBaseClass.__init__(self, scaling_type="widget")
+        if not progress_color:
+            progress_color = ctk.ThemeManager.theme['CTkProgressBar']['progress_color'][1]
+        
+        self.progress = progress
+        self.progress_color = progress_color
+        self.base_color = self._fg_color
+        self.show_progress = False  # Only show progress during processing
+        
+        # Store text content
+        self.name_text = ""
+        self.status_text = ""
+        self.status_color = "lightgray"
+        
+        # Create a canvas to draw the progress background and text
+        self.progress_canvas = tk.Canvas(self, highlightthickness=0)
+        self.progress_canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        
+        # Bind to configure event to redraw when size changes
+        self.bind('<Configure>', self._on_configure)
+        
+        # Update the progress display
+        self._update_progress_display()
+    
+    def destroy(self):
+        """Override destroy to properly clean up scaling callbacks"""
+        CTkScalingBaseClass.destroy(self)
+        ctk.CTkFrame.destroy(self)
+    
+    def set_progress(self, progress, show_progress=True):
+        """Set the progress value (0.0 to 1.0) and whether to show progress bar"""
+        self.progress = max(0.0, min(1.0, progress))
+        self.show_progress = show_progress
+        self._update_progress_display()
+    
+    def set_name_text(self, text):
+        """Set the name text to display"""
+        self.name_text = text
+        self._update_progress_display()
+    
+    def set_status_text(self, text, color="lightgray"):
+        """Set the status text and color to display"""
+        self.status_text = text
+        self.status_color = color
+        self._update_progress_display()
+            
+    def _on_configure(self, event=None):
+        """Handle resize events"""
+        self._update_progress_display()
+    
+    def _get_scaled_font_size(self):
+        """Calculate font size based on frame height and use CustomTkinter's scaling"""
+        try:
+            font = ctk.CTkFont()
+            scaled_font = self._apply_font_scaling(font)
+            return scaled_font[1]
+        except:
+            return 13  # Fallback
+    
+    def _update_progress_display(self):
+        """Update the progress bar display and text"""
+        if not self.progress_canvas.winfo_exists():
+            return
+            
+        # Clear the canvas
+        self.progress_canvas.delete("all")
+        
+        # Get canvas dimensions
+        width = self.progress_canvas.winfo_width()
+        height = self.progress_canvas.winfo_height()
+        
+        if width <= 1 or height <= 1:
+            # Canvas not ready yet
+            self.after(10, self._update_progress_display)
+            return
+        
+        # Calculate button area width to avoid overlap (1 button = 30px + padding)
+        button_area_width = 2 * self._apply_widget_scaling(30 + 5)
+               
+        # Draw base background
+        base_color = self.base_color[1] if isinstance(self.base_color, tuple) else self.base_color
+        self.progress_canvas.configure(bg=base_color)
+        
+        # Draw progress bar only if show_progress is True and there's progress
+        if self.show_progress and self.progress > 0:
+            progress_width = int((width - button_area_width) * self.progress)
+            self.progress_canvas.create_rectangle(
+                0, 0, progress_width, height,
+                fill=self.progress_color,
+                outline=""
+            )
+        
+        # Calculate font size based on screen scaling
+        font_size = self._get_scaled_font_size()
+                
+        # Draw text overlays
+        if self.name_text:
+            self.progress_canvas.create_text(
+                10, height // 2,
+                text=self.name_text,
+                anchor="w",
+                fill="lightgray",
+                font=("", font_size)
+            )
+        
+        if self.status_text:
+            # Position status text to avoid button overlap
+            status_x = width - button_area_width - self._apply_widget_scaling(5)
+            self.progress_canvas.create_text(
+                status_x, height // 2,
+                text=self.status_text,
+                anchor="e",
+                fill=self.status_color,
+                font=("", font_size)
+            )
 
 class App(ctk.CTk):
     def __init__(self):
@@ -1222,8 +1348,16 @@ class App(ctk.CTk):
             if hasattr(self, 'queue_row_widgets') and job_key in self.queue_row_widgets:
                 # Update existing row
                 row = self.queue_row_widgets[job_key]
-                row['name_label'].configure(text=audio_name)
-                row['status_label'].configure(text=status_text, text_color=status_color)
+                # Update text directly on the ProgressFrame canvas
+                row['frame'].set_name_text(audio_name)
+                row['frame'].set_status_text(status_text, status_color)
+                
+                # Update progress bar visibility based on job status
+                is_processing = job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]
+                if is_processing:
+                    row['frame'].set_progress(job.progress, show_progress=True)
+                else:
+                    row['frame'].set_progress(0.0, show_progress=False)
 
                 # Ensure repeat button visibility only for ERROR and CANCELED
                 try:
@@ -1238,9 +1372,9 @@ class App(ctk.CTk):
                                 hover_color='darkred',
                                 command=lambda j=job: self._on_queue_row_repeat(j)
                             )
-                            repeat_btn.pack(side='right', padx=(0, 4), pady=2)
+                            repeat_btn.pack(side='right', padx=(0, 4), pady=5)
                             row['repeat_btn'] = repeat_btn
-                            row['repeat_tt'] = CTkToolTip(repeat_btn, text=t('queue_tt_repeat_job'))
+                            row['repeat_tt'] = CTkToolTip(repeat_btn, text=t('queue_tt_repeat_job')) 
                         else:
                             if not row['repeat_btn'].winfo_ismapped():
                                 row['repeat_btn'].pack(side='right', padx=(0, 4), pady=2)
@@ -1316,12 +1450,21 @@ class App(ctk.CTk):
                     for tt in row['tooltips']:
                         tt.set_text(job_tooltip)
             else:
-                # Create new row
-                entry_frame = ctk.CTkFrame(self.queue_scrollable, fg_color='#4A4A4A')  # #1D1E1E
-                entry_frame.pack(fill='x', padx=0, pady=2)
-
-                name_label = ctk.CTkLabel(entry_frame, text=audio_name, anchor='w', text_color="lightgray")
-                name_label.pack(side='left', padx=(10, 0), pady=2, fill='x', expand=True)
+                # Create new row with progress bar background
+                fg_color = ctk.ThemeManager.theme['CTkSegmentedButton']['unselected_color'][1]
+                entry_frame = ProgressFrame(self.queue_scrollable, progress=job.progress, progress_color=None, fg_color=fg_color)
+                entry_frame.pack(fill='x', padx=(0, 5), pady=2)
+                
+                # Set the text directly on the ProgressFrame canvas
+                entry_frame.set_name_text(audio_name)
+                entry_frame.set_status_text(status_text, status_color)
+                
+                # Set progress bar visibility based on job status
+                is_processing = job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]
+                if is_processing:
+                    entry_frame.set_progress(job.progress, show_progress=True)
+                else:
+                    entry_frame.set_progress(0.0, show_progress=False)
 
                 # Add small action buttons (repeat left of X)
                 repeat_btn = None
@@ -1344,12 +1487,15 @@ class App(ctk.CTk):
                     hover_color=('darkred'),
                     command=lambda j=job: self._on_queue_row_action(j)
                 )
-                cancel_btn.pack(side='right', padx=(0, 6), pady=2)
+                cancel_btn.pack(side='right', padx=(0, 6), pady=5)
                 if repeat_btn is not None:
-                    repeat_btn.pack(side='right', padx=(0, 4), pady=2)
+                    repeat_btn.pack(side='right', padx=(0, 4), pady=5)
 
-                status_label = ctk.CTkLabel(entry_frame, text=status_text, text_color=status_color, anchor='e')
-                status_label.pack(side='right', padx=(0, 10), pady=2)
+                # Create dummy labels for compatibility with existing code (but make them invisible)
+                name_label = ctk.CTkLabel(entry_frame, text="", width=0, height=0)
+                name_label.pack_forget()  # Don't show them
+                status_label = ctk.CTkLabel(entry_frame, text="", width=0, height=0)
+                status_label.pack_forget()  # Don't show them
 
                 # Tooltips (create once per row)
                 tt_frame = CTkToolTip(entry_frame, text=job_tooltip) #, bg_color='gray')
@@ -1706,6 +1852,20 @@ class App(ctk.CTk):
         self.progress_textbox.delete('1.0', tk.END)
         self.progress_textbox.insert(tk.END, progr_str)
         self.progress_textbox.configure(state=ctk.DISABLED)
+        
+        # Update progress of currently running job in queue table
+        if progr >= 0:
+            running_jobs = self.queue.get_running_jobs()
+            if running_jobs:
+                current_job = running_jobs[0]  # Get the first running job
+                current_job.progress = progr
+                
+                # Update the progress bar background for this job
+                job_key = id(current_job)
+                if hasattr(self, 'queue_row_widgets') and job_key in self.queue_row_widgets:
+                    row = self.queue_row_widgets[job_key]
+                    if hasattr(row['frame'], 'set_progress'):
+                        row['frame'].set_progress(progr)
 
     def collect_transcription_options(self) -> TranscriptionJob:
         """Collect all transcription options from UI and config into a TranscriptionJob object"""
