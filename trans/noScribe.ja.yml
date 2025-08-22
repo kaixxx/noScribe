@@ -121,3 +121,4 @@ ja:
   queue_tt_cancel_running: 'このジョブをキャンセル'
   queue_tt_remove_waiting: 'キューから削除'
   queue_tt_remove_entry: 'リストから削除'
+  queue_tt_repeat_job: 'このジョブを再実行'

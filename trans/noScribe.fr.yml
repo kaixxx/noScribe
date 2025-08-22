@@ -121,3 +121,4 @@ fr:
   queue_tt_cancel_running: 'Annuler cette tâche'
   queue_tt_remove_waiting: 'Retirer de la file'
   queue_tt_remove_entry: 'Retirer de la liste'
+  queue_tt_repeat_job: 'Relancer cette tâche'

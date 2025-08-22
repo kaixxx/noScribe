@@ -122,3 +122,4 @@ pt:
   queue_tt_cancel_running: 'Cancelar esta tarefa'
   queue_tt_remove_waiting: 'Remover da fila'
   queue_tt_remove_entry: 'Remover da lista'
+  queue_tt_repeat_job: 'Repetir esta tarefa'

@@ -121,3 +121,4 @@ it:
   queue_tt_cancel_running: 'Annulla questa attività'
   queue_tt_remove_waiting: 'Rimuovi dalla coda'
   queue_tt_remove_entry: 'Rimuovi dall’elenco'
+  queue_tt_repeat_job: 'Ripeti questa attività'

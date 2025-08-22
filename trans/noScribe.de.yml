@@ -123,3 +123,4 @@ de:
   queue_tt_cancel_running: 'Diesen Auftrag abbrechen'
   queue_tt_remove_waiting: 'Aus der Warteschlange entfernen'
   queue_tt_remove_entry: 'Aus der Liste entfernen'
+  queue_tt_repeat_job: 'Diesen Auftrag erneut ausführen'

@@ -124,6 +124,7 @@ zh-CN: &defaults
   queue_tt_cancel_running: '取消此任务'
   queue_tt_remove_waiting: '从队列中移除'
   queue_tt_remove_entry: '从列表中移除'
+  queue_tt_repeat_job: '重复此任务'
 
 zh:
   <<: *defaults

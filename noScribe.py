@@ -1225,7 +1225,35 @@ class App(ctk.CTk):
                 row['name_label'].configure(text=audio_name)
                 row['status_label'].configure(text=status_text, text_color=status_color)
 
-                # Ensure cancel/delete button exists, is visible and styled per status
+                # Ensure repeat button visibility only for ERROR and CANCELED
+                try:
+                    if job.status in [JobStatus.ERROR, JobStatus.CANCELED]:
+                        if 'repeat_btn' not in row or row['repeat_btn'] is None:
+                            repeat_btn = ctk.CTkButton(
+                                row['frame'],
+                                text='⟲',
+                                width=24,
+                                height=20,
+                                fg_color=btn_color,
+                                hover_color='darkred',
+                                command=lambda j=job: self._on_queue_row_repeat(j)
+                            )
+                            repeat_btn.pack(side='right', padx=(0, 4), pady=2)
+                            row['repeat_btn'] = repeat_btn
+                            row['repeat_tt'] = CTkToolTip(repeat_btn, text=t('queue_tt_repeat_job'))
+                        else:
+                            if not row['repeat_btn'].winfo_ismapped():
+                                row['repeat_btn'].pack(side='right', padx=(0, 4), pady=2)
+                            row['repeat_btn'].configure(state=ctk.NORMAL, command=lambda j=job: self._on_queue_row_repeat(j))
+                    else:
+                        # hide the repeat button if it exists for other states
+                        if 'repeat_btn' in row and row['repeat_btn'] is not None:
+                            if row['repeat_btn'].winfo_ismapped():
+                                row['repeat_btn'].pack_forget()
+                except Exception:
+                    pass
+
+                # Cancel button
                 if 'cancel_btn' in row and row['cancel_btn'] is not None:
                     try:
                         row['cancel_btn'].configure(command=lambda j=job: self._on_queue_row_action(j))
@@ -1251,6 +1279,14 @@ class App(ctk.CTk):
                                 pass
                     except Exception:
                         pass
+
+                # Repack status label last so it ends up left of repeat and X
+                try:
+                    if row['status_label'].winfo_manager():
+                        row['status_label'].pack_forget()
+                    row['status_label'].pack(side='right', padx=(0, 10), pady=2)
+                except Exception:
+                    pass
 
                 # Update click bindings only on transition to/from FINISHED
                 was_finished = row.get('status') == JobStatus.FINISHED
@@ -1287,7 +1323,18 @@ class App(ctk.CTk):
                 name_label = ctk.CTkLabel(entry_frame, text=audio_name, anchor='w', text_color="lightgray")
                 name_label.pack(side='left', padx=(10, 0), pady=2, fill='x', expand=True)
 
-                # Add small action button (always visible)
+                # Add small action buttons (repeat left of X)
+                repeat_btn = None
+                if job.status in [JobStatus.ERROR, JobStatus.CANCELED]:
+                    repeat_btn = ctk.CTkButton(
+                        entry_frame,
+                        text='⟲',
+                        width=24,
+                        height=20,
+                        fg_color=btn_color,
+                        hover_color=('darkred'),
+                        command=lambda j=job: self._on_queue_row_repeat(j)
+                    )
                 cancel_btn = ctk.CTkButton(
                     entry_frame,
                     text='X',
@@ -1298,6 +1345,8 @@ class App(ctk.CTk):
                     command=lambda j=job: self._on_queue_row_action(j)
                 )
                 cancel_btn.pack(side='right', padx=(0, 6), pady=2)
+                if repeat_btn is not None:
+                    repeat_btn.pack(side='right', padx=(0, 4), pady=2)
 
                 status_label = ctk.CTkLabel(entry_frame, text=status_text, text_color=status_color, anchor='e')
                 status_label.pack(side='right', padx=(0, 10), pady=2)
@@ -1314,6 +1363,7 @@ class App(ctk.CTk):
                 else:
                     cancel_tt_text = t('queue_tt_remove_entry')
                 cancel_tt = CTkToolTip(cancel_btn, text=cancel_tt_text)
+                repeat_tt = CTkToolTip(repeat_btn, text=t('queue_tt_repeat_job')) if repeat_btn is not None else None
 
                 if job.status == JobStatus.FINISHED:
                     entry_frame.configure(cursor="hand2")
@@ -1337,6 +1387,8 @@ class App(ctk.CTk):
                     'tooltips': [tt_frame, tt_name, tt_status],
                     'cancel_btn': cancel_btn,
                     'cancel_tt': cancel_tt,
+                    'repeat_btn': repeat_btn,
+                    'repeat_tt': repeat_tt,
                 }
 
         # Remove rows no longer present
@@ -1452,6 +1504,42 @@ class App(ctk.CTk):
         except Exception as e:
             # Log any UI handling error silently
             self.logn(f'Queue action error: {e}', 'error')
+
+    def _on_queue_row_repeat(self, job: TranscriptionJob):
+        """Repeat a job: set to WAITING if others are running, else start immediately."""
+        try:
+            if job.status not in [JobStatus.ERROR, JobStatus.CANCELED]:
+                return
+            # reset job timing and messages
+            job.error_message = None
+            job.error_tb = None
+            job.started_at = None
+            job.finished_at = None
+            job.status = JobStatus.WAITING
+            self.update_queue_table()
+            try:
+                self.update_queue_controls()
+            except Exception:
+                pass
+
+            has_running = len(self.queue.get_running_jobs()) > 0
+            if has_running:
+                return
+
+            # no running jobs: start this one immediately
+            try:
+                start_idx = self.queue.jobs.index(job)
+            except ValueError:
+                start_idx = None
+            if start_idx is not None:
+                wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": start_idx})
+                wkr.start()
+                try:
+                    self.update_queue_controls()
+                except Exception:
+                    pass
+        except Exception as e:
+            self.logn(f'Queue repeat error: {e}', 'error')
 
     def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.

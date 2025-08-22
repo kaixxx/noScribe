@@ -121,3 +121,4 @@ es:
   queue_tt_cancel_running: 'Cancelar este trabajo'
   queue_tt_remove_waiting: 'Eliminar de la cola'
   queue_tt_remove_entry: 'Eliminar de la lista'
+  queue_tt_repeat_job: 'Repetir este trabajo'

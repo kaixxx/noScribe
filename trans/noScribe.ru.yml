@@ -122,3 +122,4 @@ ru:
   queue_tt_cancel_running: 'Отменить это задание'
   queue_tt_remove_waiting: 'Удалить из очереди'
   queue_tt_remove_entry: 'Удалить из списка'
+  queue_tt_repeat_job: 'Повторить это задание'

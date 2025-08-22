@@ -131,4 +131,5 @@ en:
   queue_tt_cancel_running: 'Cancel this job'
   queue_tt_remove_waiting: 'Remove from queue'
   queue_tt_remove_entry: 'Remove from list'
+  queue_tt_repeat_job: 'Repeat this job'
                       
