@@ -36,9 +36,34 @@ class CTkToolTip(object):
         self.corner_radius: int = 10
         self.border_width: int = 1
         self.padding: tuple = (10, 2)       
-        self._widget.bind("<Enter>", self.on_enter)
-        self._widget.bind("<Leave>", self.on_leave)
-        self._widget.bind("<ButtonPress>", self.on_leave)
+        # Bind to the primary widget; use add="+" to avoid clobbering existing bindings
+        self._widget.bind("<Enter>", self.on_enter, add="+")
+        self._widget.bind("<Leave>", self.on_leave, add="+")
+        self._widget.bind("<ButtonPress>", self.on_leave, add="+")
+
+        # Also bind to an inner canvas if the widget is a composite (e.g., ProgressFrame)
+        try:
+            inner_targets = []
+            # Prefer a known attribute used by ProgressFrame
+            if hasattr(self._widget, 'progress_canvas'):
+                inner_targets.append(self._widget.progress_canvas)
+            else:
+                # Fallback: bind to any direct tk.Canvas children
+                for child in getattr(self._widget, 'winfo_children', lambda: [])():
+                    try:
+                        if isinstance(child, tk.Canvas) or getattr(child, 'winfo_class', lambda: '')() == 'Canvas':
+                            inner_targets.append(child)
+                    except Exception:
+                        pass
+            for target in inner_targets:
+                try:
+                    target.bind("<Enter>", self.on_enter, add="+")
+                    target.bind("<Leave>", self.on_leave, add="+")
+                    target.bind("<ButtonPress>", self.on_leave, add="+")
+                except Exception:
+                    pass
+        except Exception:
+            pass
         self._id = None
         self._tw = None
 
@@ -109,28 +134,28 @@ class CTkToolTip(object):
         # Pack the frame into the Toplevel so the label becomes visible
         self.frame.pack(fill="both", expand=True)
         
-        if event:
-            # Calculate available space on the right side of the widget relative to the screen
-            root_width = self._tw.winfo_screenwidth()
-            widget_x = event.x_root
-            space_on_right = root_width - widget_x
+        # Determine current pointer position for robust placement (works with synthetic events)
+        try:
+            pointer_x, pointer_y = self._widget.winfo_pointerxy()
+        except Exception:
+            # Fallback to widget origin if pointer position is unavailable
+            pointer_x = self._widget.winfo_rootx()
+            pointer_y = self._widget.winfo_rooty()
 
-            # Calculate the width of the tooltip's text based on the length of the message string
-            text_width = self.message_label.winfo_reqwidth()
+        # Calculate available space on the right side of the pointer relative to the screen
+        root_width = self._tw.winfo_screenwidth()
+        space_on_right = root_width - pointer_x
 
-            # Calculate the offset based on available space and text width to avoid going off-screen on the right side
-            offset_x = self.x_offset
-            if space_on_right < text_width + 20:  # Adjust the threshold as needed
-                offset_x = -text_width - 20  # Negative offset when space is limited on the right side
+        # Calculate the width of the tooltip's text based on the message label
+        text_width = self.message_label.winfo_reqwidth()
 
-            # Offsets the ToolTip using the coordinates od an event as an origin
-            self._tw.geometry(f"+{event.x_root + offset_x}+{event.y_root + self.y_offset}")   
-        else:
-            x = y = 0
-            x, y, cx, cy = self._widget.bbox("insert")
-            x += self._widget.winfo_rootx() + 40
-            y += self._widget.winfo_rooty() + 20
-            self._tw.geometry(f"+{x}+{y}")
+        # Calculate the offset based on available space and text width to avoid going off-screen on the right side
+        offset_x = self.x_offset
+        if space_on_right < text_width + 20:  # Adjust the threshold as needed
+            offset_x = -text_width - 20  # Negative offset when space is limited on the right side
+
+        # Position the tooltip near the pointer
+        self._tw.geometry(f"+{pointer_x + offset_x}+{pointer_y + self.y_offset}")
         
         # label = tk.Label(self._tw, text=self._text, justify='left', fg=self._fg_color,
         #                 bg=self._bg_colour, relief='solid', borderwidth=1,

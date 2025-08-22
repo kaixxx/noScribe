@@ -26,7 +26,6 @@ if sys.stderr is None:
 import tkinter as tk
 import customtkinter as ctk
 from customtkinter.windows.widgets.scaling import CTkScalingBaseClass
-# from CTkToolTip import CTkToolTip
 from CTkToolTips import CTkToolTip
 from tkHyperlinkManager import HyperlinkManager
 import webbrowser
@@ -750,6 +749,10 @@ class ProgressFrame(ctk.CTkFrame, CTkScalingBaseClass):
         self.progress_canvas = tk.Canvas(self, highlightthickness=0)
         self.progress_canvas.place(x=0, y=0, relwidth=1, relheight=1)
         
+        # Forward mouse events from canvas to frame for CTkToolTip functionality
+        self.progress_canvas.bind("<Enter>", self._on_canvas_enter)
+        self.progress_canvas.bind("<Leave>", self._on_canvas_leave)
+        
         # Bind to configure event to redraw when size changes
         self.bind('<Configure>', self._on_configure)
         
@@ -777,6 +780,18 @@ class ProgressFrame(ctk.CTkFrame, CTkScalingBaseClass):
         self.status_text = text
         self.status_color = color
         self._update_progress_display()
+    
+    def bind_click(self, callback):
+        """Bind click event to the canvas"""
+        self.progress_canvas.bind("<Button-1>", callback)
+    
+    def unbind_click(self):
+        """Unbind click event from the canvas"""
+        self.progress_canvas.unbind("<Button-1>")
+    
+    def configure_cursor(self, cursor):
+        """Configure cursor for the canvas"""
+        self.progress_canvas.configure(cursor=cursor)
             
     def _on_configure(self, event=None):
         """Handle resize events"""
@@ -790,6 +805,16 @@ class ProgressFrame(ctk.CTkFrame, CTkScalingBaseClass):
             return scaled_font[1]
         except:
             return 13  # Fallback
+    
+    def _on_canvas_enter(self, event):
+        """Forward canvas Enter event to frame for CTkToolTip"""
+        # Generate a synthetic Enter event for the frame
+        self.event_generate("<Enter>")
+    
+    def _on_canvas_leave(self, event):
+        """Forward canvas Leave event to frame for CTkToolTip"""
+        # Generate a synthetic Leave event for the frame
+        self.event_generate("<Leave>")
     
     def _update_progress_display(self):
         """Update the progress bar display and text"""
@@ -1414,13 +1439,7 @@ class App(ctk.CTk):
                     except Exception:
                         pass
 
-                # Repack status label last so it ends up left of repeat and X
-                try:
-                    if row['status_label'].winfo_manager():
-                        row['status_label'].pack_forget()
-                    row['status_label'].pack(side='right', padx=(0, 10), pady=2)
-                except Exception:
-                    pass
+                # Note: status_label no longer exists since we use ProgressFrame canvas text
 
                 # Update click bindings only on transition to/from FINISHED
                 was_finished = row.get('status') == JobStatus.FINISHED
@@ -1429,19 +1448,11 @@ class App(ctk.CTk):
                     def on_click(event, transcript_file=job.transcript_file):
                         if transcript_file and os.path.exists(transcript_file):
                             self.after(100, lambda: self.launch_editor(transcript_file))
-                    row['frame'].configure(cursor="hand2")
-                    row['name_label'].configure(cursor="hand2")
-                    row['status_label'].configure(cursor="hand2")
-                    row['frame'].bind("<Button-1>", on_click)
-                    row['name_label'].bind("<Button-1>", on_click)
-                    row['status_label'].bind("<Button-1>", on_click)
+                    row['frame'].configure_cursor("hand2")
+                    row['frame'].bind_click(on_click)
                 elif was_finished and not is_finished:
-                    row['frame'].configure(cursor="")
-                    row['name_label'].configure(cursor="")
-                    row['status_label'].configure(cursor="")
-                    row['frame'].unbind("<Button-1>")
-                    row['name_label'].unbind("<Button-1>")
-                    row['status_label'].unbind("<Button-1>")
+                    row['frame'].configure_cursor("")
+                    row['frame'].unbind_click()
 
                 row['status'] = job.status
                 row['tooltip_text'] = job_tooltip
@@ -1491,16 +1502,8 @@ class App(ctk.CTk):
                 if repeat_btn is not None:
                     repeat_btn.pack(side='right', padx=(0, 4), pady=5)
 
-                # Create dummy labels for compatibility with existing code (but make them invisible)
-                name_label = ctk.CTkLabel(entry_frame, text="", width=0, height=0)
-                name_label.pack_forget()  # Don't show them
-                status_label = ctk.CTkLabel(entry_frame, text="", width=0, height=0)
-                status_label.pack_forget()  # Don't show them
-
                 # Tooltips (create once per row)
                 tt_frame = CTkToolTip(entry_frame, text=job_tooltip) #, bg_color='gray')
-                tt_name = CTkToolTip(name_label, text=job_tooltip) #, bg_color='gray')
-                tt_status = CTkToolTip(status_label, text=job_tooltip) #, bg_color='gray')
                 # Tooltip for X button per status
                 if job.status == JobStatus.WAITING:
                     cancel_tt_text = t('queue_tt_remove_waiting')
@@ -1512,25 +1515,19 @@ class App(ctk.CTk):
                 repeat_tt = CTkToolTip(repeat_btn, text=t('queue_tt_repeat_job')) if repeat_btn is not None else None
 
                 if job.status == JobStatus.FINISHED:
-                    entry_frame.configure(cursor="hand2")
-                    name_label.configure(cursor="hand2")
-                    status_label.configure(cursor="hand2")
                     def on_click(event, transcript_file=job.transcript_file):
                         if transcript_file and os.path.exists(transcript_file):
                             self.after(100, lambda: self.launch_editor(transcript_file))
-                    entry_frame.bind("<Button-1>", on_click)
-                    name_label.bind("<Button-1>", on_click)
-                    status_label.bind("<Button-1>", on_click)
+                    entry_frame.configure_cursor("hand2")
+                    entry_frame.bind_click(on_click)
 
                 if not hasattr(self, 'queue_row_widgets'):
                     self.queue_row_widgets = {}
                 self.queue_row_widgets[job_key] = {
                     'frame': entry_frame,
-                    'name_label': name_label,
-                    'status_label': status_label,
                     'status': job.status,
                     'tooltip_text': job_tooltip,
-                    'tooltips': [tt_frame, tt_name, tt_status],
+                    'tooltips': [tt_frame],
                     'cancel_btn': cancel_btn,
                     'cancel_tt': cancel_tt,
                     'repeat_btn': repeat_btn,
