@@ -1750,7 +1750,7 @@ class App(ctk.CTk):
                     self.log_textbox.configure(state=tk.NORMAL)
                     # To prevent slowing down the UI, limit the content of log_textbox to max 5000 characters
                     if self.log_len > 5000:
-                       self.log_textbox.delete("1.0", f"1.{self.log_len - 3000}") # keep the last 3000
+                       self.log_textbox.delete("1.0", f"1.0 + {self.log_len - 3000} chars") # keep the last 3000
                        self.log_len = 3000 
                        
                     if link:
