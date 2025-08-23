@@ -894,6 +894,7 @@ class App(ctk.CTk):
         self.cancel = False # if set to True, transcription will be canceled
         # If True, cancel only the currently running job (triggered from queue row "X")
         self._cancel_job_only = False
+        self.current_progress = -1
 
         # configure window
         self.title('noScribe - ' + t('app_header'))
@@ -1790,7 +1791,9 @@ class App(ctk.CTk):
         """ Replace the last line of the log """
         if where != 'file':
             self.log_textbox.configure(state=ctk.NORMAL)
+            tmp_txt = self.log_textbox.get("end-1c linestart", "end-1c")
             self.log_textbox.delete("end-1c linestart", "end-1c")
+            self.log_len -= len(tmp_txt)
         self.log(txt, tags, where, link, tb)
 
     def button_audio_file_event(self):
@@ -1845,6 +1848,11 @@ class App(ctk.CTk):
             progr = progr + (value * progr_factor / 100)
         if progr >= 1:
             progr = 0.99 # whisper sometimes still needs some time to finish even if the progress is already at 100%. This can be confusing, so we never go above 99%...
+
+        if abs(progr - self.current_progress) < 0.01:
+            # stop updating progress bars if the change is less than 1% (0.01)
+            return
+        self.current_progress = progr
 
         # Update progress_textbox
         if progr < 0:
