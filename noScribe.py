@@ -1194,6 +1194,7 @@ class App(ctk.CTk):
         self.log_textbox.tag_config('highlight', foreground='darkorange')
         self.log_textbox.tag_config('error', foreground='yellow')
         self.log_textbox.pack(padx=0, pady=[0,0], expand=True, fill='both')
+        self.log_len = 0
 
         self.hyperlink = HyperlinkManager(self.log_textbox._textbox)
 
@@ -1747,12 +1748,17 @@ class App(ctk.CTk):
             if hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
                 try:
                     self.log_textbox.configure(state=tk.NORMAL)
-                    
+                    # To prevent slowing down the UI, limit the content of log_textbox to max 5000 characters
+                    if self.log_len > 5000:
+                       self.log_textbox.delete("1.0", f"1.{self.log_len - 3000}") # keep the last 3000
+                       self.log_len = 3000 
+                       
                     if link:
                         tags = tags + self.hyperlink.add(partial(self.openLink, link))
-                    
+                                      
                     self.log_textbox.insert(tk.END, txt, tags)
                     self.log_textbox.yview_moveto(1)  # Scroll to last line
+                    self.log_len += len(txt)
                     
                     # Schedule disabling the textbox in the main thread
                     self.log_textbox.after(0, lambda: self.log_textbox.configure(state=tk.DISABLED))
