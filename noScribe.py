@@ -465,10 +465,6 @@ class TranscriptionJob:
             return self.finished_at - self.started_at
         return None
     
-    def is_completed(self) -> bool:
-        """Check if job is completed (finished or error)"""
-        return self.status in [JobStatus.FINISHED, JobStatus.ERROR, JobStatus.CANCELED]
-
 class TranscriptionQueue:
     """Manages a queue of transcription jobs"""
     
@@ -530,7 +526,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
                            language_name=None, whisper_model_name=None, speaker_detection=None,
                            overlapping=None, timestamps=None, disfluencies=None, pause=None,
                            auto_edit_transcript=None, cli_mode=False) -> TranscriptionJob:
-    """Create a TranscriptionJob with all default values set in one place.
+    """Create a TranscriptionJob with all default values
     
     This function handles both CLI and GUI job creation, ensuring all defaults
     are consistent between both modes.
@@ -1545,7 +1541,7 @@ class App(ctk.CTk):
                     row['frame'].destroy()
                     
         # Udate queue tab title
-        new_name = f'{t("tab_queue")} ({len(self.queue.get_failed_jobs()) + len(self.queue.get_finished_jobs())}/{len(self.queue.jobs)})'
+        new_name = f'{t("tab_queue")} ({len(self.queue.jobs) - len(self.queue.get_waiting_jobs()) - len(self.queue.get_running_jobs())}/{len(self.queue.jobs)})'
         old_name = self.tabview._name_list[1]
         if new_name != old_name:
             self.tabview.rename(old_name, new_name)
