@@ -68,6 +68,8 @@ import logging
 import json
 import urllib
 import multiprocessing
+import multiprocessing as mp
+import queue as pyqueue
 import gc
 import traceback
 from enum import Enum
@@ -2381,57 +2383,25 @@ class App(ctk.CTk):
                             self.logn(t('rescue_saving', file=my_transcript_file), 'error', link=f'file://{my_transcript_file}')
                             last_auto_save = datetime.datetime.now()
 
-                from faster_whisper import WhisperModel
-                if platform.system() == "Darwin": # = MAC
-                    whisper_device = 'auto'
-                elif platform.system() in ('Windows', 'Linux'):
-                    whisper_device = 'cpu'
-                    whisper_device = job.whisper_xpu
-                else:
-                    raise Exception('Platform not supported yet.')
-                model = WhisperModel(job.whisper_model,
-                                        device=whisper_device,  
-                                        cpu_threads=number_threads, 
-                                        compute_type=job.whisper_compute_type, 
-                                        local_files_only=True)
-                self.logn('model loaded', where='file')
-
-                if self.cancel:
-                    raise Exception(t('err_user_cancelation')) 
-
-                multilingual = False
-                if job.language_name == 'Multilingual':
-                    multilingual = True
-                    whisper_lang = None
-                elif job.language_name == 'Auto':
-                    whisper_lang = None
-                else:
-                    whisper_lang = languages[job.language_name]
-                
-                # VAD 
-                    
+                # Prepare VAD data locally for pause adjustment (audio is 16kHz mono after ffmpeg conversion)
                 try:
                     job.vad_threshold = float(config['voice_activity_detection_threshold'])
-                except:
+                except Exception:
                     config['voice_activity_detection_threshold'] = '0.5'
-                    job.vad_threshold = 0.5                     
-
-                sampling_rate = model.feature_extractor.sampling_rate
+                    job.vad_threshold = 0.5
+                sampling_rate = 16000
                 audio = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
                 duration = audio.shape[0] / sampling_rate
-                
-                self.logn('Voice Activity Detection')
                 try:
-                    vad_parameters = VadOptions(min_silence_duration_ms=1000, 
-                                            threshold=job.vad_threshold,
-                                            speech_pad_ms=0)
+                    vad_parameters = VadOptions(min_silence_duration_ms=1000,
+                                                threshold=job.vad_threshold,
+                                                speech_pad_ms=400)
                 except TypeError:
-                    # parameter threshold was temporarily renamed to 'onset' in pyannote 3.1:  
-                    vad_parameters = VadOptions(min_silence_duration_ms=1000, 
-                                            onset=job.vad_threshold,
-                                            speech_pad_ms=0)
+                    vad_parameters = VadOptions(min_silence_duration_ms=1000,
+                                                onset=job.vad_threshold,
+                                                speech_pad_ms=400)
                 speech_chunks = get_speech_timestamps(audio, vad_parameters)
-                
+
                 def adjust_for_pause(segment):
                     """Adjusts start and end of segment if it falls into a pause 
                     identified by the VAD"""
@@ -2454,49 +2424,8 @@ class App(ctk.CTk):
                     
                     return segment
                 
-                # transcribe
-                
-                if self.cancel:
-                    raise Exception(t('err_user_cancelation')) 
-
-                vad_parameters.speech_pad_ms = 400
-
-                # detect language                    
-                if job.language_name == 'auto':
-                    language, language_probability, all_language_probs = model.detect_language(
-                        audio,
-                        vad_filter=True,
-                        vad_parameters=vad_parameters
-                    )
-                    self.logn("Detected language '%s' with probability %f" % (language, language_probability))
-                    whisper_lang = language
-
-                if job.disfluencies:                    
-                    try:
-                        with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as file:
-                            prompts = yaml.safe_load(file)
-                    except:
-                        prompts = {}
-                    prompt = prompts.get(whisper_lang, '') # Fetch language prompt, default to empty string
-                else:
-                    prompt = ''
-                
-                del audio
-                gc.collect()
-                
-                segments, info = model.transcribe(
-                    tmp_audio_file, # audio, 
-                    language=whisper_lang,
-                    multilingual=multilingual, 
-                    beam_size=5, 
-                    #temperature=job.whisper_temperature, 
-                    word_timestamps=True, 
-                    #initial_prompt=prompt,
-                    hotwords=prompt, 
-                    vad_filter=True,
-                    vad_parameters=vad_parameters,
-                    # length_penalty=0.5
-                )
+                # Run Faster-Whisper in a spawned subprocess and receive segments/info
+                segments, info = self._run_whisper_subprocess(tmp_audio_file, job)
 
                 if self.cancel:
                     raise Exception(t('err_user_cancelation')) 
@@ -2703,6 +2632,130 @@ class App(ctk.CTk):
             # Handle unexpected errors
             self.logn(f'Error starting transcription: {str(e)}', 'error')
             tk.messagebox.showerror(title='noScribe', message=f'Error starting transcription: {str(e)}')
+
+    def _run_whisper_subprocess(self, tmp_audio_file: str, job):
+        """Spawn a subprocess to run Faster-Whisper and return (segments, info).
+        Streams child logs back into the GUI. Blocks in the worker thread until result.
+        """
+        # Build args for child process matching previous model/transcribe kwargs
+        if platform.system() == "Darwin":
+            whisper_device = 'auto'
+        elif platform.system() in ('Windows', 'Linux'):
+            whisper_device = job.whisper_xpu
+        else:
+            raise Exception('Platform not supported yet.')
+
+        # Language code for non-auto/multilingual
+        language_code = None
+        if job.language_name not in ('Auto', 'Multilingual'):
+            try:
+                language_code = languages[job.language_name]
+            except Exception:
+                language_code = None
+
+        # VAD threshold from config
+        try:
+            vad_threshold = float(config.get('voice_activity_detection_threshold', '0.5'))
+        except Exception:
+            vad_threshold = 0.5
+
+        args = {
+            "model_name_or_path": job.whisper_model,
+            "device": whisper_device,
+            "compute_type": job.whisper_compute_type,
+            "cpu_threads": number_threads,
+            "local_files_only": True,
+            "audio_path": tmp_audio_file,
+            "language_name": job.language_name,
+            "language_code": language_code,
+            "disfluencies": job.disfluencies,
+            "beam_size": 5,
+            "word_timestamps": True,
+            "vad_filter": True,
+            "vad_threshold": vad_threshold,
+        }
+
+        # Spawn child process using spawn start method
+        ctx = mp.get_context("spawn")
+        q = ctx.Queue()
+        from noscribe_mp_worker import proc_entrypoint
+        proc = ctx.Process(target=proc_entrypoint, args=(args, q))
+        proc.start()
+
+        segs, info = None, None
+        try:
+            while True:
+                try:
+                    msg = q.get(timeout=0.1)
+                except pyqueue.Empty:
+                    if not proc.is_alive():
+                        # Process died without sending result
+                        exitcode = proc.exitcode
+                        self.logn(f"Transcription worker exited unexpectedly (code {exitcode}). UI remains responsive.", 'error')
+                        raise Exception('Subprocess terminated unexpectedly')
+                    continue
+
+                mtype = msg.get("type") if isinstance(msg, dict) else None
+                if mtype == "log":
+                    level = msg.get("level", "info")
+                    txt = msg.get("msg", "")
+                    if level == 'error':
+                        self.logn(txt, 'error')
+                    else:
+                        self.logn(txt)
+                elif mtype == "progress":
+                    pct = msg.get("pct")
+                    detail = msg.get("detail")
+                    try:
+                        if pct is not None:
+                            self.set_progress(3, float(pct), job.speaker_detection)
+                    except Exception:
+                        pass
+                elif mtype == "result":
+                    if msg.get("ok"):
+                        segs = msg.get("segments", [])
+                        info = msg.get("info", {})
+                    else:
+                        err = msg.get('error', 'Transcription failed')
+                        trc = msg.get('trace')
+                        self.logn(f"Transcription failed: {err}", 'error')
+                        if trc:
+                            self.logn(trc, where='file')
+                        raise Exception(err)
+                    break
+                # keep looping until we get a result
+        finally:
+            try:
+                proc.join(timeout=0.2)
+            except Exception:
+                pass
+            if proc.is_alive():
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+            try:
+                proc.close()
+            except Exception:
+                pass
+
+        # Wrap segments and info into simple objects to match previous usage
+        class _Seg:
+            __slots__ = ("start", "end", "text", "words")
+            def __init__(self, d):
+                self.start = d.get('start')
+                self.end = d.get('end')
+                self.text = d.get('text')
+                self.words = d.get('words')
+
+        class _Info:
+            __slots__ = ("duration",)
+            def __init__(self, d):
+                self.duration = d.get('duration')
+
+        seg_objs = [_Seg(d) for d in (segs or [])]
+        info_obj = _Info(info or {})
+        return seg_objs, info_obj
 
     def button_send_to_queue_event(self):
         """Collect options and enqueue the job without starting processing."""
