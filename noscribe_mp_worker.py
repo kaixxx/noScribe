@@ -101,7 +101,7 @@ def proc_entrypoint(args: dict, q):
             except Exception:
                 prompt = ""
 
-        # Perform transcription
+        # Perform transcription (streaming)
         segments, info = model.transcribe(
             audio_path,
             language=whisper_lang,
@@ -114,27 +114,29 @@ def proc_entrypoint(args: dict, q):
             vad_filter=args.get("vad_filter", True),
             vad_parameters=vad_parameters,
         )
-
-        # Convert segments to plain dicts
-        seg_list = []
+        # Stream segments to parent as they arrive
         for s in segments:
-            seg_d = {
-                "start": getattr(s, "start", None),
-                "end": getattr(s, "end", None),
-                "text": getattr(s, "text", None),
-            }
-            words = getattr(s, "words", None)
-            if words:
-                seg_d["words"] = [
-                    {
-                        "word": getattr(w, "word", None),
-                        "start": getattr(w, "start", None),
-                        "end": getattr(w, "end", None),
-                        "prob": getattr(w, "probability", None),
-                    }
-                    for w in words
-                ]
-            seg_list.append(seg_d)
+            try:
+                seg_d = {
+                    "start": getattr(s, "start", None),
+                    "end": getattr(s, "end", None),
+                    "text": getattr(s, "text", None),
+                }
+                words = getattr(s, "words", None)
+                if words:
+                    seg_d["words"] = [
+                        {
+                            "word": getattr(w, "word", None),
+                            "start": getattr(w, "start", None),
+                            "end": getattr(w, "end", None),
+                            "prob": getattr(w, "probability", None),
+                        }
+                        for w in words
+                    ]
+                q.put({"type": "segment", "segment": seg_d})
+            except Exception:
+                # Best-effort; continue on serialization issues
+                pass
 
         # info into dict
         if is_dataclass(info):
@@ -148,7 +150,7 @@ def proc_entrypoint(args: dict, q):
         info_dict.setdefault("duration", duration)
 
         try:
-            q.put({"type": "result", "ok": True, "segments": seg_list, "info": info_dict})
+            q.put({"type": "result", "ok": True, "info": info_dict})
         except Exception:
             pass
 
@@ -174,4 +176,3 @@ def proc_entrypoint(args: dict, q):
             })
         except Exception:
             pass
-

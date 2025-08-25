@@ -1980,6 +1980,14 @@ class App(ctk.CTk):
                     error_msg = job.error_message or str(e)
                     if str(e) == t('err_user_cancelation') or self.cancel:
                         job.set_canceled(t('err_user_cancelation'))
+                        try:
+                            if job.auto_save:
+                                save_doc()
+                                self.logn()
+                                self.log(t('transcription_saved'))
+                                self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
+                        except Exception:
+                            pass
                     else:
                         job.set_error(error_msg)
                     self.update_queue_table()
@@ -2424,29 +2432,41 @@ class App(ctk.CTk):
                     
                     return segment
                 
-                # Run Faster-Whisper in a spawned subprocess and receive segments/info
-                segments, info = self._run_whisper_subprocess(tmp_audio_file, job)
+                # Prepare VAD locally for pause adjust during streaming
+                try:
+                    job.vad_threshold = float(config['voice_activity_detection_threshold'])
+                except Exception:
+                    config['voice_activity_detection_threshold'] = '0.5'
+                    job.vad_threshold = 0.5
+                sampling_rate = 16000
+                audio = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
+                duration = audio.shape[0] / sampling_rate
+                try:
+                    vad_parameters = VadOptions(min_silence_duration_ms=1000,
+                                                threshold=job.vad_threshold,
+                                                speech_pad_ms=400)
+                except TypeError:
+                    vad_parameters = VadOptions(min_silence_duration_ms=1000,
+                                                onset=job.vad_threshold,
+                                                speech_pad_ms=400)
+                speech_chunks = get_speech_timestamps(audio, vad_parameters)
 
-                if self.cancel:
-                    raise Exception(t('err_user_cancelation')) 
-
-                self.logn(t('start_transcription'))
-                self.logn()
-
+                # Run Faster-Whisper in a spawned subprocess and stream segments
                 last_segment_end = 0
                 last_timestamp_ms = 0
                 first_segment = True
 
-                for segment in segments:
-                    # check for user cancelation
-                    if self.cancel:
-                        if job.auto_save:
-                            save_doc()
-                            self.logn()
-                            self.log(t('transcription_saved'))
-                            self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
-
-                        raise Exception(t('err_user_cancelation')) 
+                def on_segment(seg):
+                    nonlocal first_segment, last_segment_end, last_timestamp_ms, p, speaker, prev_speaker
+                    # Map dict to simple object-like for existing code
+                    class _Seg:
+                        __slots__ = ("start", "end", "text", "words")
+                        def __init__(self, d):
+                            self.start = d.get('start')
+                            self.end = d.get('end')
+                            self.text = d.get('text')
+                            self.words = d.get('words')
+                    segment = _Seg(seg)
 
                     segment = adjust_for_pause(segment)
 
@@ -2533,7 +2553,7 @@ class App(ctk.CTk):
                         else: # same speaker
                             if job.timestamps:
                                 if (start - last_timestamp_ms) > job.timestamp_interval:
-                                    seg_html = f' <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
+                                    seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text)}'
                                     seg_text = f' {ts}{seg_text}'
                                     last_timestamp_ms = start
                                 else:
@@ -2541,7 +2561,7 @@ class App(ctk.CTk):
 
                     else: # no speaker detection
                         if job.timestamps and (first_segment or (start - last_timestamp_ms) > job.timestamp_interval):
-                            seg_html = f' <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
+                            seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text)}'
                             seg_text = f' {ts}{seg_text}'
                             last_timestamp_ms = start
                         else:
@@ -2551,15 +2571,8 @@ class App(ctk.CTk):
                             seg_text = seg_text.lstrip()
                             seg_html = seg_html.lstrip()
 
-                    # Mark confidence level (not implemented yet in html)
-                    # cl_level = round((segment.avg_logprob + 1) * 10)
-                    # TODO: better cl_level for words based on https://github.com/Softcatala/whisper-ctranslate2/blob/main/src/whisper_ctranslate2/transcribe.py
-                    # if cl_level > 0:
-                    #     r.style = d.styles[f'noScribe_cl{cl_level}']
-
                     # Create bookmark with audio timestamps start to end and add the current segment.
-                    # This way, we can jump to the according audio position and play it later in the editor.
-                    a_html = f'<a name="ts_{orig_audio_start}_{orig_audio_end}_{speaker}" >{seg_html}</a>'
+                    a_html = f'<a name=\"ts_{orig_audio_start}_{orig_audio_end}_{speaker}\" >{seg_html}</a>'
                     a = d.createElementFromHTML(a_html)
                     p.appendChild(a)
 
@@ -2567,13 +2580,28 @@ class App(ctk.CTk):
 
                     first_segment = False
 
-                    # auto save
+                    # auto save periodically
+                    nonlocal last_auto_save
                     if job.auto_save:
                         if (datetime.datetime.now() - last_auto_save).total_seconds() > 20:
                             save_doc()
 
-                    progr = round((segment.end/info.duration) * 100)
-                    self.set_progress(3, progr, job.speaker_detection)
+                    # per-segment progress based on total duration
+                    try:
+                        progr = round((segment.end/duration) * 100)
+                        self.set_progress(3, progr, job.speaker_detection)
+                    except Exception:
+                        pass
+
+                info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment)
+
+                if self.cancel:
+                    raise Exception(t('err_user_cancelation')) 
+
+                self.logn(t('start_transcription'))
+                self.logn()
+
+                # info.duration already available from subprocess info; progress done per-segment above
 
                 save_doc()
                 self.logn()
@@ -2633,9 +2661,10 @@ class App(ctk.CTk):
             self.logn(f'Error starting transcription: {str(e)}', 'error')
             tk.messagebox.showerror(title='noScribe', message=f'Error starting transcription: {str(e)}')
 
-    def _run_whisper_subprocess(self, tmp_audio_file: str, job):
-        """Spawn a subprocess to run Faster-Whisper and return (segments, info).
-        Streams child logs back into the GUI. Blocks in the worker thread until result.
+    def _run_whisper_subprocess_stream(self, tmp_audio_file: str, job, on_segment):
+        """Spawn a subprocess to run Faster-Whisper and stream segments.
+        Calls on_segment(dict) for each segment streamed by the child.
+        Returns a simple info object (duration at least).
         """
         # Build args for child process matching previous model/transcribe kwargs
         if platform.system() == "Darwin":
@@ -2681,13 +2710,23 @@ class App(ctk.CTk):
         from noscribe_mp_worker import proc_entrypoint
         proc = ctx.Process(target=proc_entrypoint, args=(args, q))
         proc.start()
+        # Expose to allow cancel to terminate the child
+        self._mp_proc = proc
+        self._mp_queue = q
 
-        segs, info = None, None
+        info = None
         try:
             while True:
                 try:
                     msg = q.get(timeout=0.1)
                 except pyqueue.Empty:
+                    if self.cancel:
+                        # User requested cancel; terminate child
+                        try:
+                            proc.terminate()
+                        except Exception:
+                            pass
+                        raise Exception(t('err_user_cancelation'))
                     if not proc.is_alive():
                         # Process died without sending result
                         exitcode = proc.exitcode
@@ -2711,9 +2750,19 @@ class App(ctk.CTk):
                             self.set_progress(3, float(pct), job.speaker_detection)
                     except Exception:
                         pass
+                elif mtype == "segment":
+                    seg = msg.get("segment") or {}
+                    try:
+                        on_segment(seg)
+                    except Exception as e:
+                        # If on_segment fails, stop child and raise
+                        try:
+                            proc.terminate()
+                        except Exception:
+                            pass
+                        raise
                 elif mtype == "result":
                     if msg.get("ok"):
-                        segs = msg.get("segments", [])
                         info = msg.get("info", {})
                     else:
                         err = msg.get('error', 'Transcription failed')
@@ -2738,24 +2787,16 @@ class App(ctk.CTk):
                 proc.close()
             except Exception:
                 pass
-
-        # Wrap segments and info into simple objects to match previous usage
-        class _Seg:
-            __slots__ = ("start", "end", "text", "words")
-            def __init__(self, d):
-                self.start = d.get('start')
-                self.end = d.get('end')
-                self.text = d.get('text')
-                self.words = d.get('words')
+            # Clear exposed handles
+            self._mp_proc = None
+            self._mp_queue = None
 
         class _Info:
             __slots__ = ("duration",)
             def __init__(self, d):
                 self.duration = d.get('duration')
-
-        seg_objs = [_Seg(d) for d in (segs or [])]
         info_obj = _Info(info or {})
-        return seg_objs, info_obj
+        return info_obj
 
     def button_send_to_queue_event(self):
         """Collect options and enqueue the job without starting processing."""
@@ -2790,6 +2831,24 @@ class App(ctk.CTk):
             self.logn(t('start_canceling'))
             self.update()
             self.cancel = True
+            # Try to terminate active whisper subprocess if present
+            try:
+                if getattr(self, "_mp_proc", None) is not None and self._mp_proc.is_alive():
+                    try:
+                        self._mp_proc.terminate()
+                    except Exception:
+                        pass
+                    try:
+                        self._mp_proc.join(timeout=0.3)
+                    except Exception:
+                        pass
+                    try:
+                        self._mp_proc.close()
+                    except Exception:
+                        pass
+            finally:
+                self._mp_proc = None
+                self._mp_queue = None
             try:
                 self.update_queue_controls()
             except Exception:
