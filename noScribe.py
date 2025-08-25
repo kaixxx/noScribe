@@ -1636,6 +1636,24 @@ class App(ctk.CTk):
                     # Only cancel the current job, not the entire queue
                     self._cancel_job_only = True
                     self.cancel = True
+                    # Try to terminate active whisper subprocess if present
+                    try:
+                        if getattr(self, "_mp_proc", None) is not None and self._mp_proc.is_alive():
+                            try:
+                                self._mp_proc.terminate()
+                            except Exception:
+                                pass
+                            try:
+                                self._mp_proc.join(timeout=0.3)
+                            except Exception:
+                                pass
+                            try:
+                                self._mp_proc.close()
+                            except Exception:
+                                pass
+                    finally:
+                        self._mp_proc = None
+                        self._mp_queue = None
             else:
                 # Finished, canceling or error -> remove from list after confirmation
                 if tk.messagebox.askyesno(title='noScribe', message=t('queue_remove_entry')):
