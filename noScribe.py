@@ -2229,71 +2229,9 @@ class App(ctk.CTk):
                         self.logn(t('loading_pyannote'))
                         self.set_progress(1, 100, job.speaker_detection)
 
-                        diarize_output = os.path.join(tmpdir.name, 'diarize_out.yaml')
-                        diarize_abspath = 'python ' + os.path.join(app_dir, 'diarize.py')
-                        diarize_abspath_win = os.path.join(app_dir, '..', 'diarize.exe')
-                        diarize_abspath_mac = os.path.join(app_dir, '..', 'MacOS', 'diarize')
-                        diarize_abspath_lin = os.path.join(app_dir, '..', 'diarize')
-                        if platform.system() == 'Windows' and os.path.exists(diarize_abspath_win):
-                            diarize_abspath = diarize_abspath_win
-                        elif platform.system() == 'Darwin' and os.path.exists(diarize_abspath_mac): # = MAC
-                            diarize_abspath = diarize_abspath_mac
-                        elif platform.system() == 'Linux' and os.path.exists(diarize_abspath_lin):
-                            diarize_abspath = diarize_abspath_lin
-                        diarize_cmd = f'{diarize_abspath} {job.pyannote_xpu} "{tmp_audio_file}" "{diarize_output}" {job.speaker_detection}'
-                        diarize_env = None
-                        if job.pyannote_xpu == 'mps':
-                            diarize_env = os.environ.copy()
-                            diarize_env["PYTORCH_ENABLE_MPS_FALLBACK"] = str(1) # Necessary since some operators are not implemented for MPS yet.
-                        self.logn(diarize_cmd, where='file')
+                        diarization = self._run_diarize_subprocess(tmp_audio_file, job)
 
-                        if platform.system() == 'Windows':
-                            # (supresses the terminal, see: https://stackoverflow.com/questions/1813872/running-a-process-in-pythonw-with-popen-without-a-console)
-                            startupinfo = STARTUPINFO()
-                            startupinfo.dwFlags |= STARTF_USESHOWWINDOW
-                        elif platform.system() in ('Darwin', "Linux"): # = MAC
-                            diarize_cmd = shlex.split(diarize_cmd)
-                            startupinfo = None
-                        else:
-                            raise Exception('Platform not supported yet.')
-
-                        with Popen(diarize_cmd,
-                                   stdout=PIPE,
-                                   stderr=STDOUT,
-                                   encoding='UTF-8',
-                                   startupinfo=startupinfo,
-                                   env=diarize_env,
-                                   close_fds=True) as pyannote_proc:
-                            for line in pyannote_proc.stdout:
-                                if self.cancel:
-                                    pyannote_proc.kill()
-                                    raise Exception(t('err_user_cancelation')) 
-                                print(line)
-                                if line.startswith('progress '):
-                                    progress = line.split()
-                                    step_name = progress[1]
-                                    progress_percent = int(progress[2])
-                                    self.logr(f'{step_name}: {progress_percent}%')                       
-                                    if step_name == 'segmentation':
-                                        self.set_progress(2, progress_percent * 0.3, job.speaker_detection)
-                                    elif step_name == 'embeddings':
-                                        self.set_progress(2, 30 + (progress_percent * 0.7), job.speaker_detection)
-                                elif line.startswith('error '):
-                                    self.logn('PyAnnote error: ' + line[5:], 'error')
-                                elif line.startswith('log: '):
-                                    self.logn('PyAnnote ' + line, where='file')
-                                    if line.strip() == "log: 'pyannote_xpu: cpu' was set.": # The string needs to be the same as in diarize.py `print("log: 'pyannote_xpu: cpu' was set.")`.
-                                        job.pyannote_xpu = 'cpu'
-                                        config['pyannote_xpu'] = 'cpu'
-
-                        if pyannote_proc.returncode > 0:
-                            raise Exception('')
-
-                        # load diarization results
-                        with open(diarize_output, 'r') as file:
-                            diarization = yaml.safe_load(file)
-
-                        # write segments to log file 
+                        # write segments to log file
                         for segment in diarization:
                             line = f'{ms_to_str(job.start + segment["start"], include_ms=True)} - {ms_to_str(job.start + segment["end"], include_ms=True)} {segment["label"]}'
                             self.logn(line, where='file')
@@ -2815,6 +2753,88 @@ class App(ctk.CTk):
                 self.duration = d.get('duration')
         info_obj = _Info(info or {})
         return info_obj
+
+    def _run_diarize_subprocess(self, tmp_audio_file: str, job):
+        """Spawn a subprocess to run diarization and return list of segments.
+        Streams child logs/progress back to GUI and honors cancel.
+        """
+        ctx = mp.get_context("spawn")
+        q = ctx.Queue()
+        from noscribe_mp_diarize_worker import proc_entrypoint_diarize
+        args = {
+            "device": job.pyannote_xpu,
+            "audio_path": tmp_audio_file,
+            "num_speakers": (job.speaker_detection if isinstance(job.speaker_detection, int) else None),
+        }
+        proc = ctx.Process(target=proc_entrypoint_diarize, args=(args, q))
+        proc.start()
+        # Keep handles for cancel
+        self._mp_proc = proc
+        self._mp_queue = q
+
+        diarization = None
+        try:
+            while True:
+                try:
+                    msg = q.get(timeout=0.1)
+                except pyqueue.Empty:
+                    if self.cancel:
+                        try:
+                            proc.terminate()
+                        except Exception:
+                            pass
+                        raise Exception(t('err_user_cancelation'))
+                    if not proc.is_alive():
+                        exitcode = proc.exitcode
+                        self.logn(f"Diarization worker exited unexpectedly (code {exitcode}). UI remains responsive.", 'error')
+                        raise Exception('Subprocess terminated unexpectedly')
+                    continue
+
+                mtype = msg.get("type") if isinstance(msg, dict) else None
+                if mtype == "log":
+                    txt = msg.get("msg", "")
+                    self.logn('PyAnnote ' + txt, where='file')
+                    if txt.strip() == "log: 'pyannote_xpu: cpu' was set.":
+                        job.pyannote_xpu = 'cpu'
+                        config['pyannote_xpu'] = 'cpu'
+                elif mtype == "progress":
+                    step_name = str(msg.get("step", ""))
+                    progress_percent = int(msg.get("pct", 0))
+                    self.logr(f'{step_name}: {progress_percent}%')
+                    if step_name == 'segmentation':
+                        self.set_progress(2, progress_percent * 0.3, job.speaker_detection)
+                    elif step_name == 'embeddings':
+                        self.set_progress(2, 30 + (progress_percent * 0.7), job.speaker_detection)
+                elif mtype == "result":
+                    if msg.get("ok"):
+                        diarization = msg.get("segments", [])
+                    else:
+                        err = msg.get('error', 'Diarization failed')
+                        trc = msg.get('trace')
+                        self.logn(f"PyAnnote error: {err}", 'error')
+                        if trc:
+                            self.logn(trc, where='file')
+                        raise Exception(err)
+                    break
+
+        finally:
+            try:
+                proc.join(timeout=0.2)
+            except Exception:
+                pass
+            if proc.is_alive():
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+            try:
+                proc.close()
+            except Exception:
+                pass
+            self._mp_proc = None
+            self._mp_queue = None
+
+        return diarization or []
 
     def button_send_to_queue_event(self):
         """Collect options and enqueue the job without starting processing."""
