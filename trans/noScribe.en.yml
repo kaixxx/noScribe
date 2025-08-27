@@ -77,6 +77,7 @@ en:
   queue_added_job: 'Added job "%{audio_file}"" to queue.'
   queue_start: === Starting queue ===
   queue_start_jobs: Processing %{total} transcription job(s)
+  queue_none_waiting: 'Nothing to do, the queue contains no waiting jobs.'
   start_job: 'Starting job: %{audio_file}'
   start_audio_conversion: 'Converting audio...'
   audio_conversion_finished: 'Audio conversion finished'
@@ -86,6 +87,7 @@ en:
   start_transcription: 'Transcription...'
   loading_whisper: 'Loading whisper'
   vad: 'Voice activity detection...'
+  language_detect: 'Detected language "%{lang}" with probability %{prob}'
 
   transcription_finished: 'Transcription finished.' 
   transcription_saved: 'Saved to: '
