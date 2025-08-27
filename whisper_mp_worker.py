@@ -57,9 +57,9 @@ def whisper_proc_entrypoint(args: dict, q):
         # VAD options
         vad_threshold = float(args.get("vad_threshold", 0.5))
         try:
-            vad_parameters = VadOptions(min_silence_duration_ms=200, threshold=vad_threshold, speech_pad_ms=400)
+            vad_parameters = VadOptions(min_silence_duration_ms=500, threshold=vad_threshold, speech_pad_ms=50)
         except TypeError:
-            vad_parameters = VadOptions(min_silence_duration_ms=200, onset=vad_threshold, speech_pad_ms=400)
+            vad_parameters = VadOptions(min_silence_duration_ms=500, onset=vad_threshold, speech_pad_ms=50)
 
         # Language handling
         language_name = args.get("language_name")

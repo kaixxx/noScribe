@@ -671,27 +671,27 @@ Examples:
                        help='Output transcript file path (.html, .txt, or .vtt)')
     
     # Optional arguments
-    parser.add_argument('--no-gui', action='store_true',
+    parser.add_argument('--no-gui', action='store_true', default=False,
                        help='Run without showing the GUI (headless mode)')
     parser.add_argument('--start', 
                        help='Start time (format: HH:MM:SS)')
     parser.add_argument('--stop',
                        help='Stop time (format: HH:MM:SS)')
-    parser.add_argument('--language', 
+    parser.add_argument('--language', default='auto', 
                        help='Language code (e.g., en, de, fr) or "auto" for auto-detection')
-    parser.add_argument('--model',
+    parser.add_argument('--model', default='precise',
                        help='Whisper model to use (use --help-models to see available models)')
-    parser.add_argument('--speaker-detection', choices=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+    parser.add_argument('--speaker-detection', choices=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], default='auto',
                        help='Speaker detection/diarization setting')
-    parser.add_argument('--overlapping', action='store_true',
+    parser.add_argument('--overlapping', action='store_true', default=True,
                        help='Enable overlapping speech detection')
-    parser.add_argument('--timestamps', action='store_true',
+    parser.add_argument('--timestamps', action='store_true', default=False,
                        help='Include timestamps in transcript')
     parser.add_argument('--disfluencies', action='store_true', default=True,
                        help='Include disfluencies (uh, um, etc.) in transcript')
     parser.add_argument('--no-disfluencies', action='store_false', dest='disfluencies',
                        help='Exclude disfluencies from transcript')
-    parser.add_argument('--pause', choices=['none', '1sec+', '2sec+', '3sec+'],
+    parser.add_argument('--pause', choices=['none', '1sec+', '2sec+', '3sec+'], default='1sec+',
                        help='Mark pauses in transcript')
     
     return parser.parse_args()
@@ -1957,7 +1957,11 @@ class App(ctk.CTk):
             summary = self.queue.get_queue_summary()
             self.logn()
             self.logn(t('queue_start'), 'highlight')
-            self.logn(t('queue_start_jobs', total=summary['total']))
+            pending = len(self.queue.get_waiting_jobs())
+            if pending > 0:
+                self.logn(t('queue_start_jobs', total=pending))
+            else:
+                self.logn(t('queue_none_waiting'))                
             # Process each job in the queue
             while self.queue.has_pending_jobs():
                 # If global cancel was requested (via Stop button), cancel all waiting jobs
@@ -2353,11 +2357,11 @@ class App(ctk.CTk):
                 audio = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
                 duration = audio.shape[0] / sampling_rate
                 try:
-                    vad_parameters = VadOptions(min_silence_duration_ms=1000,
+                    vad_parameters = VadOptions(min_silence_duration_ms=500,
                                                 threshold=job.vad_threshold,
                                                 speech_pad_ms=0)
                 except TypeError:
-                    vad_parameters = VadOptions(min_silence_duration_ms=1000,
+                    vad_parameters = VadOptions(min_silence_duration_ms=500,
                                                 onset=job.vad_threshold,
                                                 speech_pad_ms=0)
                 speech_chunks = get_speech_timestamps(audio, vad_parameters)
