@@ -2,9 +2,10 @@ import gc
 import os
 import traceback
 from dataclasses import asdict, is_dataclass
+from i18n import t
 
 
-def proc_entrypoint(args: dict, q):
+def whisper_proc_entrypoint(args: dict, q):
     """
     Runs in a child process. Streams progress/logs to parent via `q`.
     Messages put on `q` are dicts with one of the following shapes:
@@ -27,27 +28,21 @@ def proc_entrypoint(args: dict, q):
             except Exception:
                 pass
 
-        plog("debug", "Subprocess started. Initializing Whisper model...")
+        # plog("debug", "Subprocess started. Initializing Whisper model...")
 
         # Build model in child using provided options
         model = WhisperModel(
             args["model_name_or_path"],
-            device=args.get("device", "auto"),
+            device=args.get("device", "cpu"),
             compute_type=args.get("compute_type", "float16"),
-            cpu_threads=args.get("cpu_threads"),
+            cpu_threads=args.get("cpu_threads", 4),
             local_files_only=args.get("local_files_only", True),
         )
-        plog("debug", "Model loaded in subprocess")
+        # plog("debug", "Model loaded in subprocess")
 
         # Define callbacks that forward to parent via queue (not used by faster-whisper directly, but kept for parity)
         def log_cb(level, msg):
             plog(level, msg)
-
-        def progress_cb(pct=None, detail=None):
-            try:
-                q.put({"type": "progress", "pct": pct, "detail": detail})
-            except Exception:
-                pass
 
         # Prepare audio and VAD
         audio_path = args.get("audio_path")
@@ -57,17 +52,14 @@ def proc_entrypoint(args: dict, q):
         sampling_rate = model.feature_extractor.sampling_rate
         audio = decode_audio(audio_path, sampling_rate=sampling_rate)
         duration = audio.shape[0] / sampling_rate
-        log_cb("info", "Voice Activity Detection")
+        log_cb("info", t('vad'))
 
         # VAD options
         vad_threshold = float(args.get("vad_threshold", 0.5))
         try:
-            vad_parameters = VadOptions(min_silence_duration_ms=1000, threshold=vad_threshold, speech_pad_ms=0)
+            vad_parameters = VadOptions(min_silence_duration_ms=200, threshold=vad_threshold, speech_pad_ms=400)
         except TypeError:
-            vad_parameters = VadOptions(min_silence_duration_ms=1000, onset=vad_threshold, speech_pad_ms=0)
-        speech_chunks = get_speech_timestamps(audio, vad_parameters)
-        # Adjust padding for transcription
-        vad_parameters.speech_pad_ms = 400
+            vad_parameters = VadOptions(min_silence_duration_ms=200, onset=vad_threshold, speech_pad_ms=400)
 
         # Language handling
         language_name = args.get("language_name")
@@ -87,7 +79,7 @@ def proc_entrypoint(args: dict, q):
             language, language_probability, _ = model.detect_language(
                 audio, vad_filter=True, vad_parameters=vad_parameters
             )
-            log_cb("info", "Detected language '%s' with probability %f" % (language, language_probability))
+            log_cb("info", t('language_detect', lang=language, prob=f'{language_probability:.2f}'))
             whisper_lang = language
 
         # Build prompt/hotwords if disfluencies suppression is requested
@@ -114,6 +106,9 @@ def proc_entrypoint(args: dict, q):
             vad_filter=args.get("vad_filter", True),
             vad_parameters=vad_parameters,
         )
+        
+        log_cb('info', t('start_transcription') + '\n')
+        
         # Stream segments to parent as they arrive
         for s in segments:
             try:

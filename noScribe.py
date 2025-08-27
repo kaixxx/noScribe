@@ -1943,10 +1943,6 @@ class App(ctk.CTk):
         
         return job
 
-
-    ################################################################################################
-    # Main function
-
     def transcription_worker(self, start_job_index=None):
         """Process transcription jobs from the queue"""
         queue_start_time = datetime.datetime.now()
@@ -2148,7 +2144,7 @@ class App(ctk.CTk):
                     if ffmpeg_proc.returncode > 0:
                         raise Exception(t('err_ffmpeg'))
                     self.logn(t('audio_conversion_finished'))
-                    self.set_progress(1, 50, job.speaker_detection)
+                    self.set_progress(1, 100, job.speaker_detection)
                 except Exception as e:
                     traceback_str = traceback.format_exc()
                     job.set_error(f"{t('err_converting_audio')}: {e}", traceback_str)
@@ -2227,7 +2223,7 @@ class App(ctk.CTk):
                         self.logn()
                         self.logn(t('start_identifiying_speakers'), 'highlight')
                         self.logn(t('loading_pyannote'))
-                        self.set_progress(1, 100, job.speaker_detection)
+                        # self.set_progress(1, 100, job.speaker_detection)
 
                         diarization = self._run_diarize_subprocess(tmp_audio_file, job)
 
@@ -2359,11 +2355,11 @@ class App(ctk.CTk):
                 try:
                     vad_parameters = VadOptions(min_silence_duration_ms=1000,
                                                 threshold=job.vad_threshold,
-                                                speech_pad_ms=400)
+                                                speech_pad_ms=0)
                 except TypeError:
                     vad_parameters = VadOptions(min_silence_duration_ms=1000,
                                                 onset=job.vad_threshold,
-                                                speech_pad_ms=400)
+                                                speech_pad_ms=0)
                 speech_chunks = get_speech_timestamps(audio, vad_parameters)
 
                 def adjust_for_pause(segment):
@@ -2389,6 +2385,7 @@ class App(ctk.CTk):
                     return segment
                 
                 # Prepare VAD locally for pause adjust during streaming
+                """
                 try:
                     job.vad_threshold = float(config['voice_activity_detection_threshold'])
                 except Exception:
@@ -2406,7 +2403,8 @@ class App(ctk.CTk):
                                                 onset=job.vad_threshold,
                                                 speech_pad_ms=400)
                 speech_chunks = get_speech_timestamps(audio, vad_parameters)
-
+                """
+                
                 # Run Faster-Whisper in a spawned subprocess and stream segments
                 last_segment_end = 0
                 last_timestamp_ms = 0
@@ -2554,11 +2552,6 @@ class App(ctk.CTk):
                 if self.cancel:
                     raise Exception(t('err_user_cancelation')) 
 
-                self.logn(t('start_transcription'))
-                self.logn()
-
-                # info.duration already available from subprocess info; progress done per-segment above
-
                 save_doc()
                 self.logn()
                 self.logn()
@@ -2663,8 +2656,8 @@ class App(ctk.CTk):
         # Spawn child process using spawn start method
         ctx = mp.get_context("spawn")
         q = ctx.Queue()
-        from noscribe_mp_worker import proc_entrypoint
-        proc = ctx.Process(target=proc_entrypoint, args=(args, q))
+        from whisper_mp_worker import whisper_proc_entrypoint
+        proc = ctx.Process(target=whisper_proc_entrypoint, args=(args, q))
         proc.start()
         # Expose to allow cancel to terminate the child
         self._mp_proc = proc
@@ -2686,7 +2679,7 @@ class App(ctk.CTk):
                     if not proc.is_alive():
                         # Process died without sending result
                         exitcode = proc.exitcode
-                        self.logn(f"Transcription worker exited unexpectedly (code {exitcode}). UI remains responsive.", 'error')
+                        self.logn(f"Transcription worker exited unexpectedly (code {exitcode}).", 'error')
                         raise Exception('Subprocess terminated unexpectedly')
                     continue
 
@@ -2760,13 +2753,13 @@ class App(ctk.CTk):
         """
         ctx = mp.get_context("spawn")
         q = ctx.Queue()
-        from noscribe_mp_diarize_worker import proc_entrypoint_diarize
+        from pyannote_mp_worker import pyannote_proc_entrypoint
         args = {
             "device": job.pyannote_xpu,
             "audio_path": tmp_audio_file,
             "num_speakers": (job.speaker_detection if isinstance(job.speaker_detection, int) else None),
         }
-        proc = ctx.Process(target=proc_entrypoint_diarize, args=(args, q))
+        proc = ctx.Process(target=pyannote_proc_entrypoint, args=(args, q))
         proc.start()
         # Keep handles for cancel
         self._mp_proc = proc
@@ -2860,9 +2853,6 @@ class App(ctk.CTk):
             self.logn(f'Error queuing transcription: {str(e)}', 'error')
             tk.messagebox.showerror(title='noScribe', message=f'Error queuing transcription: {str(e)}')
     
-    # End main function Button Start        
-    ################################################################################################
-
     def button_stop_event(self):
         if tk.messagebox.askyesno(title='noScribe', message=t('transcription_canceled')) == True:
             self.logn()

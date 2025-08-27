@@ -86,6 +86,7 @@ en:
   start_transcription: 'Transcription...'
   loading_whisper: 'Loading whisper'
   vad: 'Voice activity detection...'
+  language_detect: 'Detected language "%{lang}" with probability %{prob}'
 
   transcription_finished: 'Transcription finished.' 
   transcription_saved: 'Saved to: '

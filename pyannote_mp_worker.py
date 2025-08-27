@@ -4,7 +4,7 @@ import traceback
 from dataclasses import asdict, is_dataclass
 
 
-def proc_entrypoint_diarize(args: dict, q):
+def pyannote_proc_entrypoint(args: dict, q):
     """Runs diarization in a child process and streams progress/logs.
     Messages:
       {"type":"log","level":"info|warn|error|debug","msg":str}
