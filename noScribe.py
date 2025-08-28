@@ -1998,14 +1998,6 @@ class App(ctk.CTk):
                     error_msg = job.error_message or str(e)
                     if str(e) == t('err_user_cancelation') or self.cancel:
                         job.set_canceled(t('err_user_cancelation'))
-                        try:
-                            if job.auto_save:
-                                save_doc()
-                                self.logn()
-                                self.log(t('transcription_saved'))
-                                self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
-                        except Exception:
-                            pass
                     else:
                         job.set_error(error_msg)
                     self.update_queue_table()
@@ -2387,28 +2379,7 @@ class App(ctk.CTk):
                             segment.end = pause_start + pause_extend
                     
                     return segment
-                
-                # Prepare VAD locally for pause adjust during streaming
-                """
-                try:
-                    job.vad_threshold = float(config['voice_activity_detection_threshold'])
-                except Exception:
-                    config['voice_activity_detection_threshold'] = '0.5'
-                    job.vad_threshold = 0.5
-                sampling_rate = 16000
-                audio = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
-                duration = audio.shape[0] / sampling_rate
-                try:
-                    vad_parameters = VadOptions(min_silence_duration_ms=1000,
-                                                threshold=job.vad_threshold,
-                                                speech_pad_ms=400)
-                except TypeError:
-                    vad_parameters = VadOptions(min_silence_duration_ms=1000,
-                                                onset=job.vad_threshold,
-                                                speech_pad_ms=400)
-                speech_chunks = get_speech_timestamps(audio, vad_parameters)
-                """
-                
+                                
                 # Run Faster-Whisper in a spawned subprocess and stream segments
                 last_segment_end = 0
                 last_timestamp_ms = 0
@@ -2550,22 +2521,23 @@ class App(ctk.CTk):
                         self.set_progress(3, progr, job.speaker_detection)
                     except Exception:
                         pass
+                
+                try:
+                    info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment)
+                    if self.cancel:
+                        raise Exception(t('err_user_cancelation')) 
 
-                info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment)
+                    self.logn()
+                    self.logn()
+                    self.logn(t('transcription_finished'), 'highlight')
+                finally:
+                    if job.transcript_file != my_transcript_file: # used alternative filename because saving under the initial name failed
+                        self.log(t('rescue_saving'))
+                        self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
+                    else:
+                        self.log(t('transcription_saved'))
+                        self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
 
-                if self.cancel:
-                    raise Exception(t('err_user_cancelation')) 
-
-                save_doc()
-                self.logn()
-                self.logn()
-                self.logn(t('transcription_finished'), 'highlight')
-                if job.transcript_file != my_transcript_file: # used alternative filename because saving under the initial name failed
-                    self.log(t('rescue_saving'))
-                    self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
-                else:
-                    self.log(t('transcription_saved'))
-                    self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
                 # log duration of the whole process
                 proc_time = datetime.datetime.now() - proc_start_time
                 proc_seconds = "{:02d}".format(int(proc_time.total_seconds() % 60))
