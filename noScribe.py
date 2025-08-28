@@ -688,9 +688,9 @@ Examples:
     parser.add_argument('--no-overlapping', action='store_false', dest='overlapping', default=None,
                        help='Disable overlapping speech detection')
     parser.add_argument('--timestamps', action='store_true', default=None,
-                       help='Include timestamps in transcript')
+                       help='Include visible timestamps in the transcript')
     parser.add_argument('--no-timestamps', action='store_false', dest='timestamps', default=None,
-                       help='Include timestamps in transcript')
+                       help='Exclude visible timestamps from the transcript')
     parser.add_argument('--disfluencies', action='store_true', default=None,
                        help='Include disfluencies (uh, um, etc.) in transcript')
     parser.add_argument('--no-disfluencies', action='store_false', dest='disfluencies', default=None,
