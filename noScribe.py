@@ -673,25 +673,29 @@ Examples:
     # Optional arguments
     parser.add_argument('--no-gui', action='store_true', default=False,
                        help='Run without showing the GUI (headless mode)')
-    parser.add_argument('--start', 
+    parser.add_argument('--start', default=None,
                        help='Start time (format: HH:MM:SS)')
-    parser.add_argument('--stop',
+    parser.add_argument('--stop', default=None,
                        help='Stop time (format: HH:MM:SS)')
-    parser.add_argument('--language', default='auto', 
+    parser.add_argument('--language', default=None,
                        help='Language code (e.g., en, de, fr) or "auto" for auto-detection')
-    parser.add_argument('--model', default='precise',
+    parser.add_argument('--model', default=None,
                        help='Whisper model to use (use --help-models to see available models)')
-    parser.add_argument('--speaker-detection', choices=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], default='auto',
+    parser.add_argument('--speaker-detection', choices=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], default=None,
                        help='Speaker detection/diarization setting')
-    parser.add_argument('--overlapping', action='store_true', default=True,
+    parser.add_argument('--overlapping', action='store_true', default=None, 
                        help='Enable overlapping speech detection')
-    parser.add_argument('--timestamps', action='store_true', default=False,
+    parser.add_argument('--no-overlapping', action='store_false', dest='overlapping', default=None,
+                       help='Disable overlapping speech detection')
+    parser.add_argument('--timestamps', action='store_true', default=None,
                        help='Include timestamps in transcript')
-    parser.add_argument('--disfluencies', action='store_true', default=True,
+    parser.add_argument('--no-timestamps', action='store_false', dest='timestamps', default=None,
+                       help='Include timestamps in transcript')
+    parser.add_argument('--disfluencies', action='store_true', default=None,
                        help='Include disfluencies (uh, um, etc.) in transcript')
-    parser.add_argument('--no-disfluencies', action='store_false', dest='disfluencies',
+    parser.add_argument('--no-disfluencies', action='store_false', dest='disfluencies', default=None,
                        help='Exclude disfluencies from transcript')
-    parser.add_argument('--pause', choices=['none', '1sec+', '2sec+', '3sec+'], default='1sec+',
+    parser.add_argument('--pause', choices=['none', '1sec+', '2sec+', '3sec+'], default=None,
                        help='Mark pauses in transcript')
     
     return parser.parse_args()
@@ -2982,7 +2986,7 @@ if __name__ == "__main__":
         show_available_models()
         sys.exit(0)
 
-    # If explicit headless requested, keep old CLI behavior
+    # If explicit headless requested, run pure CLI mode
     if getattr(args, 'no_gui', False):
         if args.audio_file and args.output_file:
             exit_code = run_cli_mode(args)
@@ -2992,7 +2996,7 @@ if __name__ == "__main__":
             print("Usage: python noScribe.py <audio_file> <output_file> [options] --no-gui")
             sys.exit(1)
 
-    # Default: show GUI and keep it usable, even with CLI args
+    # Default: show GUI, even with CLI args
     app = App()
 
     # If arguments were provided, prefill and optionally auto-start
@@ -3004,7 +3008,7 @@ if __name__ == "__main__":
             if args.model in available_models:
                 desired_model_name = args.model
             else:
-                print(f"Warning: Model '{args.model}' not found. Using default GUI selection.")
+                app.logn(f"Warning: Model '{args.model}' not found. Using default GUI selection.")
 
         if desired_model_name:
             try:
@@ -3029,44 +3033,40 @@ if __name__ == "__main__":
                 pass
             app.logn(t('log_transcript_filename') + app.transcript_file)
 
-        # If both files provided, create a job and auto-start in GUI
-        if getattr(args, 'audio_file', None) and getattr(args, 'output_file', None):
-            # Build job from args but use GUI defaults (not headless)
-            start_time = millisec(args.start) if getattr(args, 'start', None) else None
-            stop_time = millisec(args.stop) if getattr(args, 'stop', None) else None
-
-            # Resolve model path: preferred from CLI if available, otherwise from current GUI selection
-            model_name = desired_model_name or app.option_menu_whisper_model.get()
-            if model_name in getattr(app, 'whisper_model_paths', {}):
-                model_path = app.whisper_model_paths[model_name]
+        # Prefill other options if provided
+        if getattr(args, 'start', None):
+            app.entry_start.delete(0, 'end')
+            app.entry_start.insert(0, args.start)
+        if getattr(args, 'stop', None):
+            app.entry_stop.delete(0, 'end')
+            app.entry_stop.insert(0, args.stop)
+        if getattr(args, 'language', None):
+            app.option_menu_language.set(args.language)
+        if getattr(args, 'pause', None):
+            app.option_menu_pause.set(args.pause)
+        if getattr(args, 'speaker_detection', None):
+            app.option_menu_speaker.set(args.speaker_detection)
+        if getattr(args, 'overlapping', None) is not None:
+            if args.overlapping:
+                app.check_box_overlapping.select()
             else:
-                # Ensure model paths are populated
-                app.get_whisper_models()
-                model_path = app.whisper_model_paths.get(model_name, None)
+                app.check_box_overlapping.deselect()
+        if getattr(args, 'disfluencies', None) is not None:
+            if args.disfluencies:
+                app.check_box_disfluencies.select()
+            else:
+                app.check_box_disfluencies.deselect()
+        if getattr(args, 'timestamps', None) is not None:
+            if args.timestamps:
+                app.check_box_timestamps.select()
+            else:
+                app.check_box_timestamps.deselect()
 
-            job = create_transcription_job(
-                audio_file=args.audio_file,
-                transcript_file=args.output_file,
-                start_time=start_time,
-                stop_time=stop_time,
-                language_name=getattr(args, 'language', None),
-                whisper_model_name=model_path if model_path else None,
-                speaker_detection=getattr(args, 'speaker_detection', None),
-                overlapping=getattr(args, 'overlapping', None),
-                timestamps=getattr(args, 'timestamps', None),
-                disfluencies=getattr(args, 'disfluencies', None),
-                pause=getattr(args, 'pause', None),
-                cli_mode=False,
-            )
+        # If both files provided, create a job and auto-start in GUI
+        if app.audio_file and app.audio_file != '' and app.transcript_file and app.transcript_file != '':
+            # Start the job
+            app.button_start_event()
 
-            # Add job to queue and start worker thread
-            app.queue.add_job(job)
-            try:
-                app.update_queue_table()
-            except Exception:
-                pass
-            wkr = Thread(target=app.transcription_worker, args=())
-            wkr.start()
     except Exception as e:
         # Non-fatal: continue to show GUI
         print(f"Warning: Failed to prefill GUI from CLI args: {e}")
