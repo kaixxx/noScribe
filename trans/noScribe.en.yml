@@ -100,6 +100,9 @@ en:
   processing_time: 'Total processing time: %{total_time_str}'
 
   # Error messages
+  output_override: >
+    Another job in the queue (waiting, running, or finished) uses the same output file.
+    Do you want to override the output file?
   err_setup: 'An error occured during the setup. Check if you have a working internet connection and restart the program.'
   err_invalid_time_string: 'This is not a valid time: "%{time}"'
   err_options: 'Error in options'

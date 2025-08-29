@@ -521,6 +521,40 @@ class TranscriptionQueue:
     def is_empty(self) -> bool:
         """Check if queue is empty"""
         return len(self.jobs) == 0
+    
+    def has_output_conflict(self, transcript_file: str, ignore_job: Optional[TranscriptionJob] = None) -> bool:
+        """Check if another queue job uses the same output file.
+        Ignores jobs in ERROR, CANCELING, CANCELED and optionally a given job."""
+        try:
+            target = os.path.abspath(transcript_file)
+        except Exception:
+            return False
+        try:
+            for j in self.jobs:
+                try:
+                    if not j or j is ignore_job:
+                        continue
+                    tf = getattr(j, 'transcript_file', None)
+                    if not tf:
+                        continue
+                    if os.path.abspath(tf) == target and j.status not in [JobStatus.ERROR, JobStatus.CANCELING, JobStatus.CANCELED]:
+                        return True
+                except Exception:
+                    continue
+        except Exception:
+            return False
+        return False
+
+    def confirm_output_override(self, transcript_file: str, ignore_job: Optional[TranscriptionJob] = None) -> bool:
+        """Prompt the user if a conflicting output file is found. Returns True to proceed."""
+        try:
+            if self.has_output_conflict(transcript_file, ignore_job=ignore_job):
+                msg = t('output_override')
+                return tk.messagebox.askyesno(title='noScribe', message=msg)
+        except Exception:
+            pass
+        return True
+    
 
 # Command Line Interface
 
@@ -1675,6 +1709,9 @@ class App(ctk.CTk):
         try:
             if job.status not in [JobStatus.ERROR, JobStatus.CANCELED]:
                 return
+            # Confirm override if output file conflicts with other jobs (ignore this job itself)
+            if not self.queue.confirm_output_override(job.transcript_file, ignore_job=job):
+                return
             # reset job timing and messages
             job.error_message = None
             job.error_tb = None
@@ -2568,6 +2605,9 @@ class App(ctk.CTk):
         try:
             # Collect transcription options from UI
             job = self.collect_transcription_options()
+            # Confirm override if output file conflicts with jobs in queue
+            if not self.queue.confirm_output_override(job.transcript_file):
+                return
             
             # Add the job to the queue
             self.queue.add_job(job)
@@ -2813,6 +2853,9 @@ class App(ctk.CTk):
         """Collect options and enqueue the job without starting processing."""
         try:
             job = self.collect_transcription_options()
+            # Confirm override if output file conflicts with jobs in the queue
+            if not self.queue.confirm_output_override(job.transcript_file):
+                return
             self.queue.add_job(job)
             self.update_queue_table()
             try:
