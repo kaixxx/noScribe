@@ -62,7 +62,7 @@ de:
   # job queue tooltips
   job_tt_waiting: 'Auftrag wartet.'
   job_tt_running: 'Auftrag läuft. Details im Protokoll-Tab.'
-  job_tt_finished: 'Fertig. Klicken, um Ergebnis im noScribe-Editor zu öffnen.'
+  job_tt_finished: 'Erfolg. Klicke rechts auf die Schaltfläche "✔", um die Ausgabe im noScribe-Editor zu öffnen.'
   job_tt_canceling: 'Abbruch läuft...'
   job_tt_canceled: 'Auftrag vom Benutzer abgebrochen.'
   job_tt_error: 'Fehler bei der Auftragsverarbeitung: %{error_msg}'
@@ -70,8 +70,10 @@ de:
   # log messages
   log_transcript_filename: 'Transkript-Dateiname: '
   log_audio_file_selected: 'Gewählte Audiodatei: '
+  queue_added_job: 'Auftrag "%{audio_file}" zur Warteschlange hinzugefügt.'
   queue_start: '=== Warteschlange wird gestartet ==='
   queue_start_jobs: 'Bearbeite %{total} Transkriptionsauftrag/-aufträge'
+  queue_none_waiting: 'Nichts zu tun, die Warteschlange enthält keine wartenden Aufträge.'
   start_job: 'Starte Auftrag: %{audio_file}'
   start_audio_conversion: 'Audioumwandlung...'
   audio_conversion_finished: 'Umwandlung fertig.'
@@ -81,6 +83,7 @@ de:
   start_transcription: 'Transkription...'
   loading_whisper: 'Whisper laden'
   vad: 'Sprachaktivitätserkennung...'
+  language_detect: 'Erkannte Sprache "%{lang}" mit Wahrscheinlichkeit %{prob}'
   transcription_finished: 'Transkription beendet.'
   transcription_saved: 'Gespeichert unter: '
   trancription_time: 'Dauer: %{duration} Minuten'
@@ -89,8 +92,12 @@ de:
   completed: 'Abgeschlossen: %{finished}'
   failed: 'Fehlgeschlagen: %{errors}'
   canceled_summary: 'Abgebrochen: %{canceled}'
+  processing_time: 'Gesamte Verarbeitungszeit: %{total_time_str}'
 
   # Error messages
+  output_override: >
+    Ein anderer Auftrag in der Warteschlange (wartend, laufend oder abgeschlossen) verwendet dieselbe Ausgabedatei.
+    Möchtest du die Ausgabedatei überschreiben?
   err_setup: 'Während des Einrichtung ist ein Fehler aufgetreten. Bitte die Internetverbindung prüfen.'
   err_invalid_time_string: 'Das ist keine korrekte Zeitangabe: "%{time}"'
   err_options: 'Fehler in den Optionen'
@@ -100,6 +107,7 @@ de:
   err_converting_audio: Fehler im 1. Schritt - Audiokonvertierung.
   err_identifying_speakers: Fehler im 2. Schritt - Erkennung der Sprecher:innen. 
   transcription_canceled: 'Transkription wirklich abbrechen?'
+  queue_cancel_all_confirm: 'Dadurch werden alle unerledigten Aufträge in der Warteschlange abgebrochen. Möchtest du fortfahren?'
   err_user_cancelation: 'Abbruch durch Nutzer:in'
   err_whisper_main: 'whisper wurde mit folgendem Fehler beendet: %{e}'
   err_transcription: 'Fehler im 3. Schritt - Transkription'
@@ -124,3 +132,8 @@ de:
   queue_tt_remove_waiting: 'Aus der Warteschlange entfernen'
   queue_tt_remove_entry: 'Aus der Liste entfernen'
   queue_tt_repeat_job: 'Diesen Auftrag erneut ausführen'
+  queue_tt_edit_job: 'Ergebnis im noScribe-Editor öffnen'
+
+  # Additional UI buttons
+  send_queue: 'Auftrag in Warteschlange senden'
+  queue_run_button: 'Ausführen'

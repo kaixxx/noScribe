@@ -61,7 +61,7 @@ es:
   # Información sobre la cola de trabajos
   job_tt_waiting: 'Tarea en espera...'
   job_tt_running: 'La tarea se está ejecutando. Vea la pestaña de registro para detalles.'
-  job_tt_finished: 'Éxito. Haz clic para abrir la salida en el editor de noScribe.'
+  job_tt_finished: 'Éxito. Haz clic en el botón "✔" de la derecha para abrir la salida en el editor de noScribe.'
   job_tt_canceling: 'Cancelando...'
   job_tt_canceled: 'Trabajo cancelado por el usuario.'
   job_tt_error: 'Se produjo un error durante el procesamiento: %{error_msg}'
@@ -69,8 +69,10 @@ es:
   # Mensajes de registro
   log_transcript_filename: 'Nombre de archivo de transcripción: '
   log_audio_file_selected: 'Archivo de audio seleccionado: '
+  queue_added_job: 'Trabajo "%{audio_file}" añadido a la cola.'
   queue_start: '=== Iniciando cola ==='
   queue_start_jobs: 'Procesando %{total} trabajo(s) de transcripción'
+  queue_none_waiting: 'Nada que hacer, la cola no contiene trabajos en espera.'
   start_job: 'Iniciando trabajo: %{audio_file}'
   start_audio_conversion: 'Convirtiendo audio...'
   audio_conversion_finished: 'Conversión de audio finalizada'
@@ -80,6 +82,7 @@ es:
   start_transcription: 'Transcribiendo...'
   loading_whisper: 'Cargando whisper'
   vad: 'Detección de actividad de voz...'
+  language_detect: 'Idioma detectado "%{lang}" con probabilidad %{prob}'
   transcription_finished: 'Transcripción finalizada.'
   transcription_saved: 'Guardado en '
   trancription_time: 'Duración: %{duration} minutos'
@@ -88,9 +91,13 @@ es:
   completed: 'Completados: %{finished}'
   failed: 'Fallidos: %{errors}'
   canceled_summary: 'Cancelados: %{canceled}'
+  processing_time: 'Tiempo total de procesamiento: %{total_time_str}'
 
   # Mensajes de error
   err_setup: 'Se produjo un error durante la configuración. Verifica tu conexión a Internet y reinicia el programa.'
+  output_override: >
+    Otro trabajo en la cola (en espera, en ejecución o finalizado) utiliza el mismo archivo de salida.
+    ¿Deseas sobrescribir el archivo de salida?
   err_invalid_time_string: 'Este no es un formato de tiempo válido: "%{time}"'
   err_options: 'Error en las opciones'
   err_no_audio_file: 'Error: Por favor, selecciona un archivo de audio.'
@@ -99,6 +106,7 @@ es:
   err_converting_audio: 'Error en el paso 1: conversión de audio.'
   err_identifying_speakers: 'Error en el paso 2: identificación de oradores.'
   transcription_canceled: '¿Realmente deseas cancelar la transcripción?'   
+  queue_cancel_all_confirm: 'Esto cancelará todos los trabajos no finalizados en la cola. ¿Deseas continuar?'
   err_user_cancelation: 'El proceso ha sido cancelado por el usuario.'
   err_whisper_main: 'Terminación de Whisper con el código de error %{e}'
   err_transcription: 'Error en el paso 3: transcripción'
@@ -122,3 +130,8 @@ es:
   queue_tt_remove_waiting: 'Eliminar de la cola'
   queue_tt_remove_entry: 'Eliminar de la lista'
   queue_tt_repeat_job: 'Repetir este trabajo'
+  queue_tt_edit_job: 'Abrir el resultado en el editor de noScribe'
+
+  # Botones adicionales de la UI
+  send_queue: 'Enviar tarea a la cola'
+  queue_run_button: 'Ejecutar'

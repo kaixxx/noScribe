@@ -61,7 +61,7 @@ ja:
   # ジョブキューのツールチップ
   job_tt_waiting: 'ジョブ待機中...'
   job_tt_running: 'ジョブ実行中。詳細はログタブを参照してください。'
-  job_tt_finished: '成功。クリックして noScribe エディターで出力を開きます。'
+  job_tt_finished: '成功。右側の「✔」ボタンをクリックして、noScribe エディターで出力を開きます。'
   job_tt_canceling: 'キャンセル中...'
   job_tt_canceled: 'ユーザーによりジョブがキャンセルされました。'
   job_tt_error: 'ジョブ処理中にエラーが発生しました: %{error_msg}'
@@ -69,8 +69,10 @@ ja:
   # ログメッセージ
   log_transcript_filename: '転写ファイル名：'
   log_audio_file_selected: '選択された音声ファイル：'
+  queue_added_job: 'ジョブ「%{audio_file}」をキューに追加しました。'
   queue_start: '=== キューを開始 ==='
   queue_start_jobs: '%{total} 個の転写ジョブを処理中'
+  queue_none_waiting: '行うことはありません。キューに待機中のジョブはありません。'
   start_job: 'ジョブを開始: %{audio_file}'
   start_audio_conversion: '音声の変換を開始中...'
   audio_conversion_finished: '音声の変換が完了しました'
@@ -80,6 +82,7 @@ ja:
   start_transcription: '転写を開始中...'
   loading_whisper: 'whisperの読み込み中'
   vad: '音声活動検出...'
+  language_detect: '検出された言語は「%{lang}」（確率 %{prob}）'
   transcription_finished: '転写が完了しました。'
   transcription_saved: '%{file}に保存されました'
   trancription_time: '所要時間：%{duration}分'
@@ -88,9 +91,13 @@ ja:
   completed: '完了: %{finished}'
   failed: '失敗: %{errors}'
   canceled_summary: 'キャンセル: %{canceled}'
+  processing_time: '総処理時間：%{total_time_str}'
 
   # エラーメッセージ
   err_setup: 'セットアップ中にエラーが発生しました。インターネット接続が正常か確認し、プログラムを再起動してください。'
+  output_override: >
+    キュー内の別のジョブ（待機中、実行中、または完了済み）が同じ出力ファイルを使用しています。
+    出力ファイルを上書きしますか？
   err_invalid_time_string: '無効な時間です：" %{time}"'
   err_options: 'オプションのエラー'
   err_no_audio_file: 'エラー：音声ファイルを選択してください。'
@@ -99,6 +106,7 @@ ja:
   err_converting_audio: 'ステップ1でエラーが発生しました-音声の変換。'
   err_identifying_speakers: 'ステップ2でエラーが発生しました-話者の識別。'
   transcription_canceled: '本当に転写をキャンセルしますか？'   
+  queue_cancel_all_confirm: 'キュー内の未完了のジョブがすべてキャンセルされます。続行しますか？'
   err_user_cancelation: 'ユーザーによってプロセスがキャンセルされました。'
   err_whisper_main: 'Whisperメインがエラーコード %{e} で終了しました'
   err_transcription: 'ステップ3でエラーが発生しました-転写'
@@ -122,3 +130,8 @@ ja:
   queue_tt_remove_waiting: 'キューから削除'
   queue_tt_remove_entry: 'リストから削除'
   queue_tt_repeat_job: 'このジョブを再実行'
+  queue_tt_edit_job: '結果を noScribe エディターで開く'
+
+  # 追加のUIボタン
+  send_queue: 'ジョブをキューに送る'
+  queue_run_button: '実行'

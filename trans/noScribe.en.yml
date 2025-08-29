@@ -65,10 +65,11 @@ en:
   # job queue tooltips
   job_tt_waiting: 'Job waiting...'
   job_tt_running: 'Job is running. See the log tab for details.'
-  job_tt_finished: 'Success. Click to open the output in the noScribe Editor.'
+  job_tt_finished: 'Success. Click the "✔" button on the right to open the output in the noScribe Editor.'
   job_tt_canceling: 'Canceling...'
   job_tt_canceled: 'Job was canceled by the user.'
   job_tt_error: 'An error occured during job processing: %{error_msg}'
+
  
   # log messages
   log_transcript_filename: 'Transcript filename: '
@@ -136,4 +137,5 @@ en:
   queue_tt_remove_waiting: 'Remove from queue'
   queue_tt_remove_entry: 'Remove from list'
   queue_tt_repeat_job: 'Repeat this job'
+  queue_tt_edit_job: 'Open the result in the noScribe Editor'
                       

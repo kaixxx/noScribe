@@ -61,7 +61,7 @@ zh-CN: &defaults
   # 队列提示
   job_tt_waiting: '任务等待中...'
   job_tt_running: '任务运行中。详情请查看日志标签。'
-  job_tt_finished: '成功。点击在 noScribe 编辑器中打开输出。'
+  job_tt_finished: '成功。点击右侧的“✔”按钮，在 noScribe 编辑器中打开输出。'
   job_tt_canceling: '正在取消...'
   job_tt_canceled: '作业已被用户取消。'
   job_tt_error: '处理任务时发生错误：%{error_msg}'
@@ -69,8 +69,10 @@ zh-CN: &defaults
   # 日志信息
   log_transcript_filename: '转录文件名：'
   log_audio_file_selected: '已选择音频文件：'
+  queue_added_job: '已将任务“%{audio_file}”添加到队列。'
   queue_start: '=== 开始队列 ==='
   queue_start_jobs: '正在处理 %{total} 个转录任务'
+  queue_none_waiting: '无需处理，队列中没有等待中的任务。'
   start_job: '开始任务：%{audio_file}'
   start_audio_conversion: '正在转换音频...'
   audio_conversion_finished: '音频转换完成'
@@ -78,10 +80,9 @@ zh-CN: &defaults
   loading_pyannote: '加载pyannote中'
   start_canceling: '正在取消...（请稍候）'
   start_transcription: '正在转录...'
-  loading_whisper: '加载whisper中'
-  start_transcription: '转录...'
   loading_whisper: '正在加载whisper'
   vad: '语音活动检测...'
+  language_detect: '检测到语言“%{lang}”，概率 %{prob}'
 
   transcription_finished: '转录完成。'
   transcription_saved: '已保存至'
@@ -91,8 +92,12 @@ zh-CN: &defaults
   completed: '已完成：%{finished}'
   failed: '失败：%{errors}'
   canceled_summary: '已取消：%{canceled}'
+  processing_time: '总处理时间：%{total_time_str}'
 
   # 错误信息
+  output_override: >
+    队列中的另一个任务（等待中、运行中或已完成）使用了同一输出文件。
+    是否要覆盖该输出文件？
   err_setup: '设置过程中发生错误。请检查您的网络连接并重新启动程序。'
   err_invalid_time_string: '无效的时间格式：“%{time}”'
   err_options: '选项错误'
@@ -102,6 +107,7 @@ zh-CN: &defaults
   err_converting_audio: '步骤1中的音频转换错误。'
   err_identifying_speakers: '步骤2中的说话人识别错误。'
   transcription_canceled: '是否确认取消转录？'   
+  queue_cancel_all_confirm: '这将取消队列中所有未完成的任务。是否继续？'
   err_user_cancelation: '转录过程已被用户取消。'
   err_whisper_main: 'Whisper主进程终止，错误代码：%{e}'
   err_transcription: '步骤3中的转录错误。'
@@ -125,6 +131,11 @@ zh-CN: &defaults
   queue_tt_remove_waiting: '从队列中移除'
   queue_tt_remove_entry: '从列表中移除'
   queue_tt_repeat_job: '重复此任务'
+  queue_tt_edit_job: '在 noScribe 编辑器中打开结果'
+
+  # 其他 UI 按钮
+  send_queue: '发送任务到队列'
+  queue_run_button: '运行'
 
 zh:
   <<: *defaults

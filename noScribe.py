@@ -1422,7 +1422,7 @@ class App(ctk.CTk):
                 else:
                     row['frame'].set_progress(0.0, show_progress=False)
 
-                # Ensure repeat button visibility only for ERROR and CANCELED
+                # Add repeat button for status ERROR and CANCELED only
                 try:
                     if job.status in [JobStatus.ERROR, JobStatus.CANCELED]:
                         if 'repeat_btn' not in row or row['repeat_btn'] is None:
@@ -1450,7 +1450,7 @@ class App(ctk.CTk):
                 except Exception:
                     pass
 
-                # Cancel button
+                # Cancel button for running jobs
                 if 'cancel_btn' in row and row['cancel_btn'] is not None:
                     try:
                         row['cancel_btn'].configure(command=lambda j=job: self._on_queue_row_action(j))
@@ -1477,20 +1477,33 @@ class App(ctk.CTk):
                     except Exception:
                         pass
 
-                # Note: status_label no longer exists since we use ProgressFrame canvas text
-
-                # Update click bindings only on transition to/from FINISHED
-                was_finished = row.get('status') == JobStatus.FINISHED
-                is_finished = job.status == JobStatus.FINISHED
-                if is_finished and not was_finished:
-                    def on_click(event, transcript_file=job.transcript_file):
-                        if transcript_file and os.path.exists(transcript_file):
-                            self.after(100, lambda: self.launch_editor(transcript_file))
-                    row['frame'].configure_cursor("hand2")
-                    row['frame'].bind_click(on_click)
-                elif was_finished and not is_finished:
-                    row['frame'].configure_cursor("")
-                    row['frame'].unbind_click()
+                # Add edit button for finished jobs
+                try:
+                    if job.status == JobStatus.FINISHED:
+                        if 'edit_btn' not in row or row['edit_btn'] is None:
+                            edit_btn = ctk.CTkButton(
+                                row['frame'],
+                                text='✔',
+                                width=24,
+                                height=20,
+                                fg_color=btn_color,
+                                hover_color='darkred',
+                                command=lambda j=job: self._on_queue_row_edit(j)
+                            )
+                            edit_btn.pack(side='right', padx=(0, 4), pady=5)
+                            row['edit_btn'] = edit_btn
+                            row['edit_tt'] = CTkToolTip(edit_btn, text=t('queue_tt_edit_job')) 
+                        else:
+                            if not row['edit_btn'].winfo_ismapped():
+                                row['edit_btn'].pack(side='right', padx=(0, 4), pady=2)
+                            row['edit_btn'].configure(state=ctk.NORMAL, command=lambda j=job: self._on_queue_row_edit(j))
+                    else:
+                        # hide the edit button if it exists for other states
+                        if 'edit_btn' in row and row['edit_btn'] is not None:
+                            if row['edit_btn'].winfo_ismapped():
+                                row['edit_btn'].pack_forget()
+                except Exception:
+                    pass
 
                 row['status'] = job.status
                 row['tooltip_text'] = job_tooltip
@@ -1742,6 +1755,9 @@ class App(ctk.CTk):
                     pass
         except Exception as e:
             self.logn(f'Queue repeat error: {e}', 'error')
+    
+    def _on_queue_row_edit(self, job: TranscriptionJob):
+        self.launch_editor(job.transcript_file)
 
     def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.

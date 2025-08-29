@@ -1,0 +1,2 @@
+codex exec --sandbox workspace-write "The 'trans' subdirectory contains translation files for this app. The english version is your reference. Open it and check for each entry if it is also contained in the other language files. Update them if needed. The text for 'job_tt_finished' has changed. The English version is up to date. Update this string in all other language files."
+pause

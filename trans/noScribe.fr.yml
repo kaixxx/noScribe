@@ -61,7 +61,7 @@ fr:
   # Info-bulles de la file d'attente
   job_tt_waiting: 'Tâche en attente...'
   job_tt_running: "La tâche est en cours. Voir l'onglet journal pour les détails."
-  job_tt_finished: "Succès. Cliquez pour ouvrir le résultat dans l'éditeur noScribe."
+  job_tt_finished: "Succès. Cliquez sur le bouton \"✔\" à droite pour ouvrir le résultat dans l’éditeur noScribe."
   job_tt_canceling: 'Annulation en cours...'
   job_tt_canceled: 'Tâche annulée par l’utilisateur.'
   job_tt_error: "Une erreur est survenue lors du traitement de la tâche : %{error_msg}"
@@ -69,8 +69,10 @@ fr:
   # Messages de journalisation
   log_transcript_filename: "Nom du fichier de transcription : "
   log_audio_file_selected: "Fichier audio sélectionné : "
+  queue_added_job: 'Tâche "%{audio_file}" ajoutée à la file d’attente.'
   queue_start: '=== Démarrage de la file d'attente ==='
   queue_start_jobs: 'Traitement de %{total} tâche(s) de transcription'
+  queue_none_waiting: 'Rien à faire, la file ne contient aucune tâche en attente.'
   start_job: 'Démarrage de la tâche : %{audio_file}'
   start_audio_conversion: "Conversion audio en cours..."
   audio_conversion_finished: "Conversion audio terminée"
@@ -79,18 +81,23 @@ fr:
   start_canceling: "Annulation en cours... (veuillez patienter un instant)"
   start_transcription: "Transcription en cours..."
   loading_whisper: "Chargement de whisper"
-  vad: 'Détection d\'activité vocale...'
+  vad: "Détection d'activité vocale..."
+  language_detect: 'Langue détectée « %{lang} » avec une probabilité de %{prob}'
   transcription_finished: "Transcription terminée."
   transcription_saved: "Enregistré sous "
   trancription_time: "Durée : %{duration} minutes"
-  queue_complete: '=== Traitement de la file d\'attente terminé ==='
+  queue_complete: "=== Traitement de la file d'attente terminé ==="
   total_jobs: 'Tâches totales : %{total}'
   completed: 'Terminées : %{finished}'
   failed: 'Échouées : %{errors}'
   canceled_summary: 'Annulées : %{canceled}'
+  processing_time: 'Temps total de traitement : %{total_time_str}'
 
   # Messages d'erreur
   err_setup: "Une erreur s'est produite pendant la configuration. Vérifiez votre connexion internet et redémarrez le programme."
+  output_override: >
+    Une autre tâche dans la file (en attente, en cours ou terminée) utilise le même fichier de sortie.
+    Voulez-vous écraser ce fichier de sortie ?
   err_invalid_time_string: "Il s'agit d'une heure invalide : \"%{time}\""
   err_options: "Erreur dans les options"
   err_no_audio_file: "Erreur : Veuillez sélectionner un fichier audio."
@@ -99,6 +106,7 @@ fr:
   err_converting_audio: "Erreur à l'étape 1 - conversion de l'audio."
   err_identifying_speakers: "Erreur à l'étape 2 - identification des locuteurs."
   transcription_canceled: "Voulez-vous vraiment annuler la transcription ?"   
+  queue_cancel_all_confirm: 'Cela annulera toutes les tâches non terminées dans la file. Voulez-vous continuer ?'
   err_user_cancelation: "Le processus a été annulé par l'utilisateur."
   err_whisper_main: "Arrêt de whisper avec le code d'erreur %{e}"
   err_transcription: "Erreur à l'étape 3 - transcription"
@@ -122,3 +130,8 @@ fr:
   queue_tt_remove_waiting: 'Retirer de la file'
   queue_tt_remove_entry: 'Retirer de la liste'
   queue_tt_repeat_job: 'Relancer cette tâche'
+  queue_tt_edit_job: 'Ouvrir le résultat dans l’éditeur noScribe'
+
+  # Boutons supplémentaires de l’UI
+  send_queue: 'Envoyer la tâche à la file'
+  queue_run_button: 'Exécuter'

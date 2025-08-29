@@ -62,7 +62,7 @@ ru:
   # Подсказки очереди заданий
   job_tt_waiting: 'Задача ожидает...'
   job_tt_running: 'Задача выполняется. Подробности смотрите во вкладке журнала.'
-  job_tt_finished: 'Успешно. Нажмите, чтобы открыть результат в редакторе noScribe.'
+  job_tt_finished: 'Успешно. Нажмите кнопку «✔» справа, чтобы открыть результат в редакторе noScribe.'
   job_tt_canceling: 'Отмена выполняется...'
   job_tt_canceled: 'Задание отменено пользователем.'
   job_tt_error: 'Во время обработки задачи произошла ошибка: %{error_msg}'
@@ -70,8 +70,10 @@ ru:
   # Сообщения журнала
   log_transcript_filename: 'Имя файла транскрипции: '
   log_audio_file_selected: 'Выбран аудиофайл: '
+  queue_added_job: 'Задание «%{audio_file}» добавлено в очередь.'
   queue_start: '=== Запуск очереди ==='
   queue_start_jobs: 'Обработка %{total} задания(ий) на транскрипцию'
+  queue_none_waiting: 'Нечего выполнять: в очереди нет ожидающих заданий.'
   start_job: 'Запуск задания: %{audio_file}'
   start_audio_conversion: 'Преобразование аудио...'
   audio_conversion_finished: 'Преобразование аудио завершено'
@@ -81,6 +83,7 @@ ru:
   start_transcription: 'Транскрибация...'
   loading_whisper: 'Загрузка whisper'
   vad: 'Обнаружение голосовой активности...'
+  language_detect: 'Обнаружен язык «%{lang}» с вероятностью %{prob}'
   transcription_finished: 'Транскрибация завершена.'
   transcription_saved: 'Сохранено в '
   trancription_time: 'Продолжительность: %{duration} минут'
@@ -89,9 +92,13 @@ ru:
   completed: 'Завершено: %{finished}'
   failed: 'Неудачных: %{errors}'
   canceled_summary: 'Отменено: %{canceled}'
+  processing_time: 'Общее время обработки: %{total_time_str}'
 
   # Сообщения об ошибках
   err_setup: 'Произошла ошибка при настройке. Проверьте подключение к интернету и перезапустите программу.'
+  output_override: >
+    Другое задание в очереди (ожидает, выполняется или завершено) использует тот же выходной файл.
+    Перезаписать этот выходной файл?
   err_invalid_time_string: 'Неверное время: "%{time}"'
   err_options: 'Ошибка в настройках'
   err_no_audio_file: 'Ошибка: Пожалуйста, выберите аудиофайл.'
@@ -100,6 +107,7 @@ ru:
   err_converting_audio: Ошибка на шаге 1 - преобразование аудио.
   err_identifying_speakers: Ошибка на шаге 2 - определение дикторов.
   transcription_canceled: 'Вы действительно хотите отменить транскрипцию?'   
+  queue_cancel_all_confirm: 'Это отменит все незавершённые задания в очереди. Продолжить?'
   err_user_cancelation: 'Процесс был отменен пользователем.'
   err_whisper_main: 'Ошибка в Whisper: завершение основной программы с кодом %{e}'
   err_transcription: 'Ошибка на шаге 3 - транскрипция'
@@ -123,3 +131,8 @@ ru:
   queue_tt_remove_waiting: 'Удалить из очереди'
   queue_tt_remove_entry: 'Удалить из списка'
   queue_tt_repeat_job: 'Повторить это задание'
+  queue_tt_edit_job: 'Открыть результат в редакторе noScribe'
+
+  # Дополнительные кнопки UI
+  send_queue: 'Отправить задание в очередь'
+  queue_run_button: 'Запустить'
