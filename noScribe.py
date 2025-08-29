@@ -1180,8 +1180,8 @@ class App(ctk.CTk):
         self.start_action_menu = StartActionOptionMenu(self, self.start_button_container)
         self.start_action_menu.pack(fill='x', expand=True)
 
-        # Stop Button
-        self.stop_button = ctk.CTkButton(self.sidebar_frame, height=42, fg_color='darkred', hover_color='darkred', text=t('stop_button'), command=self.button_stop_event)
+        # Enqueue Button
+        self.enqueue_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('send_queue'), command=self.button_send_to_queue_event)
         
         # create queue view and log textbox
         self.frame_right = ctk.CTkFrame(self.frame_main, corner_radius=0, fg_color='transparent')
@@ -1952,9 +1952,9 @@ class App(ctk.CTk):
         queue_start_time = datetime.datetime.now()
         self.cancel = False
 
-        # Show the stop button
+        # Show the enqueue button, next job will not be started directly, but send to the queue 
         self.start_button_container.pack_forget() # hide
-        self.stop_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+        self.enqueue_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
 
         try:
             # Log queue summary
@@ -2036,8 +2036,8 @@ class App(ctk.CTk):
             self.logn(f"Queue error details: {traceback_str}", where='file')
         
         finally:
-            # Hide the stop button
-            self.stop_button.pack_forget() # hide
+            # Hide the enqueue button
+            self.enqueue_button.pack_forget() # hide
             self.start_button_container.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
             # Hide progress
             self.set_progress(0, 0)
@@ -2557,9 +2557,9 @@ class App(ctk.CTk):
                 self.log_file = None
 
         finally:
-            # hide the stop button
-            self.stop_button.pack_forget() # hide
-            self.start_button_container.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+            # hide the enqueue button
+            #self.enqueue_button.pack_forget() # hide
+            #self.start_button_container.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
 
             # hide progress
             self.set_progress(0, 0)
@@ -2833,35 +2833,6 @@ class App(ctk.CTk):
             self.logn(f'Error queuing transcription: {str(e)}', 'error')
             tk.messagebox.showerror(title='noScribe', message=f'Error queuing transcription: {str(e)}')
     
-    def button_stop_event(self):
-        if tk.messagebox.askyesno(title='noScribe', message=t('transcription_canceled')) == True:
-            self.logn()
-            self.logn(t('start_canceling'))
-            self.update()
-            self.cancel = True
-            # Try to terminate active whisper subprocess if present
-            try:
-                if getattr(self, "_mp_proc", None) is not None and self._mp_proc.is_alive():
-                    try:
-                        self._mp_proc.terminate()
-                    except Exception:
-                        pass
-                    try:
-                        self._mp_proc.join(timeout=0.3)
-                    except Exception:
-                        pass
-                    try:
-                        self._mp_proc.close()
-                    except Exception:
-                        pass
-            finally:
-                self._mp_proc = None
-                self._mp_queue = None
-            try:
-                self.update_queue_controls()
-            except Exception:
-                pass
-
     def on_closing(self):
         # (see: https://stackoverflow.com/questions/111155/how-do-i-handle-the-window-close-event-in-tkinter)
         #if messagebox.askokcancel("Quit", "Do you want to quit?"):
