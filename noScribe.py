@@ -1765,7 +1765,7 @@ class App(ctk.CTk):
         # set system/version dependent "start_new_session" analogs
         if file == '':
             file = self.transcript_file
-        ext = os.path.splitext(self.transcript_file)[1][1:]
+        ext = os.path.splitext(file)[1][1:]
         if file != '' and ext != 'html':
             file = ''
             if not tk.messagebox.askyesno(title='noScribe', message=t('err_editor_invalid_format')):

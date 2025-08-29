@@ -15,6 +15,7 @@ nsis_tmp.nsi
 ggml*.bin
 ROADMAP.md
 whisper_test.py
+codex*.*
 
 models/precise/*
 !models/precise/NOSCRIBE_README.txt
