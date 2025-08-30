@@ -1186,7 +1186,7 @@ class App(ctk.CTk):
             def _clicked(self, event=None):
                 # Open dropdown with the single queue action for non-text-label clicks
                 try:
-                    self._values = [t('send_queue')]
+                    self._values = [t('send_queue'), t('start_queue')]
                     self._dropdown_menu.configure(values=self._values)
                 except Exception:
                     pass
@@ -1196,6 +1196,14 @@ class App(ctk.CTk):
                 if value == t('send_queue'):
                     try:
                         self.noScribe_parent.button_send_to_queue_event()
+                    finally:
+                        try:
+                            self.set(t('start_button'))
+                        except Exception:
+                            self.set('Start')
+                elif value == t('start_queue'):
+                    try:
+                        self.noScribe_parent.button_start_event()
                     finally:
                         try:
                             self.set(t('start_button'))

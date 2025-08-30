@@ -45,6 +45,7 @@ en:
   label_disfluencies: 'Disfluencies:'
   
   start_button: Start 
+  start_queue: 'Start job now'
   send_queue: 'Send job to queue'
   stop_button: Cancel
   queue_run_button: 'Run'
