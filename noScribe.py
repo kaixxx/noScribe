@@ -1199,8 +1199,7 @@ class App(ctk.CTk):
             def _dropdown_callback(self, value: str):
                 if value == t('send_queue'):
                     try:
-                        #self.noScribe_parent.button_send_to_queue_event()
-                        self.noScribe_parent.button_start_event(enqueue=True)
+                        self.noScribe_parent.create_job(enqueue=True)
                     finally:
                         try:
                             self.set(t('start_button'))
@@ -1208,7 +1207,7 @@ class App(ctk.CTk):
                             self.set('Start')
                 elif value == t('start_queue'):
                     try:
-                        self.noScribe_parent.button_start_event(enqueue=False)
+                        self.noScribe_parent.create_job(enqueue=False)
                     finally:
                         try:
                             self.set(t('start_button'))
@@ -1219,16 +1218,13 @@ class App(ctk.CTk):
 
             def _on_text_label_click(self, event):
                 try:
-                    self.noScribe_parent.button_start_event(enqueue=False)
+                    self.noScribe_parent.create_job(enqueue=False)
                 except Exception:
                     pass
                 return "break"
 
         self.start_action_menu = StartActionOptionMenu(self, self.start_button_container)
         self.start_action_menu.pack(fill='x', expand=True)
-
-        # Enqueue Button
-        self.enqueue_button = ctk.CTkButton(self.sidebar_frame, height=42, text=t('send_queue'), command=self.button_send_to_queue_event)
         
         # create queue view and log textbox
         self.frame_right = ctk.CTkFrame(self.frame_main, corner_radius=0, fg_color='transparent')
@@ -1412,6 +1408,8 @@ class App(ctk.CTk):
                 status_color = "yellow"
                 msg = job.error_message if job.error_message else ''
                 job_tooltip = t('job_tt_error', error_msg=msg)
+
+            job_tooltip += '\n\nJob summary'
 
             status_text = t(str(job.status.value))
             
@@ -2005,10 +2003,6 @@ class App(ctk.CTk):
         queue_start_time = datetime.datetime.now()
         self.cancel = False
 
-        # Show the enqueue button, next job will not be started directly, but send to the queue 
-        self.start_button_container.pack_forget() # hide
-        self.enqueue_button.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
-
         try:
             # Log queue summary
             summary = self.queue.get_queue_summary()
@@ -2089,9 +2083,6 @@ class App(ctk.CTk):
             self.logn(f"Queue error details: {traceback_str}", where='file')
         
         finally:
-            # Hide the enqueue button
-            self.enqueue_button.pack_forget() # hide
-            self.start_button_container.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
             # Hide progress
             self.set_progress(0, 0)
             try:
@@ -2610,14 +2601,10 @@ class App(ctk.CTk):
                 self.log_file = None
 
         finally:
-            # hide the enqueue button
-            #self.enqueue_button.pack_forget() # hide
-            #self.start_button_container.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
-
             # hide progress
             self.set_progress(0, 0)
             
-    def button_start_event(self, enqueue=False):
+    def create_job(self, enqueue=False):
         try:
             # Collect transcription options from UI
             job = self.collect_transcription_options()
@@ -2867,29 +2854,6 @@ class App(ctk.CTk):
             self._mp_queue = None
 
         return diarization or []
-
-    def button_send_to_queue_event(self):
-        """Collect options and enqueue the job without starting processing."""
-        try:
-            job = self.collect_transcription_options()
-            # Confirm override if output file conflicts with jobs in the queue
-            if not self.queue.confirm_output_override(job.transcript_file):
-                return
-            self.queue.add_job(job)
-            self.update_queue_table()
-            # Switch to queue tab to give visual feedback
-            try:
-                self.tabview.set(t("tab_queue"))
-            except Exception:
-                pass
-            self.logn()
-            self.logn(t('queue_added_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
-        except (ValueError, FileNotFoundError) as e:
-            self.logn(str(e), 'error')
-            tk.messagebox.showerror(title='noScribe', message=str(e))
-        except Exception as e:
-            self.logn(f'Error queuing transcription: {str(e)}', 'error')
-            tk.messagebox.showerror(title='noScribe', message=f'Error queuing transcription: {str(e)}')
     
     def on_closing(self):
         # (see: https://stackoverflow.com/questions/111155/how-do-i-handle-the-window-close-event-in-tkinter)
@@ -3094,7 +3058,7 @@ if __name__ == "__main__":
         # If both files provided, create a job and auto-start in GUI
         if app.audio_file and app.audio_file != '' and app.transcript_file and app.transcript_file != '':
             # Start the job
-            app.button_start_event()
+            app.create_job()
 
     except Exception as e:
         # Non-fatal: continue to show GUI
