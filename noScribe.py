@@ -502,6 +502,10 @@ class TranscriptionQueue:
         """Check if there are jobs waiting to be processed"""
         return len(self.get_waiting_jobs()) > 0
     
+    def is_running(self) -> bool:
+        """Check if any job are currently beeing processed"""
+        return len(self.get_running_jobs()) > 0
+    
     def get_next_waiting_job(self) -> Optional[TranscriptionJob]:
         """Get the next job to process"""
         waiting_jobs = self.get_waiting_jobs()
@@ -1195,7 +1199,8 @@ class App(ctk.CTk):
             def _dropdown_callback(self, value: str):
                 if value == t('send_queue'):
                     try:
-                        self.noScribe_parent.button_send_to_queue_event()
+                        #self.noScribe_parent.button_send_to_queue_event()
+                        self.noScribe_parent.button_start_event(enqueue=True)
                     finally:
                         try:
                             self.set(t('start_button'))
@@ -1203,7 +1208,7 @@ class App(ctk.CTk):
                             self.set('Start')
                 elif value == t('start_queue'):
                     try:
-                        self.noScribe_parent.button_start_event()
+                        self.noScribe_parent.button_start_event(enqueue=False)
                     finally:
                         try:
                             self.set(t('start_button'))
@@ -1214,7 +1219,7 @@ class App(ctk.CTk):
 
             def _on_text_label_click(self, event):
                 try:
-                    self.noScribe_parent.button_start_event()
+                    self.noScribe_parent.button_start_event(enqueue=False)
                 except Exception:
                     pass
                 return "break"
@@ -1287,10 +1292,6 @@ class App(ctk.CTk):
         self.queue_row_widgets = {}
 
         self.update_queue_table()
-        try:
-            self.update_queue_controls()
-        except Exception:
-            pass
 
         # Frame progress bar / edit button
         self.frame_edit = ctk.CTkFrame(self.frame_main, height=20, corner_radius=0, fg_color=self.log_textbox._fg_color)
@@ -1665,7 +1666,6 @@ class App(ctk.CTk):
             self.cancel = True
             self._cancel_job_only = False
             self.update_queue_table()
-            self.update_queue_controls()
         except Exception:
             pass
 
@@ -1740,10 +1740,6 @@ class App(ctk.CTk):
             job.finished_at = None
             job.status = JobStatus.WAITING
             self.update_queue_table()
-            try:
-                self.update_queue_controls()
-            except Exception:
-                pass
 
             has_running = len(self.queue.get_running_jobs()) > 0
             if has_running:
@@ -1757,10 +1753,6 @@ class App(ctk.CTk):
             if start_idx is not None:
                 wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": start_idx})
                 wkr.start()
-                try:
-                    self.update_queue_controls()
-                except Exception:
-                    pass
         except Exception as e:
             self.logn(f'Queue repeat error: {e}', 'error')
     
@@ -2625,7 +2617,7 @@ class App(ctk.CTk):
             # hide progress
             self.set_progress(0, 0)
             
-    def button_start_event(self):
+    def button_start_event(self, enqueue=False):
         try:
             # Collect transcription options from UI
             job = self.collect_transcription_options()
@@ -2636,15 +2628,18 @@ class App(ctk.CTk):
             # Add the job to the queue
             self.queue.add_job(job)
             self.update_queue_table()
-            try:
-                self.update_queue_controls()
-            except Exception:
-                pass
             
-            # Start transcription worker with the queue
-            wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": len(self.queue.jobs) - 1})
-            wkr.start()
-            
+            if not enqueue and not self.queue.is_running(): # Start transcription worker with the queue
+                wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": len(self.queue.jobs) - 1})
+                wkr.start()
+            else: # just add it to the queue
+                try:
+                    self.tabview.set(self.tabview._name_list[1]) # Switch to queue tab for visual feedback
+                except Exception:
+                    pass
+                self.logn()
+                self.logn(t('queue_added_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
+                            
         except (ValueError, FileNotFoundError) as e:
             # Handle validation errors from collect_transcription_options
             self.logn(str(e), 'error')
@@ -2882,10 +2877,6 @@ class App(ctk.CTk):
                 return
             self.queue.add_job(job)
             self.update_queue_table()
-            try:
-                self.update_queue_controls()
-            except Exception:
-                pass
             # Switch to queue tab to give visual feedback
             try:
                 self.tabview.set(t("tab_queue"))
