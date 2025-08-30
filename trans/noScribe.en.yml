@@ -123,6 +123,7 @@ en:
   err_noScribeEdit_not_found: 'Error: Could not find the noScribe Editor.'
   err_vtt_invalid_options: 'Warning: The options "overlapping speech", "Mark pause" and "Timestamps" are not supported in VTT files.'
   err_editor_invalid_format: 'The editor can only be used with html files. Do you want to start it anyway?'
+  err_editor_no_file: 'No finished transcription job available. Start the editor anyway?'
   err_invalid_model: 'Ignored double name for whisper model: "%{model_name}"'
 
   # Doc contents

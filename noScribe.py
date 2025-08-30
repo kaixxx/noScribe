@@ -1266,9 +1266,18 @@ class App(ctk.CTk):
         self.queue_controls_frame = ctk.CTkFrame(self.tab_queue, fg_color='transparent')
         self.queue_controls_frame.pack(fill='x', side='bottom', padx=0, pady=(0, 0))
 
+        self.queue_edit_btn = ctk.CTkButton(
+            self.queue_controls_frame,
+            text=t('editor_button'),
+            width=100,
+            fg_color=self.log_textbox._scrollbar_button_color,            
+            command=lambda: self.launch_editor()
+        )
+        self.queue_edit_btn.pack(side='right', padx=(0, 10), pady=8)
+
         self.queue_stop_btn = ctk.CTkButton(
             self.queue_controls_frame,
-            text=t('stop_button') if 't' in globals() else 'Stop',
+            text=t('stop_button'),
             fg_color='darkred',
             hover_color='darkred',
             width=100,
@@ -1292,11 +1301,6 @@ class App(ctk.CTk):
         # Frame progress bar / edit button
         self.frame_edit = ctk.CTkFrame(self.frame_main, height=20, corner_radius=0, fg_color=self.log_textbox._fg_color)
         self.frame_edit.pack(padx=20, pady=[0,30], anchor='sw', fill='x', side='bottom')
-
-        # Edit Button
-        self.edit_button = ctk.CTkButton(self.frame_edit, fg_color=self.log_textbox._scrollbar_button_color, 
-                                         text=t('editor_button'), command=self.launch_editor, width=140)
-        self.edit_button.pack(padx=[20,10], pady=[10,10], expand=False, anchor='se', side='right')
 
         # Progress bar
         self.progress_textbox = ctk.CTkTextbox(self.frame_edit, wrap='none', height=15, state="disabled", font=("",16), text_color="lightgray")
@@ -1535,8 +1539,30 @@ class App(ctk.CTk):
                 else:
                     entry_frame.set_progress(0.0, show_progress=False)
 
-                # Add small action buttons (repeat left of X)
+                # Add small action buttons to job row
+                # X Button
+                cancel_btn = ctk.CTkButton(
+                    entry_frame,
+                    text='X',
+                    width=24,
+                    height=20,
+                    fg_color=('darkred' if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION] else btn_color),
+                    hover_color=('darkred'),
+                    command=lambda j=job: self._on_queue_row_action(j)
+                )
+                cancel_btn.pack(side='right', padx=(0, 6), pady=5)   
+                # Tooltip for X button per status
+                if job.status == JobStatus.WAITING:
+                    cancel_tt_text = t('queue_tt_remove_waiting')
+                elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
+                    cancel_tt_text = t('queue_tt_cancel_running')
+                else:
+                    cancel_tt_text = t('queue_tt_remove_entry')
+                cancel_tt = CTkToolTip(cancel_btn, text=cancel_tt_text)
+                
+                # Repeat button (job status canceled or error only)                               
                 repeat_btn = None
+                repeat_tt = None
                 if job.status in [JobStatus.ERROR, JobStatus.CANCELED]:
                     repeat_btn = ctk.CTkButton(
                         entry_frame,
@@ -1547,37 +1573,27 @@ class App(ctk.CTk):
                         hover_color=('darkred'),
                         command=lambda j=job: self._on_queue_row_repeat(j)
                     )
-                cancel_btn = ctk.CTkButton(
-                    entry_frame,
-                    text='X',
-                    width=24,
-                    height=20,
-                    fg_color=('darkred' if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION] else btn_color),
-                    hover_color=('darkred'),
-                    command=lambda j=job: self._on_queue_row_action(j)
-                )
-                cancel_btn.pack(side='right', padx=(0, 6), pady=5)
-                if repeat_btn is not None:
                     repeat_btn.pack(side='right', padx=(0, 4), pady=5)
+                    repeat_tt = CTkToolTip(repeat_btn, text=t('queue_tt_repeat_job'))
 
-                # Tooltips (create once per row)
-                tt_frame = CTkToolTip(entry_frame, text=job_tooltip) #, bg_color='gray')
-                # Tooltip for X button per status
-                if job.status == JobStatus.WAITING:
-                    cancel_tt_text = t('queue_tt_remove_waiting')
-                elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
-                    cancel_tt_text = t('queue_tt_cancel_running')
-                else:
-                    cancel_tt_text = t('queue_tt_remove_entry')
-                cancel_tt = CTkToolTip(cancel_btn, text=cancel_tt_text)
-                repeat_tt = CTkToolTip(repeat_btn, text=t('queue_tt_repeat_job')) if repeat_btn is not None else None
-
+                # Edit button (finished jobs only)
+                edit_btn = None
+                edit_tt = None
                 if job.status == JobStatus.FINISHED:
-                    def on_click(event, transcript_file=job.transcript_file):
-                        if transcript_file and os.path.exists(transcript_file):
-                            self.after(100, lambda: self.launch_editor(transcript_file))
-                    entry_frame.configure_cursor("hand2")
-                    entry_frame.bind_click(on_click)
+                    edit_btn = ctk.CTkButton(
+                        entry_frame,
+                        text='✔',
+                        width=24,
+                        height=20,
+                        fg_color=btn_color,
+                        hover_color='darkred',
+                        command=lambda j=job: self._on_queue_row_edit(j)
+                    )
+                    edit_btn.pack(side='right', padx=(0, 4), pady=5)
+                    edit_tt = CTkToolTip(edit_btn, text=t('queue_tt_edit_job'))                 
+
+                # Row tooltip (create once per row)
+                tt_frame = CTkToolTip(entry_frame, text=job_tooltip) #, bg_color='gray')
 
                 if not hasattr(self, 'queue_row_widgets'):
                     self.queue_row_widgets = {}
@@ -1590,6 +1606,8 @@ class App(ctk.CTk):
                     'cancel_tt': cancel_tt,
                     'repeat_btn': repeat_btn,
                     'repeat_tt': repeat_tt,
+                    'edit_btn': edit_btn,
+                    'edit_tt': edit_tt
                 }
 
         # Remove rows no longer present
@@ -1755,19 +1773,31 @@ class App(ctk.CTk):
             self.logn(f'Queue repeat error: {e}', 'error')
     
     def _on_queue_row_edit(self, job: TranscriptionJob):
-        self.launch_editor(job.transcript_file)
+        self.openLink(f'file://{job.transcript_file}')
 
     def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
         # set system/version dependent "start_new_session" analogs
+  
         if file == '':
-            file = self.transcript_file
+            # get last finished job (if any)
+            jobs = self.queue.get_finished_jobs()
+            if len(jobs) > 0:
+                file = jobs[-1].transcript_file
+            
+        if file == '':
+            # no file or finished job to open
+            if not tk.messagebox.askyesno(title='noScribe', message=t('err_editor_no_file')):
+                return
+
         ext = os.path.splitext(file)[1][1:]
         if file != '' and ext != 'html':
+            # wrong format
             file = ''
             if not tk.messagebox.askyesno(title='noScribe', message=t('err_editor_invalid_format')):
                 return
+
         program: str = None
         if platform.system() == 'Windows':
             program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit.exe')
@@ -1806,8 +1836,6 @@ class App(ctk.CTk):
         else: 
             webbrowser.open(link)
     
-
-
     def log(self, txt: str = '', tags: list = [], where: str = 'both', link: str = '', tb: str = '') -> None:
         """ Log to main window (where can be 'screen', 'file', or 'both') 
         tb = formatted traceback of the error, only logged to file
