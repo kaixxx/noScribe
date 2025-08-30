@@ -43,6 +43,7 @@ fr:
   label_disfluencies: 'Mots de remplissage :'
   
   start_button: "Démarrer"
+  start_queue: 'Démarrer la tâche maintenant'
   stop_button: "Annuler"
   editor_button: "Éditeur"
 
@@ -115,6 +116,7 @@ fr:
   err_noScribeEdit_not_found: "Erreur : Impossible de trouver l'éditeur noScribe."
   err_vtt_invalid_options: 'Avertissement : les options "Chevauchements de parole", "Marquer les pauses" et "Horodatage" ne sont pas prises en charge dans les fichiers VTT.'
   err_editor_invalid_format: "L'éditeur ne peut être utilisé qu'avec des fichiers HTML. Voulez-vous quand même le lancer ?"
+  err_editor_no_file: "Aucune tâche de transcription terminée disponible. Démarrer l’éditeur quand même ?"
   err_invalid_model: 'Nom en double ignoré pour le modèle whisper : "%{model_name}"'
 
   # Contenu du document

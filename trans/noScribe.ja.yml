@@ -44,6 +44,7 @@ ja:
   label_disfluencies: 'フィラー：'
 
   start_button: 開始
+  start_queue: '今すぐジョブを開始'
   stop_button: キャンセル
   editor_button: エディター
   overall_progress: '全体の進行状況：'
@@ -115,6 +116,7 @@ ja:
   err_noScribeEdit_not_found: 'エラー: noScribe エディターが見つかりませんでした。'
   err_vtt_invalid_options: '警告: 「オーバーラッピング・スピーチ」、「マークはポーズをとる」と「タイムスタンプ」は VTT ファイルでサポートされていません。'
   err_editor_invalid_format: 'エディターは html ファイルでのみ使用できます。それでも起動しますか？'
+  err_editor_no_file: '完了した転写ジョブがありません。エディターを起動しますか？'
   err_invalid_model: 'Whisper モデルの重複名を無視しました: "%{model_name}"'
 
   # ドキュメント内容

@@ -44,6 +44,7 @@ de:
   label_disfluencies: 'Füllworte:'
 
   start_button: Start
+  start_queue: 'Auftrag jetzt starten'
   stop_button: Abbrechen
   editor_button: Editor
 
@@ -116,6 +117,7 @@ de:
   err_noScribeEdit_not_found: 'Fehler: Der noScribe-Editor konnte nicht gefunden werden.'
   err_vtt_invalid_options: 'Achtung: Die Optionen "Überlappende Sprache", "Pausen markieren" und "Zeitmarken" werden bei der VTT-Ausgabe nicht unterstützt.'
   err_editor_invalid_format: 'Der Editor kann nur mit html-Dateien verwendet werden. Trotzdem starten?'
+  err_editor_no_file: 'Kein abgeschlossener Transkriptionsauftrag verfügbar. Editor trotzdem starten?'
   err_invalid_model: 'Ignorierter doppelter Name für whisper-Modell: "%{model_name}"'
 
 

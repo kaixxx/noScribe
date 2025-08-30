@@ -44,6 +44,7 @@ pt:
   label_disfluencies: 'Disfluências:'
   
   start_button: Iniciar
+  start_queue: 'Iniciar tarefa agora'
   stop_button: Cancelar
   editor_button: Editor
 
@@ -116,6 +117,7 @@ pt:
   err_noScribeEdit_not_found: 'Erro: não foi possível encontrar o editor do noScribe.'
   err_vtt_invalid_options: 'Aviso: as opções "Sobreposição", "Marcar pausas" e "Registos temporais" não são suportadas em arquivos VTT.'
   err_editor_invalid_format: 'O editor só pode ser usado com arquivos HTML. Deseja iniciá-lo mesmo assim?'
+  err_editor_no_file: 'Nenhuma tarefa de transcrição concluída disponível. Iniciar o editor mesmo assim?'
   err_invalid_model: 'Nome duplicado ignorado para o modelo whisper: "%{model_name}"'
 
   # Conteúdo do documento

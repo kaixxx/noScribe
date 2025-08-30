@@ -43,6 +43,7 @@ zh-CN: &defaults
   label_disfluencies: '语言停顿：'
   
   start_button: 开始 
+  start_queue: '立即开始任务'
   stop_button: 取消
   editor_button: 编辑器
 
@@ -116,6 +117,7 @@ zh-CN: &defaults
   err_noScribeEdit_not_found: '错误：找不到noScribe编辑器。'
   err_vtt_invalid_options: '警告：VTT文件不支持“重叠发言”、“标记停顿”和“时间戳”选项。'
   err_editor_invalid_format: '编辑器只能用于html文件。你仍然要启动它吗？'
+  err_editor_no_file: '没有已完成的转录任务。仍要启动编辑器吗？'
   err_invalid_model: '忽略了重复的 whisper 模型名称："%{model_name}"'
 
   # 文档内容

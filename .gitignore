@@ -6,6 +6,7 @@ __pycache__/
 .vscode/
 noScribeEdit/*
 !noScribeEdit/readme.txt
+scripts/
 
 *.code-workspace
 auto-py-to-exe*.*
