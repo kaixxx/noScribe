@@ -1158,7 +1158,7 @@ class App(ctk.CTk):
         # Start control: single CTkOptionMenu styled like a button
         # Create a container so we can show/hide as one control
         self.start_button_container = ctk.CTkFrame(self.sidebar_frame, fg_color='transparent')
-        self.start_button_container.pack(padx=[20, 0], pady=[20,30], expand=False, fill='x', anchor='sw')
+        self.start_button_container.pack(padx=[30,30], pady=[20,30], expand=False, fill='x', anchor='sw')
 
         class StartActionOptionMenu(ctk.CTkOptionMenu):
             """A full-width option menu that looks like a button.
@@ -1224,46 +1224,40 @@ class App(ctk.CTk):
                 return "break"
 
         self.start_action_menu = StartActionOptionMenu(self, self.start_button_container)
-        self.start_action_menu.pack(fill='x', expand=True)
+        self.start_action_menu.pack(padx=[0,0], fill='x', expand=True)
         
         # create queue view and log textbox
         self.frame_right = ctk.CTkFrame(self.frame_main, corner_radius=0, fg_color='transparent')
         self.frame_right.pack(padx=0, pady=0, fill='both', expand=True, side='top')
         
-        self.tabview = ctk.CTkTabview(self.frame_right, anchor="nw", border_width=2)
-        self.tabview.pack(padx=20, pady=[20,20], fill='both', expand=True, side='top')
+        self.tabview = ctk.CTkTabview(self.frame_right, anchor="nw", border_width=0, fg_color='transparent', corner_radius=0)
+        self.tabview.pack(padx=[10,30], pady=[20,30], fill='both', expand=True, side='top')
         self.tab_log = self.tabview.add(t("tab_log")) 
         self.tab_queue = self.tabview.add(t("tab_queue")) 
         self.tabview.set(t("tab_log"))  # set currently visible tab
 
-        self.log_textbox = ctk.CTkTextbox(self.tab_log, wrap='word', state="disabled", font=("",16), text_color="lightgray", bg_color='transparent', fg_color='transparent')
+        self.log_frame = ctk.CTkFrame(self.tab_log, fg_color='transparent', border_width=1, corner_radius=0)
+        self.log_frame.pack(padx=0, pady=0, expand=True, fill='both')
+        self.log_textbox = ctk.CTkTextbox(self.log_frame, wrap='word', state="disabled", font=("",16), text_color="lightgray", bg_color='transparent', fg_color='transparent')
         self.log_textbox.tag_config('highlight', foreground='darkorange')
         self.log_textbox.tag_config('error', foreground='yellow')
-        self.log_textbox.pack(padx=0, pady=[0,0], expand=True, fill='both')
+        self.log_textbox.pack(padx=5, pady=5, expand=True, fill='both')
         self.log_len = 0
 
         self.hyperlink = HyperlinkManager(self.log_textbox._textbox)
 
         # Queue table
-        self.queue_frame = ctk.CTkFrame(self.tab_queue)
-        self.queue_frame.pack(padx=0, pady=0, fill='both', expand=True)
-        
-        # Queue table header
-        #self.queue_header_frame = ctk.CTkFrame(self.queue_frame)
-        #self.queue_header_frame.pack(fill='x', padx=0, pady=0)
-        
-        #self.queue_header_name = ctk.CTkLabel(self.queue_header_frame, text="Name", font=ctk.CTkFont(weight="bold"))
-        #self.queue_header_name.pack(side='left', padx=(20, 0))
-        
-        #self.queue_header_status = ctk.CTkLabel(self.queue_header_frame, text="Status", font=ctk.CTkFont(weight="bold"))
-        #self.queue_header_status.pack(side='right', padx=(0, 20))
-        
+        self.queue_frame = ctk.CTkFrame(self.tab_queue, fg_color='transparent', border_width=1, corner_radius=0)
+        self.queue_frame.pack(padx=0, pady=0, expand=True, fill='both')        
+        self.queue_frame = ctk.CTkFrame(self.queue_frame, fg_color='transparent')
+        self.queue_frame.pack(padx=5, pady=5, fill='both', expand=True)
+                
         # Scrollable frame for queue entries
         self.queue_scrollable = ctk.CTkScrollableFrame(self.queue_frame, bg_color='transparent', fg_color='transparent')
         self.queue_scrollable.pack(fill='both', expand=True, padx=0, pady=(0, 0))
 
         # Controls row at the bottom of the queue tab
-        self.queue_controls_frame = ctk.CTkFrame(self.tab_queue, fg_color='transparent')
+        self.queue_controls_frame = ctk.CTkFrame(self.queue_frame, fg_color='transparent')
         self.queue_controls_frame.pack(fill='x', side='bottom', padx=0, pady=(0, 0))
 
         self.queue_edit_btn = ctk.CTkButton(
@@ -1300,11 +1294,11 @@ class App(ctk.CTk):
 
         # Frame progress bar / edit button
         self.frame_edit = ctk.CTkFrame(self.frame_main, height=20, corner_radius=0, fg_color=self.log_textbox._fg_color)
-        self.frame_edit.pack(padx=20, pady=[0,30], anchor='sw', fill='x', side='bottom')
+        # self.frame_edit.pack(padx=20, pady=[0,30], anchor='sw', fill='x', side='bottom')
 
         # Progress bar
         self.progress_textbox = ctk.CTkTextbox(self.frame_edit, wrap='none', height=15, state="disabled", font=("",16), text_color="lightgray")
-        self.progress_textbox.pack(padx=[10,10], pady=[5,0], expand=True, fill='x', anchor='sw', side='left')
+        # self.progress_textbox.pack(padx=[10,10], pady=[5,0], expand=True, fill='x', anchor='sw', side='left')
 
         self.update_scrollbar_visibility()        
         #self.progress_bar = ctk.CTkProgressBar(self.frame_edit, mode='determinate', progress_color='darkred', fg_color=self.log_textbox._fg_color)
