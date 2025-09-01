@@ -766,7 +766,7 @@ class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format h
                     if self.get()[i:i+1] != ':':
                         self.insert(i, ':')
 
-class ProgressFrame(ctk.CTkFrame, CTkScalingBaseClass):
+class JobEntryFrame(ctk.CTkFrame, CTkScalingBaseClass):
     """A custom frame that can display a progress bar as its background with text overlays"""
     
     def __init__(self, master, progress=0.0, progress_color=None, **kwargs):
@@ -1231,7 +1231,7 @@ class App(ctk.CTk):
         self.frame_right.pack(padx=0, pady=0, fill='both', expand=True, side='top')
         
         self.tabview = ctk.CTkTabview(self.frame_right, anchor="nw", border_width=0, fg_color='transparent', corner_radius=0)
-        self.tabview.pack(padx=[10,30], pady=[20,30], fill='both', expand=True, side='top')
+        self.tabview.pack(padx=[10,30], pady=[0,30], fill='both', expand=True, side='top')
         self.tab_log = self.tabview.add(t("tab_log")) 
         self.tab_queue = self.tabview.add(t("tab_queue")) 
         self.tabview.set(t("tab_log"))  # set currently visible tab
@@ -1243,7 +1243,31 @@ class App(ctk.CTk):
         self.log_textbox.tag_config('error', foreground='yellow')
         self.log_textbox.pack(padx=5, pady=5, expand=True, fill='both')
         self.log_len = 0
+        
+        self.log_progress_frame = ctk.CTkFrame(self.log_frame, fg_color='transparent')
+        self.log_progress_frame.pack(padx=10, pady=10, fill='x', expand=False, anchor='center') 
+        self.log_edit_btn = ctk.CTkButton(
+            self.log_progress_frame,
+            text=t('editor_button'),
+            width=100,
+            fg_color=self.log_textbox._scrollbar_button_color,            
+            command=lambda: self.launch_editor()
+        )
+        self.log_edit_btn.pack(side='right', padx=(0, 0), pady=0)
+        self.log_stop_btn = ctk.CTkButton(
+            self.log_progress_frame,
+            text=t('stop_button'),
+            fg_color='darkred',
+            hover_color='darkred',
+            width=100,
+            state=ctk.DISABLED,
+            command=lambda: self.on_queue_stop()
+        )
+        self.log_stop_btn.pack(side='right', padx=(0, 10), pady=0)
 
+        self.log_progress_bar = ctk.CTkProgressBar(self.log_progress_frame, mode='determinate', fg_color="gray17")
+        self.log_progress_bar.set(0)
+        
         self.hyperlink = HyperlinkManager(self.log_textbox._textbox)
 
         # Queue table
@@ -1267,7 +1291,7 @@ class App(ctk.CTk):
             fg_color=self.log_textbox._scrollbar_button_color,            
             command=lambda: self.launch_editor()
         )
-        self.queue_edit_btn.pack(side='right', padx=(0, 10), pady=8)
+        self.queue_edit_btn.pack(side='right', padx=(0, 5), pady=5)
 
         self.queue_stop_btn = ctk.CTkButton(
             self.queue_controls_frame,
@@ -1277,7 +1301,7 @@ class App(ctk.CTk):
             width=100,
             command=lambda: self.on_queue_stop()
         )
-        self.queue_stop_btn.pack(side='right', padx=(0, 10), pady=8)
+        self.queue_stop_btn.pack(side='right', padx=(0, 10), pady=5)
 
         self.queue_run_btn = ctk.CTkButton(
             self.queue_controls_frame,
@@ -1285,29 +1309,14 @@ class App(ctk.CTk):
             width=100,
             command=lambda: self.on_queue_run()
         )
-        self.queue_run_btn.pack(side='right', padx=(0, 10), pady=8)
+        self.queue_run_btn.pack(side='right', padx=(0, 10), pady=5)
 
         # Mapping for diff-based queue rows (job_key -> widgets)
         self.queue_row_widgets = {}
 
         self.update_queue_table()
 
-        # Frame progress bar / edit button
-        self.frame_edit = ctk.CTkFrame(self.frame_main, height=20, corner_radius=0, fg_color=self.log_textbox._fg_color)
-        # self.frame_edit.pack(padx=20, pady=[0,30], anchor='sw', fill='x', side='bottom')
-
-        # Progress bar
-        self.progress_textbox = ctk.CTkTextbox(self.frame_edit, wrap='none', height=15, state="disabled", font=("",16), text_color="lightgray")
-        # self.progress_textbox.pack(padx=[10,10], pady=[5,0], expand=True, fill='x', anchor='sw', side='left')
-
         self.update_scrollbar_visibility()        
-        #self.progress_bar = ctk.CTkProgressBar(self.frame_edit, mode='determinate', progress_color='darkred', fg_color=self.log_textbox._fg_color)
-        #self.progress_bar.set(0)
-        # self.progress_bar.pack(padx=[10,10], pady=[10,10], expand=True, fill='x', anchor='sw', side='left')
-
-        # status bar bottom
-        #self.frame_status = ctk.CTkFrame(self, height=20, corner_radius=0)
-        #self.frame_status.pack(padx=0, pady=[0,0], anchor='sw', fill='x', side='bottom')
 
         self.logn(t('welcome_message'), 'highlight')
         self.log(t('welcome_credits', v=app_version, y=app_year))
@@ -1416,7 +1425,7 @@ class App(ctk.CTk):
             if hasattr(self, 'queue_row_widgets') and job_key in self.queue_row_widgets:
                 # Update existing row
                 row = self.queue_row_widgets[job_key]
-                # Update text directly on the ProgressFrame canvas
+                # Update text directly on the JobEntryFrame canvas
                 row['frame'].set_name_text(audio_name)
                 row['frame'].set_status_text(status_text, status_color)
                 
@@ -1519,10 +1528,10 @@ class App(ctk.CTk):
             else:
                 # Create new row with progress bar background
                 fg_color = ctk.ThemeManager.theme['CTkSegmentedButton']['unselected_color'][1]
-                entry_frame = ProgressFrame(self.queue_scrollable, progress=job.progress, progress_color=None, fg_color=fg_color)
+                entry_frame = JobEntryFrame(self.queue_scrollable, progress=job.progress, progress_color=None, fg_color=fg_color)
                 entry_frame.pack(fill='x', padx=(0, 5), pady=2)
                 
-                # Set the text directly on the ProgressFrame canvas
+                # Set the text directly on the JobEntryFrame canvas
                 entry_frame.set_name_text(audio_name)
                 entry_frame.set_status_text(status_text, status_color)
                 
@@ -1946,16 +1955,18 @@ class App(ctk.CTk):
             # stop updating progress bars if the change is less than 1% (0.01)
             return
         self.current_progress = progr
-
-        # Update progress_textbox
-        if progr < 0:
-            progr_str = ''
+        
+        # Update log_progress_bar
+        if self.current_progress > 0:
+            self.log_progress_bar.set(self.current_progress)
+            if not self.log_progress_bar.winfo_ismapped():
+                self.log_progress_bar.pack(padx=(0,10), pady=0, expand=True, fill='x', anchor='sw', side='left')
+                self.log_stop_btn.configure(state=ctk.NORMAL)
         else:
-            progr_str = f'({t("overall_progress")}{round(progr * 100)}%)'
-        self.progress_textbox.configure(state=ctk.NORMAL)        
-        self.progress_textbox.delete('1.0', tk.END)
-        self.progress_textbox.insert(tk.END, progr_str)
-        self.progress_textbox.configure(state=ctk.DISABLED)
+            self.log_progress_bar.set(0)
+            if self.log_progress_bar.winfo_ismapped():
+                self.log_progress_bar.pack_forget()
+                self.log_stop_btn.configure(state=ctk.DISABLED)
         
         # Update progress of currently running job in queue table
         if progr >= 0:
