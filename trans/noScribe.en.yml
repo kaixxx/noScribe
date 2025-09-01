@@ -28,9 +28,11 @@ en:
 
   label_audio_file: 'Audio file:'
   label_audio_file_name: <select file>
+  multiple_audio_files: '(multiple files selected)'
   
   label_transcript_file: 'Save transcript as:'
   label_transcript_file_name: <select filename> 
+  output_dir_selection: 'Multiple audio files: Select a directory where the transcripts should be saved. The names will be generated automatically.'  
 
   label_start: 'Start (hh:mm:ss):'
   label_stop: 'Stop (hh:mm:ss):' 
@@ -73,8 +75,8 @@ en:
 
  
   # log messages
-  log_transcript_filename: 'Transcript filename: '
-  log_audio_file_selected: 'Audio file selected: '
+  log_transcript_filename: 'Transcript filename(s): '
+  log_audio_file_selected: 'Audio file(s) selected: '
   queue_added_job: 'Added job "%{audio_file}"" to queue.'
   queue_start: === Starting queue ===
   queue_start_jobs: Processing %{total} transcription job(s)

@@ -928,8 +928,8 @@ class App(ctk.CTk):
                            'See here for more information: https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription')            
         
         self.queue = TranscriptionQueue()
-        self.audio_file = ''
-        self.transcript_file = ''
+        self.audio_files_list = []
+        self.transcript_files_list = []
         self.log_file = None
         self.cancel = False # if set to True, transcription will be canceled
         # If True, cancel only the currently running job (triggered from queue row "X")
@@ -1898,20 +1898,57 @@ class App(ctk.CTk):
             self.log_len -= len(tmp_txt)
         self.log(txt, tags, where, link, tb)
 
+    def create_default_transcript_names(self, dir=None):
+        self.transcript_files_list = []
+        if not ('last_filetype' in config):
+            config['last_filetype'] = 'html'
+        for f in self.audio_files_list:
+            if dir:
+                transcript_name = os.path.join(dir, f'{Path(f).stem}.{config['last_filetype']}')
+            else:
+                transcript_name = f'{Path(f).with_name(Path(f).stem)} .{config['last_filetype']}'
+            self.transcript_files_list.append(transcript_name)
+        if len(self.transcript_files_list) > 1:
+            self.button_transcript_file_name.configure(text=t('multiple_audio_files'))
+        elif len(self.transcript_files_list) == 1:
+            self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_files_list[0]))
+        else: 
+            self.button_transcript_file_name.configure(text='')
+
+        self.logn()
+        log_msg = t('log_transcript_filename')
+        for fn in self.transcript_files_list:
+            log_msg += f'\n{fn}'
+        self.logn(log_msg)
+
     def button_audio_file_event(self):
-        fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_file), initialfile=os.path.basename(self.audio_file))
-        if fn:
-            self.audio_file = fn
-            self.logn(t('log_audio_file_selected') + self.audio_file)
-            self.button_audio_file_name.configure(text=os.path.basename(self.audio_file))
+        fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_files_list[0] if len(self.audio_files_list) > 0 else ''), 
+                                           initialfile=os.path.basename(self.audio_files_list[0] if len(self.audio_files_list) > 0 else ''), 
+                                           multiple=True)
+        if fn and len(fn) > 0:
+            self.audio_files_list = fn
+            msg = t('log_audio_file_selected')
+            for f in fn:
+                msg += f'\n{f}'
+            self.logn()
+            self.logn(msg)
+            if len(fn) == 1:
+                self.button_audio_file_name.configure(text=os.path.basename(self.audio_files_list[0]))
+            else:
+                self.button_audio_file_name.configure(text=t('multiple_audio_files'))
+            self.create_default_transcript_names()
 
     def button_transcript_file_event(self):
-        if self.transcript_file != '':
-            _initialdir = os.path.dirname(self.transcript_file)
-            _initialfile = os.path.basename(self.transcript_file)
+        if len(self.audio_files_list) == 0:
+            # select audio first
+            tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
+            return                    
+        if len(self.transcript_files_list) > 0:
+            _initialdir = os.path.dirname(self.transcript_files_list[0])
+            _initialfile = os.path.basename(self.transcript_files_list[0])
         else:
-            _initialdir = os.path.dirname(self.audio_file)
-            _initialfile = Path(os.path.basename(self.audio_file)).stem
+            _initialdir = ''
+            _initialfile = ''            
         if not ('last_filetype' in config):
             config['last_filetype'] = 'html'
         filetypes = [
@@ -1923,15 +1960,33 @@ class App(ctk.CTk):
             if ft[1] == f'*.{config["last_filetype"]}':
                 filetypes.insert(0, filetypes.pop(i))
                 break
-        fn = tk.filedialog.asksaveasfilename(initialdir=_initialdir, initialfile=_initialfile, 
-                                             filetypes=filetypes, 
-                                             defaultextension=config['last_filetype'])
-        if fn:
-            self.transcript_file = fn
-            self.logn(t('log_transcript_filename') + self.transcript_file)
-            self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_file))
-            config['last_filetype'] = os.path.splitext(self.transcript_file)[1][1:]
-            
+        
+        if len(self.audio_files_list) > 1:
+            # multiple audio files, select an output directory
+            tk.messagebox.showinfo(title='noScribe', message=t('output_dir_selection'))
+            dir = tk.filedialog.askdirectory(title="noScribe", initialdir=_initialdir)
+            if dir:
+                self.create_default_transcript_names(dir)
+            else:
+                return
+        else:
+            # single audio file, select an output file name
+            fn = tk.filedialog.asksaveasfilename(initialdir=_initialdir, initialfile=_initialfile, 
+                                                filetypes=filetypes, 
+                                                defaultextension=config['last_filetype'])
+            if fn:
+                self.transcript_files_list = [fn]
+                self.button_transcript_file_name.configure(text=os.path.basename(fn))
+                config['last_filetype'] = os.path.splitext(fn)[1][1:]
+            else:
+                return
+        
+        self.logn()
+        log_msg = t('log_transcript_filename')
+        for fn in self.transcript_files_list:
+            log_msg += f'\n{fn}'
+        self.logn(log_msg)
+        
     def set_progress(self, step, value, speaker_detection='none'):
         """ Update state of the progress bar """
         progr = -1
@@ -1982,13 +2037,14 @@ class App(ctk.CTk):
                     if hasattr(row['frame'], 'set_progress'):
                         row['frame'].set_progress(progr)
 
-    def collect_transcription_options(self) -> TranscriptionJob:
-        """Collect all transcription options from UI and config into a TranscriptionJob object"""
+    def collect_transcription_options(self) -> TranscriptionQueue:
+        """Collect all transcription options from UI and config and creates a 
+        TranscriptionQueue for each audio file"""
         # Validate required inputs
-        if self.audio_file == '':
+        if len(self.audio_files_list) == 0:
             raise ValueError(t('err_no_audio_file'))
         
-        if self.transcript_file == '':
+        if len(self.transcript_files_list) == 0:
             raise ValueError(t('err_no_transcript_file'))
         
         # Parse time range from UI
@@ -2008,28 +2064,33 @@ class App(ctk.CTk):
             raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
         whisper_model_path = self.whisper_model_paths[sel_whisper_model]
         
-        # Create job using unified function
-        job = create_transcription_job(
-            audio_file=self.audio_file,
-            transcript_file=self.transcript_file,
-            start_time=start_time,
-            stop_time=stop_time,
-            language_name=self.option_menu_language.get(),
-            whisper_model_name=whisper_model_path,  # Pass the full path
-            speaker_detection=self.option_menu_speaker.get(),
-            overlapping=self.check_box_overlapping.get(),
-            timestamps=self.check_box_timestamps.get(),
-            disfluencies=self.check_box_disfluencies.get(),
-            pause=self.option_menu_pause.get(),  # Pass string value
-            cli_mode=False
-        )
+        queue = TranscriptionQueue()
+        if len(self.audio_files_list) != len(self.transcript_files_list):
+            self.create_default_transcript_names()
         
-        # Handle VTT format warnings in GUI mode
-        if job.file_ext == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
-            self.logn()
-            self.logn(t('err_vtt_invalid_options'), 'error')
+        for i in range(len(self.audio_files_list)):
+            job = create_transcription_job(
+                audio_file=self.audio_files_list[i],
+                transcript_file=self.transcript_files_list[i],
+                start_time=start_time,
+                stop_time=stop_time,
+                language_name=self.option_menu_language.get(),
+                whisper_model_name=whisper_model_path,  # Pass the full path
+                speaker_detection=self.option_menu_speaker.get(),
+                overlapping=self.check_box_overlapping.get(),
+                timestamps=self.check_box_timestamps.get(),
+                disfluencies=self.check_box_disfluencies.get(),
+                pause=self.option_menu_pause.get(),  # Pass string value
+                cli_mode=False
+            )
+            # Handle VTT format warnings in GUI mode
+            if job.file_ext == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
+                self.logn()
+                self.logn(t('err_vtt_invalid_options'), 'error')
+            
+            queue.add_job(job)
         
-        return job
+        return queue
 
     def transcription_worker(self, start_job_index=None):
         """Process transcription jobs from the queue"""
@@ -2639,26 +2700,36 @@ class App(ctk.CTk):
             
     def create_job(self, enqueue=False):
         try:
+            show_queue_tab = enqueue
             # Collect transcription options from UI
-            job = self.collect_transcription_options()
+            new_queue = self.collect_transcription_options()
+            
             # Confirm override if output file conflicts with jobs in queue
-            if not self.queue.confirm_output_override(job.transcript_file):
-                return
+            for job in new_queue.jobs:
+                if self.queue.has_output_conflict(job.transcript_file):
+                    if not self.queue.confirm_output_override(job.transcript_file):
+                        return
+                    else:
+                        break
+
+            # Add the jobs to the queue
+            for job in new_queue.jobs:
+                self.queue.add_job(job)            
+                if not enqueue and not self.queue.is_running(): # Start transcription worker with the queue
+                    wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": len(self.queue.jobs) - 1})
+                    wkr.start()
+                    enqueue = True
+                else: # just add it to the queue
+                    show_queue_tab = True
+                    self.logn()
+                    self.logn(t('queue_added_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
             
-            # Add the job to the queue
-            self.queue.add_job(job)
             self.update_queue_table()
-            
-            if not enqueue and not self.queue.is_running(): # Start transcription worker with the queue
-                wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": len(self.queue.jobs) - 1})
-                wkr.start()
-            else: # just add it to the queue
+            if show_queue_tab:
                 try:
                     self.tabview.set(self.tabview._name_list[1]) # Switch to queue tab for visual feedback
                 except Exception:
                     pass
-                self.logn()
-                self.logn(t('queue_added_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
                             
         except (ValueError, FileNotFoundError) as e:
             # Handle validation errors from collect_transcription_options
@@ -3044,20 +3115,22 @@ if __name__ == "__main__":
 
         # Prefill files if provided
         if getattr(args, 'audio_file', None):
-            app.audio_file = args.audio_file
+            app.audio_files_list = [args.audio_file]
             try:
-                app.button_audio_file_name.configure(text=os.path.basename(app.audio_file))
+                app.button_audio_file_name.configure(text=os.path.basename(args.audio_file))
             except Exception:
                 pass
-            app.logn(t('log_audio_file_selected') + app.audio_file)
+            app.logn()
+            app.logn(t('log_audio_file_selected') + f'\n{args.audio_file}')
 
         if getattr(args, 'output_file', None):
-            app.transcript_file = args.output_file
+            app.transcript_files_list = [args.output_file]
             try:
-                app.button_transcript_file_name.configure(text=os.path.basename(app.transcript_file))
+                app.button_transcript_file_name.configure(text=os.path.basename(args.output_file))
             except Exception:
                 pass
-            app.logn(t('log_transcript_filename') + app.transcript_file)
+            app.logn()
+            app.logn(t('log_transcript_filename') + f'\n{args.output_file}')
 
         # Prefill other options if provided
         if getattr(args, 'start', None):
@@ -3089,7 +3162,7 @@ if __name__ == "__main__":
                 app.check_box_timestamps.deselect()
 
         # If both files provided, create a job and auto-start in GUI
-        if app.audio_file and app.audio_file != '' and app.transcript_file and app.transcript_file != '':
+        if len(app.audio_files_list) > 0 and len(app.transcript_files_list) > 0:
             # Start the job
             app.create_job()
 
