@@ -124,7 +124,8 @@ class CTkToolTip(object):
             border_width=self.border_width,
             fg_color=self.fg_color,
         )
-        self.message_label = ctk.CTkLabel(self.frame, text=self.text)
+        # Left-justify multi-line tooltip text for better readability
+        self.message_label = ctk.CTkLabel(self.frame, text=self.text, justify='left', anchor='w')
         self.message_label.pack(
             fill="both",
             padx=self.padding[0] + self.border_width,

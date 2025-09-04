@@ -68,10 +68,11 @@ en:
   # job queue tooltips
   job_tt_waiting: 'Job waiting...'
   job_tt_running: 'Job is running. See the log tab for details.'
-  job_tt_finished: 'Success. Click the "✔" button on the right to open the output in the noScribe Editor.'
+  job_tt_finished: 'Finished. Click "✔" on the right to see the result.'
   job_tt_canceling: 'Canceling...'
   job_tt_canceled: 'Job was canceled by the user.'
   job_tt_error: 'An error occured during job processing: %{error_msg}'
+  job_tt_transcript_file: 'Transcript:'
 
  
   # log messages

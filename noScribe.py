@@ -480,6 +480,83 @@ class TranscriptionJob:
         if self.started_at and self.finished_at:
             return self.finished_at - self.started_at
         return None
+
+    def format_summary(self) -> str:
+        """Build a concise, multi-line summary for tooltips.
+
+        Uses localized UI labels where available and simple symbols for booleans.
+        """
+        lines = []
+
+        def yn(v: bool) -> str:
+            return '✓' if bool(v) else '✗'
+
+        # Output file (show basename and format)
+        try:
+            out_name = os.path.basename(self.transcript_file) if self.transcript_file else ''
+            lines.append(f"{t('job_tt_transcript_file')} {out_name}")
+        except Exception:
+            pass
+
+        # Time range
+        try:
+            start_ms = getattr(self, 'start', 0) or 0
+            stop_ms = getattr(self, 'stop', 0) or 0
+            start_txt = ms_to_str(start_ms) if start_ms > 0 else '00:00:00'
+            stop_txt = ms_to_str(stop_ms) if stop_ms > 0 else 'end'
+            lines.append(f"{t('label_start')} {start_txt}")
+            lines.append(f"{t('label_stop')} {stop_txt}")
+        except Exception:
+            pass
+
+        # Language
+        try:
+            lines.append(f"{t('label_language')} {self.language_name}")
+        except Exception:
+            pass
+
+        # Model (display basename if a path)
+        try:
+            model_disp = os.path.basename(self.whisper_model) if self.whisper_model else ''
+            if not model_disp:
+                model_disp = str(self.whisper_model)
+            lines.append(f"{t('label_whisper_model')} {model_disp}")
+        except Exception:
+            pass
+
+        # Pause threshold (map int index back to label)
+        try:
+            pause_opts = ['none', '1sec+', '2sec+', '3sec+']
+            pause_disp = pause_opts[self.pause] if isinstance(self.pause, int) and 0 <= self.pause < len(pause_opts) else str(self.pause)
+            lines.append(f"{t('label_pause')} {pause_disp}")
+        except Exception:
+            pass
+
+        # Speaker detection
+        try:
+            lines.append(f"{t('label_speaker')} {self.speaker_detection}")
+        except Exception:
+            pass
+
+        # Overlapping speech
+        try:
+            lines.append(f"{t('label_overlapping')} {yn(self.overlapping)}")
+        except Exception:
+            pass
+
+        # Disfluencies
+        try:
+            lines.append(f"{t('label_disfluencies')} {yn(self.disfluencies)}")
+        except Exception:
+            pass
+
+        # Timestamps
+        try:
+            lines.append(f"{t('label_timestamps')} {yn(self.timestamps)}")
+        except Exception:
+            pass
+
+        return "\n".join([ln for ln in lines if ln])
     
 class TranscriptionQueue:
     """Manages a queue of transcription jobs"""
@@ -978,7 +1055,6 @@ class App(ctk.CTk):
         # sub header
         self.header_label = ctk.CTkLabel(self.frame_header_logo, text=t('app_header'), font=ctk.CTkFont(size=16, weight="bold"))
         self.header_label.pack(padx=20, pady=[0, 20], anchor='w')
-
         # graphic
         self.header_graphic = ctk.CTkImage(dark_image=Image.open(os.path.join(app_dir, 'graphic_sw.png')), size=(926,119))
         self.header_graphic_label = ctk.CTkLabel(self.frame_header, image=self.header_graphic, text='')
@@ -1395,7 +1471,7 @@ class App(ctk.CTk):
             scrollbar.grid()
         else:
             scrollbar.grid_remove()  # Hide the scrollbar if not needed    
-            
+                        
     def update_queue_table(self):
         """Update the queue table by diffing: update existing rows, add new ones, remove missing."""
         current_keys = []
@@ -1430,7 +1506,11 @@ class App(ctk.CTk):
                 msg = job.error_message if job.error_message else ''
                 job_tooltip = t('job_tt_error', error_msg=msg)
 
-            job_tooltip += '\n\nJob summary'
+            # Append a real, concise summary of the job's options
+            try:
+                job_tooltip += '\n\n' + job.format_summary()
+            except Exception:
+                pass
 
             status_text = t(str(job.status.value))
             
