@@ -81,7 +81,7 @@ multiprocessing.freeze_support()
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.6.2'
+app_version = '0.7'
 app_year = '2025'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -2931,6 +2931,7 @@ class App(ctk.CTk):
             "word_timestamps": True,
             "vad_filter": True,
             "vad_threshold": vad_threshold,
+            "locale": app_locale,
         }
 
         # Spawn child process using spawn start method

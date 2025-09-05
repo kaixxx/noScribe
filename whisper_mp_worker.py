@@ -21,12 +21,27 @@ def whisper_proc_entrypoint(args: dict, q):
         from faster_whisper.vad import VadOptions, get_speech_timestamps
         import torch
         import yaml
+        import i18n
 
         def plog(level, msg):
             try:
                 q.put({"type": "log", "level": level, "msg": str(msg)})
             except Exception:
                 pass
+
+        # Initialize i18n in child process (PyInstaller uses spawn; no globals shared)
+        try:
+            app_dir = os.path.abspath(os.path.dirname(__file__))
+            i18n.set('filename_format', '{locale}.{format}')
+            # Ensure translations directory is available to python-i18n
+            i18n.load_path.append(os.path.join(app_dir, 'trans'))
+            i18n.set('fallback', 'en')
+            # Use locale passed by parent when available
+            child_locale = args.get('locale') or 'en'
+            i18n.set('locale', child_locale)
+        except Exception:
+            # Safe fallback: leave i18n defaults; keys may pass through
+            pass
 
         # plog("debug", "Subprocess started. Initializing Whisper model...")
 
@@ -86,7 +101,6 @@ def whisper_proc_entrypoint(args: dict, q):
         prompt = ""
         if args.get("disfluencies", False):
             try:
-                app_dir = os.path.abspath(os.path.dirname(__file__))
                 with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as f:
                     prompts = yaml.safe_load(f) or {}
                 prompt = prompts.get(whisper_lang, '')
