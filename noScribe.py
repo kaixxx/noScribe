@@ -36,7 +36,7 @@ import platform
 import yaml
 import locale
 import appdirs
-from subprocess import run, call, Popen, PIPE, STDOUT
+from subprocess import run, call, Popen, PIPE, STDOUT, DEVNULL
 if platform.system() == 'Windows':
     # import torch.cuda # to check with torch.cuda.is_available()
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
@@ -1026,6 +1026,12 @@ class App(ctk.CTk):
         # If True, cancel only the currently running job (triggered from queue row "X")
         self._cancel_job_only = False
         self.current_progress = -1
+        # Track background activity for robust shutdown
+        self._worker_threads = []
+        self._mp_proc = None
+        self._mp_queue = None
+        self._ffmpeg_proc = None
+        self._shutting_down = False
 
         # configure window
         self.title('noScribe - ' + t('app_header'))
@@ -1755,7 +1761,8 @@ class App(ctk.CTk):
             has_running = len(self.queue.get_running_jobs()) > 0
             has_pending = self.queue.has_pending_jobs()
             if (not has_running) and has_pending:
-                wkr = Thread(target=self.transcription_worker, args=())
+                wkr = Thread(target=self.transcription_worker, args=(), daemon=True)
+                self._worker_threads.append(wkr)
                 wkr.start()
             self.update_queue_controls()
         except Exception:
@@ -1866,7 +1873,8 @@ class App(ctk.CTk):
             except ValueError:
                 start_idx = None
             if start_idx is not None:
-                wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": start_idx})
+                wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": start_idx}, daemon=True)
+                self._worker_threads.append(wkr)
                 wkr.start()
         except Exception as e:
             self.logn(f'Queue repeat error: {e}', 'error')
@@ -2366,25 +2374,68 @@ class App(ctk.CTk):
                     self.logn(ffmpeg_cmd, where='file')
 
                     if platform.system() == 'Windows':
-                        # (supresses the terminal, see: https://stackoverflow.com/questions/1813872/running-a-process-in-pythonw-with-popen-without-a-console)
+                        # (suppresses the terminal, see: https://stackoverflow.com/questions/1813872/running-a-process-in-pythonw-with-popen-without-a-console)
                         startupinfo = STARTUPINFO()
                         startupinfo.dwFlags |= STARTF_USESHOWWINDOW
-                        with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8', startupinfo=startupinfo) as ffmpeg_proc:
-                            for line in ffmpeg_proc.stdout:
-                                self.logn('ffmpeg: ' + line)
+                        ffmpeg_proc = Popen(
+                            ffmpeg_cmd,
+                            stdout=DEVNULL,
+                            stderr=STDOUT,
+                            universal_newlines=True,
+                            encoding='utf-8',
+                            startupinfo=startupinfo
+                        )
                     elif platform.system() in ("Darwin", "Linux"):
-                        with Popen(ffmpeg_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1,universal_newlines=True,encoding='utf-8') as ffmpeg_proc:
-                            for line in ffmpeg_proc.stdout:
-                                self.logn('ffmpeg: ' + line)
-                    if ffmpeg_proc.returncode > 0:
-                        raise Exception(t('err_ffmpeg'))
+                        ffmpeg_proc = Popen(
+                            ffmpeg_cmd,
+                            stdout=DEVNULL,
+                            stderr=STDOUT,
+                            universal_newlines=True,
+                            encoding='utf-8'
+                        )
+
+                    # Track process for external cancel/close handling
+                    self._ffmpeg_proc = ffmpeg_proc
+
+                    try:
+                        # Poll loop to allow responsive cancel during conversion
+                        while True:
+                            rc = ffmpeg_proc.poll()
+                            if rc is not None:
+                                break
+                            if self.cancel:
+                                try:
+                                    ffmpeg_proc.terminate()
+                                except Exception:
+                                    pass
+                                # Ensure process does not linger
+                                try:
+                                    ffmpeg_proc.wait(timeout=1.0)
+                                except Exception:
+                                    try:
+                                        ffmpeg_proc.kill()
+                                    except Exception:
+                                        pass
+                                raise Exception(t('err_user_cancelation'))
+                            time.sleep(0.1)
+
+                        if ffmpeg_proc.returncode and ffmpeg_proc.returncode > 0:
+                            raise Exception(t('err_ffmpeg'))
+                    finally:
+                        self._ffmpeg_proc = None
                     self.logn(t('audio_conversion_finished'))
                     self.set_progress(1, 100, job.speaker_detection)
                 except Exception as e:
                     traceback_str = traceback.format_exc()
-                    job.set_error(f"{t('err_converting_audio')}: {e}", traceback_str)
-                    self.update_queue_table()
-                    raise Exception(job.error_message)
+                    # Distinguish cancel vs. real error during audio conversion
+                    if str(e) == t('err_user_cancelation') or self.cancel:
+                        job.set_canceled(t('err_user_cancelation'))
+                        self.update_queue_table()
+                        raise Exception(t('err_user_cancelation'))
+                    else:
+                        job.set_error(f"{t('err_converting_audio')}: {e}", traceback_str)
+                        self.update_queue_table()
+                        raise Exception(job.error_message)
 
                 #-------------------------------------------------------
                 # 2) Speaker identification (diarization) with pyannote
@@ -2812,7 +2863,8 @@ class App(ctk.CTk):
             for job in new_queue.jobs:
                 self.queue.add_job(job)            
                 if not enqueue and not self.queue.is_running(): # Start transcription worker with the queue
-                    wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": len(self.queue.jobs) - 1})
+                    wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": len(self.queue.jobs) - 1}, daemon=True)
+                    self._worker_threads.append(wkr)
                     wkr.start()
                     enqueue = True
                 else: # just add it to the queue
@@ -3065,7 +3117,66 @@ class App(ctk.CTk):
                 return # user has aborted cancelation of waiting jobs
         except:
             pass
-        
+
+        # Signal shutdown and try to stop background activity gracefully
+        self._shutting_down = True
+        self.cancel = True
+        try:
+            # Terminate active multiprocessing child (diarization/whisper) if present
+            try:
+                if getattr(self, "_mp_proc", None) is not None and self._mp_proc.is_alive():
+                    try:
+                        self._mp_proc.terminate()
+                    except Exception:
+                        pass
+                    try:
+                        self._mp_proc.join(timeout=1.0)
+                    except Exception:
+                        pass
+            finally:
+                try:
+                    if getattr(self, "_mp_queue", None) is not None:
+                        try:
+                            self._mp_queue.close()
+                        except Exception:
+                            pass
+                        try:
+                            self._mp_queue.join_thread()
+                        except Exception:
+                            pass
+                finally:
+                    self._mp_proc = None
+                    self._mp_queue = None
+
+            # Terminate ffmpeg if currently converting
+            try:
+                if getattr(self, "_ffmpeg_proc", None) is not None and self._ffmpeg_proc.poll() is None:
+                    try:
+                        self._ffmpeg_proc.terminate()
+                    except Exception:
+                        pass
+                    try:
+                        self._ffmpeg_proc.wait(timeout=1.0)
+                    except Exception:
+                        try:
+                            self._ffmpeg_proc.kill()
+                        except Exception:
+                            pass
+            finally:
+                self._ffmpeg_proc = None
+
+            # Join worker threads briefly to give them a chance to exit
+            try:
+                for th in list(getattr(self, "_worker_threads", [])):
+                    try:
+                        th.join(timeout=2.0)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        except Exception:
+            pass
+
         # remember some settings for the next run
         try:
             config['last_language'] = self.option_menu_language.get()
@@ -3078,6 +3189,10 @@ class App(ctk.CTk):
 
             save_config()
         finally:
+            try:
+                self.quit()
+            except Exception:
+                pass
             self.destroy()
 
 def run_cli_mode(args):
