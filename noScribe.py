@@ -1772,7 +1772,9 @@ class App(ctk.CTk):
         """Ask for confirmation, then cancel running job and mark all pending jobs as canceled.
         Returns False if user does not confirm cancelation."""
         try:
-            if ask_before_canceling and not tk.messagebox.askyesno(title='noScribe', message=t('queue_cancel_all_confirm')):
+            if (ask_before_canceling and
+                   (self.queue.is_running() or self.queue.has_pending_jobs()) and 
+                   not tk.messagebox.askyesno(title='noScribe', message=t('queue_cancel_all_confirm'))):
                 return False
             # Mark waiting jobs as canceled immediately
             for job in self.queue.get_waiting_jobs():
