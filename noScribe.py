@@ -1761,11 +1761,12 @@ class App(ctk.CTk):
         except Exception:
             pass
 
-    def on_queue_stop(self):
-        """Ask for confirmation, then cancel running job and mark all pending jobs as canceled."""
+    def on_queue_stop(self, ask_before_canceling=True) -> bool:
+        """Ask for confirmation, then cancel running job and mark all pending jobs as canceled.
+        Returns False if user does not confirm cancelation."""
         try:
-            if not tk.messagebox.askyesno(title='noScribe', message=t('queue_cancel_all_confirm')):
-                return
+            if ask_before_canceling and not tk.messagebox.askyesno(title='noScribe', message=t('queue_cancel_all_confirm')):
+                return False
             # Mark waiting jobs as canceled immediately
             for job in self.queue.get_waiting_jobs():
                 try:
@@ -1781,6 +1782,7 @@ class App(ctk.CTk):
             self.update_queue_table()
         except Exception:
             pass
+        return True
 
     def _on_queue_row_action(self, job: TranscriptionJob):
         """Handle click on the small X button for a job row."""
@@ -3056,8 +3058,16 @@ class App(ctk.CTk):
     def on_closing(self):
         # (see: https://stackoverflow.com/questions/111155/how-do-i-handle-the-window-close-event-in-tkinter)
         #if messagebox.askokcancel("Quit", "Do you want to quit?"):
+
+        # Stop all running jobs:
         try:
-            # remember some settings for the next run
+            if not self.on_queue_stop(ask_before_canceling=True):
+                return # user has aborted cancelation of waiting jobs
+        except:
+            pass
+        
+        # remember some settings for the next run
+        try:
             config['last_language'] = self.option_menu_language.get()
             config['last_speaker'] = self.option_menu_speaker.get()
             config['last_whisper_model'] = self.option_menu_whisper_model.get()
