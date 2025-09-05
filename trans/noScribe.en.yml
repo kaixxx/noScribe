@@ -116,6 +116,7 @@ en:
   err_ffmpeg: 'ffmpeg returned an error'
   err_converting_audio: Error in step 1 - converting the audio.
   err_identifying_speakers: Error in step 2 - identifiying the speakers.
+  err_loading_prompt: 'Warning: Failed to load whisper prompt.'
   transcription_canceled: 'Do you really want to cancel the transcription?'  
   queue_cancel_all_confirm: 'This will cancel all unfinished jobs in the queue. Do you want to continue?' 
   err_user_cancelation: 'Process has been canceled by the user.'

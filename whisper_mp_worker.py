@@ -100,12 +100,16 @@ def whisper_proc_entrypoint(args: dict, q):
         # Build prompt/hotwords if disfluencies suppression is requested
         prompt = ""
         if args.get("disfluencies", False):
-            try:
-                with open(os.path.join(app_dir, 'prompt.yml'), 'r', encoding='utf-8') as f:
-                    prompts = yaml.safe_load(f) or {}
-                prompt = prompts.get(whisper_lang, '')
-            except Exception:
-                prompt = ""
+            prompt_file = 'prompt.yml'
+        else:
+            prompt_file = 'prompt_nd.yml'         
+        try:
+            with open(os.path.join(app_dir, prompt_file), 'r', encoding='utf-8') as f:
+                prompts = yaml.safe_load(f) or {}
+            prompt = prompts.get(whisper_lang, '')
+        except Exception:
+            log_cb('error', t('err_loading_prompt') + '\n')
+            prompt = ""
 
         # Perform transcription (streaming)
         segments, info = model.transcribe(
