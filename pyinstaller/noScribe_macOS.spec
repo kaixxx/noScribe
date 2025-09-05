@@ -30,7 +30,7 @@ noScribe_datas += collect_data_files('customtkinter')
 noScribe_datas += copy_metadata('AdvancedHTMLParser')
 noScribe_datas += collect_data_files('faster_whisper')
 
-# pyannote integration (mirror Windows spec approach)
+# pyannote integration
 noScribe_datas += [('../pyannote/', './pyannote/')]
 noScribe_datas += collect_data_files('lightning')
 noScribe_datas += collect_data_files('gradio')
@@ -117,6 +117,6 @@ app = BUNDLE(
     name='noScribe.app',
     icon='../noScribeLogo.ico',
     bundle_identifier=None,
-    info_plist={"CFBundleShortVersionString":"0.6"},
+    info_plist={"CFBundleShortVersionString":"0.7"},
 )
 
