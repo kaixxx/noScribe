@@ -2,7 +2,13 @@ import os
 import platform
 import traceback
 from dataclasses import asdict, is_dataclass
+import os
 
+if platform.system() == "Darwin" and platform.machine() == "x86_64":
+    os.environ.setdefault("OMP_NUM_THREADS", "1")
+    os.environ.setdefault("MKL_NUM_THREADS", "1")
+    os.environ.setdefault("MKL_THREADING_LAYER", "GNU")
+    os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")  # temp workaround for iomp5 dup
 
 def pyannote_proc_entrypoint(args: dict, q):
     """Runs diarization in a child process and streams progress/logs.
@@ -15,6 +21,8 @@ def pyannote_proc_entrypoint(args: dict, q):
     try:
         import yaml
         import torch
+        if platform.system() == "Darwin" and platform.machine() == "x86_64":
+           torch.set_num_threads(1)
         from pyannote.audio import Pipeline
         from tempfile import TemporaryDirectory
 
