@@ -3035,7 +3035,7 @@ class App(ctk.CTk):
         args = {
             "device": job.pyannote_xpu,
             "audio_path": tmp_audio_file,
-            "num_speakers": (job.speaker_detection if isinstance(job.speaker_detection, int) else None),
+            "num_speakers": (int(job.speaker_detection) if str(job.speaker_detection).isdigit() else None),
         }
         proc = ctx.Process(target=pyannote_proc_entrypoint, args=(args, q))
         proc.start()
