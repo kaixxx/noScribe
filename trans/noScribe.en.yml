@@ -78,7 +78,7 @@ en:
   # log messages
   log_transcript_filename: 'Transcript filename(s): '
   log_audio_file_selected: 'Audio file(s) selected: '
-  queue_added_job: 'Added job "%{audio_file}"" to queue.'
+  queue_added_job: 'Added job "%{audio_file}" to queue.'
   queue_start: === Starting queue ===
   queue_start_jobs: Processing %{total} transcription job(s)
   queue_none_waiting: 'Nothing to do, the queue contains no waiting jobs.'

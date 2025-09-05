@@ -26,9 +26,11 @@ zh-CN: &defaults
   tab_queue: 队列
   label_audio_file: '音频文件：'
   label_audio_file_name: <选择文件>
+  multiple_audio_files: '（已选择多个文件）'
   
   label_transcript_file: '保存转录文件为：'
   label_transcript_file_name: <选择文件名> 
+  output_dir_selection: '多个音频文件：请选择一个目录保存转录结果。文件名将自动生成。'
 
   label_start: '开始（hh:mm:ss）：'
   label_stop: '结束（hh:mm:ss）：'
@@ -62,14 +64,15 @@ zh-CN: &defaults
   # 队列提示
   job_tt_waiting: '任务等待中...'
   job_tt_running: '任务运行中。详情请查看日志标签。'
-  job_tt_finished: '成功。点击右侧的“✔”按钮，在 noScribe 编辑器中打开输出。'
+  job_tt_finished: '已完成。点击右侧“✔”查看结果。'
+  job_tt_transcript_file: '转录：'
   job_tt_canceling: '正在取消...'
   job_tt_canceled: '作业已被用户取消。'
   job_tt_error: '处理任务时发生错误：%{error_msg}'
 
   # 日志信息
-  log_transcript_filename: '转录文件名：'
-  log_audio_file_selected: '已选择音频文件：'
+  log_transcript_filename: '转录文件名（可多个）：'
+  log_audio_file_selected: '已选择音频文件（可多个）：'
   queue_added_job: '已将任务“%{audio_file}”添加到队列。'
   queue_start: '=== 开始队列 ==='
   queue_start_jobs: '正在处理 %{total} 个转录任务'

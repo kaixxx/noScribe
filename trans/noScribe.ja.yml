@@ -27,9 +27,11 @@ ja:
   tab_queue: キュー
   label_audio_file: '音声ファイル：'
   label_audio_file_name: <ファイルを選択>
+  multiple_audio_files: '（複数のファイルが選択されています）'
   
   label_transcript_file: '転写を保存：'
   label_transcript_file_name: <ファイル名を選択> 
+  output_dir_selection: '複数の音声ファイル: 文字起こしの保存先フォルダを選択してください。ファイル名は自動で生成されます。'
 
   label_start: '開始（hh:mm:ss）：'
   label_stop: '終了（hh:mm:ss）：' 
@@ -62,14 +64,15 @@ ja:
   # ジョブキューのツールチップ
   job_tt_waiting: 'ジョブ待機中...'
   job_tt_running: 'ジョブ実行中。詳細はログタブを参照してください。'
-  job_tt_finished: '成功。右側の「✔」ボタンをクリックして、noScribe エディターで出力を開きます。'
+  job_tt_finished: '完了。右側の「✔」をクリックして結果を表示します。'
+  job_tt_transcript_file: '転写:'
   job_tt_canceling: 'キャンセル中...'
   job_tt_canceled: 'ユーザーによりジョブがキャンセルされました。'
   job_tt_error: 'ジョブ処理中にエラーが発生しました: %{error_msg}'
 
   # ログメッセージ
-  log_transcript_filename: '転写ファイル名：'
-  log_audio_file_selected: '選択された音声ファイル：'
+  log_transcript_filename: '転写ファイル名（複数可）：'
+  log_audio_file_selected: '選択された音声ファイル（複数可）：'
   queue_added_job: 'ジョブ「%{audio_file}」をキューに追加しました。'
   queue_start: '=== キューを開始 ==='
   queue_start_jobs: '%{total} 個の転写ジョブを処理中'

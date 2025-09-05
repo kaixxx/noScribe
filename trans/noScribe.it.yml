@@ -26,9 +26,11 @@ it:
   tab_queue: Coda
   label_audio_file: 'File audio:'
   label_audio_file_name: <seleziona file>
+  multiple_audio_files: '(più file selezionati)'
   
   label_transcript_file: 'Salva trascrizione come:'
   label_transcript_file_name: <seleziona nome file> 
+  output_dir_selection: 'Più file audio: seleziona una cartella in cui salvare le trascrizioni. I nomi verranno generati automaticamente.'
 
   label_start: 'Inizio (hh:mm:ss): '
   label_stop: 'Fine (hh:mm:ss): ' 
@@ -62,14 +64,15 @@ it:
   # Suggerimenti della coda di lavori
   job_tt_waiting: 'Processo in attesa...'
   job_tt_running: 'Processo in esecuzione. Vedi la scheda registro per i dettagli.'
-  job_tt_finished: "Operazione riuscita. Fai clic sul pulsante '✔' a destra per aprire l'output nell'editor di noScribe."
+  job_tt_finished: 'Completato. Clicca su "✔" a destra per vedere il risultato.'
+  job_tt_transcript_file: 'Trascrizione:'
   job_tt_canceling: 'Annullamento in corso...'
   job_tt_canceled: 'Attività annullata dall’utente.'
   job_tt_error: "Si è verificato un errore durante l'elaborazione: %{error_msg}"
 
   # Messaggi di log
-  log_transcript_filename: 'Nome file trascrizione: '
-  log_audio_file_selected: 'File audio selezionato: '
+  log_transcript_filename: 'Nome/i file della trascrizione: '
+  log_audio_file_selected: 'File audio selezionato/i: '
   queue_added_job: 'Attività "%{audio_file}" aggiunta alla coda.'
   queue_start: '=== Avvio della coda ==='
   queue_start_jobs: 'Elaborazione di %{total} attività di trascrizione'

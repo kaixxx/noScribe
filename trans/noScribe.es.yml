@@ -26,9 +26,11 @@ es:
   tab_queue: Cola
   label_audio_file: 'Archivo de audio:'
   label_audio_file_name: <seleccionar archivo>
+  multiple_audio_files: '(varios archivos seleccionados)'
   
   label_transcript_file: 'Guardar transcripción como:'
   label_transcript_file_name: <seleccionar nombre de archivo> 
+  output_dir_selection: 'Varios archivos de audio: Selecciona un directorio donde se guardarán las transcripciones. Los nombres se generarán automáticamente.'
 
   label_start: 'Inicio (hh:mm:ss): '
   label_stop: 'Fin (hh:mm:ss): ' 
@@ -62,14 +64,15 @@ es:
   # Información sobre la cola de trabajos
   job_tt_waiting: 'Tarea en espera...'
   job_tt_running: 'La tarea se está ejecutando. Vea la pestaña de registro para detalles.'
-  job_tt_finished: 'Éxito. Haz clic en el botón "✔" de la derecha para abrir la salida en el editor de noScribe.'
+  job_tt_finished: 'Finalizado. Haz clic en "✔" a la derecha para ver el resultado.'
+  job_tt_transcript_file: 'Transcripción:'
   job_tt_canceling: 'Cancelando...'
   job_tt_canceled: 'Trabajo cancelado por el usuario.'
   job_tt_error: 'Se produjo un error durante el procesamiento: %{error_msg}'
 
   # Mensajes de registro
-  log_transcript_filename: 'Nombre de archivo de transcripción: '
-  log_audio_file_selected: 'Archivo de audio seleccionado: '
+  log_transcript_filename: 'Nombre(s) de archivo de transcripción: '
+  log_audio_file_selected: 'Archivo(s) de audio seleccionado(s): '
   queue_added_job: 'Trabajo "%{audio_file}" añadido a la cola.'
   queue_start: '=== Iniciando cola ==='
   queue_start_jobs: 'Procesando %{total} trabajo(s) de transcripción'

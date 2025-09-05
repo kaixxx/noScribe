@@ -27,9 +27,11 @@ de:
   tab_queue: Warteschlange
   label_audio_file: 'Audiodatei:'
   label_audio_file_name: <Audiodatei wählen>
+  multiple_audio_files: '(mehrere Dateien ausgewählt)'
   
   label_transcript_file: 'Transkript speichern unter:'
   label_transcript_file_name: <Dateinamen auswählen> 
+  output_dir_selection: 'Mehrere Audiodateien: Bitte einen Ordner wählen, in dem die Transkripte gespeichert werden. Die Dateinamen werden automatisch erzeugt.'
 
   label_start: 'Start (hh:mm:ss): '
   label_stop: 'Stop (hh:mm:ss): ' 
@@ -63,14 +65,15 @@ de:
   # job queue tooltips
   job_tt_waiting: 'Auftrag wartet.'
   job_tt_running: 'Auftrag läuft. Details im Protokoll-Tab.'
-  job_tt_finished: 'Erfolg. Klicke rechts auf die Schaltfläche "✔", um die Ausgabe im noScribe-Editor zu öffnen.'
+  job_tt_finished: 'Fertig. Rechts auf "✔" klicken, um das Ergebnis zu sehen.'
+  job_tt_transcript_file: 'Transkript:'
   job_tt_canceling: 'Abbruch läuft...'
   job_tt_canceled: 'Auftrag vom Benutzer abgebrochen.'
   job_tt_error: 'Fehler bei der Auftragsverarbeitung: %{error_msg}'
 
   # log messages
-  log_transcript_filename: 'Transkript-Dateiname: '
-  log_audio_file_selected: 'Gewählte Audiodatei: '
+  log_transcript_filename: 'Transkript-Dateiname(n): '
+  log_audio_file_selected: 'Gewählte Audiodatei(en): '
   queue_added_job: 'Auftrag "%{audio_file}" zur Warteschlange hinzugefügt.'
   queue_start: '=== Warteschlange wird gestartet ==='
   queue_start_jobs: 'Bearbeite %{total} Transkriptionsauftrag/-aufträge'

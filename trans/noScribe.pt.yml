@@ -27,9 +27,11 @@ pt:
   tab_queue: Fila
   label_audio_file: 'Arquivo de áudio:'
   label_audio_file_name: <selecionar arquivo>
+  multiple_audio_files: '(vários arquivos selecionados)'
   
   label_transcript_file: 'Salvar transcrição como:'
   label_transcript_file_name: <selecionar nome de arquivo> 
+  output_dir_selection: 'Vários arquivos de áudio: selecione um diretório onde as transcrições serão salvas. Os nomes serão gerados automaticamente.'
 
   label_start: 'Início (hh:mm:ss): '
   label_stop: 'Parar (hh:mm:ss): ' 
@@ -63,14 +65,15 @@ pt:
   # Dicas da fila de trabalhos
   job_tt_waiting: 'Tarefa aguardando...'
   job_tt_running: 'Tarefa em execução. Veja a aba de registro para detalhes.'
-  job_tt_finished: 'Sucesso. Clique no botão "✔" à direita para abrir o resultado no editor noScribe.'
+  job_tt_finished: 'Concluído. Clique em "✔" à direita para ver o resultado.'
+  job_tt_transcript_file: 'Transcrição:'
   job_tt_canceling: 'Cancelando...'
   job_tt_canceled: 'Tarefa cancelada pelo usuário.'
   job_tt_error: 'Ocorreu um erro durante o processamento: %{error_msg}'
 
   # Mensagens de log
-  log_transcript_filename: 'Nome do arquivo de transcrição: '
-  log_audio_file_selected: 'Arquivo de áudio selecionado: '
+  log_transcript_filename: 'Nome(s) do arquivo de transcrição: '
+  log_audio_file_selected: 'Arquivo(s) de áudio selecionado(s): '
   queue_added_job: 'Tarefa "%{audio_file}" adicionada à fila.'
   queue_start: '=== Iniciando fila ==='
   queue_start_jobs: 'Processando %{total} tarefa(s) de transcrição'

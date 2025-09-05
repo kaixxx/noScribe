@@ -26,9 +26,11 @@ fr:
   tab_queue: File d'attente
   label_audio_file: "Fichier audio :"
   label_audio_file_name: <sélectionner un fichier>
+  multiple_audio_files: '(plusieurs fichiers sélectionnés)'
   
   label_transcript_file: "Enregistrer la transcription sous :"
   label_transcript_file_name: <sélectionner un nom de fichier>
+  output_dir_selection: 'Plusieurs fichiers audio : sélectionnez un dossier où enregistrer les transcriptions. Les noms seront générés automatiquement.'
 
   label_start: "Début (hh:mm:ss) : "
   label_stop: "Fin (hh:mm:ss) : " 
@@ -62,14 +64,15 @@ fr:
   # Info-bulles de la file d'attente
   job_tt_waiting: 'Tâche en attente...'
   job_tt_running: "La tâche est en cours. Voir l'onglet journal pour les détails."
-  job_tt_finished: "Succès. Cliquez sur le bouton \"✔\" à droite pour ouvrir le résultat dans l’éditeur noScribe."
+  job_tt_finished: "Terminé. Cliquez sur \"✔\" à droite pour voir le résultat."
+  job_tt_transcript_file: 'Transcription :'
   job_tt_canceling: 'Annulation en cours...'
   job_tt_canceled: 'Tâche annulée par l’utilisateur.'
   job_tt_error: "Une erreur est survenue lors du traitement de la tâche : %{error_msg}"
 
   # Messages de journalisation
-  log_transcript_filename: "Nom du fichier de transcription : "
-  log_audio_file_selected: "Fichier audio sélectionné : "
+  log_transcript_filename: "Nom(s) de fichier de transcription : "
+  log_audio_file_selected: "Fichier(s) audio sélectionné(s) : "
   queue_added_job: 'Tâche "%{audio_file}" ajoutée à la file d’attente.'
   queue_start: '=== Démarrage de la file d'attente ==='
   queue_start_jobs: 'Traitement de %{total} tâche(s) de transcription'

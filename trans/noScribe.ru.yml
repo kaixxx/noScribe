@@ -27,9 +27,11 @@ ru:
   tab_queue: Очередь
   label_audio_file: 'Аудиофайл:'
   label_audio_file_name: <выберите файл>
+  multiple_audio_files: '(выбрано несколько файлов)'
   
   label_transcript_file: 'Сохранить транскрипцию как:'
   label_transcript_file_name: <выберите имя файла> 
+  output_dir_selection: 'Несколько аудиофайлов: выберите папку, в которой будут сохранены расшифровки. Имена будут сгенерированы автоматически.'
 
   label_start: 'Начало (чч:мм:сс): '
   label_stop: 'Окончание (чч:мм:сс): ' 
@@ -63,14 +65,15 @@ ru:
   # Подсказки очереди заданий
   job_tt_waiting: 'Задача ожидает...'
   job_tt_running: 'Задача выполняется. Подробности смотрите во вкладке журнала.'
-  job_tt_finished: 'Успешно. Нажмите кнопку «✔» справа, чтобы открыть результат в редакторе noScribe.'
+  job_tt_finished: 'Готово. Нажмите «✔» справа, чтобы посмотреть результат.'
+  job_tt_transcript_file: 'Транскрипция:'
   job_tt_canceling: 'Отмена выполняется...'
   job_tt_canceled: 'Задание отменено пользователем.'
   job_tt_error: 'Во время обработки задачи произошла ошибка: %{error_msg}'
 
   # Сообщения журнала
-  log_transcript_filename: 'Имя файла транскрипции: '
-  log_audio_file_selected: 'Выбран аудиофайл: '
+  log_transcript_filename: 'Имя файла(ов) транскрипции: '
+  log_audio_file_selected: 'Выбран(ы) аудиофайл(ы): '
   queue_added_job: 'Задание «%{audio_file}» добавлено в очередь.'
   queue_start: '=== Запуск очереди ==='
   queue_start_jobs: 'Обработка %{total} задания(ий) на транскрипцию'
