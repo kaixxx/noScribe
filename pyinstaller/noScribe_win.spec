@@ -21,7 +21,8 @@ noScribe_datas += [
 ('../graphic_sw.png', '.'), 
 ('../LICENSE.txt', '.'), 
 ('../noScribeLogo.ico', '.'), 
-('../prompt.yml', '.'), 
+('../prompt.yml', '.'),
+('../prompt_nd.yml', '.'), 
 ('../README.md', '.')]
 noScribe_datas += collect_data_files('customtkinter')
 noScribe_datas += copy_metadata('AdvancedHTMLParser')
