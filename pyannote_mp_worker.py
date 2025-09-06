@@ -22,7 +22,7 @@ def pyannote_proc_entrypoint(args: dict, q):
         import yaml
         import torch
         if platform.system() == "Darwin" and platform.machine() == "x86_64":
-           torch.set_num_threads(1)
+           torch.set_num_threads(1)        
         from pyannote.audio import Pipeline
         from tempfile import TemporaryDirectory
 
@@ -53,7 +53,6 @@ def pyannote_proc_entrypoint(args: dict, q):
                 except Exception:
                     pass
 
-        device = args.get("device", "cpu")
         audio_file = args.get("audio_path")
         num_speakers = args.get("num_speakers")
         app_dir = os.path.abspath(os.path.dirname(__file__))
@@ -61,7 +60,20 @@ def pyannote_proc_entrypoint(args: dict, q):
             raise FileNotFoundError(audio_file)
 
         plog("debug", "Subprocess (diarize) started. Initializing PyAnnote pipeline...")
-
+        
+        # determine xpu
+        device = args.get("device", "")
+        if device != 'cpu':
+            if platform.system() == "Darwin":  # MAC
+                device = 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu'
+            elif platform.system() in ('Windows', 'Linux'):
+                try:
+                    device = 'cuda' if torch.cuda.is_available() and torch.cuda.device_count() > 0 else 'cpu'
+                except:
+                    device = 'cpu'
+            else:
+                raise Exception('Platform not supported yet.')
+        
         if platform.system() == 'Windows':
             # On Windows in a PyInstaller build, relative paths inside the YAML
             # will not resolve from the current working directory. Normalize

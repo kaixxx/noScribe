@@ -40,9 +40,9 @@ from subprocess import run, call, Popen, PIPE, STDOUT, DEVNULL
 if platform.system() == 'Windows':
     # import torch.cuda # to check with torch.cuda.is_available()
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
-if platform.system() in ("Windows", "Linux"):
-    from ctranslate2 import get_cuda_device_count
-    import torch
+#if platform.system() in ("Windows", "Linux"):
+#    from ctranslate2 import get_cuda_device_count
+#    import torch
 import re
 if platform.system() == "Darwin": # = MAC
     from subprocess import check_output
@@ -184,12 +184,14 @@ try:
 except: # seems we run it for the first time and there is no config file
     config = {}
     
-def get_config(key: str, default):
+def get_config(key: str, default) -> str:
     """ Get a config value, set it if it doesn't exist """
     if key not in config:
         config[key] = default
     return config[key]
 
+force_pyannote_cpu = get_config('force_pyannote_cpu', '').lower() == 'true'
+force_whisper_cpu = get_config('force_whisper_cpu', '').lower() == 'true'
     
 def version_higher(version1, version2) -> int:
     """Will return 
@@ -212,15 +214,6 @@ def version_higher(version1, version2) -> int:
     # must be completly equal
     return 0
     
-# In versions < 0.4.5 (Windows/Linux only), 'pyannote_xpu' was always set to 'cpu'.
-# Delete this so we can determine the optimal value  
-if platform.system() in ('Windows', 'Linux'):
-    try:
-        if version_higher('0.4.5', config['app_version']) == 1:
-            del config['pyannote_xpu'] 
-    except:
-        pass
-
 config['app_version'] = app_version
 
 def save_config():
@@ -444,7 +437,6 @@ class TranscriptionJob:
         self.pause_marker: str = '.'
         self.auto_save: bool = True
         self.auto_edit_transcript: bool = True
-        self.pyannote_xpu: str = 'cpu'
         self.whisper_xpu: str = 'cpu'  # Windows/Linux only
         self.vad_threshold: float = 0.5
         
@@ -728,6 +720,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     job.vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
     
     # Platform-specific XPU settings
+    """    
     if platform.system() == "Darwin":  # MAC
         xpu = get_config('pyannote_xpu', 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu')
         job.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
@@ -742,6 +735,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
         job.whisper_xpu = 'cuda' if whisper_xpu == 'cuda' else 'cpu'
     else:
         raise Exception('Platform not supported yet.')
+    """    
     
     # Check for invalid VTT options
     if job.file_ext == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
@@ -2334,6 +2328,7 @@ class App(ctk.CTk):
                     self.logn('    {:24}: {}'.format(key, value), where="file")
             elif platform.system() == "Darwin": # = MAC
                 self.logn(f"System: MAC {platform.machine()}", where="file")
+                """
                 if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
                     if job.pyannote_xpu == 'mps':
                         self.logn("macOS version >= 12.3:\nUsing MPS (with PYTORCH_ENABLE_MPS_FALLBACK enabled)", where="file")
@@ -2343,7 +2338,7 @@ class App(ctk.CTk):
                         self.logn("macOS version >= 12.3:\nInvalid option for 'pyannote_xpu' in config.yml (should be 'mps' or 'cpu')\nYou might wanna change this\nUsing MPS anyway (with PYTORCH_ENABLE_MPS_FALLBACK enabled)", where="file")
                 else:
                     self.logn("macOS version < 12.3:\nMPS not available: Using CPU\nPerformance might be poor\nConsider updating macOS, if possible", where="file")
-
+                """
             try:
 
                 #-------------------------------------------------------
@@ -3035,7 +3030,7 @@ class App(ctk.CTk):
         q = ctx.Queue()
         from pyannote_mp_worker import pyannote_proc_entrypoint
         args = {
-            "device": job.pyannote_xpu,
+            "device": 'cpu' if force_pyannote_cpu else '',
             "audio_path": tmp_audio_file,
             "num_speakers": (int(job.speaker_detection) if str(job.speaker_detection).isdigit() else None),
         }
@@ -3067,9 +3062,6 @@ class App(ctk.CTk):
                 if mtype == "log":
                     txt = msg.get("msg", "")
                     self.logn('PyAnnote ' + txt, where='file')
-                    if txt.strip() == "log: 'pyannote_xpu: cpu' was set.":
-                        job.pyannote_xpu = 'cpu'
-                        config['pyannote_xpu'] = 'cpu'
                 elif mtype == "progress":
                     step_name = str(msg.get("step", ""))
                     progress_percent = int(msg.get("pct", 0))
