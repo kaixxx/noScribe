@@ -67,7 +67,6 @@ if platform.system() == 'Darwin':
 import logging
 import json
 import urllib
-import multiprocessing
 import multiprocessing as mp
 import queue as pyqueue
 import gc
@@ -76,7 +75,7 @@ from enum import Enum
 from typing import Optional, List
 
  # Pyinstaller fix, used to open multiple instances on Mac
-multiprocessing.freeze_support()
+mp.freeze_support()
 
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
