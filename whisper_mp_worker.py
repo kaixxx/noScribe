@@ -1,5 +1,6 @@
 import gc
 import os
+import platform
 import traceback
 from dataclasses import asdict, is_dataclass
 from i18n import t
@@ -42,18 +43,15 @@ def whisper_proc_entrypoint(args: dict, q):
         except Exception:
             # Safe fallback: leave i18n defaults; keys may pass through
             pass
-
-        # plog("debug", "Subprocess started. Initializing Whisper model...")
-
+            
         # Build model in child using provided options
         model = WhisperModel(
             args["model_name_or_path"],
-            device=args.get("device", "cpu"),
+            device=args.get("device", "auto"),
             compute_type=args.get("compute_type", "float16"),
             cpu_threads=args.get("cpu_threads", 4),
             local_files_only=args.get("local_files_only", True),
         )
-        # plog("debug", "Model loaded in subprocess")
 
         # Define callbacks that forward to parent via queue (not used by faster-whisper directly, but kept for parity)
         def log_cb(level, msg):

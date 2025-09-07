@@ -2899,14 +2899,6 @@ class App(ctk.CTk):
         Calls on_segment(dict) for each segment streamed by the child.
         Returns a simple info object (duration at least).
         """
-        # Build args for child process matching previous model/transcribe kwargs
-        if platform.system() == "Darwin":
-            whisper_device = 'auto'
-        elif platform.system() in ('Windows', 'Linux'):
-            whisper_device = job.whisper_xpu
-        else:
-            raise Exception('Platform not supported yet.')
-
         # Language code for non-auto/multilingual
         language_code = None
         if job.language_name not in ('Auto', 'Multilingual'):
@@ -2923,7 +2915,7 @@ class App(ctk.CTk):
 
         args = {
             "model_name_or_path": job.whisper_model,
-            "device": whisper_device,
+            "device": 'cpu' if force_whisper_cpu else 'auto',
             "compute_type": job.whisper_compute_type,
             "cpu_threads": number_threads,
             "local_files_only": True,
