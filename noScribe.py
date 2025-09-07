@@ -193,11 +193,17 @@ def get_config(key: str, default) -> str:
 force_pyannote_cpu = get_config('force_pyannote_cpu', '').lower() == 'true'
 force_whisper_cpu = get_config('force_whisper_cpu', '').lower() == 'true'
     
-def version_higher(version1, version2) -> int:
+def version_higher(version1, version2, subversion_level=99) -> int:
     """Will return 
     1 if version1 is higher
     2 if version2 is higher
-    0  if both are equal """
+    0  if both are equal 
+    
+    subversion_level: Adjusts how deep suversions are compared. 
+                      If subversion_level = 1, "0.7.3" and "0.7.4" will be equal, because the comparison
+                      stops after the first level of subversions ("0.7").  
+                      Default: 99
+    """
     version1_elems = version1.split('.')
     version2_elems = version2.split('.')
     # make both versions the same length
@@ -211,6 +217,8 @@ def version_higher(version1, version2) -> int:
             return 1
         elif int(version2_elems[i]) > int(version1_elems[i]):
             return 2
+        if i >= subversion_level:
+            break
     # must be completly equal
     return 0
     
@@ -1420,7 +1428,9 @@ class App(ctk.CTk):
                     headers={'Accept': 'application/vnd.github.v3+json'},),
                     timeout=2).read())
                 latest_release_version = str(latest_release['tag_name']).lstrip('v')
-                if version_higher(latest_release_version, app_version) == 1:
+                if version_higher(latest_release_version, app_version, subversion_level=1) == 1:
+                    # Only major release changes like 0.6 ->_0.7 (subversion_level 1) are indicated in the
+                    # UI, not smaller subversion like 0.7.3 -> 0.7.4
                     self.logn(t('new_release', v=latest_release_version), 'highlight')
                     self.logn(str(latest_release['body'])) # release info
                     self.log(t('new_release_download'))
