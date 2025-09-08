@@ -65,7 +65,7 @@ def pyannote_proc_entrypoint(args: dict, q):
         device = args.get("device", "")
         if device != 'cpu':
             if platform.system() == "Darwin":  # MAC
-                device = 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu'
+                device = 'mps' if platform.mac_ver()[0] >= '12.3' and torch.backends.mps.is_available() else 'cpu'
             elif platform.system() in ('Windows', 'Linux'):
                 try:
                     device = 'cuda' if torch.cuda.is_available() and torch.cuda.device_count() > 0 else 'cpu'
@@ -73,51 +73,22 @@ def pyannote_proc_entrypoint(args: dict, q):
                     device = 'cpu'
             else:
                 raise Exception('Platform not supported yet.')
-        
-        if platform.system() == 'Windows':
-            # On Windows in a PyInstaller build, relative paths inside the YAML
-            # will not resolve from the current working directory. Normalize
-            # model paths to absolute paths relative to the app directory.
-            with open(os.path.join(app_dir, 'pyannote', 'pyannote_config.yaml'), 'r') as yaml_file:
-                pyannote_config = yaml.safe_load(yaml_file)
 
-            pyannote_config['pipeline']['params']['embedding'] = os.path.join(
-                app_dir, *pyannote_config['pipeline']['params']['embedding'].split("/"))
-            pyannote_config['pipeline']['params']['segmentation'] = os.path.join(
-                app_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/"))
+        # Expand relative model paths to absolute paths inside app folder
+        with open(os.path.join(app_dir, 'pyannote', 'pyannote_config.yaml'), 'r') as yaml_file:
+            pyannote_config = yaml.safe_load(yaml_file)
+        pyannote_config['pipeline']['params']['embedding'] = os.path.join(
+            app_dir, *pyannote_config['pipeline']['params']['embedding'].split("/"))
+        pyannote_config['pipeline']['params']['segmentation'] = os.path.join(
+            app_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/"))
 
-            tmpdir = TemporaryDirectory('noScribe_diarize')
-            tmp_cfg = os.path.join(tmpdir.name, 'pyannote_config_windows.yaml')
-            with open(tmp_cfg, 'w') as yaml_file:
-                yaml.safe_dump(pyannote_config, yaml_file)
+        tmpdir = TemporaryDirectory('noScribe_diarize')
+        tmp_cfg = os.path.join(tmpdir.name, 'pyannote_config_macOS.yaml')
+        with open(tmp_cfg, 'w') as yaml_file:
+            yaml.safe_dump(pyannote_config, yaml_file)
 
-            pipeline = Pipeline.from_pretrained(tmp_cfg)
-            pipeline.to(torch.device(device))
-        elif platform.system() in ("Darwin", "Linux"):
-            if device == 'mps' and not torch.backends.mps.is_available():
-                # Mirror the exact log strings expected by parent
-                plog("info", "log: 'pyannote_xpu: mps' was selected, but mps is not available on this system!")
-                plog("info", "log: This happens, because availability cannot be checked earlier.")
-                plog("info", "log: 'pyannote_xpu: cpu' was set.")
-                device = 'cpu'
-            with open(os.path.join(app_dir, 'pyannote', 'pyannote_config.yaml'), 'r') as yaml_file:
-                pyannote_config = yaml.safe_load(yaml_file)
-
-            # Expand relative model paths to absolute paths inside app folder
-            pyannote_config['pipeline']['params']['embedding'] = os.path.join(
-                app_dir, *pyannote_config['pipeline']['params']['embedding'].split("/"))
-            pyannote_config['pipeline']['params']['segmentation'] = os.path.join(
-                app_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/"))
-
-            tmpdir = TemporaryDirectory('noScribe_diarize')
-            tmp_cfg = os.path.join(tmpdir.name, 'pyannote_config_macOS.yaml')
-            with open(tmp_cfg, 'w') as yaml_file:
-                yaml.safe_dump(pyannote_config, yaml_file)
-
-            pipeline = Pipeline.from_pretrained(tmp_cfg)
-            pipeline.to(torch.device(device))
-        else:
-            raise Exception('Platform not supported yet.')
+        pipeline = Pipeline.from_pretrained(tmp_cfg)
+        pipeline.to(torch.device(device))
 
         seg_list = []
         with SimpleProgressHook() as hook:

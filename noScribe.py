@@ -3182,6 +3182,8 @@ class App(ctk.CTk):
             config['last_overlapping'] = self.check_box_overlapping.get()
             config['last_timestamps'] = self.check_box_timestamps.get()
             config['last_disfluencies'] = self.check_box_disfluencies.get()
+            config['force_pyannote_cpu'] = str(force_pyannote_cpu)
+            config['force_whisper_cpu'] = str(force_whisper_cpu)
 
             save_config()
         finally:
