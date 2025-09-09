@@ -444,8 +444,7 @@ class TranscriptionJob:
         self.timestamp_color: str = '#78909C'
         self.pause_marker: str = '.'
         self.auto_save: bool = True
-        self.auto_edit_transcript: bool = True
-        self.whisper_xpu: str = 'cpu'  # Windows/Linux only
+        self.whisper_xpu: str = 'cpu' 
         self.vad_threshold: float = 0.5
         
         # Derived properties
@@ -655,7 +654,7 @@ class TranscriptionQueue:
 def create_transcription_job(audio_file=None, transcript_file=None, start_time=None, stop_time=None,
                            language_name=None, whisper_model_name=None, speaker_detection=None,
                            overlapping=None, timestamps=None, disfluencies=None, pause=None,
-                           auto_edit_transcript=None, cli_mode=False) -> TranscriptionJob:
+                           cli_mode=False) -> TranscriptionJob:
     """Create a TranscriptionJob with all default values
     
     This function handles both CLI and GUI job creation, ensuring all defaults
@@ -716,15 +715,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     job.timestamp_color = get_config('timestamp_color', '#78909C')
     job.pause_marker = get_config('pause_seconds_marker', '.')
     job.auto_save = False if get_config('auto_save', 'True') == 'False' else True
-    
-    # Auto-edit transcript setting
-    if auto_edit_transcript is not None:
-        job.auto_edit_transcript = auto_edit_transcript
-    elif cli_mode:
-        job.auto_edit_transcript = 'False'  # Don't auto-open editor in CLI mode
-    else:
-        job.auto_edit_transcript = get_config('auto_edit_transcript', 'True')
-    
+        
     job.vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
     
     # Platform-specific XPU settings
@@ -2205,6 +2196,8 @@ class App(ctk.CTk):
     def transcription_worker(self, start_job_index=None):
         """Process transcription jobs from the queue"""
         queue_start_time = datetime.datetime.now()
+        queue_jobs_processed = 0
+        job = None
         self.cancel = False
 
         try:
@@ -2241,7 +2234,8 @@ class App(ctk.CTk):
                 try:
                     self.logn()
                     self.logn(t('start_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
-                    
+                    queue_jobs_processed += 1
+  
                     # Process single job
                     self._process_single_job(job)
                     
@@ -2280,6 +2274,13 @@ class App(ctk.CTk):
             total_seconds = "{:02d}".format(int(total_time.total_seconds() % 60))
             total_time_str = f'{int(total_time.total_seconds() // 60)}:{total_seconds}'
             self.logn(t('processing_time', total_time_str=total_time_str))
+            
+            # open editor if only a single file was processed
+            if queue_jobs_processed == 1 and job and job.file_ext == 'html' and get_config('auto_edit_transcript', 'True') == 'True':
+                self.launch_editor(job.transcript_file)
+            elif queue_jobs_processed > 1:
+                # if more than one job has been processed, switch to queue tab for an overview 
+                self.tabview.set(self.tabview._name_list[1])
             
         except Exception as e:
             self.logn(f"Queue processing error: {str(e)}", 'error')
@@ -2838,11 +2839,6 @@ class App(ctk.CTk):
                 proc_seconds = "{:02d}".format(int(proc_time.total_seconds() % 60))
                 proc_time_str = f'{int(proc_time.total_seconds() // 60)}:{proc_seconds}' 
                 self.logn(t('trancription_time', duration=proc_time_str)) 
-
-                # auto open transcript in editor
-                if (job.auto_edit_transcript == 'True') and (job.file_ext == 'html'):
-                    self.launch_editor(my_transcript_file)
-            
             finally:
                 self.log_file.close()
                 self.log_file = None
