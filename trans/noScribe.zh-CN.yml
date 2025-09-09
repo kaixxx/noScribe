@@ -110,6 +110,7 @@ zh-CN: &defaults
   err_ffmpeg: 'ffmpeg返回了一个错误'
   err_converting_audio: '步骤1中的音频转换错误。'
   err_identifying_speakers: '步骤2中的说话人识别错误。'
+  err_loading_prompt: '警告：无法加载 Whisper 提示词。'
   transcription_canceled: '是否确认取消转录？'   
   queue_cancel_all_confirm: '这将取消队列中所有未完成的任务。是否继续？'
   err_user_cancelation: '转录过程已被用户取消。'

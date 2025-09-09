@@ -110,6 +110,7 @@ de:
   err_ffmpeg: 'ffmpeg hat einen Fehler gemeldet.'
   err_converting_audio: Fehler im 1. Schritt - Audiokonvertierung.
   err_identifying_speakers: Fehler im 2. Schritt - Erkennung der Sprecher:innen. 
+  err_loading_prompt: 'Warnung: Whisper-Prompt konnte nicht geladen werden.'
   transcription_canceled: 'Transkription wirklich abbrechen?'
   queue_cancel_all_confirm: 'Dadurch werden alle unerledigten Aufträge in der Warteschlange abgebrochen. Möchtest du fortfahren?'
   err_user_cancelation: 'Abbruch durch Nutzer:in'

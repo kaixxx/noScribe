@@ -109,6 +109,7 @@ fr:
   err_ffmpeg: "ffmpeg a renvoyé une erreur"
   err_converting_audio: "Erreur à l'étape 1 - conversion de l'audio."
   err_identifying_speakers: "Erreur à l'étape 2 - identification des locuteurs."
+  err_loading_prompt: 'Avertissement : échec du chargement du prompt Whisper.'
   transcription_canceled: "Voulez-vous vraiment annuler la transcription ?"   
   queue_cancel_all_confirm: 'Cela annulera toutes les tâches non terminées dans la file. Voulez-vous continuer ?'
   err_user_cancelation: "Le processus a été annulé par l'utilisateur."

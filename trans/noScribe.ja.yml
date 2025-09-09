@@ -109,6 +109,7 @@ ja:
   err_ffmpeg: 'ffmpegでエラーが発生しました'
   err_converting_audio: 'ステップ1でエラーが発生しました-音声の変換。'
   err_identifying_speakers: 'ステップ2でエラーが発生しました-話者の識別。'
+  err_loading_prompt: '警告: Whisperのプロンプトを読み込めませんでした。'
   transcription_canceled: '本当に転写をキャンセルしますか？'   
   queue_cancel_all_confirm: 'キュー内の未完了のジョブがすべてキャンセルされます。続行しますか？'
   err_user_cancelation: 'ユーザーによってプロセスがキャンセルされました。'

@@ -110,6 +110,7 @@ ru:
   err_ffmpeg: 'ffmpeg вернул ошибку'
   err_converting_audio: Ошибка на шаге 1 - преобразование аудио.
   err_identifying_speakers: Ошибка на шаге 2 - определение дикторов.
+  err_loading_prompt: 'Предупреждение: не удалось загрузить промпт Whisper.'
   transcription_canceled: 'Вы действительно хотите отменить транскрипцию?'   
   queue_cancel_all_confirm: 'Это отменит все незавершённые задания в очереди. Продолжить?'
   err_user_cancelation: 'Процесс был отменен пользователем.'

@@ -109,6 +109,7 @@ it:
   err_ffmpeg: 'ffmpeg ha restituito un errore'
   err_converting_audio: 'Errore nella fase 1 - conversione audio.'
   err_identifying_speakers: 'Errore nella fase 2 - identificazione degli speaker.'
+  err_loading_prompt: 'Avviso: impossibile caricare il prompt di Whisper.'
   transcription_canceled: 'Vuoi davvero annullare la trascrizione?'   
   queue_cancel_all_confirm: 'Questo annullerà tutte le attività non completate nella coda. Vuoi continuare?'
   err_user_cancelation: 'Processo annullato dall utente.'

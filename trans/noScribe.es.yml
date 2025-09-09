@@ -109,6 +109,7 @@ es:
   err_ffmpeg: 'ffmpeg devolvió un error'
   err_converting_audio: 'Error en el paso 1: conversión de audio.'
   err_identifying_speakers: 'Error en el paso 2: identificación de oradores.'
+  err_loading_prompt: 'Advertencia: no se pudo cargar el prompt de Whisper.'
   transcription_canceled: '¿Realmente deseas cancelar la transcripción?'   
   queue_cancel_all_confirm: 'Esto cancelará todos los trabajos no finalizados en la cola. ¿Deseas continuar?'
   err_user_cancelation: 'El proceso ha sido cancelado por el usuario.'
