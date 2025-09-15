@@ -582,28 +582,37 @@ class App(ctk.CTk):
         elif len(models) > 0:
             self.option_menu_whisper_model.set(models[0])
 
+        # Compute Type
+        self.label_compute_type = ctk.CTkLabel(self.frame_options, text=t('label_compute_type', fallback='Compute Type'))
+        self.label_compute_type.grid(column=0, row=4, sticky='w', pady=5)
+
+        compute_types = ['default', 'int8_openvino', 'int8', 'float16', 'int8_float16', 'int16']
+        self.option_menu_compute_type = ctk.CTkOptionMenu(self.frame_options, width=100, values=compute_types, dynamic_resizing=False)
+        self.option_menu_compute_type.grid(column=1, row=4, sticky='e', pady=5)
+        self.option_menu_compute_type.set(get_config('last_compute_type', 'default'))
+
         # Mark pauses
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
-        self.label_pause.grid(column=0, row=4, sticky='w', pady=5)
+        self.label_pause.grid(column=0, row=5, sticky='w', pady=5)
 
         self.option_menu_pause = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', '1sec+', '2sec+', '3sec+'])
-        self.option_menu_pause.grid(column=1, row=4, sticky='e', pady=5)
+        self.option_menu_pause.grid(column=1, row=5, sticky='e', pady=5)
         self.option_menu_pause.set(get_config('last_pause', '1sec+'))
 
         # Speaker Detection (Diarization)
         self.label_speaker = ctk.CTkLabel(self.frame_options, text=t('label_speaker'))
-        self.label_speaker.grid(column=0, row=5, sticky='w', pady=5)
+        self.label_speaker.grid(column=0, row=6, sticky='w', pady=5)
 
         self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
-        self.option_menu_speaker.grid(column=1, row=5, sticky='e', pady=5)
+        self.option_menu_speaker.grid(column=1, row=6, sticky='e', pady=5)
         self.option_menu_speaker.set(get_config('last_speaker', 'auto'))
 
         # Overlapping Speech (Diarization)
         self.label_overlapping = ctk.CTkLabel(self.frame_options, text=t('label_overlapping'))
-        self.label_overlapping.grid(column=0, row=6, sticky='w', pady=5)
+        self.label_overlapping.grid(column=0, row=7, sticky='w', pady=5)
 
         self.check_box_overlapping = ctk.CTkCheckBox(self.frame_options, text = '')
-        self.check_box_overlapping.grid(column=1, row=6, sticky='e', pady=5)
+        self.check_box_overlapping.grid(column=1, row=7, sticky='e', pady=5)
         overlapping = config.get('last_overlapping', True)
         if overlapping:
             self.check_box_overlapping.select()
@@ -612,10 +621,10 @@ class App(ctk.CTk):
             
         # Disfluencies
         self.label_disfluencies = ctk.CTkLabel(self.frame_options, text=t('label_disfluencies'))
-        self.label_disfluencies.grid(column=0, row=7, sticky='w', pady=5)
+        self.label_disfluencies.grid(column=0, row=8, sticky='w', pady=5)
 
         self.check_box_disfluencies = ctk.CTkCheckBox(self.frame_options, text = '')
-        self.check_box_disfluencies.grid(column=1, row=7, sticky='e', pady=5)
+        self.check_box_disfluencies.grid(column=1, row=8, sticky='e', pady=5)
         check_box_disfluencies = config.get('last_disfluencies', True)
         if check_box_disfluencies:
             self.check_box_disfluencies.select()
@@ -624,10 +633,10 @@ class App(ctk.CTk):
 
         # Timestamps in text
         self.label_timestamps = ctk.CTkLabel(self.frame_options, text=t('label_timestamps'))
-        self.label_timestamps.grid(column=0, row=8, sticky='w', pady=5)
+        self.label_timestamps.grid(column=0, row=9, sticky='w', pady=5)
 
         self.check_box_timestamps = ctk.CTkCheckBox(self.frame_options, text = '')
-        self.check_box_timestamps.grid(column=1, row=8, sticky='e', pady=5)
+        self.check_box_timestamps.grid(column=1, row=9, sticky='e', pady=5)
         check_box_timestamps = config.get('last_timestamps', False)
         if check_box_timestamps:
             self.check_box_timestamps.select()
@@ -954,7 +963,8 @@ class App(ctk.CTk):
             self.whisper_temperature = get_config('whisper_temperature', 0.0)
             self.logn(f'whisper temperature: {self.whisper_temperature}', where='file')
 
-            self.whisper_compute_type = get_config('whisper_compute_type', 'default')
+            self.whisper_compute_type = self.option_menu_compute_type.get()
+            option_info += f'{t("label_compute_type", fallback="Compute Type")} {self.whisper_compute_type} | '
             self.logn(f'whisper compute type: {self.whisper_compute_type}', where='file')
 
             self.timestamp_interval = get_config('timestamp_interval', 60_000) # default: add a timestamp every minute
@@ -1684,6 +1694,7 @@ class App(ctk.CTk):
             config['last_language'] = self.option_menu_language.get()
             config['last_speaker'] = self.option_menu_speaker.get()
             config['last_whisper_model'] = self.option_menu_whisper_model.get()
+            config['last_compute_type'] = self.option_menu_compute_type.get()
             config['last_pause'] = self.option_menu_pause.get()
             config['last_overlapping'] = self.check_box_overlapping.get()
             config['last_timestamps'] = self.check_box_timestamps.get()
