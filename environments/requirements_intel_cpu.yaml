@@ -1,0 +1,42 @@
+#This defines an environment to execute Intel-accelerated Python on CPU
+# Prerequisite:  Intel Oneapi base toolkit
+#Intel reserves the cpu-only distro of pytorch to a separate pip index
+name: noscribe_intel_cpu # This will become the name of your environment
+channels:
+    - https://software.repos.intel.com/python/conda
+    - defaults
+dependencies: # The list of packages to include in your environment
+    - python=3.12
+    - python_abi
+    - numpy 
+    - scipy 
+    - level-zero  #Intel Level-zero library - should be part of OneAPI but isn't
+    - scikit-learn 
+    - scikit-learn-intelex 
+    - dpnp 
+    - dpctl 
+    - tbb4py 
+    - smp 
+    - mpi4py
+    - deepspeed 
+    - modin-all 
+    - onnxruntime
+    - appdirs
+    - Pillow
+    - pyinstaller
+    - PyYAML
+    - pip # Install pip in your environment
+    - pip: # Include pip dependencies last
+        - --index-url https://download.pytorch.org/whl/cpu
+        #- --extra-index-url https://pytorch-extension.intel.com/release-whl/stable/cpu/us/ 
+        - --extra-index-url https://pypi.org/simple/
+        - torch>=2.7.1
+        - torchaudio
+        - intel-extension-for-pytorch
+        - AdvancedHTMLParser
+        - customtkinter
+        - faster-whisper
+        - pyannote.audio>=3.3.2
+        - python-i18n
+
+
