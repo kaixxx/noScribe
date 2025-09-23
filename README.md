@@ -72,12 +72,12 @@ ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](htt
 
 - **Manual installation from source:**
     Based on [instructions by mael-lenoc](https://github.com/kaixxx/noScribe/discussions/83)
-    ```shell
+    ```bash
     # release ( must be > 0.6 in order to include the latest fixes for linux!)
     NOS_REL=0.6.1
-    wget https://github.com/kaixxx/noScribe/archive/refs/tags/v${NOS_REL).tar.gz
-    tar xvz -f v${NOS_REL).tar.gz
-    cd noScribe-${NOS_REL)/  # from here on all happens in this directory
+    wget https://github.com/kaixxx/noScribe/archive/refs/tags/v${NOS_REL}.tar.gz
+    tar xvz -f v${NOS_REL}.tar.gz
+    cd noScribe-${NOS_REL} # from here on all happens in this directory
 
     # alternative: current main branch
     wget -O noScribe-main.zip https://github.com/kaixxx/noScribe/archive/refs/heads/main.zip
