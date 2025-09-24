@@ -17,6 +17,7 @@
 
 import sys
 import argparse
+import os
 # In the compiled version (no command line), stdout is None which might lead to errors
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w")
@@ -31,12 +32,11 @@ from tkHyperlinkManager import HyperlinkManager
 import webbrowser
 from functools import partial
 from PIL import Image
-import os
 import platform
 import yaml
 import locale
 import appdirs
-from subprocess import run, call, Popen, PIPE, STDOUT, DEVNULL
+from subprocess import run, Popen, PIPE, STDOUT
 if platform.system() == 'Windows':
     # import torch.cuda # to check with torch.cuda.is_available()
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
@@ -54,7 +54,6 @@ from faster_whisper.vad import VadOptions, get_speech_timestamps
 import AdvancedHTMLParser
 import html
 from threading import Thread
-import time
 from tempfile import TemporaryDirectory
 import datetime
 from pathlib import Path

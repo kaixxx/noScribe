@@ -186,3 +186,4 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
+
