@@ -5,10 +5,10 @@ from datetime import datetime
 
 noScribe_version = '0.7'
 clean_build = True
-run_pyinstaller_non_cuda = True
-run_pyinstaller_cuda = False
+run_pyinstaller_non_cuda = False
+run_pyinstaller_cuda = True
 run_nsis_non_cuda = False
-run_nsis_cuda = False
+run_nsis_cuda = True
 
 conda_env_noncuda = 'noScribe_0_6_non_cuda'
 conda_env_cuda = 'noScribe_0_6_cuda'
@@ -37,7 +37,7 @@ def run_pyinstaller(cuda=False):
     else:
         pyinstaller_cmd = f'conda activate {conda_env_noncuda} &&'
         
-    pyinstaller_cmd += f'python  "{pyinstaller_path}" --noconfirm "{os.path.join(script_dir, "noScribe_win.spec")}" --distpath {pyinstaller_out_path}'
+    pyinstaller_cmd += f'python  "{pyinstaller_path}" --noconfirm "{os.path.join(script_dir, 'noScribe_win.spec')}" --distpath {pyinstaller_out_path}'
     if clean_build:
         pyinstaller_cmd += ' --clean'
     
