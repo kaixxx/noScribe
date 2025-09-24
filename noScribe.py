@@ -36,7 +36,7 @@ import platform
 import yaml
 import locale
 import appdirs
-from subprocess import run, Popen, PIPE, STDOUT
+from subprocess import run, Popen, PIPE, STDOUT, DEVNULL
 if platform.system() == 'Windows':
     # import torch.cuda # to check with torch.cuda.is_available()
     from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
@@ -72,6 +72,7 @@ import gc
 import traceback
 from enum import Enum
 from typing import Optional, List
+import time
 
  # Pyinstaller fix, used to open multiple instances on Mac
 mp.freeze_support()
