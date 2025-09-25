@@ -2234,11 +2234,11 @@ class App(ctk.CTk):
                 try:
                     self.logn()
                     self.logn(t('start_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
-                    queue_jobs_processed += 1
   
                     # Process single job
                     self._process_single_job(job)
                     
+                    queue_jobs_processed += 1
                     job.set_finished()
                     self.update_queue_table()
                     
