@@ -743,9 +743,9 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
 def create_job_from_cli_args(args) -> TranscriptionJob:
     """Create a TranscriptionJob from command line arguments"""
     # Parse time arguments
-    start_time = utils.millisec(args.start) if args.start else None
-    stop_time = utils.millisec(args.stop) if args.stop else None
-    
+    start_time = utils.str_to_ms(args.start) if args.start else None
+    stop_time = utils.str_to_ms(args.stop) if args.stop else None
+
     return create_transcription_job(
         audio_file=args.audio_file,
         transcript_file=args.output_file,
