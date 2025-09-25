@@ -74,6 +74,8 @@ from enum import Enum
 from typing import Optional, List
 import time
 
+import utils
+
  # Pyinstaller fix, used to open multiple instances on Mac
 mp.freeze_support()
 
@@ -288,14 +290,6 @@ def get_unique_filename(fn: str, file_list=[]) -> str:
         return f'{base_path}_{i}.{file_ext}'
     else:
         return fn    
-
-def millisec(timeStr: str) -> int:
-    """ Convert 'hh:mm:ss' string into milliseconds """
-    try:
-        h, m, s = timeStr.split(':')
-        return (int(h) * 3600 + int(m) * 60 + int(s)) * 1000 # https://stackoverflow.com/a/6402859
-    except:
-        raise Exception(t('err_invalid_time_string', time = timeStr))
 
 def ms_to_str(milliseconds: float, include_ms=False):
     """ Convert milliseconds into formatted timestamp 'hh:mm:ss' """
@@ -749,8 +743,8 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
 def create_job_from_cli_args(args) -> TranscriptionJob:
     """Create a TranscriptionJob from command line arguments"""
     # Parse time arguments
-    start_time = millisec(args.start) if args.start else None
-    stop_time = millisec(args.stop) if args.stop else None
+    start_time = utils.millisec(args.start) if args.start else None
+    stop_time = utils.millisec(args.stop) if args.stop else None
     
     return create_transcription_job(
         audio_file=args.audio_file,
