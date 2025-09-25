@@ -3,7 +3,7 @@ import sys
 from subprocess import Popen
 from datetime import datetime
 
-noScribe_version = '0.6.2'
+noScribe_version = '0.7'
 clean_build = True
 run_pyinstaller_non_cuda = False
 run_pyinstaller_cuda = True
@@ -37,7 +37,7 @@ def run_pyinstaller(cuda=False):
     else:
         pyinstaller_cmd = f'conda activate {conda_env_noncuda} &&'
         
-    pyinstaller_cmd += f'python  "{pyinstaller_path}" --noconfirm "{os.path.join(script_dir, "noScribe_combined_win.spec")}" --distpath {pyinstaller_out_path}'
+    pyinstaller_cmd += f'python  "{pyinstaller_path}" --noconfirm "{os.path.join(script_dir, 'noScribe_win.spec')}" --distpath {pyinstaller_out_path}'
     if clean_build:
         pyinstaller_cmd += ' --clean'
     

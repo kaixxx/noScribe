@@ -19,13 +19,19 @@ ja:
     お楽しみください！
 
   setup_message: '初回実行：セットアップを完了してください...'
+  new_release: 'noScribe の新しいバージョンが利用可能です (%{v}):'
+  new_release_download: 'ダウンロード: '
 
   # UI要素
+  tab_log: ログ
+  tab_queue: キュー
   label_audio_file: '音声ファイル：'
   label_audio_file_name: <ファイルを選択>
+  multiple_audio_files: '（複数のファイルが選択されています）'
   
   label_transcript_file: '転写を保存：'
   label_transcript_file_name: <ファイル名を選択> 
+  output_dir_selection: '複数の音声ファイル: 文字起こしの保存先フォルダを選択してください。ファイル名は自動で生成されます。'
 
   label_start: '開始（hh:mm:ss）：'
   label_stop: '終了（hh:mm:ss）：' 
@@ -37,13 +43,41 @@ ja:
   label_overlapping: 'オーバーラッピング・スピーチ：'
   label_pause: 'マークはポーズをとる：'
   label_timestamps: 'タイムスタンプ：'
-  
-  start_button: 開始 
+  label_disfluencies: 'フィラー：'
+
+  start_button: 開始
+  start_queue: '今すぐジョブを開始'
   stop_button: キャンセル
+  editor_button: エディター
+  overall_progress: '全体の進行状況：'
+
+  # ジョブの状態
+  waiting: '待機中'
+  audio_conversion: 'オーディオ変換'
+  speaker_identification: '話者識別'
+  transcription: '転写'
+  canceling: 'キャンセル中'
+  canceled: 'キャンセル済み'
+  finished: '完了'
+  error: 'エラー'
+
+  # ジョブキューのツールチップ
+  job_tt_waiting: 'ジョブ待機中...'
+  job_tt_running: 'ジョブ実行中。詳細はログタブを参照してください。'
+  job_tt_finished: '完了。右側の「✔」をクリックして結果を表示します。'
+  job_tt_transcript_file: '転写:'
+  job_tt_canceling: 'キャンセル中...'
+  job_tt_canceled: 'ユーザーによりジョブがキャンセルされました。'
+  job_tt_error: 'ジョブ処理中にエラーが発生しました: %{error_msg}'
 
   # ログメッセージ
-  log_transcript_filename: '転写ファイル名：'
-  log_audio_file_selected: '選択された音声ファイル：'
+  log_transcript_filename: '転写ファイル名（複数可）：'
+  log_audio_file_selected: '選択された音声ファイル（複数可）：'
+  queue_added_job: 'ジョブ「%{audio_file}」をキューに追加しました。'
+  queue_start: '=== キューを開始 ==='
+  queue_start_jobs: '%{total} 個の転写ジョブを処理中'
+  queue_none_waiting: '行うことはありません。キューに待機中のジョブはありません。'
+  start_job: 'ジョブを開始: %{audio_file}'
   start_audio_conversion: '音声の変換を開始中...'
   audio_conversion_finished: '音声の変換が完了しました'
   start_identifiying_speakers: '話者の識別を開始中...'
@@ -51,12 +85,23 @@ ja:
   start_canceling: 'キャンセル中...（しばらくお待ちください）'
   start_transcription: '転写を開始中...'
   loading_whisper: 'whisperの読み込み中'
-  transcription_finished: '転写が完了しました。' 
+  vad: '音声活動検出...'
+  language_detect: '検出された言語は「%{lang}」（確率 %{prob}）'
+  transcription_finished: '転写が完了しました。'
   transcription_saved: '%{file}に保存されました'
   trancription_time: '所要時間：%{duration}分'
+  queue_complete: '=== キュー処理が完了 ==='
+  total_jobs: '総ジョブ: %{total}'
+  completed: '完了: %{finished}'
+  failed: '失敗: %{errors}'
+  canceled_summary: 'キャンセル: %{canceled}'
+  processing_time: '総処理時間：%{total_time_str}'
 
   # エラーメッセージ
   err_setup: 'セットアップ中にエラーが発生しました。インターネット接続が正常か確認し、プログラムを再起動してください。'
+  output_override: >
+    キュー内の別のジョブ（待機中、実行中、または完了済み）が同じ出力ファイルを使用しています。
+    出力ファイルを上書きしますか？
   err_invalid_time_string: '無効な時間です：" %{time}"'
   err_options: 'オプションのエラー'
   err_no_audio_file: 'エラー：音声ファイルを選択してください。'
@@ -64,15 +109,35 @@ ja:
   err_ffmpeg: 'ffmpegでエラーが発生しました'
   err_converting_audio: 'ステップ1でエラーが発生しました-音声の変換。'
   err_identifying_speakers: 'ステップ2でエラーが発生しました-話者の識別。'
+  err_loading_prompt: '警告: Whisperのプロンプトを読み込めませんでした。'
   transcription_canceled: '本当に転写をキャンセルしますか？'   
+  queue_cancel_all_confirm: 'キュー内の未完了のジョブがすべてキャンセルされます。続行しますか？'
   err_user_cancelation: 'ユーザーによってプロセスがキャンセルされました。'
   err_whisper_main: 'Whisperメインがエラーコード %{e} で終了しました'
   err_transcription: 'ステップ3でエラーが発生しました-転写'
   rescue_saving: '元のファイル名への保存に失敗しました。代わりにこのファイルに保存されました：%{file}'
   rescue_saving_failed: 'エラー：元のファイル名への保存に失敗しました。代替のファイル名も存在します。終了する必要があります。（Wordでトランスクリプトが既に開かれていないことを確認してください！）'
+  err_noScribeEdit_not_found: 'エラー: noScribe エディターが見つかりませんでした。'
+  err_vtt_invalid_options: '警告: 「オーバーラッピング・スピーチ」、「マークはポーズをとる」と「タイムスタンプ」は VTT ファイルでサポートされていません。'
+  err_editor_invalid_format: 'エディターは html ファイルでのみ使用できます。それでも起動しますか？'
+  err_editor_no_file: '完了した転写ジョブがありません。エディターを起動しますか？'
+  err_invalid_model: 'Whisper モデルの重複名を無視しました: "%{model_name}"'
 
   # ドキュメント内容
   doc_header: 'noScribe vers. %{version}で転写されました'
   doc_header_audio: '音声ファイル：%{file}'
   pause_minutes: '(%{minutes}分[秒]休止)'
   pause_seconds: '(%{seconds}秒休止)'
+  
+  # キュー操作
+  queue_remove_waiting: 'このジョブをキューから削除しますか？'
+  queue_remove_entry: 'この項目をリストから削除しますか？'
+  queue_tt_cancel_running: 'このジョブをキャンセル'
+  queue_tt_remove_waiting: 'キューから削除'
+  queue_tt_remove_entry: 'リストから削除'
+  queue_tt_repeat_job: 'このジョブを再実行'
+  queue_tt_edit_job: '結果を noScribe エディターで開く'
+
+  # 追加のUIボタン
+  send_queue: 'ジョブをキューに送る'
+  queue_run_button: '実行'

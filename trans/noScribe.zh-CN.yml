@@ -22,11 +22,15 @@ zh-CN: &defaults
   new_release_download: '下载：'
 
   # 用户界面元素
+  tab_log: 日志
+  tab_queue: 队列
   label_audio_file: '音频文件：'
   label_audio_file_name: <选择文件>
+  multiple_audio_files: '（已选择多个文件）'
   
   label_transcript_file: '保存转录文件为：'
   label_transcript_file_name: <选择文件名> 
+  output_dir_selection: '多个音频文件：请选择一个目录保存转录结果。文件名将自动生成。'
 
   label_start: '开始（hh:mm:ss）：'
   label_stop: '结束（hh:mm:ss）：'
@@ -41,30 +45,63 @@ zh-CN: &defaults
   label_disfluencies: '语言停顿：'
   
   start_button: 开始 
+  start_queue: '立即开始任务'
   stop_button: 取消
   editor_button: 编辑器
 
   overall_progress: '总进度：'
 
+  # 任务状态
+  waiting: '等待中'
+  audio_conversion: '音频转换'
+  speaker_identification: '说话人识别'
+  transcription: '转录'
+  canceling: '正在取消'
+  canceled: '已取消'
+  finished: '完成'
+  error: '错误'
+
+  # 队列提示
+  job_tt_waiting: '任务等待中...'
+  job_tt_running: '任务运行中。详情请查看日志标签。'
+  job_tt_finished: '已完成。点击右侧“✔”查看结果。'
+  job_tt_transcript_file: '转录：'
+  job_tt_canceling: '正在取消...'
+  job_tt_canceled: '作业已被用户取消。'
+  job_tt_error: '处理任务时发生错误：%{error_msg}'
+
   # 日志信息
-  log_transcript_filename: '转录文件名：'
-  log_audio_file_selected: '已选择音频文件：'
+  log_transcript_filename: '转录文件名（可多个）：'
+  log_audio_file_selected: '已选择音频文件（可多个）：'
+  queue_added_job: '已将任务“%{audio_file}”添加到队列。'
+  queue_start: '=== 开始队列 ==='
+  queue_start_jobs: '正在处理 %{total} 个转录任务'
+  queue_none_waiting: '无需处理，队列中没有等待中的任务。'
+  start_job: '开始任务：%{audio_file}'
   start_audio_conversion: '正在转换音频...'
   audio_conversion_finished: '音频转换完成'
   start_identifiying_speakers: '正在识别说话人...'
   loading_pyannote: '加载pyannote中'
   start_canceling: '正在取消...（请稍候）'
   start_transcription: '正在转录...'
-  loading_whisper: '加载whisper中'
-  start_transcription: '转录...'
   loading_whisper: '正在加载whisper'
   vad: '语音活动检测...'
-  
-  transcription_finished: '转录完成。' 
+  language_detect: '检测到语言“%{lang}”，概率 %{prob}'
+
+  transcription_finished: '转录完成。'
   transcription_saved: '已保存至'
   trancription_time: '时长：%{duration}分钟'
+  queue_complete: '=== 队列处理完成 ==='
+  total_jobs: '任务总数：%{total}'
+  completed: '已完成：%{finished}'
+  failed: '失败：%{errors}'
+  canceled_summary: '已取消：%{canceled}'
+  processing_time: '总处理时间：%{total_time_str}'
 
   # 错误信息
+  output_override: >
+    队列中的另一个任务（等待中、运行中或已完成）使用了同一输出文件。
+    是否要覆盖该输出文件？
   err_setup: '设置过程中发生错误。请检查您的网络连接并重新启动程序。'
   err_invalid_time_string: '无效的时间格式：“%{time}”'
   err_options: '选项错误'
@@ -73,7 +110,9 @@ zh-CN: &defaults
   err_ffmpeg: 'ffmpeg返回了一个错误'
   err_converting_audio: '步骤1中的音频转换错误。'
   err_identifying_speakers: '步骤2中的说话人识别错误。'
+  err_loading_prompt: '警告：无法加载 Whisper 提示词。'
   transcription_canceled: '是否确认取消转录？'   
+  queue_cancel_all_confirm: '这将取消队列中所有未完成的任务。是否继续？'
   err_user_cancelation: '转录过程已被用户取消。'
   err_whisper_main: 'Whisper主进程终止，错误代码：%{e}'
   err_transcription: '步骤3中的转录错误。'
@@ -82,12 +121,27 @@ zh-CN: &defaults
   err_noScribeEdit_not_found: '错误：找不到noScribe编辑器。'
   err_vtt_invalid_options: '警告：VTT文件不支持“重叠发言”、“标记停顿”和“时间戳”选项。'
   err_editor_invalid_format: '编辑器只能用于html文件。你仍然要启动它吗？'
+  err_editor_no_file: '没有已完成的转录任务。仍要启动编辑器吗？'
+  err_invalid_model: '忽略了重复的 whisper 模型名称："%{model_name}"'
 
   # 文档内容
   doc_header: '使用noScribe %{version} 版本转录'
   doc_header_audio: '音频文件：%{file}'
   pause_minutes: '(%{minutes} 分钟 暂停)'
   pause_seconds: '(%{seconds} 秒暂停)'
+  
+  # 队列操作
+  queue_remove_waiting: '从队列中移除此任务？'
+  queue_remove_entry: '从列表中移除此条目？'
+  queue_tt_cancel_running: '取消此任务'
+  queue_tt_remove_waiting: '从队列中移除'
+  queue_tt_remove_entry: '从列表中移除'
+  queue_tt_repeat_job: '重复此任务'
+  queue_tt_edit_job: '在 noScribe 编辑器中打开结果'
+
+  # 其他 UI 按钮
+  send_queue: '发送任务到队列'
+  queue_run_button: '运行'
 
 zh:
   <<: *defaults

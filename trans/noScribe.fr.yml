@@ -18,13 +18,19 @@ fr:
     Profitez-en !
 
   setup_message: "Première exécution : Termine la configuration..."
+  new_release: "Une nouvelle version de noScribe est disponible (%{v}) :"
+  new_release_download: "Télécharger : "
 
   # Éléments de l'interface utilisateur
+  tab_log: Journal
+  tab_queue: File d'attente
   label_audio_file: "Fichier audio :"
   label_audio_file_name: <sélectionner un fichier>
+  multiple_audio_files: '(plusieurs fichiers sélectionnés)'
   
   label_transcript_file: "Enregistrer la transcription sous :"
   label_transcript_file_name: <sélectionner un nom de fichier>
+  output_dir_selection: 'Plusieurs fichiers audio : sélectionnez un dossier où enregistrer les transcriptions. Les noms seront générés automatiquement.'
 
   label_start: "Début (hh:mm:ss) : "
   label_stop: "Fin (hh:mm:ss) : " 
@@ -36,13 +42,42 @@ fr:
   label_overlapping: 'Chevauchements de parole'
   label_pause: 'Marquer les pauses :'
   label_timestamps: 'Horodatage :'
+  label_disfluencies: 'Mots de remplissage :'
   
   start_button: "Démarrer"
+  start_queue: 'Démarrer la tâche maintenant'
   stop_button: "Annuler"
+  editor_button: "Éditeur"
+
+  overall_progress: 'Progression totale : '
+
+  # Statut de la tâche
+  waiting: 'en attente'
+  audio_conversion: 'conversion audio'
+  speaker_identification: 'identification des locuteurs'
+  transcription: 'transcription'
+  canceling: 'annulation en cours'
+  canceled: 'annulé'
+  finished: 'terminé'
+  error: 'erreur'
+
+  # Info-bulles de la file d'attente
+  job_tt_waiting: 'Tâche en attente...'
+  job_tt_running: "La tâche est en cours. Voir l'onglet journal pour les détails."
+  job_tt_finished: "Terminé. Cliquez sur \"✔\" à droite pour voir le résultat."
+  job_tt_transcript_file: 'Transcription :'
+  job_tt_canceling: 'Annulation en cours...'
+  job_tt_canceled: 'Tâche annulée par l’utilisateur.'
+  job_tt_error: "Une erreur est survenue lors du traitement de la tâche : %{error_msg}"
 
   # Messages de journalisation
-  log_transcript_filename: "Nom du fichier de transcription : "
-  log_audio_file_selected: "Fichier audio sélectionné : "
+  log_transcript_filename: "Nom(s) de fichier de transcription : "
+  log_audio_file_selected: "Fichier(s) audio sélectionné(s) : "
+  queue_added_job: 'Tâche "%{audio_file}" ajoutée à la file d’attente.'
+  queue_start: '=== Démarrage de la file d'attente ==='
+  queue_start_jobs: 'Traitement de %{total} tâche(s) de transcription'
+  queue_none_waiting: 'Rien à faire, la file ne contient aucune tâche en attente.'
+  start_job: 'Démarrage de la tâche : %{audio_file}'
   start_audio_conversion: "Conversion audio en cours..."
   audio_conversion_finished: "Conversion audio terminée"
   start_identifiying_speakers: "Identification des locuteurs en cours..."
@@ -50,12 +85,23 @@ fr:
   start_canceling: "Annulation en cours... (veuillez patienter un instant)"
   start_transcription: "Transcription en cours..."
   loading_whisper: "Chargement de whisper"
-  transcription_finished: "Transcription terminée." 
+  vad: "Détection d'activité vocale..."
+  language_detect: 'Langue détectée « %{lang} » avec une probabilité de %{prob}'
+  transcription_finished: "Transcription terminée."
   transcription_saved: "Enregistré sous "
   trancription_time: "Durée : %{duration} minutes"
+  queue_complete: "=== Traitement de la file d'attente terminé ==="
+  total_jobs: 'Tâches totales : %{total}'
+  completed: 'Terminées : %{finished}'
+  failed: 'Échouées : %{errors}'
+  canceled_summary: 'Annulées : %{canceled}'
+  processing_time: 'Temps total de traitement : %{total_time_str}'
 
   # Messages d'erreur
   err_setup: "Une erreur s'est produite pendant la configuration. Vérifiez votre connexion internet et redémarrez le programme."
+  output_override: >
+    Une autre tâche dans la file (en attente, en cours ou terminée) utilise le même fichier de sortie.
+    Voulez-vous écraser ce fichier de sortie ?
   err_invalid_time_string: "Il s'agit d'une heure invalide : \"%{time}\""
   err_options: "Erreur dans les options"
   err_no_audio_file: "Erreur : Veuillez sélectionner un fichier audio."
@@ -63,15 +109,35 @@ fr:
   err_ffmpeg: "ffmpeg a renvoyé une erreur"
   err_converting_audio: "Erreur à l'étape 1 - conversion de l'audio."
   err_identifying_speakers: "Erreur à l'étape 2 - identification des locuteurs."
+  err_loading_prompt: 'Avertissement : échec du chargement du prompt Whisper.'
   transcription_canceled: "Voulez-vous vraiment annuler la transcription ?"   
+  queue_cancel_all_confirm: 'Cela annulera toutes les tâches non terminées dans la file. Voulez-vous continuer ?'
   err_user_cancelation: "Le processus a été annulé par l'utilisateur."
   err_whisper_main: "Arrêt de whisper avec le code d'erreur %{e}"
   err_transcription: "Erreur à l'étape 3 - transcription"
   rescue_saving: "Échec de l'enregistrement sous le nom de fichier d'origine. Enregistré sous ce fichier à la place : %{file}"
   rescue_saving_failed: "Erreur : Échec de l'enregistrement sous le nom de fichier d'origine. Le nom de fichier alternatif existe également. Je dois quitter. (Assurez-vous que votre transcription n'est pas déjà ouverte dans Word !)"
+  err_noScribeEdit_not_found: "Erreur : Impossible de trouver l'éditeur noScribe."
+  err_vtt_invalid_options: 'Avertissement : les options "Chevauchements de parole", "Marquer les pauses" et "Horodatage" ne sont pas prises en charge dans les fichiers VTT.'
+  err_editor_invalid_format: "L'éditeur ne peut être utilisé qu'avec des fichiers HTML. Voulez-vous quand même le lancer ?"
+  err_editor_no_file: "Aucune tâche de transcription terminée disponible. Démarrer l’éditeur quand même ?"
+  err_invalid_model: 'Nom en double ignoré pour le modèle whisper : "%{model_name}"'
 
   # Contenu du document
   doc_header: "Transcrit avec noScribe vers. %{version}"
   doc_header_audio: "Fichier audio : %{file}"
   pause_minutes: '(%{minutes} minute[s] pause)'
   pause_seconds: '(%{seconds} secondes pause)'
+  
+  # Actions de file d'attente
+  queue_remove_waiting: 'Retirer cette tâche de la file d’attente ?'
+  queue_remove_entry: 'Retirer cette entrée de la liste ?'
+  queue_tt_cancel_running: 'Annuler cette tâche'
+  queue_tt_remove_waiting: 'Retirer de la file'
+  queue_tt_remove_entry: 'Retirer de la liste'
+  queue_tt_repeat_job: 'Relancer cette tâche'
+  queue_tt_edit_job: 'Ouvrir le résultat dans l’éditeur noScribe'
+
+  # Boutons supplémentaires de l’UI
+  send_queue: 'Envoyer la tâche à la file'
+  queue_run_button: 'Exécuter'

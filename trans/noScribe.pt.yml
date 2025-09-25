@@ -19,13 +19,19 @@ pt:
     Aproveite!
 
   setup_message: 'Primeira execução: Complete a configuração...'
+  new_release: 'Uma nova versão do noScribe está disponível (%{v}):'
+  new_release_download: 'Download: '
 
   # Elementos da interface
+  tab_log: Registro
+  tab_queue: Fila
   label_audio_file: 'Arquivo de áudio:'
   label_audio_file_name: <selecionar arquivo>
+  multiple_audio_files: '(vários arquivos selecionados)'
   
   label_transcript_file: 'Salvar transcrição como:'
   label_transcript_file_name: <selecionar nome de arquivo> 
+  output_dir_selection: 'Vários arquivos de áudio: selecione um diretório onde as transcrições serão salvas. Os nomes serão gerados automaticamente.'
 
   label_start: 'Início (hh:mm:ss): '
   label_stop: 'Parar (hh:mm:ss): ' 
@@ -37,13 +43,42 @@ pt:
   label_overlapping: 'Sobreposição:'
   label_pause: 'Marcar pausas:'
   label_timestamps: 'Registos temporais:'
+  label_disfluencies: 'Disfluências:'
   
-  start_button: Iniciar 
+  start_button: Iniciar
+  start_queue: 'Iniciar tarefa agora'
   stop_button: Cancelar
+  editor_button: Editor
+
+  overall_progress: 'Progresso geral: '
+
+  # Status do trabalho
+  waiting: 'aguardando'
+  audio_conversion: 'conversão de áudio'
+  speaker_identification: 'identificação de locutores'
+  transcription: 'transcrição'
+  canceling: 'cancelando'
+  canceled: 'cancelado'
+  finished: 'concluído'
+  error: 'erro'
+
+  # Dicas da fila de trabalhos
+  job_tt_waiting: 'Tarefa aguardando...'
+  job_tt_running: 'Tarefa em execução. Veja a aba de registro para detalhes.'
+  job_tt_finished: 'Concluído. Clique em "✔" à direita para ver o resultado.'
+  job_tt_transcript_file: 'Transcrição:'
+  job_tt_canceling: 'Cancelando...'
+  job_tt_canceled: 'Tarefa cancelada pelo usuário.'
+  job_tt_error: 'Ocorreu um erro durante o processamento: %{error_msg}'
 
   # Mensagens de log
-  log_transcript_filename: 'Nome do arquivo de transcrição: '
-  log_audio_file_selected: 'Arquivo de áudio selecionado: '
+  log_transcript_filename: 'Nome(s) do arquivo de transcrição: '
+  log_audio_file_selected: 'Arquivo(s) de áudio selecionado(s): '
+  queue_added_job: 'Tarefa "%{audio_file}" adicionada à fila.'
+  queue_start: '=== Iniciando fila ==='
+  queue_start_jobs: 'Processando %{total} tarefa(s) de transcrição'
+  queue_none_waiting: 'Nada a fazer, a fila não contém tarefas em espera.'
+  start_job: 'Iniciando tarefa: %{audio_file}'
   start_audio_conversion: 'Convertendo áudio...'
   audio_conversion_finished: 'Conversão de áudio concluída'
   start_identifiying_speakers: 'Identificação de alto-falantes...'
@@ -51,12 +86,23 @@ pt:
   start_canceling: 'Cancelando... (aguarde um segundo)'
   start_transcription: 'Transcrição...'
   loading_whisper: 'Carregando whisper'
-  transcription_finished: 'Transcrição concluída.' 
+  vad: 'Detecção de atividade de voz...'
+  language_detect: 'Idioma detectado "%{lang}" com probabilidade %{prob}'
+  transcription_finished: 'Transcrição concluída.'
   transcription_saved: 'Salvo em '
   trancription_time: 'Duração: %{duration} minutos'
+  queue_complete: '=== Processamento da fila concluído ==='
+  total_jobs: 'Total de tarefas: %{total}'
+  completed: 'Concluídas: %{finished}'
+  failed: 'Falhas: %{errors}'
+  canceled_summary: 'Canceladas: %{canceled}'
+  processing_time: 'Tempo total de processamento: %{total_time_str}'
 
   # Mensagens de erro
   err_setup: 'Ocorreu um erro durante a configuração. Verifique se você possui uma conexão de internet funcionando e reinicie o programa.'
+  output_override: >
+    Outra tarefa na fila (aguardando, em execução ou concluída) usa o mesmo arquivo de saída.
+    Deseja substituir o arquivo de saída?
   err_invalid_time_string: 'Este não é um horário válido: "%{time}"'
   err_options: 'Erro nas opções'
   err_no_audio_file: 'Erro: Por favor, selecione um arquivo de áudio.'
@@ -64,15 +110,35 @@ pt:
   err_ffmpeg: 'ffmpeg retornou um erro'
   err_converting_audio: Erro na etapa 1 - convertendo o áudio.
   err_identifying_speakers: Erro na etapa 2 - identificando os alto-falantes.
+  err_loading_prompt: 'Aviso: não foi possível carregar o prompt do Whisper.'
   transcription_canceled: 'Você realmente deseja cancelar a transcrição?'   
+  queue_cancel_all_confirm: 'Isto cancelará todas as tarefas não concluídas na fila. Deseja continuar?'
   err_user_cancelation: 'O processo foi cancelado pelo usuário.'
   err_whisper_main: Whisper terminou com o código de erro %{e}
   err_transcription: 'Erro na etapa 3 - transcrição'
   rescue_saving: 'Falha ao salvar com o nome de arquivo original. Salvo em vez disso neste arquivo: %{file}'
   rescue_saving_failed: 'Erro: Falha ao salvar com o nome de arquivo original. O nome alternativo também existe. Preciso sair. (Certifique-se de que sua transcrição não esteja aberta no Word!)'
+  err_noScribeEdit_not_found: 'Erro: não foi possível encontrar o editor do noScribe.'
+  err_vtt_invalid_options: 'Aviso: as opções "Sobreposição", "Marcar pausas" e "Registos temporais" não são suportadas em arquivos VTT.'
+  err_editor_invalid_format: 'O editor só pode ser usado com arquivos HTML. Deseja iniciá-lo mesmo assim?'
+  err_editor_no_file: 'Nenhuma tarefa de transcrição concluída disponível. Iniciar o editor mesmo assim?'
+  err_invalid_model: 'Nome duplicado ignorado para o modelo whisper: "%{model_name}"'
 
   # Conteúdo do documento
   doc_header: 'Transcrito com noScribe versão %{version}'
   doc_header_audio: 'Arquivo de áudio: %{file}'
   pause_minutes: '(%{minutes} minuto[s] pausa)'
   pause_seconds: '(%{seconds} segundos de pausa)'
+  
+  # Ações da fila
+  queue_remove_waiting: 'Remover esta tarefa da fila?'
+  queue_remove_entry: 'Remover esta entrada da lista?'
+  queue_tt_cancel_running: 'Cancelar esta tarefa'
+  queue_tt_remove_waiting: 'Remover da fila'
+  queue_tt_remove_entry: 'Remover da lista'
+  queue_tt_repeat_job: 'Repetir esta tarefa'
+  queue_tt_edit_job: 'Abrir o resultado no editor noScribe'
+
+  # Botões adicionais da UI
+  send_queue: 'Enviar tarefa para a fila'
+  queue_run_button: 'Executar'

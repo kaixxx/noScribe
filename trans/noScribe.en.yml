@@ -23,11 +23,16 @@ en:
   new_release_download: 'Download: '
 
   # UI Elements
+  tab_log: Log
+  tab_queue: Queue
+
   label_audio_file: 'Audio file:'
   label_audio_file_name: <select file>
+  multiple_audio_files: '(multiple files selected)'
   
   label_transcript_file: 'Save transcript as:'
   label_transcript_file_name: <select filename> 
+  output_dir_selection: 'Multiple audio files: Select a directory where the transcripts should be saved. The names will be generated automatically.'  
 
   label_start: 'Start (hh:mm:ss):'
   label_stop: 'Stop (hh:mm:ss):' 
@@ -41,16 +46,43 @@ en:
   label_timestamps: 'Timestamps:'
   label_disfluencies: 'Disfluencies:'
   
-  
   start_button: Start 
+  start_queue: 'Start job now'
+  send_queue: 'Send job to queue'
   stop_button: Cancel
+  queue_run_button: 'Run'
   editor_button: Editor
 
   overall_progress: 'Overall progress: '
 
+  # job status
+  waiting: 'waiting'
+  audio_conversion: 'audio conversion'
+  speaker_identification: 'speaker identification'
+  transcription: 'transcription'
+  canceling: 'canceling in progress'
+  canceled: 'canceled'
+  finished: 'finished'
+  error: 'error'
+
+  # job queue tooltips
+  job_tt_waiting: 'Job waiting...'
+  job_tt_running: 'Job is running. See the log tab for details.'
+  job_tt_finished: 'Finished. Click "✔" on the right to see the result.'
+  job_tt_canceling: 'Canceling...'
+  job_tt_canceled: 'Job was canceled by the user.'
+  job_tt_error: 'An error occured during job processing: %{error_msg}'
+  job_tt_transcript_file: 'Transcript:'
+
+ 
   # log messages
-  log_transcript_filename: 'Transcript filename: '
-  log_audio_file_selected: 'Audio file selected: '
+  log_transcript_filename: 'Transcript filename(s): '
+  log_audio_file_selected: 'Audio file(s) selected: '
+  queue_added_job: 'Added job "%{audio_file}" to queue.'
+  queue_start: === Starting queue ===
+  queue_start_jobs: Processing %{total} transcription job(s)
+  queue_none_waiting: 'Nothing to do, the queue contains no waiting jobs.'
+  start_job: 'Starting job: %{audio_file}'
   start_audio_conversion: 'Converting audio...'
   audio_conversion_finished: 'Audio conversion finished'
   start_identifiying_speakers: 'Speaker identification...'
@@ -59,12 +91,23 @@ en:
   start_transcription: 'Transcription...'
   loading_whisper: 'Loading whisper'
   vad: 'Voice activity detection...'
+  language_detect: 'Detected language "%{lang}" with probability %{prob}'
 
   transcription_finished: 'Transcription finished.' 
   transcription_saved: 'Saved to: '
   trancription_time: 'Duration: %{duration} minutes'
+  
+  queue_complete: '=== Queue processing complete ==='
+  total_jobs: 'Total jobs: %{total}'
+  completed: 'Completed: %{finished}'
+  failed: 'Failed: %{errors}'
+  canceled_summary: 'Canceled: %{canceled}'
+  processing_time: 'Total processing time: %{total_time_str}'
 
   # Error messages
+  output_override: >
+    Another job in the queue (waiting, running, or finished) uses the same output file.
+    Do you want to override the output file?
   err_setup: 'An error occured during the setup. Check if you have a working internet connection and restart the program.'
   err_invalid_time_string: 'This is not a valid time: "%{time}"'
   err_options: 'Error in options'
@@ -73,7 +116,9 @@ en:
   err_ffmpeg: 'ffmpeg returned an error'
   err_converting_audio: Error in step 1 - converting the audio.
   err_identifying_speakers: Error in step 2 - identifiying the speakers.
-  transcription_canceled: 'Do you really want to cancel the transcription?'   
+  err_loading_prompt: 'Warning: Failed to load whisper prompt.'
+  transcription_canceled: 'Do you really want to cancel the transcription?'  
+  queue_cancel_all_confirm: 'This will cancel all unfinished jobs in the queue. Do you want to continue?' 
   err_user_cancelation: 'Process has been canceled by the user.'
   err_whisper_main: whisper terminated with the error code %{e}
   err_transcription: 'Error in step 3 - transcription'
@@ -82,10 +127,21 @@ en:
   err_noScribeEdit_not_found: 'Error: Could not find the noScribe Editor.'
   err_vtt_invalid_options: 'Warning: The options "overlapping speech", "Mark pause" and "Timestamps" are not supported in VTT files.'
   err_editor_invalid_format: 'The editor can only be used with html files. Do you want to start it anyway?'
-  
+  err_editor_no_file: 'No finished transcription job available. Start the editor anyway?'
+  err_invalid_model: 'Ignored double name for whisper model: "%{model_name}"'
+
   # Doc contents
   doc_header: 'Transcribed with noScribe vers. %{version}'
   doc_header_audio: 'Audio file: %{file}'
   pause_minutes: '(%{minutes} minute[s] pause)'
   pause_seconds: '(%{seconds} seconds pause)'
+  
+  # Queue actions
+  queue_remove_waiting: 'Remove this job from the queue?'
+  queue_remove_entry: 'Remove this entry from the list?'
+  queue_tt_cancel_running: 'Cancel this job'
+  queue_tt_remove_waiting: 'Remove from queue'
+  queue_tt_remove_entry: 'Remove from list'
+  queue_tt_repeat_job: 'Repeat this job'
+  queue_tt_edit_job: 'Open the result in the noScribe Editor'
                       

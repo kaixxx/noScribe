@@ -19,13 +19,19 @@ ru:
     Приятной работы!
 
   setup_message: 'Первый запуск: Завершите настройку...'
+  new_release: 'Доступна новая версия noScribe (%{v}):'
+  new_release_download: 'Загрузить: '
 
   # Элементы пользовательского интерфейса
+  tab_log: Журнал
+  tab_queue: Очередь
   label_audio_file: 'Аудиофайл:'
   label_audio_file_name: <выберите файл>
+  multiple_audio_files: '(выбрано несколько файлов)'
   
   label_transcript_file: 'Сохранить транскрипцию как:'
   label_transcript_file_name: <выберите имя файла> 
+  output_dir_selection: 'Несколько аудиофайлов: выберите папку, в которой будут сохранены расшифровки. Имена будут сгенерированы автоматически.'
 
   label_start: 'Начало (чч:мм:сс): '
   label_stop: 'Окончание (чч:мм:сс): ' 
@@ -37,13 +43,42 @@ ru:
   label_overlapping: 'Перекрытие речи:'
   label_pause: 'Отметьте паузы:'
   label_timestamps: 'Временные метки:'
+  label_disfluencies: 'Паразитные слова:'
   
-  start_button: Старт 
+  start_button: Старт
+  start_queue: 'Запустить задание сейчас'
   stop_button: Отмена
+  editor_button: Редактор
+ 
+  overall_progress: 'Общий прогресс: '
+
+  # Статус задания
+  waiting: 'ожидание'
+  audio_conversion: 'преобразование аудио'
+  speaker_identification: 'определение дикторов'
+  transcription: 'транскрибация'
+  canceling: 'отмена выполняется'
+  canceled: 'отменено'
+  finished: 'завершено'
+  error: 'ошибка'
+
+  # Подсказки очереди заданий
+  job_tt_waiting: 'Задача ожидает...'
+  job_tt_running: 'Задача выполняется. Подробности смотрите во вкладке журнала.'
+  job_tt_finished: 'Готово. Нажмите «✔» справа, чтобы посмотреть результат.'
+  job_tt_transcript_file: 'Транскрипция:'
+  job_tt_canceling: 'Отмена выполняется...'
+  job_tt_canceled: 'Задание отменено пользователем.'
+  job_tt_error: 'Во время обработки задачи произошла ошибка: %{error_msg}'
 
   # Сообщения журнала
-  log_transcript_filename: 'Имя файла транскрипции: '
-  log_audio_file_selected: 'Выбран аудиофайл: '
+  log_transcript_filename: 'Имя файла(ов) транскрипции: '
+  log_audio_file_selected: 'Выбран(ы) аудиофайл(ы): '
+  queue_added_job: 'Задание «%{audio_file}» добавлено в очередь.'
+  queue_start: '=== Запуск очереди ==='
+  queue_start_jobs: 'Обработка %{total} задания(ий) на транскрипцию'
+  queue_none_waiting: 'Нечего выполнять: в очереди нет ожидающих заданий.'
+  start_job: 'Запуск задания: %{audio_file}'
   start_audio_conversion: 'Преобразование аудио...'
   audio_conversion_finished: 'Преобразование аудио завершено'
   start_identifiying_speakers: 'Определение дикторов...'
@@ -51,12 +86,23 @@ ru:
   start_canceling: 'Отмена... (пожалуйста, подождите)'
   start_transcription: 'Транскрибация...'
   loading_whisper: 'Загрузка whisper'
-  transcription_finished: 'Транскрибация завершена.' 
+  vad: 'Обнаружение голосовой активности...'
+  language_detect: 'Обнаружен язык «%{lang}» с вероятностью %{prob}'
+  transcription_finished: 'Транскрибация завершена.'
   transcription_saved: 'Сохранено в '
   trancription_time: 'Продолжительность: %{duration} минут'
+  queue_complete: '=== Обработка очереди завершена ==='
+  total_jobs: 'Всего заданий: %{total}'
+  completed: 'Завершено: %{finished}'
+  failed: 'Неудачных: %{errors}'
+  canceled_summary: 'Отменено: %{canceled}'
+  processing_time: 'Общее время обработки: %{total_time_str}'
 
   # Сообщения об ошибках
   err_setup: 'Произошла ошибка при настройке. Проверьте подключение к интернету и перезапустите программу.'
+  output_override: >
+    Другое задание в очереди (ожидает, выполняется или завершено) использует тот же выходной файл.
+    Перезаписать этот выходной файл?
   err_invalid_time_string: 'Неверное время: "%{time}"'
   err_options: 'Ошибка в настройках'
   err_no_audio_file: 'Ошибка: Пожалуйста, выберите аудиофайл.'
@@ -64,15 +110,35 @@ ru:
   err_ffmpeg: 'ffmpeg вернул ошибку'
   err_converting_audio: Ошибка на шаге 1 - преобразование аудио.
   err_identifying_speakers: Ошибка на шаге 2 - определение дикторов.
+  err_loading_prompt: 'Предупреждение: не удалось загрузить промпт Whisper.'
   transcription_canceled: 'Вы действительно хотите отменить транскрипцию?'   
+  queue_cancel_all_confirm: 'Это отменит все незавершённые задания в очереди. Продолжить?'
   err_user_cancelation: 'Процесс был отменен пользователем.'
   err_whisper_main: 'Ошибка в Whisper: завершение основной программы с кодом %{e}'
   err_transcription: 'Ошибка на шаге 3 - транскрипция'
   rescue_saving: 'Не удалось сохранить в оригинальный файл. Сохранено в файл: %{file}'
   rescue_saving_failed: 'Ошибка: Не удалось сохранить в оригинальный файл. Файл с альтернативным именем также существует. Приложение будет закрыто. (Убедитесь, что ваша транскрипция не открыта в Word!)'
+  err_noScribeEdit_not_found: 'Ошибка: не удалось найти редактор noScribe.'
+  err_vtt_invalid_options: 'Предупреждение: параметры "Перекрытие речи", "Отметьте паузы" и "Временные метки" не поддерживаются в файлах VTT.'
+  err_editor_invalid_format: 'Редактор может использоваться только с HTML-файлами. Запустить его все равно?'
+  err_editor_no_file: 'Нет доступных завершённых заданий транскрипции. Запустить редактор всё равно?'
+  err_invalid_model: 'Игнорируется повторяющееся имя модели whisper: "%{model_name}"'
 
   # Содержимое документа
   doc_header: 'Транскрибировано с помощью noScribe версии %{version}'
   doc_header_audio: 'Аудиофайл: %{file}'
   pause_minutes: '(%{minutes} минуты паузы)'
   pause_seconds: '(%{seconds} секунд паузы)'
+  
+  # Действия с очередью
+  queue_remove_waiting: 'Удалить это задание из очереди?'
+  queue_remove_entry: 'Удалить эту запись из списка?'
+  queue_tt_cancel_running: 'Отменить это задание'
+  queue_tt_remove_waiting: 'Удалить из очереди'
+  queue_tt_remove_entry: 'Удалить из списка'
+  queue_tt_repeat_job: 'Повторить это задание'
+  queue_tt_edit_job: 'Открыть результат в редакторе noScribe'
+
+  # Дополнительные кнопки UI
+  send_queue: 'Отправить задание в очередь'
+  queue_run_button: 'Запустить'
