@@ -2146,12 +2146,12 @@ class App(ctk.CTk):
         start_time = None
         val = self.entry_start.get()
         if val != '':
-            start_time = millisec(val)
+            start_time = utils.str_to_ms(val)
         
         stop_time = None
         val = self.entry_stop.get()
         if val != '':
-            stop_time = millisec(val)
+            stop_time = utils.str_to_ms(val)
         
         # Get whisper model path
         sel_whisper_model = self.option_menu_whisper_model.get()
