@@ -1,0 +1,36 @@
+# This Github Action is based on
+# https://docs.github.com/en/actions/tutorials/build-and-test-code/python
+name: noScribe
+
+on: [push, pull_request]
+
+jobs:
+  pytest:
+
+    # Use other operating systems as well when tests are added that are os
+    # specific.
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+      # You can test your matrix by printing the current Python version
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+        
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r environments/requirements_linux.txt
+
+      - name: Test with pytest
+        run: |
+          pip install pytest pytest-cov
+          python -m pytest --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
