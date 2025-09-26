@@ -33,7 +33,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 > All releases are hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 
 ### Windows
-- The **general purpose version** for normal PCs without a NVIDIA graphics card: [https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fnormal](https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fnormal) 
+- The **general purpose version** for normal PCs without a NVIDIA graphics card: [https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fnormal2](https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fnormal2) 
 - A special version using **CUDA acceleration on NVIDIA graphics cards** with at least 6 GB of VRAM: [https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fcuda1](https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fcuda1). Make sure that your NVIDIA drivers are on version 570.65 or higher. You must also install the [CUDA toolkit from here](https://developer.nvidia.com/cuda-downloads?target_os=Windows) (a reboot is required afterwards).
 - **Installation**: 
     - Start the downloaded setup file. This may take a while, be patient.
@@ -186,4 +186,5 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
+
 
