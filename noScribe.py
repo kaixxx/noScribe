@@ -291,15 +291,6 @@ def get_unique_filename(fn: str, file_list=[]) -> str:
     else:
         return fn    
 
-def ms_to_str(milliseconds: float, include_ms=False):
-    """ Convert milliseconds into formatted timestamp 'hh:mm:ss' """
-    seconds, milliseconds = divmod(milliseconds,1000)
-    minutes, seconds = divmod(seconds, 60)
-    hours, minutes = divmod(minutes, 60)
-    formatted = f'{hours:02d}:{minutes:02d}:{seconds:02d}'
-    if include_ms:
-        formatted += f'.{milliseconds:03d}'
-    return formatted 
 
 def iter_except(function, exception):
         # Works like builtin 2-argument `iter()`, but stops on `exception`.
@@ -494,8 +485,8 @@ class TranscriptionJob:
         try:
             start_ms = getattr(self, 'start', 0) or 0
             stop_ms = getattr(self, 'stop', 0) or 0
-            start_txt = ms_to_str(start_ms) if start_ms > 0 else '00:00:00'
-            stop_txt = ms_to_str(stop_ms) if stop_ms > 0 else 'end'
+            start_txt = utils.ms_to_str(start_ms) if start_ms > 0 else '00:00:00'
+            stop_txt = utils.ms_to_str(stop_ms) if stop_ms > 0 else 'end'
             lines.append(f"{t('label_start')} {start_txt}")
             lines.append(f"{t('label_stop')} {stop_txt}")
         except Exception:
@@ -2303,9 +2294,9 @@ class App(ctk.CTk):
             # Create option info string for logging
             option_info = ''
             if job.start > 0:
-                option_info += f'{t("label_start")} {ms_to_str(job.start)} | '
+                option_info += f'{t("label_start")} {utils.ms_to_str(job.start)} | '
             if job.stop > 0:
-                option_info += f'{t("label_stop")} {ms_to_str(job.stop)} | '
+                option_info += f'{t("label_stop")} {utils.ms_to_str(job.stop)} | '
             option_info += f'{t("label_language")} {job.language_name} ({languages[job.language_name]}) | '
             option_info += f'{t("label_speaker")} {job.speaker_detection} | '
             option_info += f'{t("label_overlapping")} {job.overlapping} | '
@@ -2516,7 +2507,7 @@ class App(ctk.CTk):
 
                         # write segments to log file
                         for segment in diarization:
-                            line = f'{ms_to_str(job.start + segment["start"], include_ms=True)} - {ms_to_str(job.start + segment["end"], include_ms=True)} {segment["label"]}'
+                            line = f'{utils.ms_to_str(job.start + segment["start"], include_ms=True)} - {utils.ms_to_str(job.start + segment["end"], include_ms=True)} {segment["label"]}'
                             self.logn(line, where='file')
 
                         self.logn()
@@ -2697,7 +2688,7 @@ class App(ctk.CTk):
                     orig_audio_end = job.start + end
 
                     if job.timestamps:
-                        ts = ms_to_str(orig_audio_start)
+                        ts = utils.ms_to_str(orig_audio_start)
                         ts = f'[{ts}]'
 
                     # check for pauses and mark them in the transcript
