@@ -420,6 +420,8 @@ class TranscriptionJob:
         # File paths
         self.audio_file: str = ''
         self.transcript_file: str = ''
+        # Partial transcript tracking
+        self.has_partial_transcript: bool = False
         
         # Time range
         self.start: int = 0  # milliseconds
@@ -957,7 +959,8 @@ class JobEntryFrame(ctk.CTkFrame, CTkScalingBaseClass):
             return
         
         # Calculate button area width to avoid overlap (1 button = 30px + padding)
-        button_area_width = 2 * self._apply_widget_scaling(30 + 5)
+        # Reserve space for up to 3 buttons (X, ⟲/✔, ✔)
+        button_area_width = 3 * self._apply_widget_scaling(30 + 5)
                
         # Draw base background
         base_color = self.base_color[1] if isinstance(self.base_color, tuple) else self.base_color
@@ -1585,6 +1588,33 @@ class App(ctk.CTk):
                     except Exception:
                         pass
 
+                # Add "open partial" button for failed jobs with partial HTML transcript
+                try:
+                    if job.status in [JobStatus.ERROR, JobStatus.CANCELED] and getattr(job, 'has_partial_transcript', False):
+                        if 'partial_btn' not in row or row['partial_btn'] is None:
+                            partial_btn = ctk.CTkButton(
+                                row['frame'],
+                                text='✔',
+                                width=24,
+                                height=20,
+                                fg_color=btn_color,
+                                hover_color='darkred',
+                                command=lambda j=job: self._on_queue_row_open_partial(j)
+                            )
+                            partial_btn.pack(side='right', padx=(0, 4), pady=5)
+                            row['partial_btn'] = partial_btn
+                            row['partial_tt'] = CTkToolTip(partial_btn, text=t('queue_tt_open_partial_job')) 
+                        else:
+                            if not row['partial_btn'].winfo_ismapped():
+                                row['partial_btn'].pack(side='right', padx=(0, 4), pady=2)
+                            row['partial_btn'].configure(state=ctk.NORMAL, command=lambda j=job: self._on_queue_row_open_partial(j))
+                    else:
+                        # hide the partial button otherwise
+                        if 'partial_btn' in row and row['partial_btn'] is not None and row['partial_btn'].winfo_ismapped():
+                            row['partial_btn'].pack_forget()
+                except Exception:
+                    pass
+
                 # Add edit button for finished jobs
                 try:
                     if job.status == JobStatus.FINISHED:
@@ -1673,6 +1703,22 @@ class App(ctk.CTk):
                     repeat_btn.pack(side='right', padx=(0, 4), pady=5)
                     repeat_tt = CTkToolTip(repeat_btn, text=t('queue_tt_repeat_job'))
 
+                # Open partial button (failed job with partial transcript, HTML only)
+                partial_btn = None
+                partial_tt = None
+                if job.status in [JobStatus.ERROR, JobStatus.CANCELED] and getattr(job, 'has_partial_transcript', False):
+                    partial_btn = ctk.CTkButton(
+                        entry_frame,
+                        text='✔',
+                        width=24,
+                        height=20,
+                        fg_color=btn_color,
+                        hover_color='darkred',
+                        command=lambda j=job: self._on_queue_row_open_partial(j)
+                    )
+                    partial_btn.pack(side='right', padx=(0, 4), pady=5)
+                    partial_tt = CTkToolTip(partial_btn, text=t('queue_tt_open_partial_job'))
+
                 # Edit button (finished jobs only)
                 edit_btn = None
                 edit_tt = None
@@ -1703,6 +1749,8 @@ class App(ctk.CTk):
                     'cancel_tt': cancel_tt,
                     'repeat_btn': repeat_btn,
                     'repeat_tt': repeat_tt,
+                    'partial_btn': partial_btn,
+                    'partial_tt': partial_tt,
                     'edit_btn': edit_btn,
                     'edit_tt': edit_tt
                 }
@@ -1877,6 +1925,28 @@ class App(ctk.CTk):
     
     def _on_queue_row_edit(self, job: TranscriptionJob):
         self.openLink(f'file://{job.transcript_file}')
+
+    def _on_queue_row_open_partial(self, job: TranscriptionJob):
+        """Open the partial transcript file (HTML in editor, TXT/VTT via default app)."""
+        try:
+            path = getattr(job, 'transcript_file', '') or ''
+            if not path or not os.path.exists(path):
+                try:
+                    self.logn(t('err_partial_not_found'), 'error')
+                except Exception:
+                    pass
+                try:
+                    tk.messagebox.showerror(title='noScribe', message=t('err_partial_not_found'))
+                except Exception:
+                    pass
+                return
+            try:
+                self.logn(t('log_open_partial', file=path))
+            except Exception:
+                pass
+            self.openLink(f'file://{path}')
+        except Exception:
+            pass
 
     def launch_editor(self, file=''):
         # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
@@ -2303,7 +2373,7 @@ class App(ctk.CTk):
         
         tmpdir = TemporaryDirectory('noScribe')
         tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
-        my_transcript_file = job.transcript_file
+        orig_transcript_file = job.transcript_file
 
         try:
             # Create option info string for logging
@@ -2322,7 +2392,7 @@ class App(ctk.CTk):
             # Create log file
             if not os.path.exists(f'{config_dir}/log'):
                 os.makedirs(f'{config_dir}/log')
-            self.log_file = open(f'{config_dir}/log/{Path(my_transcript_file).stem}.log', 'w', encoding="utf-8")
+            self.log_file = open(f'{config_dir}/log/{Path(job.transcript_file).stem}.log', 'w', encoding="utf-8")
 
             # Log job configuration
             self.logn(f'whisper beam size: {job.whisper_beam_size}', where='file')
@@ -2603,7 +2673,7 @@ class App(ctk.CTk):
                 last_auto_save = datetime.datetime.now()
 
                 def save_doc():
-                    nonlocal my_transcript_file  # Tell Python we’re modifying the outer variable
+                    nonlocal last_auto_save
                     txt = ''
                     if job.file_ext == 'html':
                         txt = d.asHTML()
@@ -2615,24 +2685,24 @@ class App(ctk.CTk):
                         raise TypeError(f'Invalid file type "{job.file_ext}".')
                     try:
                         if txt != '':
-                            with open(my_transcript_file, 'w', encoding="utf-8") as f:
+                            with open(job.transcript_file, 'w', encoding="utf-8") as f:
                                 f.write(txt)
                                 f.flush()
                             last_auto_save = datetime.datetime.now()
                     except Exception as e:
                         # other error while saving, maybe the file is already open in Word and cannot be overwritten
                         # try saving to a different filename
-                        my_transcript_file = get_unique_filename(my_transcript_file)
+                        my_transcript_file = get_unique_filename(job.transcript_file)
                         if os.path.exists(my_transcript_file):
                             # the alternative filename also exists already, don't want to overwrite, giving up
                             raise Exception(t('rescue_saving_failed'))
                         else:
-                            # htmlStr = d.asHTML()
-                            with open(my_transcript_file, 'w', encoding="utf-8") as f:
+                            job.transcript_file = my_transcript_file
+                            with open(job.transcript_file, 'w', encoding="utf-8") as f:
                                 f.write(txt)
                                 f.flush()
                             self.logn()
-                            self.logn(t('rescue_saving', file=my_transcript_file), 'error', link=f'file://{my_transcript_file}')
+                            self.logn(t('rescue_saving', file=job.transcript_file), 'error', link=f'file://{job.transcript_file}')
                             last_auto_save = datetime.datetime.now()
 
                 # Prepare VAD data locally for pause adjustment (audio is 16kHz mono after ffmpeg conversion)
@@ -2802,14 +2872,15 @@ class App(ctk.CTk):
                     p.appendChild(a)
 
                     self.log(seg_text)
-
+                    
                     first_segment = False
 
                     # auto save periodically
                     nonlocal last_auto_save
                     if job.auto_save:
-                        if (datetime.datetime.now() - last_auto_save).total_seconds() > 20:
+                        if (datetime.datetime.now() - last_auto_save).total_seconds() > 5:
                             save_doc()
+                            job.has_partial_transcript = True
 
                     # per-segment progress based on total duration
                     try:
@@ -2820,19 +2891,25 @@ class App(ctk.CTk):
                 
                 try:
                     info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment)
-                    if self.cancel:
-                        raise Exception(t('err_user_cancelation')) 
-
+                    # if self.cancel:
+                    #    raise Exception(t('err_user_cancelation')) 
+                    
+                    job.has_partial_transcript = False # transcript is finished
                     self.logn()
                     self.logn()
                     self.logn(t('transcription_finished'), 'highlight')
                 finally:
-                    if job.transcript_file != my_transcript_file: # used alternative filename because saving under the initial name failed
+                    if not first_segment:
+                        save_doc()
+                        job.has_partial_transcript = job.status != JobStatus.FINISHED
+                    else:
+                        job.has_partial_transcript = False
+                    if job.transcript_file != orig_transcript_file: # used alternative filename because saving under the initial name failed
                         self.log(t('rescue_saving'))
-                        self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
+                        self.logn(job.transcript_file, link=f'file://{job.transcript_file}')
                     else:
                         self.log(t('transcription_saved'))
-                        self.logn(my_transcript_file, link=f'file://{my_transcript_file}')
+                        self.logn(job.transcript_file, link=f'file://{job.transcript_file}')
 
                 # log duration of the whole process
                 proc_time = datetime.datetime.now() - proc_start_time

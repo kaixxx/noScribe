@@ -123,6 +123,8 @@ de:
   err_editor_invalid_format: 'Der Editor kann nur mit html-Dateien verwendet werden. Trotzdem starten?'
   err_editor_no_file: 'Kein abgeschlossener Transkriptionsauftrag verfügbar. Editor trotzdem starten?'
   err_invalid_model: 'Ignorierter doppelter Name für whisper-Modell: "%{model_name}"'
+  err_partial_not_found: 'Teil-Transkriptdatei nicht gefunden.'
+  log_open_partial: 'Teil-Transkript wird geöffnet: %{file}'
 
 
   # Doc contents
@@ -139,6 +141,7 @@ de:
   queue_tt_remove_entry: 'Aus der Liste entfernen'
   queue_tt_repeat_job: 'Diesen Auftrag erneut ausführen'
   queue_tt_edit_job: 'Ergebnis im noScribe-Editor öffnen'
+  queue_tt_open_partial_job: 'Teil-Ergebnis im noScribe-Editor öffnen'
 
   # Additional UI buttons
   send_queue: 'Auftrag in Warteschlange senden'

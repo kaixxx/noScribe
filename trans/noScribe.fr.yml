@@ -122,6 +122,8 @@ fr:
   err_editor_invalid_format: "L'éditeur ne peut être utilisé qu'avec des fichiers HTML. Voulez-vous quand même le lancer ?"
   err_editor_no_file: "Aucune tâche de transcription terminée disponible. Démarrer l’éditeur quand même ?"
   err_invalid_model: 'Nom en double ignoré pour le modèle whisper : "%{model_name}"'
+  err_partial_not_found: 'Fichier de transcription partielle introuvable.'
+  log_open_partial: 'Ouverture de la transcription partielle : %{file}'
 
   # Contenu du document
   doc_header: "Transcrit avec noScribe vers. %{version}"
@@ -137,6 +139,7 @@ fr:
   queue_tt_remove_entry: 'Retirer de la liste'
   queue_tt_repeat_job: 'Relancer cette tâche'
   queue_tt_edit_job: 'Ouvrir le résultat dans l’éditeur noScribe'
+  queue_tt_open_partial_job: 'Ouvrir le résultat partiel dans l’éditeur noScribe'
 
   # Boutons supplémentaires de l’UI
   send_queue: 'Envoyer la tâche à la file'

@@ -122,6 +122,8 @@ es:
   err_editor_invalid_format: 'El editor solo puede usarse con archivos HTML. ¿Deseas iniciarlo de todas formas?'
   err_editor_no_file: 'No hay ninguna transcripción finalizada disponible. ¿Iniciar el editor de todos modos?'
   err_invalid_model: 'Nombre duplicado ignorado para el modelo whisper: "%{model_name}"'
+  err_partial_not_found: 'Archivo de transcripción parcial no encontrado.'
+  log_open_partial: 'Abriendo transcripción parcial: %{file}'
 
   # Contenido del documento
   doc_header: 'Transcrito con noScribe ver. %{version}'
@@ -137,6 +139,7 @@ es:
   queue_tt_remove_entry: 'Eliminar de la lista'
   queue_tt_repeat_job: 'Repetir este trabajo'
   queue_tt_edit_job: 'Abrir el resultado en el editor de noScribe'
+  queue_tt_open_partial_job: 'Abrir el resultado parcial en el editor de noScribe'
 
   # Botones adicionales de la UI
   send_queue: 'Enviar tarea a la cola'

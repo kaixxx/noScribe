@@ -129,6 +129,8 @@ en:
   err_editor_invalid_format: 'The editor can only be used with html files. Do you want to start it anyway?'
   err_editor_no_file: 'No finished transcription job available. Start the editor anyway?'
   err_invalid_model: 'Ignored double name for whisper model: "%{model_name}"'
+  err_partial_not_found: 'Partial transcript file not found.'
+  log_open_partial: 'Opening partial transcript: %{file}'
 
   # Doc contents
   doc_header: 'Transcribed with noScribe vers. %{version}'
@@ -144,4 +146,4 @@ en:
   queue_tt_remove_entry: 'Remove from list'
   queue_tt_repeat_job: 'Repeat this job'
   queue_tt_edit_job: 'Open the result in the noScribe Editor'
-                      
+  queue_tt_open_partial_job: 'Open partial result in the noScribe Editor'
