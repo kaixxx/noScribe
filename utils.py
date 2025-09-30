@@ -41,12 +41,12 @@ def str_to_ms(time_str: str) -> int:
 
 def ms_to_str(milliseconds: int, include_ms: bool = False) -> str:
     """
-    Convert milliseconds to a formatted timestamp string in "hh:mm:ss" format.
+    Convert milliseconds to a formatted timestamp string in "HH:MM:SS" format.
 
     Args:
         milliseconds (float): The number of milliseconds to convert.
         include_ms (bool, optional): Whether to include milliseconds in the
-        output. Defaults to False.
+        output ("HH:MM:SS.mmm"). Defaults to False.
 
     Returns:
         str: A formatted timestamp string.
@@ -69,13 +69,15 @@ def ms_to_str(milliseconds: int, include_ms: bool = False) -> str:
     return formatted
 
 
-def ms_to_webvtt(milliseconds) -> str:
-    """converts milliseconds to the time stamp of WebVTT (HH:MM:SS.mmm)
+def ms_to_webvtt(milliseconds: int) -> str:
     """
-    # 1 hour = 3600000 milliseconds
-    # 1 minute = 60000 milliseconds
-    # 1 second = 1000 milliseconds
-    hours, milliseconds = divmod(milliseconds, 3600000)
-    minutes, milliseconds = divmod(milliseconds, 60000)
-    seconds, milliseconds = divmod(milliseconds, 1000)
-    return "{:02d}:{:02d}:{:02d}.{:03d}".format(hours, minutes, seconds, milliseconds)
+    Converts milliseconds to a WebVTT timestamp string (HH:MM:SS.mmm).
+
+    Args:
+        milliseconds: The time in milliseconds.
+
+    Returns:
+        A string representing the timestamp in the format HH:MM:SS.mmm.
+    """
+
+    return ms_to_str(milliseconds, include_ms=True)
