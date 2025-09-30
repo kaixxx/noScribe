@@ -52,3 +52,33 @@ def test_ms_to_str():
 
     with pytest.raises(ValueError):
         utils.ms_to_str(-1000.5)
+
+
+def test_ms_to_webvtt():
+    """
+    Tests for the `ms_to_webvtt` function.
+    """
+
+    assert utils.ms_to_webvtt(0) == "00:00:00.000"
+    assert utils.ms_to_webvtt(1000) == "00:00:01.000"
+    assert utils.ms_to_webvtt(1250) == "00:00:01.250"
+    assert utils.ms_to_webvtt(60000) == "00:01:00.000"
+    assert utils.ms_to_webvtt(60250) == "00:01:00.250"
+    assert utils.ms_to_webvtt(3600000) == "01:00:00.000"
+    assert utils.ms_to_webvtt(3600250) == "01:00:00.250"
+
+    # Test invalid inputs
+    with pytest.raises(ValueError):
+        utils.ms_to_webvtt(86400001)
+
+    with pytest.raises(TypeError):
+        utils.ms_to_webvtt("abc")
+
+    with pytest.raises(ValueError):
+        utils.ms_to_webvtt(123.45)
+
+    with pytest.raises(ValueError):
+        utils.ms_to_webvtt(-1000)
+
+    with pytest.raises(ValueError):
+        utils.ms_to_webvtt(-1000.5)
