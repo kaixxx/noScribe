@@ -39,12 +39,31 @@ def str_to_ms(time_str: str) -> int:
     return ret
 
 
-def ms_to_str(milliseconds: float, include_ms=False):
-    """ Convert milliseconds into formatted timestamp 'hh:mm:ss' """
-    Convert milliseconds into formatted timestamp 'hh:mm:ss' """
-    seconds, milliseconds = divmod(milliseconds,1000)
+def ms_to_str(milliseconds: int, include_ms: bool = False) -> str:
+    """
+    Convert milliseconds to a formatted timestamp string in "hh:mm:ss" format.
+
+    Args:
+        milliseconds (float): The number of milliseconds to convert.
+        include_ms (bool, optional): Whether to include milliseconds in the
+        output. Defaults to False.
+
+    Returns:
+        str: A formatted timestamp string.
+    """
+
+    if milliseconds > 86400000:
+        raise ValueError("milliseconds are larger than 24 hours", milliseconds)
+    if milliseconds < 0:
+        raise ValueError("milliseconds smaller than zero", milliseconds)
+
+    seconds, milliseconds = divmod(milliseconds, 1000)
     minutes, seconds = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
-    formatted = f'{hours:02d}:{minutes:02d}:{seconds:02d}'
+
+    formatted = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
     if include_ms:
-        formatted += f'.{milliseconds:03d}'
+        formatted += f".{milliseconds:03d}"
+
+    return formatted
