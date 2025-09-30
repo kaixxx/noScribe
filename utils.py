@@ -67,3 +67,15 @@ def ms_to_str(milliseconds: int, include_ms: bool = False) -> str:
         formatted += f".{milliseconds:03d}"
 
     return formatted
+
+
+def ms_to_webvtt(milliseconds) -> str:
+    """converts milliseconds to the time stamp of WebVTT (HH:MM:SS.mmm)
+    """
+    # 1 hour = 3600000 milliseconds
+    # 1 minute = 60000 milliseconds
+    # 1 second = 1000 milliseconds
+    hours, milliseconds = divmod(milliseconds, 3600000)
+    minutes, milliseconds = divmod(milliseconds, 60000)
+    seconds, milliseconds = divmod(milliseconds, 1000)
+    return "{:02d}:{:02d}:{:02d}.{:03d}".format(hours, minutes, seconds, milliseconds)

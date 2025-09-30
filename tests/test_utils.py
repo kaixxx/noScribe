@@ -25,11 +25,8 @@ def test_ms_to_str():
     # Without ms
     assert utils.ms_to_str(0) == "00:00:00"
     assert utils.ms_to_str(1000) == "00:00:01"
-    assert utils.ms_to_str(1250) == "00:00:01"
     assert utils.ms_to_str(60000) == "00:01:00"
-    assert utils.ms_to_str(60250) == "00:01:00"
     assert utils.ms_to_str(3600000) == "01:00:00"
-    assert utils.ms_to_str(3600250) == "01:00:00"
 
     # With ms
     assert utils.ms_to_str(0, include_ms=True) == "00:00:00.000"

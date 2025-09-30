@@ -338,16 +338,6 @@ def vtt_escape(txt: str) -> str:
         txt = txt.replace('\n\n', '\n')
     return txt    
 
-def ms_to_webvtt(milliseconds) -> str:
-    """converts milliseconds to the time stamp of WebVTT (HH:MM:SS.mmm)
-    """
-    # 1 hour = 3600000 milliseconds
-    # 1 minute = 60000 milliseconds
-    # 1 second = 1000 milliseconds
-    hours, milliseconds = divmod(milliseconds, 3600000)
-    minutes, milliseconds = divmod(milliseconds, 60000)
-    seconds, milliseconds = divmod(milliseconds, 1000)
-    return "{:02d}:{:02d}:{:02d}.{:03d}".format(hours, minutes, seconds, milliseconds)
 
 def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: str):
     vtt = 'WEBVTT '
@@ -368,8 +358,8 @@ def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: st
         if name is not None:
             name_elems = name.split('_', 4)
             if len(name_elems) > 1 and name_elems[0] == 'ts':
-                start = ms_to_webvtt(int(name_elems[1]))
-                end = ms_to_webvtt(int(name_elems[2]))
+                start = utils.ms_to_webvtt(int(name_elems[1]))
+                end = utils.ms_to_webvtt(int(name_elems[2]))
                 spkr = name_elems[3]
                 txt = vtt_escape(html_node_to_text(segment))
                 vtt += f'{i+1}\n{start} --> {end}\n<v {spkr}>{txt.lstrip()}\n\n'
