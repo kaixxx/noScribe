@@ -2,6 +2,10 @@
 Different small and distinct helper functions
 """
 
+import os
+
+from pathlib import Path
+
 import i18n
 
 
@@ -37,3 +41,18 @@ def str_to_ms(time_str: str) -> int:
         ) from e
 
     return ret
+
+
+def get_unique_filename(fn: str, file_list=[]) -> str:
+    if os.path.exists(fn) or fn in file_list:
+        i = 1
+        path = Path(fn)
+        base_path = os.path.join(path.parent, path.stem)
+        file_ext = os.path.splitext(fn)[1][1:] 
+        while os.path.exists(f'{base_path}_{i}.{file_ext}') or f'{base_path}_{i}.{file_ext}' in file_list:
+            i += 1
+            if i > 999:
+                break
+        return f'{base_path}_{i}.{file_ext}'
+    else:
+        return fn

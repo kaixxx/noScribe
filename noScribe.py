@@ -277,20 +277,6 @@ timestamp_re = re.compile(r'\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]'
 
 # Helper functions
 
-def get_unique_filename(fn: str, file_list=[]) -> str:
-    if os.path.exists(fn) or fn in file_list:
-        i = 1
-        path = Path(fn)
-        base_path = os.path.join(path.parent, path.stem)
-        file_ext = os.path.splitext(fn)[1][1:] 
-        while os.path.exists(f'{base_path}_{i}.{file_ext}') or f'{base_path}_{i}.{file_ext}' in file_list:
-            i += 1
-            if i > 999:
-                break
-        return f'{base_path}_{i}.{file_ext}'
-    else:
-        return fn    
-
 def ms_to_str(milliseconds: float, include_ms=False):
     """ Convert milliseconds into formatted timestamp 'hh:mm:ss' """
     seconds, milliseconds = divmod(milliseconds,1000)
@@ -2071,7 +2057,7 @@ class App(ctk.CTk):
                 transcript_name = os.path.join(dir, f'{Path(f).stem}.{config['last_filetype']}')
             else:
                 transcript_name = f'{Path(f).with_name(Path(f).stem)}.{config['last_filetype']}'
-            transcript_name = get_unique_filename(transcript_name, self.transcript_files_list) # ensure to not obverride anything
+            transcript_name = utils.get_unique_filename(transcript_name, self.transcript_files_list) # ensure to not obverride anything
             self.transcript_files_list.append(transcript_name)
         if len(self.transcript_files_list) > 1:
             self.button_transcript_file_name.configure(text=t('multiple_audio_files'))
@@ -2686,7 +2672,7 @@ class App(ctk.CTk):
                     except Exception as e:
                         # other error while saving, maybe the file is already open in Word and cannot be overwritten
                         # try saving to a different filename
-                        my_transcript_file = get_unique_filename(job.transcript_file)
+                        my_transcript_file = utils.get_unique_filename(job.transcript_file)
                         if os.path.exists(my_transcript_file):
                             # the alternative filename also exists already, don't want to overwrite, giving up
                             raise Exception(t('rescue_saving_failed'))
