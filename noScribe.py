@@ -2050,20 +2050,25 @@ class App(ctk.CTk):
 
     def create_default_transcript_names(self, dir=None):
         self.transcript_files_list = []
-        if not ('last_filetype' in config):
+        if 'last_filetype' not in config:
             config['last_filetype'] = 'html'
+
+        # Collect audio file names.
         for f in self.audio_files_list:
             if dir:
-                transcript_name = os.path.join(dir, f'{Path(f).stem}.{config['last_filetype']}')
+                self.transcript_files_list.append(Path(dir) / f'{Path(f).stem}.{config['last_filetype']}')
             else:
-                transcript_name = f'{Path(f).with_name(Path(f).stem)}.{config['last_filetype']}'
-            transcript_name = utils.get_unique_filename(transcript_name, self.transcript_files_list) # ensure to not obverride anything
-            self.transcript_files_list.append(transcript_name)
+                self.transcript_files_list.append(f'{Path(f).with_name(Path(f).stem)}.{config['last_filetype']}')
+
+        # Ensure to not override anything and that we have unique file names.
+        # Make sure here that every file is a `Path`.
+        self.transcript_files_list = utils.create_unique_filenames([Path(x) for x in self.transcript_files_list])
+
         if len(self.transcript_files_list) > 1:
             self.button_transcript_file_name.configure(text=t('multiple_audio_files'))
         elif len(self.transcript_files_list) == 1:
-            self.button_transcript_file_name.configure(text=os.path.basename(self.transcript_files_list[0]))
-        else: 
+            self.button_transcript_file_name.configure(text=self.transcript_files_list[0].name)
+        else:
             self.button_transcript_file_name.configure(text='')
 
         self.logn()
@@ -2669,21 +2674,23 @@ class App(ctk.CTk):
                                 f.write(txt)
                                 f.flush()
                             last_auto_save = datetime.datetime.now()
-                    except Exception as e:
+                    except Exception:
                         # other error while saving, maybe the file is already open in Word and cannot be overwritten
                         # try saving to a different filename
-                        my_transcript_file = utils.get_unique_filename(job.transcript_file)
-                        if os.path.exists(my_transcript_file):
-                            # the alternative filename also exists already, don't want to overwrite, giving up
-                            raise Exception(t('rescue_saving_failed'))
-                        else:
-                            job.transcript_file = my_transcript_file
-                            with open(job.transcript_file, 'w', encoding="utf-8") as f:
-                                f.write(txt)
-                                f.flush()
-                            self.logn()
-                            self.logn(t('rescue_saving', file=job.transcript_file), 'error', link=f'file://{job.transcript_file}')
-                            last_auto_save = datetime.datetime.now()
+                        try:
+                            job.transcript_file = utils.create_unique_filenames([Path(job.transcript_file)])[0]
+                        except RuntimeError as e:
+                            # File name already exists and a new one could not
+                            # be found.
+                            raise RuntimeError(t('rescue_saving_failed')) from e
+
+                        # `job.transcript_file` is for sure a `Path` here as we
+                        # called `create_unique_filenames`.
+                        job.transcript_file.write_text(txt, encoding="utf-8")
+
+                        self.logn()
+                        self.logn(t('rescue_saving', file=job.transcript_file), 'error', link=f'file://{job.transcript_file}')
+                        last_auto_save = datetime.datetime.now()
 
                 # Prepare VAD data locally for pause adjustment (audio is 16kHz mono after ffmpeg conversion)
                 try:
