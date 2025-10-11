@@ -42,7 +42,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 
 ### MacOS
 ported by [gernophil](https://github.com/gernophil) </br>
-- **Newer Macs with Apple Silicon M1-M4 processors**
+- **Newer Macs with Apple Silicon M1-M4 processors and macOS 14 or newer**
     - Download: [https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FmacOS%2Farm64%20(Apple%20Silicon)](https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FmacOS%2Farm64%20(Apple%20Silicon))
     - Double-click on the downloaded dmg-file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
     - You will need Apple's Rosetta2 Intel emulator since one component (ffmpeg) is still made the Intel CPUs. If you don't have it installed already, do this as follows:
