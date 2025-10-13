@@ -2312,7 +2312,11 @@ class App(ctk.CTk):
             self.logn(t('processing_time', total_time_str=total_time_str))
             
             # open editor if only a single file was processed
-            if queue_jobs_processed == 1 and job and job.file_ext == 'html' and get_config('auto_edit_transcript', 'True') == 'True':
+            if queue_jobs_processed == 1 \
+                    and job \
+                    and job.file_ext == 'html' \
+                    and job.status == JobStatus.FINISHED \
+                    and get_config('auto_edit_transcript', 'True') == 'True':
                 self.launch_editor(job.transcript_file)
             elif queue_jobs_processed > 1:
                 # if more than one job has been processed, switch to queue tab for an overview 
