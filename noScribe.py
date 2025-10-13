@@ -337,33 +337,9 @@ timestamp_re = re.compile(r'\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]'
 
 # Helper for text only output
         
-def html_node_to_text(node: AdvancedHTMLParser.AdvancedTag) -> str:
-    """
-    Recursively get all text from a html node and its children. 
-    """
-    # For text nodes, return their value directly
-    if AdvancedHTMLParser.isTextNode(node): # node.nodeType == node.TEXT_NODE:
-        return html.unescape(node)
-    # For element nodes, recursively process their children
-    elif AdvancedHTMLParser.isTagNode(node):
-        text_parts = []
-        for child in node.childBlocks:
-            text = html_node_to_text(child)
-            if text:
-                text_parts.append(text)
-        # For block-level elements, prepend and append newlines
-        if node.tagName.lower() in ['p', 'div', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'br']:
-            if node.tagName.lower() == 'br':
-                return '\n'
-            else:
-                return '\n' + ''.join(text_parts).strip() + '\n'
-        else:
-            return ''.join(text_parts)
-    else:
-        return ''
 
 def html_to_text(parser: AdvancedHTMLParser.AdvancedHTMLParser) -> str:
-    return html_node_to_text(parser.body)
+    return utils.html_node_to_text(parser.body)
 
 # Helper for WebVTT output
 
@@ -380,7 +356,7 @@ def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: st
     # The first paragraph contains the title
     vtt += vtt_escape(paragraphs[0].textContent) + '\n\n'
     # Next paragraph contains info about the transcript. Add as a note.
-    vtt += vtt_escape('NOTE\n' + html_node_to_text(paragraphs[1])) + '\n\n'
+    vtt += vtt_escape('NOTE\n' + utils.html_node_to_text(paragraphs[1])) + '\n\n'
     # Add media source:
     vtt += f'NOTE media: {media_path}\n\n'
 
@@ -396,7 +372,7 @@ def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: st
                 start = utils.ms_to_webvtt(int(name_elems[1]))
                 end = utils.ms_to_webvtt(int(name_elems[2]))
                 spkr = name_elems[3]
-                txt = vtt_escape(html_node_to_text(segment))
+                txt = vtt_escape(utils.html_node_to_text(segment))
                 vtt += f'{i+1}\n{start} --> {end}\n<v {spkr}>{txt.lstrip()}\n\n'
     return vtt
 

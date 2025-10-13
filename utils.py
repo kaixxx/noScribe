@@ -2,9 +2,11 @@
 Different small and distinct helper functions
 """
 
+import html
 from pathlib import Path
 
 import i18n
+import AdvancedHTMLParser
 
 
 def str_to_ms(time_str: str) -> int:
@@ -143,3 +145,29 @@ def ms_to_webvtt(milliseconds: int) -> str:
     """
 
     return ms_to_str(milliseconds, include_ms=True)
+
+
+def html_node_to_text(node: AdvancedHTMLParser.AdvancedTag) -> str:
+    """
+    Recursively get all text from a html node and its children. 
+    """
+    # For text nodes, return their value directly
+    if AdvancedHTMLParser.isTextNode(node): # node.nodeType == node.TEXT_NODE:
+        return html.unescape(node)
+    # For element nodes, recursively process their children
+    elif AdvancedHTMLParser.isTagNode(node):
+        text_parts = []
+        for child in node.childBlocks:
+            text = html_node_to_text(child)
+            if text:
+                text_parts.append(text)
+        # For block-level elements, prepend and append newlines
+        if node.tagName.lower() in ['p', 'div', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'br']:
+            if node.tagName.lower() == 'br':
+                return '\n'
+            else:
+                return '\n' + ''.join(text_parts).strip() + '\n'
+        else:
+            return ''.join(text_parts)
+    else:
+        return ''
