@@ -334,16 +334,7 @@ else:
 # timestamp regex
 timestamp_re = re.compile(r'\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]')
 
-# Helper functions
 
-def iter_except(function, exception):
-        # Works like builtin 2-argument `iter()`, but stops on `exception`.
-        try:
-            while True:
-                yield function()
-        except exception:
-            return
-        
 # Helper for text only output
         
 def html_node_to_text(node: AdvancedHTMLParser.AdvancedTag) -> str:
