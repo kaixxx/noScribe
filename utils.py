@@ -99,3 +99,47 @@ def _build_inc_filename(path_input: Path, inc: int) -> Path:
 
     path_output = path_input.parent / f"{path_input.stem}_{inc}{path_input.suffix}"
     return path_output
+  
+  
+def ms_to_str(milliseconds: int, include_ms: bool = False) -> str:
+    """
+    Convert milliseconds to a formatted timestamp string in "HH:MM:SS" format.
+
+    Args:
+        milliseconds (float): The number of milliseconds to convert.
+        include_ms (bool, optional): Whether to include milliseconds in the
+        output ("HH:MM:SS.mmm"). Defaults to False.
+
+    Returns:
+        str: A formatted timestamp string.
+    """
+
+    if milliseconds > 86400000:
+        raise ValueError("milliseconds are larger than 24 hours", milliseconds)
+    if milliseconds < 0:
+        raise ValueError("milliseconds smaller than zero", milliseconds)
+
+    seconds, milliseconds = divmod(milliseconds, 1000)
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+
+    formatted = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+    if include_ms:
+        formatted += f".{milliseconds:03d}"
+
+    return formatted
+
+
+def ms_to_webvtt(milliseconds: int) -> str:
+    """
+    Converts milliseconds to a WebVTT timestamp string (HH:MM:SS.mmm).
+
+    Args:
+        milliseconds: The time in milliseconds.
+
+    Returns:
+        A string representing the timestamp in the format HH:MM:SS.mmm.
+    """
+
+    return ms_to_str(milliseconds, include_ms=True)
