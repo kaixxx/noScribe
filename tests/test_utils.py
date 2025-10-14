@@ -1,4 +1,9 @@
+"""
+Tests for the `utils.py` file / module.
+"""
+
 from pathlib import Path
+import importlib.resources as impres
 
 import pytest
 import utils
@@ -80,24 +85,22 @@ def test_create_unique_filenames(tmp_path):
 
     # Try with a local path component.
     path_list = [Path("./test1.txt"), Path("./test2.txt"), Path("./test3.txt")]
-    assert (
-        utils.create_unique_filenames(path_list)
-        == path_list
-    )
+    assert utils.create_unique_filenames(path_list) == path_list
 
     # Try with a local path component and files in list.
     path_list = [Path("./test.txt"), Path("./test.txt"), Path("./test.txt")]
-    assert (
-        utils.create_unique_filenames(path_list)
-        == [Path("./test.txt"), Path("./test_1.txt"), Path("./test_2.txt")]
-    )
+    assert utils.create_unique_filenames(path_list) == [
+        Path("./test.txt"),
+        Path("./test_1.txt"),
+        Path("./test_2.txt"),
+    ]
 
     # Raise an error if unique filename could not be found.
     path_list = [Path("f") for _ in range(1000)]
     with pytest.raises(RuntimeError):
         utils.create_unique_filenames(path_list)
-  
-  
+
+
 def test_ms_to_str():
     """
     Tests for the `ms_to_str` function.
@@ -134,7 +137,7 @@ def test_ms_to_str():
     with pytest.raises(ValueError):
         utils.ms_to_str(-1000.5)
 
-        
+
 def test_ms_to_webvtt():
     """
     Tests for the `ms_to_webvtt` function.
@@ -163,3 +166,42 @@ def test_ms_to_webvtt():
 
     with pytest.raises(ValueError):
         utils.ms_to_webvtt(-1000.5)
+
+
+def test_html_to_text():
+    """
+    Tests for the `html_to_text` function.
+    """
+
+    html_string = """
+    <div>
+        <p>This is a paragraph.</p>
+        <p>And another paragraph.</p>
+    </div>
+    """
+
+    assert (
+        utils.html_to_text(html_string)
+        == "This is a paragraph.\n\nAnd another paragraph."
+    )
+
+    html_string = """
+    <DIV>
+        <P>This is a paragraph.</P>
+        <P>And another paragraph.</P>
+    </DIV>
+    """
+
+    assert (
+        utils.html_to_text(html_string)
+        == "This is a paragraph.\n\nAnd another paragraph."
+    )
+
+    # Use actual interview file.
+    html_file = impres.files("noScribe") / "tests" / "data" / "interview.html"
+    html_string = html_file.read_text(encoding="utf-8")
+
+    result_file = impres.files("noScribe") / "tests" / "data" / "interview.txt"
+    result_string = result_file.read_text(encoding="utf-8")
+
+    assert utils.html_to_text(html_string, use_only_body=True) == result_string
