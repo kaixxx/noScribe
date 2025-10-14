@@ -19,7 +19,7 @@
 - Since it uses sophisticated AI models, the download is quite large – about 3.7 GB
 - Poor audio quality will lead to poor transcription results.
 - No automatic transcription is perfect, there will always be some manual revision necessary. Use the [included Editor](#noscribeedit) to check your transcripts thouroughly. (See also ["Factors Influencing the Quality"](#factors-influencing-the-quality-of-the-transcription) and ["Known Issues"](#known-issues) below.)
-- If you want to know more an can understand German, Rebecca Schmidt from the University of Paderborn wrote a nice [review of noScribe,](https://sozmethode.hypotheses.org/2315) also discussing its limitations. Also the German [computer magazine c't recommended noScribe in a recent review](https://www.heise.de/select/ct/2025/2/2433207582191637980).
+- If you want to know more and can understand German, Rebecca Schmidt from the University of Paderborn wrote a nice [review of noScribe,](https://sozmethode.hypotheses.org/2315) also discussing its limitations. Also the German [computer magazine c't recommended noScribe in a recent review](https://www.heise.de/select/ct/2025/2/2433207582191637980).
 
 ## Why the Name "noScribe"?
 The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) defines **scribe** as *"a person whose entire miserable existence has been reduced to academic grunge and pain".* I hope this software will make your academic life a little less painful and grungy, hence the name noScribe :)
@@ -198,5 +198,6 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
+
 
 
