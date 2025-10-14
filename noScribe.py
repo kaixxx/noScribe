@@ -2349,9 +2349,9 @@ class App(ctk.CTk):
             # Create option info string for logging
             option_info = ''
             if job.start > 0:
-                option_info += f'{t("label_start")} {utils.ms_to_str(job.start)} | '
+                option_info += f'{t("label_start")} {utils.ms_to_str(job.start)} | '.replace(':', '꞉') # replace the normal colon here in the header with a special character so that MAXQDA does not misinterpret it as a time marker in the transcript.
             if job.stop > 0:
-                option_info += f'{t("label_stop")} {utils.ms_to_str(job.stop)} | '
+                option_info += f'{t("label_stop")} {utils.ms_to_str(job.stop)} | '.replace(':', '꞉')
             option_info += f'{t("label_language")} {job.language_name} ({languages[job.language_name]}) | '
             option_info += f'{t("label_speaker")} {job.speaker_detection} | '
             option_info += f'{t("label_overlapping")} {job.overlapping} | '
