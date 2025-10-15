@@ -1,0 +1,19 @@
+# Conda environment file for both noScribe and noScribeEdit
+name: noscribe
+dependencies: # The list of packages to include in your environment
+    - python=3.11 # To accomodate the Intel AI tools.  3.12 is the recommended version
+    - python_abi
+    - torchaudio
+    - appdirs
+    - Pillow
+    - pyinstaller
+    - PyYAML
+    - qtawesome
+    - pip # Install pip in your environment
+    - pip: # pip dependencies that are not in conda default repos
+        - AdvancedHTMLParser
+        - customtkinter
+        - faster-whisper
+        - pyannote.audio>=3.3.2
+        - python-i18n
+        - pyqt6
