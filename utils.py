@@ -7,6 +7,7 @@ import html.parser
 from pathlib import Path
 
 import i18n
+import AdvancedHTMLParser
 
 HTML_BLOCK_LEVEL_ELEMENTS = {
     "p",
@@ -246,3 +247,30 @@ def vtt_escape(txt: str) -> str:
         txt = txt.replace("\n\n", "\n")
 
     return txt
+
+
+def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: str):
+    vtt = 'WEBVTT '
+    paragraphs = parser.getElementsByTagName('p')
+    # The first paragraph contains the title
+    vtt += vtt_escape(paragraphs[0].textContent) + '\n\n'
+    # Next paragraph contains info about the transcript. Add as a note.
+    vtt += vtt_escape('NOTE\n' + html_to_text(paragraphs[1])) + '\n\n'
+    # Add media source:
+    vtt += f'NOTE media: {media_path}\n\n'
+
+    #Add all segments as VTT cues
+    segments = parser.getElementsByTagName('a')
+    i = 0
+    for i in range(len(segments)):
+        segment = segments[i]
+        name = segment.attributes['name']
+        if name is not None:
+            name_elems = name.split('_', 4)
+            if len(name_elems) > 1 and name_elems[0] == 'ts':
+                start = ms_to_webvtt(int(name_elems[1]))
+                end = ms_to_webvtt(int(name_elems[2]))
+                spkr = name_elems[3]
+                txt = vtt_escape(html_to_text(segment))
+                vtt += f'{i+1}\n{start} --> {end}\n<v {spkr}>{txt.lstrip()}\n\n'
+    return vtt
