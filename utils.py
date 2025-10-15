@@ -149,7 +149,7 @@ def ms_to_str(milliseconds: int, include_ms: bool = False) -> str:
     return formatted
 
 
-def ms_to_webvtt(milliseconds: int) -> str:
+def _ms_to_webvtt(milliseconds: int) -> str:
     """
     Converts milliseconds to a WebVTT timestamp string (HH:MM:SS.mmm).
 
@@ -221,7 +221,7 @@ def html_to_text(html_str: str, use_only_body=False) -> str:
     return parser.get_text()
 
 
-def vtt_escape(txt: str) -> str:
+def _vtt_escape(txt: str) -> str:
     """
     Escapes a string and normalizes newline characters.
 
@@ -350,16 +350,16 @@ def html_to_webvtt(html_string: str) -> str:
 
     ret = "WEBVTT "
 
-    ret += vtt_escape(parser.get_title()) + "\n\n"
-    ret += vtt_escape("NOTE\n" + parser.get_info()) + "\n\n"
+    ret += _vtt_escape(parser.get_title()) + "\n\n"
+    ret += _vtt_escape("NOTE\n" + parser.get_info()) + "\n\n"
 
     for index, item in enumerate(parser.get_segments()):
         # Add index.
         ret += f"{index + 1}\n"
 
         # Add start time.
-        start = ms_to_webvtt(int(item["time_start"]))
-        end = ms_to_webvtt(int(item["time_end"]))
+        start = _ms_to_webvtt(int(item["time_start"]))
+        end = _ms_to_webvtt(int(item["time_end"]))
         ret += f"{start} --> {end}\n"
 
         # Add speaker if available.
@@ -367,7 +367,7 @@ def html_to_webvtt(html_string: str) -> str:
             ret += f"<v {item["speaker"]}>"
 
         # Add text.
-        ret += vtt_escape(item["text"])
+        ret += _vtt_escape(item["text"])
         ret += "\n\n"
 
     return ret

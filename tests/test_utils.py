@@ -143,29 +143,29 @@ def test_ms_to_webvtt():
     Tests for the `ms_to_webvtt` function.
     """
 
-    assert utils.ms_to_webvtt(0) == "00:00:00.000"
-    assert utils.ms_to_webvtt(1000) == "00:00:01.000"
-    assert utils.ms_to_webvtt(1250) == "00:00:01.250"
-    assert utils.ms_to_webvtt(60000) == "00:01:00.000"
-    assert utils.ms_to_webvtt(60250) == "00:01:00.250"
-    assert utils.ms_to_webvtt(3600000) == "01:00:00.000"
-    assert utils.ms_to_webvtt(3600250) == "01:00:00.250"
+    assert utils._ms_to_webvtt(0) == "00:00:00.000"
+    assert utils._ms_to_webvtt(1000) == "00:00:01.000"
+    assert utils._ms_to_webvtt(1250) == "00:00:01.250"
+    assert utils._ms_to_webvtt(60000) == "00:01:00.000"
+    assert utils._ms_to_webvtt(60250) == "00:01:00.250"
+    assert utils._ms_to_webvtt(3600000) == "01:00:00.000"
+    assert utils._ms_to_webvtt(3600250) == "01:00:00.250"
 
     # Test invalid inputs
     with pytest.raises(ValueError):
-        utils.ms_to_webvtt(86400001)
+        utils._ms_to_webvtt(86400001)
 
     with pytest.raises(TypeError):
-        utils.ms_to_webvtt("abc")
+        utils._ms_to_webvtt("abc")
 
     with pytest.raises(ValueError):
-        utils.ms_to_webvtt(123.45)
+        utils._ms_to_webvtt(123.45)
 
     with pytest.raises(ValueError):
-        utils.ms_to_webvtt(-1000)
+        utils._ms_to_webvtt(-1000)
 
     with pytest.raises(ValueError):
-        utils.ms_to_webvtt(-1000.5)
+        utils._ms_to_webvtt(-1000.5)
 
 
 def test_html_to_text():
@@ -212,25 +212,25 @@ def test_vtt_escape():
     Tests for the `vtt_escape` function.
     """
 
-    assert utils.vtt_escape("") == ""
+    assert utils._vtt_escape("") == ""
 
     # Now newlines.
-    assert utils.vtt_escape("hello world") == "hello world"
+    assert utils._vtt_escape("hello world") == "hello world"
 
     # Single newlines.
-    assert utils.vtt_escape("hello\nworld") == "hello\nworld"
+    assert utils._vtt_escape("hello\nworld") == "hello\nworld"
 
     # Double newlines.
-    assert utils.vtt_escape("hello\n\nworld") == "hello\nworld"
+    assert utils._vtt_escape("hello\n\nworld") == "hello\nworld"
 
     # Multiple newlines.
-    assert utils.vtt_escape("hello\n\nworld\n\no") == "hello\nworld\no"
-    assert utils.vtt_escape("hello\n\n\nworld\n\n\no") == "hello\nworld\no"
+    assert utils._vtt_escape("hello\n\nworld\n\no") == "hello\nworld\no"
+    assert utils._vtt_escape("hello\n\n\nworld\n\n\no") == "hello\nworld\no"
 
     # HTML special characters.
-    assert utils.vtt_escape("<hello>") == "&lt;hello&gt;"
-    assert utils.vtt_escape("hello\n<world>") == "hello\n&lt;world&gt;"
-    assert utils.vtt_escape("hello\n\n<world>") == "hello\n&lt;world&gt;"
+    assert utils._vtt_escape("<hello>") == "&lt;hello&gt;"
+    assert utils._vtt_escape("hello\n<world>") == "hello\n&lt;world&gt;"
+    assert utils._vtt_escape("hello\n\n<world>") == "hello\n&lt;world&gt;"
 
 
 def test_html_to_webvtt():
