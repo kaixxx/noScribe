@@ -205,3 +205,29 @@ def test_html_to_text():
     result_string = result_file.read_text(encoding="utf-8")
 
     assert utils.html_to_text(html_string, use_only_body=True) == result_string
+
+
+def test_vtt_escape():
+    """
+    Tests for the `vtt_escape` function.
+    """
+
+    assert utils.vtt_escape("") == ""
+
+    # Now newlines.
+    assert utils.vtt_escape("hello world") == "hello world"
+
+    # Single newlines.
+    assert utils.vtt_escape("hello\nworld") == "hello\nworld"
+
+    # Double newlines.
+    assert utils.vtt_escape("hello\n\nworld") == "hello\nworld"
+
+    # Multiple newlines.
+    assert utils.vtt_escape("hello\n\nworld\n\no") == "hello\nworld\no"
+    assert utils.vtt_escape("hello\n\n\nworld\n\n\no") == "hello\nworld\no"
+
+    # HTML special characters.
+    assert utils.vtt_escape("<hello>") == "&lt;hello&gt;"
+    assert utils.vtt_escape("hello\n<world>") == "hello\n&lt;world&gt;"
+    assert utils.vtt_escape("hello\n\n<world>") == "hello\n&lt;world&gt;"

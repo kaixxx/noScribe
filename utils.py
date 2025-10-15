@@ -220,7 +220,29 @@ def html_to_text(html_str: str, use_only_body=False) -> str:
 
 
 def vtt_escape(txt: str) -> str:
+    """
+    Escapes a string and normalizes newline characters.
+
+    This function takes a string as input, escapes HTML special characters
+    using html.escape, and then normalizes consecutive newline characters
+    into single newlines.
+
+    Args:
+        txt: The input string to be processed.
+
+    Returns:
+        The processed string with escaped HTML characters and normalized newlines.
+    """
+
     txt = html.escape(txt)
-    while txt.find('\n\n') > -1:
-        txt = txt.replace('\n\n', '\n')
+
+    # Make sure to replace all double newlines with a single newline. Use a
+    # while loop to find repetitive occurences.
+    #
+    # This could also be done using a regular expression. But I'm not sure
+    # what's faster and this is probably easier and doesn't require an
+    # additional library.
+    while "\n\n" in txt:
+        txt = txt.replace("\n\n", "\n")
+
     return txt
