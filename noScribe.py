@@ -337,20 +337,13 @@ timestamp_re = re.compile(r'\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]'
 
 # Helper for WebVTT output
 
-def vtt_escape(txt: str) -> str:
-    txt = html.escape(txt, quote=False)
-    while txt.find('\n\n') > -1:
-        txt = txt.replace('\n\n', '\n')
-    return txt    
-
-
 def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: str):
     vtt = 'WEBVTT '
     paragraphs = parser.getElementsByTagName('p')
     # The first paragraph contains the title
-    vtt += vtt_escape(paragraphs[0].textContent) + '\n\n'
+    vtt += utils.vtt_escape(paragraphs[0].textContent) + '\n\n'
     # Next paragraph contains info about the transcript. Add as a note.
-    vtt += vtt_escape('NOTE\n' + utils.html_to_text(paragraphs[1])) + '\n\n'
+    vtt += utils.vtt_escape('NOTE\n' + utils.html_to_text(paragraphs[1])) + '\n\n'
     # Add media source:
     vtt += f'NOTE media: {media_path}\n\n'
 
@@ -366,7 +359,7 @@ def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: st
                 start = utils.ms_to_webvtt(int(name_elems[1]))
                 end = utils.ms_to_webvtt(int(name_elems[2]))
                 spkr = name_elems[3]
-                txt = vtt_escape(utils.html_to_text(segment))
+                txt = utils.vtt_escape(utils.html_to_text(segment))
                 vtt += f'{i+1}\n{start} --> {end}\n<v {spkr}>{txt.lstrip()}\n\n'
     return vtt
 

@@ -217,3 +217,10 @@ def html_to_text(html_str: str, use_only_body=False) -> str:
     parser.feed(html_str)
 
     return parser.get_text()
+
+
+def vtt_escape(txt: str) -> str:
+    txt = html.escape(txt)
+    while txt.find('\n\n') > -1:
+        txt = txt.replace('\n\n', '\n')
+    return txt
