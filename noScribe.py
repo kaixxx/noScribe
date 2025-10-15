@@ -2668,7 +2668,7 @@ class App(ctk.CTk):
                         elif job.file_ext == 'txt':
                             txt = utils.html_to_text(d.asHTML(), use_only_body=True)
                         elif job.file_ext == 'vtt':
-                            txt = utils.html_to_webvtt(d, job.audio_file)
+                            txt = utils.html_to_webvtt(d.asHTML())
                         else:
                             raise TypeError(f'Invalid file type "{job.file_ext}".')
                         try:

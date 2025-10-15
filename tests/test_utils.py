@@ -231,3 +231,75 @@ def test_vtt_escape():
     assert utils.vtt_escape("<hello>") == "&lt;hello&gt;"
     assert utils.vtt_escape("hello\n<world>") == "hello\n&lt;world&gt;"
     assert utils.vtt_escape("hello\n\n<world>") == "hello\n&lt;world&gt;"
+
+
+def test_html_to_webvtt():
+    """
+    Tests for the `html_to_webvtt` function.
+    """
+
+    # Test without speaker.
+    html_string = """
+    <body>
+        <p>My Title</p>
+        <p>My Information Header</p>
+        <p><a name="ts_0_12140_">(12 seconds pause)</a></p>
+    </body>
+    """
+    result_string = (
+        "WEBVTT My Title\n\n"
+        "NOTE\n"
+        "My Information Header\n\n"
+        "1\n"
+        "00:00:00.000 --> 00:00:12.140\n"
+        "(12 seconds pause)\n\n"
+    )
+    assert utils.html_to_webvtt(html_string) == result_string
+
+    # Test with speaker.
+    html_string = """
+    <body>
+        <p>My Title</p>
+        <p>My Information Header</p>
+        <p><a name="ts_0_12140_s1">I said something.</a></p>
+    </body>
+    """
+    result_string = (
+        "WEBVTT My Title\n\n"
+        "NOTE\n"
+        "My Information Header\n\n"
+        "1\n"
+        "00:00:00.000 --> 00:00:12.140\n"
+        "<v s1>I said something.\n\n"
+    )
+    assert utils.html_to_webvtt(html_string) == result_string
+
+    # Test empty paragraphs.
+    html_string = """
+    <body>
+        <p>My Title</p>
+        <p>My Information Header</p>
+        <p></p>
+        <p><a name="ts_0_12140_s1"></a></p>
+        <p><a name="ts_0_12140_s1"> </a></p>
+        <p><a name="ts_0_12140_s1">I said something.</a></p>
+    </body>
+    """
+    result_string = (
+        "WEBVTT My Title\n\n"
+        "NOTE\n"
+        "My Information Header\n\n"
+        "1\n"
+        "00:00:00.000 --> 00:00:12.140\n"
+        "<v s1>I said something.\n\n"
+    )
+    assert utils.html_to_webvtt(html_string) == result_string
+
+    # Use actual interview file.
+    html_file = impres.files("noScribe") / "tests" / "data" / "interview.html"
+    html_string = html_file.read_text(encoding="utf-8")
+
+    result_file = impres.files("noScribe") / "tests" / "data" / "interview.vtt"
+    result_string = result_file.read_text(encoding="utf-8")
+
+    assert utils.html_to_webvtt(html_string) == result_string
