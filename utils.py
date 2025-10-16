@@ -364,7 +364,7 @@ def html_to_webvtt(html_string: str) -> str:
 
         # Add speaker if available.
         if item["speaker"]:
-            ret += f"<v {item["speaker"]}>"
+            ret += f"<v {item['speaker']}>"
 
         # Add text.
         ret += _vtt_escape(item["text"])
