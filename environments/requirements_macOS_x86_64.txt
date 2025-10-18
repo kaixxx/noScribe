@@ -8,7 +8,7 @@ Pillow
 numpy==1.26.4
 torch==2.2.2
 torchaudio==2.2.2
-pyannote.audio==3.3.2
+pyannote.audio>=4
 pyinstaller
 pyobjc
 python-i18n
