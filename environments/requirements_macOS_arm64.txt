@@ -1,5 +1,6 @@
 # Install with `pip install -r requirements_macOS_arm64.txt`
 # torchaudio # install as dependency
+av
 AdvancedHTMLParser
 appdirs
 customtkinter

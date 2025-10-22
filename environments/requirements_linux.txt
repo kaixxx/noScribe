@@ -1,5 +1,6 @@
 # Install with `pip install -r requirements_linux.txt`
 # torchaudio # install as dependency
+av
 AdvancedHTMLParser
 appdirs
 customtkinter

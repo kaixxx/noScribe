@@ -75,6 +75,7 @@ from typing import Optional, List
 import time
 
 import utils
+import audio
 
  # Pyinstaller fix, used to open multiple instances on Mac
 mp.freeze_support()
@@ -2398,77 +2399,30 @@ class App(ctk.CTk):
                 try:
                     self.logn()
                     self.logn(t('start_audio_conversion'), 'highlight')
-                
-                    if int(job.stop) > 0: # transcribe only part of the audio
-                        end_pos_cmd = f'-to {job.stop}ms'
-                    else: # tranbscribe until the end
-                        end_pos_cmd = ''
 
-                    arguments = f' -loglevel warning -hwaccel auto -y -ss {job.start}ms {end_pos_cmd} -i \"{job.audio_file}\" -ar 16000 -ac 1 -c:a pcm_s16le "{tmp_audio_file}"'
-                    if platform.system() == 'Windows':
-                        ffmpeg_path = os.path.join(app_dir, 'ffmpeg.exe')
-                        ffmpeg_cmd = ffmpeg_path + arguments
-                    elif platform.system() == "Darwin":  # = MAC
-                        ffmpeg_path = os.path.join(app_dir, 'ffmpeg')
-                        ffmpeg_cmd = shlex.split(ffmpeg_path + arguments)
-                    elif platform.system() == "Linux":
-                        # TODO: Use system ffmpeg if available
-                        ffmpeg_path = os.path.join(app_dir, 'ffmpeg-linux-x86_64')
-                        ffmpeg_cmd = shlex.split(ffmpeg_path + arguments)
-                    else:
-                        raise Exception('Platform not supported yet.')
+                    # Add audio conversion job.
+                    self._ffmpeg_proc = audio.convert.ToWav(
+                        Path(job.audio_file),
+                        Path(tmp_audio_file),
+                        force=True
+                    )
+                    self._ffmpeg_proc.open()
 
-                    self.logn(ffmpeg_cmd, where='file')
+                    if job.start > 0:
+                        self._ffmpeg_proc.seek(job.start)
 
-                    if platform.system() == 'Windows':
-                        # (suppresses the terminal, see: https://stackoverflow.com/questions/1813872/running-a-process-in-pythonw-with-popen-without-a-console)
-                        startupinfo = STARTUPINFO()
-                        startupinfo.dwFlags |= STARTF_USESHOWWINDOW
-                        ffmpeg_proc = Popen(
-                            ffmpeg_cmd,
-                            stdout=DEVNULL,
-                            stderr=STDOUT,
-                            universal_newlines=True,
-                            encoding='utf-8',
-                            startupinfo=startupinfo
-                        )
-                    elif platform.system() in ("Darwin", "Linux"):
-                        ffmpeg_proc = Popen(
-                            ffmpeg_cmd,
-                            stdout=DEVNULL,
-                            stderr=STDOUT,
-                            universal_newlines=True,
-                            encoding='utf-8'
-                        )
-
-                    # Track process for external cancel/close handling
-                    self._ffmpeg_proc = ffmpeg_proc
+                    if job.stop > 0:
+                        self._ffmpeg_proc.stop_after(job.stop)
 
                     try:
                         # Poll loop to allow responsive cancel during conversion
-                        while True:
-                            rc = ffmpeg_proc.poll()
-                            if rc is not None:
-                                break
+                        while self._ffmpeg_proc.convert():
                             if self.cancel:
-                                try:
-                                    ffmpeg_proc.terminate()
-                                except Exception:
-                                    pass
-                                # Ensure process does not linger
-                                try:
-                                    ffmpeg_proc.wait(timeout=1.0)
-                                except Exception:
-                                    try:
-                                        ffmpeg_proc.kill()
-                                    except Exception:
-                                        pass
-                                raise Exception(t('err_user_cancelation'))
-                            time.sleep(0.1)
-
-                        if ffmpeg_proc.returncode and ffmpeg_proc.returncode > 0:
-                            raise Exception(t('err_ffmpeg'))
+                                break
+                    except Exception as e:
+                        raise Exception(t('err_ffmpeg')) from e
                     finally:
+                        self._ffmpeg_proc.close()
                         self._ffmpeg_proc = None
                     self.logn(t('audio_conversion_finished'))
                     self.set_progress(1, 100, job.speaker_detection)
@@ -2684,8 +2638,8 @@ class App(ctk.CTk):
                     config['voice_activity_detection_threshold'] = '0.5'
                     job.vad_threshold = 0.5
                 sampling_rate = 16000
-                audio = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
-                duration = audio.shape[0] / sampling_rate
+                audio_array = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
+                duration = audio_array.shape[0] / sampling_rate
                 try:
                     vad_parameters = VadOptions(min_silence_duration_ms=500,
                                                 threshold=job.vad_threshold,
@@ -2694,7 +2648,7 @@ class App(ctk.CTk):
                     vad_parameters = VadOptions(min_silence_duration_ms=500,
                                                 onset=job.vad_threshold,
                                                 speech_pad_ms=0)
-                speech_chunks = get_speech_timestamps(audio, vad_parameters)
+                speech_chunks = get_speech_timestamps(audio_array, vad_parameters)
 
                 def adjust_for_pause(segment):
                     """Adjusts start and end of segment if it falls into a pause 
@@ -3191,18 +3145,10 @@ class App(ctk.CTk):
 
             # Terminate ffmpeg if currently converting
             try:
-                if getattr(self, "_ffmpeg_proc", None) is not None and self._ffmpeg_proc.poll() is None:
-                    try:
-                        self._ffmpeg_proc.terminate()
-                    except Exception:
-                        pass
-                    try:
-                        self._ffmpeg_proc.wait(timeout=1.0)
-                    except Exception:
-                        try:
-                            self._ffmpeg_proc.kill()
-                        except Exception:
-                            pass
+                if getattr(self, "_ffmpeg_proc", None):
+                    self._ffmpeg_proc.close()
+            except Exception as e:
+                raise Exception(t('err_user_cancelation')) from e
             finally:
                 self._ffmpeg_proc = None
 
