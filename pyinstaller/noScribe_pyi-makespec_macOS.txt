@@ -5,7 +5,6 @@ pyi-makespec \
 --name "noScribe" \
 --add-data "/path/to/noScribe/trans:trans/" \
 --add-data "/path/to/noScribe/graphic_sw.png:." \
---add-binary "/path/to/noScribe/ffmpeg:." \
 --add-data "/path/to/noScribe/models/faster-whisper-small:models/faster-whisper-small/" \
 --add-data "/path/to/noScribe/models/faster-whisper-large-v2:models/faster-whisper-large-v2/" \
 --add-data "/path/to/noScribe/prompt.yml:." \

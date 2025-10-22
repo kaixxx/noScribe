@@ -13,7 +13,7 @@ block_cipher = None
 a = Analysis(
     ['noScribe.py'],
     pathex=[],
-    binaries=[('ffmpeg-linux-x86_64', '.')],
+    binaries=[],
     datas=datas,
     hiddenimports=[],
     hookspath=[],
