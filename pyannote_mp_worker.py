@@ -75,20 +75,6 @@ def pyannote_proc_entrypoint(args: dict, q):
             else:
                 raise Exception('Platform not supported yet.')
 
-        # Expand relative model paths to absolute paths inside app folder
-        with open(os.path.join(app_dir, 'pyannote', 'config.yaml'), 'r') as yaml_file:
-            pyannote_config = yaml.safe_load(yaml_file)
-        pyannote_config['pipeline']['params']['embedding'] = os.path.join(
-            app_dir, *pyannote_config['pipeline']['params']['embedding'].split("/"))
-        pyannote_config['pipeline']['params']['segmentation'] = os.path.join(
-            app_dir, *pyannote_config['pipeline']['params']['segmentation'].split("/"))
-
-        tmpdir = TemporaryDirectory('noScribe_diarize')
-        tmp_cfg = os.path.join(tmpdir.name, 'pyannote_config.yaml')
-        with open(tmp_cfg, 'w') as yaml_file:
-            yaml.safe_dump(pyannote_config, yaml_file)
-
-        # pipeline = Pipeline.from_pretrained(tmp_cfg)
         pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'pyannote'))
         waveform, sample_rate = torchaudio.load(audio_file)        
         pipeline.to(torch.device(device))
