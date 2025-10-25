@@ -1,12 +1,13 @@
 # Install with `pip install -r requirements_macOS_arm64.txt`
-# torchaudio # install as dependency
+torch==2.8 # pyannote 4 is currently not compatible with torch 2.9
+torchaudio==2.8
 AdvancedHTMLParser
 appdirs
 customtkinter
 CTkToolTip
 faster-whisper
 Pillow
-pyannote.audio>=3.3.2
+pyannote.audio>=4
 pyinstaller
 pyobjc
 python-i18n
