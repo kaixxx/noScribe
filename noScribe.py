@@ -239,6 +239,20 @@ from i18n import t
 i18n.set('filename_format', '{locale}.{format}')
 i18n.load_path.append(os.path.join(app_dir, 'trans'))
 
+
+def _show_startup_error(message: str) -> None:
+    """Show a message box during startup failures if possible."""
+    root = None
+    try:
+        root = tk.Tk()
+        root.withdraw()
+        tk.messagebox.showerror(title='noScribe', message=message)
+    except Exception as tk_error:
+        print(f"ERROR: {message}", file=sys.stderr)
+    finally:
+        if root is not None:
+            root.destroy()
+
 try:
     app_locale = config['locale']
 except:
@@ -253,8 +267,32 @@ if app_locale == 'auto': # read system locale settings
     except:
         app_locale = 'en'
 i18n.set('fallback', 'en')
-i18n.set('locale', app_locale)
-config['locale'] = app_locale
+
+translation_error = ''
+print('\nnoScribe')
+try:
+    i18n.set('locale', app_locale)
+    print(t('app_header'), '\n')
+    config['locale'] = app_locale
+except Exception as locale_error:
+    translation_error = f"Failed to load translation for locale '{app_locale}'. Falling back to English.\n\n"
+    if app_locale != 'en':
+        try:
+            i18n.set('locale', 'en')
+            print(t('app_header'), '\n')
+            app_locale = 'en'
+        except Exception as english_error:
+            print("Failed to load English fallback translation.")
+            _show_startup_error(
+                'NoScribe could not load the English fallback translation and needs to close.'
+            )
+            raise SystemExit(1) from english_error
+    else:
+        print("English translation failed to load during startup.")
+        _show_startup_error(
+            'noScribe could not load the English translation and needs to close.'
+        )
+        raise SystemExit(1) from locale_error
 
 # determine optimal number of threads for faster-whisper (depending on cpu cores)
 if platform.system() == 'Windows':
@@ -1367,7 +1405,9 @@ class App(ctk.CTk):
 
         self.update_queue_table()
 
-        self.update_scrollbar_visibility()        
+        self.update_scrollbar_visibility()
+        
+        self.log(translation_error, 'error') # will be empty if no error occurred        
 
         self.logn(t('welcome_message'), 'highlight')
         self.log(t('welcome_credits', v=app_version, y=app_year))
