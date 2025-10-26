@@ -122,6 +122,8 @@ ja:
   err_editor_invalid_format: 'エディターは html ファイルでのみ使用できます。それでも起動しますか？'
   err_editor_no_file: '完了した転写ジョブがありません。エディターを起動しますか？'
   err_invalid_model: 'Whisper モデルの重複名を無視しました: "%{model_name}"'
+  err_partial_not_found: "部分的な書き起こしファイルが見つかりません。"
+  log_open_partial: "部分的な書き起こしを開く: %{file}"
 
   # ドキュメント内容
   doc_header: 'noScribe vers. %{version}で転写されました'
@@ -137,6 +139,7 @@ ja:
   queue_tt_remove_entry: 'リストから削除'
   queue_tt_repeat_job: 'このジョブを再実行'
   queue_tt_edit_job: '結果を noScribe エディターで開く'
+  queue_tt_open_partial_job: "noScribe エディターで部分結果を開く"
 
   # 追加のUIボタン
   send_queue: 'ジョブをキューに送る'

@@ -122,6 +122,8 @@ it:
   err_editor_invalid_format: "L'editor può essere utilizzato solo con file HTML. Vuoi avviarlo comunque?"
   err_editor_no_file: 'Nessuna attività di trascrizione completata disponibile. Avviare comunque l’editor?'
   err_invalid_model: 'Nome duplicato ignorato per il modello whisper: "%{model_name}"'
+  err_partial_not_found: "File di trascrizione parziale non trovato."
+  log_open_partial: "Apertura trascrizione parziale: %{file}"
 
   # Contenuti del documento
   doc_header: 'Trascritto con noScribe vers. %{version}'
@@ -137,6 +139,7 @@ it:
   queue_tt_remove_entry: 'Rimuovi dall’elenco'
   queue_tt_repeat_job: 'Ripeti questa attività'
   queue_tt_edit_job: 'Apri il risultato nell’editor di noScribe'
+  queue_tt_open_partial_job: "Apri il risultato parziale nell'editor di noScribe"
 
   # Pulsanti UI aggiuntivi
   send_queue: 'Invia attività alla coda'
