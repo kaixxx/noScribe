@@ -123,6 +123,8 @@ ru:
   err_editor_invalid_format: 'Редактор может использоваться только с HTML-файлами. Запустить его все равно?'
   err_editor_no_file: 'Нет доступных завершённых заданий транскрипции. Запустить редактор всё равно?'
   err_invalid_model: 'Игнорируется повторяющееся имя модели whisper: "%{model_name}"'
+  err_partial_not_found: 'Файл частичной транскрипции не найден.'
+  log_open_partial: 'Открытие частичной транскрипции: %{file}'
 
   # Содержимое документа
   doc_header: 'Транскрибировано с помощью noScribe версии %{version}'
@@ -138,6 +140,7 @@ ru:
   queue_tt_remove_entry: 'Удалить из списка'
   queue_tt_repeat_job: 'Повторить это задание'
   queue_tt_edit_job: 'Открыть результат в редакторе noScribe'
+  queue_tt_open_partial_job: 'Открыть частичный результат в редакторе noScribe'
 
   # Дополнительные кнопки UI
   send_queue: 'Отправить задание в очередь'

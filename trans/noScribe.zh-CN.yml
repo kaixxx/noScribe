@@ -123,6 +123,8 @@ zh-CN: &defaults
   err_editor_invalid_format: '编辑器只能用于html文件。你仍然要启动它吗？'
   err_editor_no_file: '没有已完成的转录任务。仍要启动编辑器吗？'
   err_invalid_model: '忽略了重复的 whisper 模型名称："%{model_name}"'
+  err_partial_not_found: '未找到部分转录文件。'
+  log_open_partial: '正在打开部分转录：%{file}'
 
   # 文档内容
   doc_header: '使用noScribe %{version} 版本转录'
@@ -138,6 +140,7 @@ zh-CN: &defaults
   queue_tt_remove_entry: '从列表中移除'
   queue_tt_repeat_job: '重复此任务'
   queue_tt_edit_job: '在 noScribe 编辑器中打开结果'
+  queue_tt_open_partial_job: '在 noScribe 编辑器中打开部分结果'
 
   # 其他 UI 按钮
   send_queue: '发送任务到队列'

@@ -74,7 +74,7 @@ fr:
   log_transcript_filename: "Nom(s) de fichier de transcription : "
   log_audio_file_selected: "Fichier(s) audio sélectionné(s) : "
   queue_added_job: 'Tâche "%{audio_file}" ajoutée à la file d’attente.'
-  queue_start: '=== Démarrage de la file d'attente ==='
+  queue_start: '=== Démarrage de la file d''attente ==='
   queue_start_jobs: 'Traitement de %{total} tâche(s) de transcription'
   queue_none_waiting: 'Rien à faire, la file ne contient aucune tâche en attente.'
   start_job: 'Démarrage de la tâche : %{audio_file}'
