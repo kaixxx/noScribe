@@ -118,6 +118,47 @@ python3 ./noScribe.py
 ```
 
 
+- **Manual installation from source with conda:**
+  
+Optional: to get the Intel-accelerated Python and pytorch for CPU, you must first install the OneAPI base toolkit
+
+https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit-download.html?packages=oneapi-toolkit&oneapi-toolkit-os=linux&oneapi-lin=apt
+
+    ```shell
+    # release ( must be > 0.6 in order to include the latest fixes for linux!)
+    NOS_REL=0.6
+    wget https://github.com/kaixxx/noScribe/archive/refs/tags/v${NOS_REL).tar.gz
+    tar xvz -f v${NOS_REL).tar.gz
+    cd noScribe-${NOS_REL)/  # from here on all happens in this directory
+
+    # alternative: current main branch
+    wget -O noScribe-main.zip https://github.com/kaixxx/noScribe/archive/refs/heads/main.zip
+    unzip noScribe-main.zip
+    cd noScribe-main # from here on all happens in this directory
+
+    # install noScribeEdit
+    rm -rf noScribeEdit/
+    git clone https://github.com/kaixxx/noScribeEditor.git noScribeEdit
+
+    # Create the conda environment and install requirements
+    conda env create --file environments/requirements_linux.yaml
+
+    # Alternative: Create the conda environment and install Intel Python requirements
+    conda env create --file environments/requirements_intel_cpu.yaml
+    
+    # Activate the environment
+    conda activate noscribe
+
+    # models/precise
+    # this assumes you have git large file support enabled: apt install git-lfs
+    rm -rf models/precise
+    git clone https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo models/precise
+    for f in config.json  model.bin  preprocessor_config.json  tokenizer.json  vocabulary.json; do wget -O models/fast/$f "https://huggingface.co/mukowaty/faster-whisper-int8/resolve/main/faster-whisper-large-v3-turbo-int8/${f}?download=true"; done
+
+    # run
+    python3 ./noScribe.py
+    ```
+
 ### Old versions:
 - [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j)
 
