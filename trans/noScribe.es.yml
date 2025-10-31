@@ -85,6 +85,8 @@ es:
   start_canceling: 'Cancelando... (por favor, espera un momento)'
   start_transcription: 'Transcribiendo...'
   loading_whisper: 'Cargando whisper'
+  pyannote_cuda_retry: 'Se detectó un error CUDA en PyAnnote. Reintentando en la CPU.'
+  whisper_cuda_retry: 'Se detectó un error CUDA en Whisper. Reintentando en la CPU.'
   vad: 'Detección de actividad de voz...'
   language_detect: 'Idioma detectado "%{lang}" con probabilidad %{prob}'
   transcription_finished: 'Transcripción finalizada.'
@@ -117,6 +119,18 @@ es:
   err_transcription: 'Error en el paso 3: transcripción'
   rescue_saving: 'Fallo al guardar con el nombre de archivo original. Guardado en este archivo en su lugar: %{file}'
   rescue_saving_failed: 'Error: Fallo al guardar con el nombre de archivo original. El nombre de archivo alternativo también existe. Tengo que salir. (¡Asegúrate de que tu transcripción no esté abierta en Word!)'
+  pyannote_cuda_error_prompt: |-
+    La diarización de PyAnnote falló con un error de CUDA:
+
+    %{error}
+
+    ¿Cambiar al procesamiento por CPU y volver a intentarlo?
+  whisper_cuda_error_prompt: |-
+    La transcripción de Whisper falló con un error de CUDA:
+
+    %{error}
+
+    ¿Cambiar al procesamiento por CPU y volver a intentarlo?
   err_noScribeEdit_not_found: 'Error: No se pudo encontrar el editor de noScribe.'
   err_vtt_invalid_options: 'Advertencia: Las opciones "Discurso solapado", "Marca pausas" y "Timestamps" no están soportadas en archivos VTT.'
   err_editor_invalid_format: 'El editor solo puede usarse con archivos HTML. ¿Deseas iniciarlo de todas formas?'

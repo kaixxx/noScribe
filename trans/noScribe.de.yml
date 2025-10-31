@@ -86,6 +86,8 @@ de:
   start_canceling: 'Abbrechen läuft...'
   start_transcription: 'Transkription...'
   loading_whisper: 'Whisper laden'
+  pyannote_cuda_retry: 'PyAnnote CUDA-Fehler erkannt. Erneuter Versuch auf der CPU.'
+  whisper_cuda_retry: 'Whisper CUDA-Fehler erkannt. Erneuter Versuch auf der CPU.'
   vad: 'Sprachaktivitätserkennung...'
   language_detect: 'Erkannte Sprache "%{lang}" mit Wahrscheinlichkeit %{prob}'
   transcription_finished: 'Transkription beendet.'
@@ -118,6 +120,18 @@ de:
   err_transcription: 'Fehler im 3. Schritt - Transkription'
   rescue_saving: 'Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Stattdessen wurde das Transkript in dieser Datei gesichert: %{file}'
   rescue_saving_failed: 'Fehler: Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Der alternative Dateiname existiert ebenso bereits. Die Transkription wird beendet. (Das Transkript darf nicht bereits in Word geöffnet sein!)'
+  pyannote_cuda_error_prompt: |-
+    Die PyAnnote-Diarisierung ist mit einem CUDA-Fehler fehlgeschlagen:
+
+    %{error}
+
+    Auf CPU-Verarbeitung umschalten und erneut versuchen?
+  whisper_cuda_error_prompt: |-
+    Die Whisper-Transkription ist mit einem CUDA-Fehler fehlgeschlagen:
+
+    %{error}
+
+    Auf CPU-Verarbeitung umschalten und erneut versuchen?
   err_noScribeEdit_not_found: 'Fehler: Der noScribe-Editor konnte nicht gefunden werden.'
   err_vtt_invalid_options: 'Achtung: Die Optionen "Überlappende Sprache", "Pausen markieren" und "Zeitmarken" werden bei der VTT-Ausgabe nicht unterstützt.'
   err_editor_invalid_format: 'Der Editor kann nur mit html-Dateien verwendet werden. Trotzdem starten?'

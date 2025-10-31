@@ -85,6 +85,8 @@ zh-CN: &defaults
   start_canceling: '正在取消...（请稍候）'
   start_transcription: '正在转录...'
   loading_whisper: '正在加载whisper'
+  pyannote_cuda_retry: '检测到 PyAnnote 的 CUDA 错误。正在使用 CPU 重试。'
+  whisper_cuda_retry: '检测到 Whisper 的 CUDA 错误。正在使用 CPU 重试。'
   vad: '语音活动检测...'
   language_detect: '检测到语言“%{lang}”，概率 %{prob}'
 
@@ -118,6 +120,18 @@ zh-CN: &defaults
   err_transcription: '步骤3中的转录错误。'
   rescue_saving: '保存至原始文件名失败。已保存至此文件：%{file}'
   rescue_saving_failed: '错误：保存至原始文件名失败。备用文件名已存在。程序将退出。（请确保转录文件未在Word中打开！）'
+  pyannote_cuda_error_prompt: |-
+    PyAnnote 说话人分离因 CUDA 错误失败：
+
+    %{error}
+
+    是否切换到 CPU 处理后重试？
+  whisper_cuda_error_prompt: |-
+    Whisper 转写因 CUDA 错误失败：
+
+    %{error}
+
+    是否切换到 CPU 处理后重试？
   err_noScribeEdit_not_found: '错误：找不到noScribe编辑器。'
   err_vtt_invalid_options: '警告：VTT文件不支持“重叠发言”、“标记停顿”和“时间戳”选项。'
   err_editor_invalid_format: '编辑器只能用于html文件。你仍然要启动它吗？'

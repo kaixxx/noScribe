@@ -85,6 +85,8 @@ it:
   start_canceling: 'Annullamento in corso... (attendere un secondo)'
   start_transcription: 'Trascrizione in corso...'
   loading_whisper: 'Caricamento di whisper'
+  pyannote_cuda_retry: 'Rilevato errore CUDA di PyAnnote. Riprovo sulla CPU.'
+  whisper_cuda_retry: 'Rilevato errore CUDA di Whisper. Riprovo sulla CPU.'
   vad: "Rilevamento dell'attività vocale..."
   language_detect: 'Lingua rilevata "%{lang}" con probabilità %{prob}'
   transcription_finished: 'Trascrizione completata.'
@@ -117,6 +119,18 @@ it:
   err_transcription: 'Errore nella fase 3 - trascrizione'
   rescue_saving: 'Salvataggio con il nome originale non riuscito. Salvato invece in questo file: %{file}'
   rescue_saving_failed: 'Errore: salvataggio con il nome originale non riuscito. Il nome alternativo esiste già. Il programma deve essere chiuso. (Assicurati che la trascrizione non sia già aperta in Word!)'
+  pyannote_cuda_error_prompt: |-
+    La diarizzazione PyAnnote è fallita con un errore CUDA:
+
+    %{error}
+
+    Passare all'elaborazione su CPU e riprovare?
+  whisper_cuda_error_prompt: |-
+    La trascrizione Whisper è fallita con un errore CUDA:
+
+    %{error}
+
+    Passare all'elaborazione su CPU e riprovare?
   err_noScribeEdit_not_found: "Errore: impossibile trovare l'editor di noScribe."
   err_vtt_invalid_options: 'Avviso: le opzioni "Discorso sovrapposto", "Segna le pause" e "Timestamps" non sono supportate nei file VTT.'
   err_editor_invalid_format: "L'editor può essere utilizzato solo con file HTML. Vuoi avviarlo comunque?"

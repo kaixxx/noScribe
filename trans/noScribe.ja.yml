@@ -85,6 +85,8 @@ ja:
   start_canceling: 'キャンセル中...（しばらくお待ちください）'
   start_transcription: '転写を開始中...'
   loading_whisper: 'whisperの読み込み中'
+  pyannote_cuda_retry: 'PyAnnote の CUDA エラーを検出しました。CPU で再試行します。'
+  whisper_cuda_retry: 'Whisper の CUDA エラーを検出しました。CPU で再試行します。'
   vad: '音声活動検出...'
   language_detect: '検出された言語は「%{lang}」（確率 %{prob}）'
   transcription_finished: '転写が完了しました。'
@@ -117,6 +119,18 @@ ja:
   err_transcription: 'ステップ3でエラーが発生しました-転写'
   rescue_saving: '元のファイル名への保存に失敗しました。代わりにこのファイルに保存されました：%{file}'
   rescue_saving_failed: 'エラー：元のファイル名への保存に失敗しました。代替のファイル名も存在します。終了する必要があります。（Wordでトランスクリプトが既に開かれていないことを確認してください！）'
+  pyannote_cuda_error_prompt: |-
+    PyAnnote の話者分離が CUDA エラーで失敗しました。
+
+    %{error}
+
+    CPU 処理に切り替えて再試行しますか？
+  whisper_cuda_error_prompt: |-
+    Whisper の文字起こしが CUDA エラーで失敗しました。
+
+    %{error}
+
+    CPU 処理に切り替えて再試行しますか？
   err_noScribeEdit_not_found: 'エラー: noScribe エディターが見つかりませんでした。'
   err_vtt_invalid_options: '警告: 「オーバーラッピング・スピーチ」、「マークはポーズをとる」と「タイムスタンプ」は VTT ファイルでサポートされていません。'
   err_editor_invalid_format: 'エディターは html ファイルでのみ使用できます。それでも起動しますか？'

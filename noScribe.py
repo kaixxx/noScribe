@@ -2625,7 +2625,7 @@ class App(ctk.CTk):
                                 break
                             except Exception as err:
                                 if self._handle_cuda_fallback('pyannote', err):
-                                    self.logn('PyAnnote CUDA error detected. Retrying on CPU.', 'highlight')
+                                    self.logn(t('pyannote_cuda_retry'), 'highlight')
                                     continue
                                 raise
 
@@ -2964,7 +2964,7 @@ class App(ctk.CTk):
                                 self.log(t('transcription_saved'))
                                 self.logn(job.transcript_file, link=f'file://{job.transcript_file}')
                     if retry_cuda:
-                        self.logn('Whisper CUDA error detected. Retrying on CPU.', 'highlight')
+                        self.logn(t('whisper_cuda_retry'), 'highlight')
                         continue
                     else:
                         break
@@ -3035,11 +3035,7 @@ class App(ctk.CTk):
         if component == 'pyannote':
             if force_pyannote_cpu:
                 return False
-            prompt = (
-                "PyAnnote diarization failed with a CUDA error:\n\n"
-                f"{message}\n\n"
-                "Switch to CPU processing and retry?"
-            )
+            prompt = t('pyannote_cuda_error_prompt', error=message)
             if tk.messagebox.askyesno(title='noScribe', message=prompt):
                 force_pyannote_cpu = True
                 config['force_pyannote_cpu'] = 'true'
@@ -3050,11 +3046,7 @@ class App(ctk.CTk):
         if component == 'whisper':
             if force_whisper_cpu:
                 return False
-            prompt = (
-                "Whisper transcription failed with a CUDA error:\n\n"
-                f"{message}\n\n"
-                "Switch to CPU processing and retry?"
-            )
+            prompt = t('whisper_cuda_error_prompt', error=message)
             if tk.messagebox.askyesno(title='noScribe', message=prompt):
                 force_whisper_cpu = True
                 config['force_whisper_cpu'] = 'true'
