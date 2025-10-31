@@ -19,6 +19,7 @@ def pyannote_proc_entrypoint(args: dict, q):
       {"type":"result","ok":True,"segments":[{"start":ms,"end":ms,"label":str}]}
       {"type":"result","ok":False,"error":str,"trace":str}
     """
+    device = ''
     try:
         import yaml
         import torch
@@ -100,11 +101,13 @@ def pyannote_proc_entrypoint(args: dict, q):
 
     except Exception as e:
         try:
+            error_str = f"{type(e).__name__}: {e}"
+            error_str += f' (device_{device[:3]})' # device_cpu or device_cud or device_mps
             import traceback as tb
             q.put({
                 "type": "result",
                 "ok": False,
-                "error": f"{type(e).__name__}: {e}",
+                "error": error_str,
                 "trace": tb.format_exc(),
             })
         except Exception:
