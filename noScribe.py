@@ -206,7 +206,6 @@ _CUDA_ERROR_KEYWORDS = (
     'gpu driver',
     'compute capability',
     'hip error',
-    'out of memory',
 )
 
 def _is_cuda_error_message(message: str) -> bool:
@@ -2659,6 +2658,7 @@ class App(ctk.CTk):
                 self.logn(t('loading_whisper'))
 
                 info = None
+                transcription_success = False
                 while True:
                     retry_cuda = False
 
@@ -2946,7 +2946,7 @@ class App(ctk.CTk):
                         self.logn()
                         self.logn(t('transcription_finished'), 'highlight')
                     except Exception as err:
-                        if job.whisper_xpu == 'cuda' and self._handle_cuda_fallback('whisper', err):
+                        if self._handle_cuda_fallback('whisper', err):
                             retry_cuda = True
                         else:
                             raise
