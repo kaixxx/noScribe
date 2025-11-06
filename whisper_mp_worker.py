@@ -79,6 +79,12 @@ def whisper_proc_entrypoint(args: dict, q):
         language_code = args.get("language_code")
         multilingual = False
         whisper_lang = None
+        
+        if not model.model.is_multilingual and language_code != 'en':
+            language_name = 'English'
+            language_code = 'en'
+            log_cb("info", t('language_en_only'))
+        
         if language_name == "Multilingual":
             multilingual = True
             whisper_lang = None
@@ -93,7 +99,6 @@ def whisper_proc_entrypoint(args: dict, q):
                 audio, vad_filter=True, vad_parameters=vad_parameters
             )
             log_cb("info", t('language_detect', lang=language, prob=f'{language_probability:.2f}'))
-            whisper_lang = language
 
         # Build prompt/hotwords if disfluencies suppression is requested
         prompt = ""

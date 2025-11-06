@@ -94,6 +94,7 @@ en:
   whisper_cuda_retry: 'Whisper CUDA error detected. Retrying on CPU.'
   vad: 'Voice activity detection...'
   language_detect: 'Detected language "%{lang}" with probability %{prob}'
+  language_en_only: 'Note that the AI model selected for transcription is English-only.'
 
   transcription_finished: 'Transcription finished.' 
   transcription_saved: 'Saved to: '
