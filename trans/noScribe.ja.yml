@@ -89,6 +89,7 @@ ja:
   whisper_cuda_retry: 'Whisper の CUDA エラーを検出しました。CPU で再試行します。'
   vad: '音声活動検出...'
   language_detect: '検出された言語は「%{lang}」（確率 %{prob}）'
+  language_en_only: '選択した文字起こし用のAIモデルは英語専用です。'
   transcription_finished: '転写が完了しました。'
   transcription_saved: '%{file}に保存されました'
   trancription_time: '所要時間：%{duration}分'

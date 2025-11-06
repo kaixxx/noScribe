@@ -89,6 +89,7 @@ zh-CN: &defaults
   whisper_cuda_retry: '检测到 Whisper 的 CUDA 错误。正在使用 CPU 重试。'
   vad: '语音活动检测...'
   language_detect: '检测到语言“%{lang}”，概率 %{prob}'
+  language_en_only: '请注意，所选用于转写的 AI 模型仅支持英文。'
 
   transcription_finished: '转录完成。'
   transcription_saved: '已保存至'

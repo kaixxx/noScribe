@@ -90,6 +90,7 @@ ru:
   whisper_cuda_retry: 'Обнаружена ошибка CUDA в Whisper. Повторяю на CPU.'
   vad: 'Обнаружение голосовой активности...'
   language_detect: 'Обнаружен язык «%{lang}» с вероятностью %{prob}'
+  language_en_only: 'Обратите внимание: выбранная для транскрибации модель ИИ поддерживает только английский язык.'
   transcription_finished: 'Транскрибация завершена.'
   transcription_saved: 'Сохранено в '
   trancription_time: 'Продолжительность: %{duration} минут'
