@@ -1,12 +1,13 @@
 # Install with `pip install -r requirements_linux.txt`
-# torchaudio # install as dependency
+# torch==2.8 # pyannote 4 is currently not compatible with torch 2.9; torch version is set by torchaudio
+torchaudio==2.8
 AdvancedHTMLParser
 appdirs
 customtkinter
 CTkToolTip
 faster-whisper
 Pillow
-pyannote.audio>=3.3.2
+pyannote.audio>=4
 pyinstaller
 python-i18n
 PyYAML
