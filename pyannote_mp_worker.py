@@ -4,6 +4,7 @@ import traceback
 from dataclasses import asdict, is_dataclass
 import os
 import torchaudio
+from pathlib import Path
 
 if platform.system() == "Darwin" and platform.machine() == "x86_64":
     os.environ.setdefault("OMP_NUM_THREADS", "1")
@@ -76,7 +77,7 @@ def pyannote_proc_entrypoint(args: dict, q):
             else:
                 raise Exception('Platform not supported yet.')
 
-        pipeline = Pipeline.from_pretrained(os.path.join(app_dir, 'pyannote'))
+        pipeline = Pipeline.from_pretrained(Path(os.path.join(app_dir, 'pyannote')))
         waveform, sample_rate = torchaudio.load(audio_file)        
         pipeline.to(torch.device(device))
 
