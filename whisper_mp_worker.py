@@ -95,10 +95,10 @@ def whisper_proc_entrypoint(args: dict, q):
 
         # Detect language if requested (Auto)
         if language_name == "Auto":
-            language, language_probability, _ = model.detect_language(
+            whisper_lang, language_probability, _ = model.detect_language(
                 audio, vad_filter=True, vad_parameters=vad_parameters
             )
-            log_cb("info", t('language_detect', lang=language, prob=f'{language_probability:.2f}'))
+            log_cb("info", t('language_detect', lang=whisper_lang, prob=f'{language_probability:.2f}'))
 
         # Build prompt/hotwords if disfluencies suppression is requested
         prompt = ""
@@ -122,7 +122,7 @@ def whisper_proc_entrypoint(args: dict, q):
             beam_size=args.get("beam_size", 5),
             # temperature=args.get("temperature"),
             word_timestamps=args.get("word_timestamps", True),
-            # initial_prompt=args.get("initial_prompt"),
+            # initial_prompt=prompt,
             hotwords=prompt,
             vad_filter=args.get("vad_filter", True),
             vad_parameters=vad_parameters,
