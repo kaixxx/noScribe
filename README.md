@@ -173,15 +173,40 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 - Whisper handles **dialects** fairly well (e.g., Swiss-German), but the transcript might need more manual work in the revision.
 
 ## Known Issues
+
+The output of this software needs always checked for quality, misunderstandings, and wrong speaker diarization. This software is based on [OpenAI's Whisper model](https://github.com/openai/whisper) and a first impression on how big the word error rate is can be seen [here](https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages). See also [this paper](https://doi.org/10.1145/3576915.3624380) for a comparison of different transcription services and their errors.
+
+- Like any other large language model, the whisper model can sometimes **hallucinate**. This is especially prevalent in silent audio passages. Probably due to the training of the model using subtitles created for movies and series, the subtitle creators signature which is shown in the beginning during a silence causes the AI to learn transcribers signature as proper transcription for silence. For example, phrases like "Untertitel von Stephanie Geiges" (English translation: "subtitles by Stephanie Geiges") might appear. It can also happen that background noise is treated as "text" (see [this study from the Cornell University](https://facctconference.org/static/papers24/facct24-111.pdf) for more info about the issue). In the current version, this should not be such a problem as silent audio sequences are filtered out.
+
+  More severely, users reported also of other hallucinations in shorter interviews. Sometimes, there were only some small additions like an "okay" where something similar was never said. However, sometimes it can also happen that a whole paragraph that fits more or less the context is added but was never recorded in the audio file. In interviews, this can lead to heavy distortions of the content.
+
 - The whisper AI can sometimes get **stuck in a loop of repeating text,** especially on longer audio files. If this happens, try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
-- **Multilingual audio**is now supported, but experimental.
+
+- **Multilingual audio**is now supported, but experimental. Sometimes it can happen that words in other languages than the main language are translated.
+
 - **Nonverbal expressions** like laughter are not included in the transcript and must be added later in the editor if you need them.
-- **Speaker identification:** In some recordings, the AI used by noScribe may not be able to tell the voices of certain speakers apart, even if they sound quite different to the human ear. Check the results carefully.
-- The whisper AI can sometimes **hallucinate**, especially in silent parts of the recording when it interprets background noise as 'text' (see [this study from the Cornell University](https://facctconference.org/static/papers24/facct24-111.pdf) for more info about the issue).
+
+- **Speaker diarization:** In some recordings, the AI used by noScribe may not be able to tell the voices of certain speakers apart, even if they sound quite different to the human ear. Check the results carefully.
+
+- In some cases it can happen that punctuations and capitalizations are not correct. See [this issue](https://github.com/kaixxx/noScribe/issues/235) for more information. It might help to check the "disfluencies" box in the user interface.
+
+What you can do if you run into these issues:
+
+- Transcribe the audio file once again. The model is not deterministic and might produce other results in a second run.
+
+- Try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
+
+- Try to enable/disable the "disfluencies" box in the user interface.
+
+- Try to change some model parameters. You can change them in the noScribe config file. See the [Advanced Options](#advanced-options) section.
+
+- Try to use another model. This is more effort and described in [in the Wiki](https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription).
+
 
 ## Advanced Options
-- After the app has run for the first time, you will find a file named **config.yml** in the user config directory (on windows: C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml; on Mac: "~/Library/Application Support/noscribe/config.yml"). Here, you can change a few **extra settings,** e.g., the language of the user interface.
-- Also in the user config directory you will find a folder named **log** with detailed log-files for every transcript (also unfinished ones). This can be helpful in the case of any errors. Be aware though that these files also contain the text of your transcripts which might include sensitive information.
+
+- After the app has run for the first time, you will find a file named `config.yml` in the user config directory (on Windows: `C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml`; on Mac OS: `~/Library/Application Support/noscribe/config.yml`; on Linux: `~/.config/noScribe/config.yml`). Here, you can change a few **extra settings**, e.g., the language of the user interface and model parameters.
+- Also in the user config directory you will find a folder named `log` with detailed log-files for every transcript (also unfinished ones). This can be helpful in the case of any errors. Be aware though that these files also contain the text of your transcripts which might include sensitive information.
 - If you want to use **custom whisper models** with noScribe, follow the [instructions in the Wiki](https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription).
 
 ## Development and Contribution
@@ -198,6 +223,3 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
-
-
-
