@@ -141,7 +141,7 @@ Dröge, K. (2025). noScribe. AI-powered Audio Transcription (Version XXX) [Compu
 ### Settings
 <img align="left" src="img/noScribe_settings.png" width="300">
 
-- Select your **audio file**. NoScribe supports almost any audio or video format. You can also select several files at once for batch transcription.
+- Select your **audio file**. NoScribe supports almost any audio or video format. You can also select several files at once for [batch transcription](#batch-transcription).
 - Select the **filename for the transcript.** You can also choose the file type: *.html is the default, supported also by the noScribe editor. *.vtt is a video subtitles format and is especially useful if you want to import your transcript into [EXMARaLDA](https://exmaralda.org/) for further annotation. *.txt exports the transcript as plain text.
 - **Start** and **Stop** accept timestamps in the format hh:mm:ss. Use this to limit the transcription to a particular part of the recording. This is especially helpful for testing your settings with a small sample before committing to transcribing the whole interview, which may take several hours. Leave **Stop** empty if you want to transcribe until the end of the audio file.
 - **Language:** Select the language of your transcript. Set it to "auto" to detect the language, or choose "multilingual" if your audio contains more than one language (experimental).
@@ -156,14 +156,21 @@ Dröge, K. (2025). noScribe. AI-powered Audio Transcription (Version XXX) [Compu
 - If you are ready, click the **Start**-button in the bottom left. **Cancel** will abort the process.
 - Be aware that **a one-hour interview can take up to three hours processing time** and will put a heavy load on your machine. Doing this on battery-power is not recommended.
 - A **progress indicator** at the bottom of the app will show how far you are into the whole process.
-- The **main window** will log progress-messages and errors. It will also show the text of your interview during the last step of the transcription.
+- The **main window** (log tab) will show progress-messages and errors. It will also print the text of your interview during the last step of the transcription.
 - The transcript will be auto saved every few seconds under the given filename.
 - By default, noScribe produces an HTML-file. This can be opened in every common word editor (including MS Word, LibreOffice) or QDA-package (MAXQDA, ATLAS.ti, QualCoder...).
 - Before working with the transcript though, you should check it with the included editor. There will always be some errors.
 
-### Batch transcription
-- 
-
+### Batch transcription 
+(new in version 0.7)
+- You can start an new transcription job even when the last one is not finished. It will be send to the queue and processed once the current job is finished.
+- To start multiple jobs at once with the same settings, select as many files files as you want in the audio file dialog. The output files will be named automatically. Use the "Save transcript as" dialog to select a different output folder if needed. Otherwise, the transcripts will be stored in the same folders as the audio.
+![Queue tab](img/queue.png)    
+- Switch to the "queue" tab in the main window to view the list of the jobs. It shows the state of each job and the progress of the current one.
+- The buttons:
+    - `X` Deletes a job from the list or cancels a running one.
+    - `✔` Opens the transcript in the included editor. This also works for unfinished transcripts in case of an error or if the job was canceled by the user.
+    - `⟲` Restarts the job (only available in case of errors or cancelation).       
 
 ## noScribeEdit
 The included editor to check the final transcript.
@@ -239,6 +246,7 @@ What you can do if you run into these issues:
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
+
 
 
 
