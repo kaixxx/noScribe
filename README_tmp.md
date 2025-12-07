@@ -163,11 +163,13 @@ Dröge, K. (2025). noScribe. AI-powered Audio Transcription (Version XXX) [Compu
 
 ### Batch transcription 
 (new in version 0.7)
-- You can start an new transcription job even when the last one is not finished. It will be send to the queue and processed once the current job is finished.
-- To start multiple jobs at once with the same settings, select as many files files as you want in the audio file dialog. The output files will be named automatically. Use the "Save transcript as" dialog to select a different output folder if needed. Otherwise, the transcripts will be stored in the same folders as the audio.
-![Queue tab](img/queue.png)    
-- Switch to the "queue" tab in the main window to view the list of the jobs. It shows the state of each job and the progress of the current one.
-- The buttons:
+
+<img src="img/queue.png" width="800">
+
+- The "Queue" tab in the main window shows a list of all jobs as well as their state and progress.
+- If you start a new job while another is still running, it will wait in the queue for to be processed afterwards.
+- To start multiple jobs at once with the same settings, select as many files files as you want in the audio file dialog. The output files will be named automatically. Use the "Save transcript as" dialog to select a different output folder if needed. Otherwise, the transcripts will be stored in the same folders as the audio. 
+- The job buttons:
     - `X` Deletes a job from the list or cancels a running one.
     - `✔` Opens the transcript in the included editor. This also works for unfinished transcripts in case of an error or if the job was canceled by the user.
     - `⟲` Restarts the job (only available in case of errors or cancelation).       
@@ -246,6 +248,7 @@ What you can do if you run into these issues:
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
+
 
 
 
