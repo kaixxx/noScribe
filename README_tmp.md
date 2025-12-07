@@ -1,8 +1,9 @@
 ﻿# noScribe
-> ## Cutting Edge AI Technology for Automated Audio Transcription
+### Cutting Edge AI Technology for Automated Audio Transcription
+</br>
 
 > [!WARNING]
-> Somebody has registered the domain **noscribe (dot) ai** to sell transcription services. **Stay away from this platform, I have nothing to do with it.** The real noScribe is free and will always stay that way. This is obviously an attempt to profit from the popularity of my software and the reputation it gained over the years. Very sad. 
+> Somebody has registered the domain **noscribe(dot)ai** to sell transcription services. **Stay away from this platform, I have nothing to do with it.** The real noScribe is free and will always stay that way. This is obviously an attempt to profit from the popularity of my software and the reputation it gained over the years. Very sad. 
 
 ## What is noScribe?
 - An app to produce **high quality transcripts of interviews** for qualitative social research or journalistic use
@@ -18,11 +19,12 @@
 (The transcript is from [this interview](https://www.youtube.com/watch?v=vOwajAbvPzQ&t=2018s) which I did in May 2022 with the Russian sociologist Natalia Savelyeva.)
 
 ## Limitations
+- The download is quite large (several gigabytes) due to the included AI models. 
 - Beware that a one hour interview can take up to three hours to transcribe, depending on your machine. 
-- The download is quite large (several gigabytes) because of the includes AI models. 
 - Poor audio and background noise will lead to poor transcription results.
 - No automatic transcription is perfect, there will always be some manual revision necessary. Use the [included Editor](#noscribeedit) to check your transcripts thouroughly. (See also ["Factors Influencing the Quality"](#factors-influencing-the-quality-of-the-transcription) and ["Known Issues"](#known-issues) below.)
-- If you want to know more and can understand German, Rebecca Schmidt from the University of Paderborn wrote a nice [review of noScribe,](https://sozmethode.hypotheses.org/2315) also discussing its limitations. Also the German [computer magazine c't recommended noScribe in a recent review](https://www.heise.de/select/ct/2025/2/2433207582191637980).
+
+If you want to know more and can understand German, Rebecca Schmidt from the University of Paderborn wrote a nice [review of noScribe,](https://sozmethode.hypotheses.org/2315) also discussing its limitations. Also the German [computer magazine c't recommended noScribe in a recent review](https://www.heise.de/select/ct/2025/2/2433207582191637980).
 
 ## Why the Name "noScribe"?
 The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) defines **scribe** as *"a person whose entire miserable existence has been reduced to academic grunge and pain".* I hope this software will make your academic life a little less painful and grungy, hence the name noScribe :)
@@ -171,7 +173,7 @@ Dröge, K. (2025). noScribe. AI-powered Audio Transcription (Version XXX) [Compu
 <img src="img/queue.png" width="800">
 
 - The "Queue" tab in the main window shows a list of all jobs as well as their state and progress.
-- If you start a new job while another is still running, it will wait in the queue for to be processed afterwards.
+- If you start a new job while another is still running, the new job will wait in the queue to be processed afterwards.
 - To start multiple jobs at once with the same settings, select as many files files as you want in the audio file dialog. The output files will be named automatically. Use the "Save transcript as" dialog to select a different output folder if needed. Otherwise, the transcripts will be stored in the same folders as the audio. 
 - The job buttons:
     - `X` Deletes a job from the list or cancels a running one.
@@ -242,6 +244,7 @@ The output of this software needs always checked for quality, misunderstandings,
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at my other project [QualCoder](https://github.com/ccbogel/QualCoder).
+
 
 
 
