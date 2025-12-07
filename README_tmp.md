@@ -1,8 +1,11 @@
 ﻿# noScribe
 > ## Cutting Edge AI Technology for Automated Audio Transcription
 
+> [!WARNING]
+> Somebody has registered the domain **noscribe (dot) ai** to sell transcription services. **Stay away from this platform, I have nothing to do with it.** The real noScribe is free and will always stay that way. This is obviously an attempt to profit from the popularity of my software and the reputation it gained over the years. Very sad. 
+
 ## What is noScribe?
-- Produces **high quality transcripts of interviews** for qualitative social research or journalistic use
+- An app to produce **high quality transcripts of interviews** for qualitative social research or journalistic use
 - noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)), available for Windows, MacOS and Linux 
 - It runs **completely local** on your computer, protecting the confidentiallity of your interviews. No cloud, no worries
 - It can distinguish between different **speakers** and understands around 60 languages (more or less, see below)
@@ -32,12 +35,13 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 **Current Version Number: 0.7** (see [changelog](CHANGELOG.md))
 > All releases are hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 
-### Windows 
+### Windows
 <details>
     <summary>Click to expand</summary>
-    
-- The **general purpose version** for normal PCs without a NVIDIA graphics card: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal) 
-- A special version using **CUDA acceleration on NVIDIA graphics cards** with at least 6 GB of VRAM: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fcuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fcuda). Make sure that your NVIDIA drivers are on version 570.65 or higher. You must also install the [CUDA toolkit from here](https://developer.nvidia.com/cuda-downloads?target_os=Windows) (a reboot is required afterwards).
+
+- **Download:**
+    - The **general purpose version** for normal PCs without a NVIDIA graphics card: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal) 
+    - A special version using **CUDA acceleration on NVIDIA graphics cards** with at least 6 GB of VRAM: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fcuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fcuda). Make sure that your NVIDIA drivers are on version 570.65 or higher. You must also install the [CUDA toolkit from here](https://developer.nvidia.com/cuda-downloads?target_os=Windows) (a reboot is required afterwards).
 - **Installation**: 
     - Start the downloaded setup file. This may take a while, be patient.
     - If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
@@ -199,11 +203,11 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 
 ## Known Issues
 
-The output of this software needs always checked for quality, misunderstandings, and wrong speaker diarization. This software is based on [OpenAI's Whisper model](https://github.com/openai/whisper) and a first impression on how big the word error rate is can be seen [here](https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages). See also [this paper](https://doi.org/10.1145/3576915.3624380) for a comparison of different transcription services and their errors.
+The output of this software needs always checked for quality, misunderstandings, and wrong speaker diarization. This software is based on [OpenAI's Whisper model](https://github.com/openai/whisper) and a first impression on word error rates can be seen [here](https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages). See also [this paper](https://doi.org/10.1145/3576915.3624380) for a comparison of different transcription services and their errors.
 
-- Like any other large language model, the whisper model can sometimes **hallucinate**. This is especially prevalent in silent audio passages. Probably due to the training of the model using subtitles created for movies and series, the subtitle creators signature which is shown in the beginning during a silence causes the AI to learn transcribers signature as proper transcription for silence. For example, phrases like "Untertitel von Stephanie Geiges" (English translation: "subtitles by Stephanie Geiges") might appear. It can also happen that background noise is treated as "text" (see [this study from the Cornell University](https://facctconference.org/static/papers24/facct24-111.pdf) for more info about the issue). In the current version, this should not be such a problem as silent audio sequences are filtered out.
+- Like any other large language model, the whisper model can sometimes **hallucinate**. This is especially prevalent in silent audio passages or when background noise is treated as "text" (see [this study from the Cornell University](https://facctconference.org/static/papers24/facct24-111.pdf) for more info about the issue). We use voice activity detection (VAD) to filter out sections without speech as best as possible. 
 
-  More severely, users reported also of other hallucinations in shorter interviews. Sometimes, there were only some small additions like an "okay" where something similar was never said. However, sometimes it can also happen that a whole paragraph that fits more or less the context is added but was never recorded in the audio file. In interviews, this can lead to heavy distortions of the content.
+  More severely, users also reported cases where words where hallucinated that would fit syntactically into the context, but where actually not present in the orginal audio. Such errors are especially hard to catch. 
 
 - The whisper AI can sometimes get **stuck in a loop of repeating text,** especially on longer audio files. If this happens, try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
 
@@ -213,19 +217,9 @@ The output of this software needs always checked for quality, misunderstandings,
 
 - **Speaker diarization:** In some recordings, the AI used by noScribe may not be able to tell the voices of certain speakers apart, even if they sound quite different to the human ear. Check the results carefully.
 
-- In some cases it can happen that punctuations and capitalizations are not correct. See [this issue](https://github.com/kaixxx/noScribe/issues/235) for more information. It might help to check the "disfluencies" box in the user interface.
-
-What you can do if you run into these issues:
-
-- Transcribe the audio file once again. The model is not deterministic and might produce other results in a second run.
-
-- Try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
-
-- Try to enable/disable the "disfluencies" box in the user interface.
-
-- Try to change some model parameters. You can change them in the noScribe config file. See the [Advanced Options](#advanced-options) section.
-
-- Try to use another model. This is more effort and described in [in the Wiki](https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription).
+- It can happen that **punctuations and capitalizations** are lost over time, especially in longer interviews. If you run into this issue, you can
+  - Try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
+  - Try to use another model, especially "faster-whisper-large-v2", which is less prone to this problem. You have to install this models first as described [in the Wiki](https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription).
 
 
 ## Advanced Options
@@ -247,8 +241,7 @@ What you can do if you run into these issues:
 - If you want to change the language of the user interface, you have to change the value of the "locale" setting in the advanced settings (see above).
 
 ## Other Software
-If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
-
+If you are interested in open source software for the analysis of qualitative data, take a look at my other project [QualCoder](https://github.com/ccbogel/QualCoder).
 
 
 
