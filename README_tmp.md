@@ -205,7 +205,7 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 
 ## Known Issues
 
-The output of this software needs always checked for quality, misunderstandings, and wrong speaker diarization. This software is based on [OpenAI's Whisper model](https://github.com/openai/whisper) and a first impression on word error rates can be seen [here](https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages). See also [this paper](https://doi.org/10.1145/3576915.3624380) for a comparison of different transcription services and their errors.
+- The output of this software needs always checked for quality, misunderstandings, and wrong speaker diarization. This software is based on [OpenAI's Whisper model](https://github.com/openai/whisper) and a first impression on word error rates can be seen [here](https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages). See also [this paper](https://doi.org/10.1145/3576915.3624380) for a comparison of different transcription services and their errors.
 
 - Like any other large language model, the whisper model can sometimes **hallucinate**. This is especially prevalent in silent audio passages or when background noise is treated as "text" (see [this study from the Cornell University](https://facctconference.org/static/papers24/facct24-111.pdf) for more info about the issue). We use voice activity detection (VAD) to filter out sections without speech as best as possible. 
 
@@ -244,6 +244,7 @@ The output of this software needs always checked for quality, misunderstandings,
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at my other project [QualCoder](https://github.com/ccbogel/QualCoder).
+
 
 
 
