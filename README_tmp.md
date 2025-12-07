@@ -2,10 +2,10 @@
 > ## Cutting Edge AI Technology for Automated Audio Transcription
 
 ## What is noScribe?
-- An AI-based software that **transcribes interviews** for qualitative social research or journalistic use
-- noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html))
-- It runs **completely local** on your computer. No data is sent to the internet. No cloud, no worries
-- It can distinguish different **speakers** and understands around 60 languages (more or less, see below)
+- Optimized at producing **high quality transcripts of interviews** for qualitative social research or journalistic use
+- noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)), and available for Windows, MacOS and Linux 
+- It runs **completely local** on your computer, perfectly protecting the confidentiallity of your interviews. No cloud, no worries
+- It can distinguish between different **speakers** and understands around 60 languages (more or less, see below)
 - It includes a **nice editor** to review, verify and correct the resulting transcript
 - It is standing on the shoulders of giants: [Whisper from OpenAI](https://github.com/openai/whisper), [faster-whisper by Guillaume Klein](https://github.com/guillaumekln/faster-whisper) and [pyannote from Hervé Bredin](https://github.com/pyannote/pyannote-audio)
 
@@ -15,9 +15,9 @@
 (The transcript is from [this interview](https://www.youtube.com/watch?v=vOwajAbvPzQ&t=2018s) which I did in May 2022 with the Russian sociologist Natalia Savelyeva.)
 
 ## Limitations
-- noScribe needs a fairly up-to-date computer, or the transcription will take very long. (Consider letting it run over night on a slower machine.)
-- Since it uses sophisticated AI models, the download is quite large – about 3.7 GB
-- Poor audio quality will lead to poor transcription results.
+- Since noScribe aims at the highest quality, a one hour interview can take up to three hours to transcribe. 
+- The download is quite large (several gigabytes) because it includes AI models. 
+- Poor audio quality - especially background noise - will lead to poor transcription results.
 - No automatic transcription is perfect, there will always be some manual revision necessary. Use the [included Editor](#noscribeedit) to check your transcripts thouroughly. (See also ["Factors Influencing the Quality"](#factors-influencing-the-quality-of-the-transcription) and ["Known Issues"](#known-issues) below.)
 - If you want to know more and can understand German, Rebecca Schmidt from the University of Paderborn wrote a nice [review of noScribe,](https://sozmethode.hypotheses.org/2315) also discussing its limitations. Also the German [computer magazine c't recommended noScribe in a recent review](https://www.heise.de/select/ct/2025/2/2433207582191637980).
 
@@ -29,12 +29,12 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 
 ## Download and Installation
 
-**Current Version Number: 0.6.2** (see [changelog](CHANGELOG.md))
+**Current Version Number: 0.7** (see [changelog](CHANGELOG.md))
 > All releases are hosted on SWITCHdrive, a secure data sharing platform for Swiss universities.
 
 ### Windows
-- The **general purpose version** for normal PCs without a NVIDIA graphics card: [https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fnormal2](https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fnormal2) 
-- A special version using **CUDA acceleration on NVIDIA graphics cards** with at least 6 GB of VRAM: [https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fcuda1](https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FWindows%2Fcuda1). Make sure that your NVIDIA drivers are on version 570.65 or higher. You must also install the [CUDA toolkit from here](https://developer.nvidia.com/cuda-downloads?target_os=Windows) (a reboot is required afterwards).
+- The **general purpose version** for normal PCs without a NVIDIA graphics card: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal) 
+- A special version using **CUDA acceleration on NVIDIA graphics cards** with at least 6 GB of VRAM: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fcuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fcuda). Make sure that your NVIDIA drivers are on version 570.65 or higher. You must also install the [CUDA toolkit from here](https://developer.nvidia.com/cuda-downloads?target_os=Windows) (a reboot is required afterwards).
 - **Installation**: 
     - Start the downloaded setup file. This may take a while, be patient.
     - If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
@@ -43,7 +43,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 ### MacOS
 ported by [gernophil](https://github.com/gernophil) </br>
 - **Newer Macs with Apple Silicon M1-M4 processors and macOS 14 or newer**
-    - Download: [https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FmacOS%2Farm64%20(Apple%20Silicon)](https://drive.switch.ch/index.php/s/HtKDKYRZRNaYBeI?path=%2FmacOS%2Farm64%20(Apple%20Silicon))
+    - Download: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FmacOS%2FApple%20Silicon](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FmacOS%2FApple%20Silicon)
     - Double-click on the downloaded dmg-file, then drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
     - You will need Apple's Rosetta2 Intel emulator since one component (ffmpeg) is still made the Intel CPUs. If you don't have it installed already, do this as follows:
         - Open the Terminal (located at `/Applications/Utilities/Terminal.app`).
@@ -51,11 +51,9 @@ ported by [gernophil](https://github.com/gernophil) </br>
         - Hit enter and follow the instructions on the screen.
     - Start noScribe and/or noScribeEdit by double-clicking the app within your applications.
 - **Older Macs with Intel processors**</br>
-   **Note: Version 0.6.2 on Intel based Macs is currently experimental and may not fully work. Please help us testing it. [You can download it here.](https://github.com/kaixxx/noScribe/discussions/143) </br>
-    Otherwise, you can use the stable version version 0.5:**
-    - for macOS Sonoma (14) and Sequoia (15): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64%20(Intel))
-    - for macOS 11 (Big Sur), 12 (Monterey) and 13 (Ventura): [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel)](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.5%2FmacOS%2Fx86_64_legacy%20(old%20Intel))
-    - Note: Unfortunately, we are currently not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
+   **Note: Version 0.7 is currently not available for Intel based Macs due to incompatibilities with the newest pyannote release. You can, however, still use  version 0.6: [https://drive.switch.ch/index.php/apps/files/?dir=/noScribe/noScribe%20releases/noScribe%20vers.%200.6/macOS/x86_64%20(Intel)&fileid=8266174681](https://drive.switch.ch/index.php/apps/files/?dir=/noScribe/noScribe%20releases/noScribe%20vers.%200.6/macOS/x86_64%20(Intel)&fileid=8266174681).**
+    - You can find even older versions here: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j)
+    - Unfortunately, we are not able to sign the x86_64 package correctly, so you will get a warning that noScribe and noScribeEdit are from unregistered developers. You have to manually allow noScribe and noScribeEdit to be executed, if your Gatekeeper is active. Follow these steps:
     - Double-click the downloaded dmg-file.
     - Drag noScribe and noScribeEdit into the link to your applications folder (labeled "drag both here to install").
     - Start noScribe by double-clicking the app within your applications folder. You will get an error that noScribe is from an unregistered developer. Do the same with the noScribe Editor.
@@ -122,7 +120,7 @@ python3 ./noScribe.py
 - [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j)
 
 ## Citation (APA Style)
-Dröge, K. (2024). noScribe. AI-powered Audio Transcription (Version XXX) [Computer software]. https://github.com/kaixxx/noScribe
+Dröge, K. (2025). noScribe. AI-powered Audio Transcription (Version XXX) [Computer software]. https://github.com/kaixxx/noScribe
 
 ## Usage
 ### Settings
@@ -223,3 +221,4 @@ What you can do if you run into these issues:
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder) and [Taguette](https://www.taguette.org/).
+
