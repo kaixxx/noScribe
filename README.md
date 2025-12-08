@@ -231,7 +231,8 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 
 ## Advanced Options
 
-- After the app has run for the first time, you will find a file named `config.yml` in the user config directory (on Windows: `C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml`; on Mac OS: `~/Library/Application Support/noscribe/config.yml`; on Linux: `~/.config/noScribe/config.yml`). Here, you can change a few **extra settings**, e.g., the language of the user interface and model parameters.
+- NoScribe now also includes a command line interface, ideal for scripting. Type in `noScribe.exe --help` for more information. You may also want to use the `--no-gui` option in scripting scenarios. 
+- Config file: After the app has run for the first time, you will find a file named `config.yml` in the user config directory (on Windows: `C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml`; on Mac OS: `~/Library/Application Support/noscribe/config.yml`; on Linux: `~/.config/noScribe/config.yml`). Here, you can change a few **extra settings**, e.g., the language of the user interface and model parameters.
 - Also in the user config directory you will find a folder named `log` with detailed log-files for every transcript (also unfinished ones). This can be helpful in the case of any errors. Be aware though that these files also contain the text of your transcripts which might include sensitive information.
 - If you want to use **custom whisper models** with noScribe, follow the [instructions in the Wiki](https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription).
 
