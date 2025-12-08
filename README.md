@@ -209,21 +209,14 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 - Whisper handles **dialects** fairly well (e.g., Swiss-German), but the transcript might need more manual work in the revision.
 
 ## Known Issues
-
 - The output of this software always needs to be checked for quality, misunderstandings, and wrong speaker diarization. This software is based on [OpenAI's Whisper model](https://github.com/openai/whisper). Typical word error rates can be seen [here](https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages). See also [this paper](https://doi.org/10.1145/3576915.3624380) for a comparison of different transcription services and their errors.
-
 - Like any other large language model, the whisper model can sometimes **hallucinate**. This is especially prevalent in silent audio passages or when background noise is treated as "text" (see [this study from the Cornell University](https://facctconference.org/static/papers24/facct24-111.pdf) for more info about the issue). We use voice activity detection (VAD) to filter out sections without speech as best as possible. 
-
-  More severely, users also reported cases where words were hallucinated that would fit syntactically into the context, but were actually not present in the original audio. Such errors are especially hard to catch. 
-
+  More severely, users also reported cases where words were hallucinated that would fit syntactically into the context, but were actually not present in the original audio. Such errors are especially hard to catch.
+- **Names of people, places or organizations** are often transcribed with errors.  
 - The whisper AI can sometimes get **stuck in a loop of repeating text,** especially on longer audio files. If this happens, try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
-
 - **Multilingual audio** is now supported, but experimental. Sometimes it can happen that words in other languages than the main language are translated.
-
 - **Nonverbal expressions** like laughter are not included in the transcript and must be added later in the editor if you need them.
-
 - **Speaker diarization:** In some recordings, the AI used by noScribe may not be able to tell the voices of certain speakers apart, even if they sound quite different to the human ear. Check the results carefully.
-
 - It can happen that **punctuation and capitalization** are lost over time, especially in longer interviews. If you run into this issue, you can
   - Try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
   - Try to use another model, especially "faster-whisper-large-v2", which is less prone to this problem. You have to install this model first as described [in the Wiki](https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription).
