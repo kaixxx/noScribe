@@ -34,7 +34,8 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 
 ## Donate
 NoScribe is free and always will be. However, developing it costs real money. I have purchased hardware for testing and pay Apple annually for a developer ID. If you would like to support this project, you can make a donation on Ko-Fi. Thanks! 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O4O61PWJNK)
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/noscribe)
 
 ## Download and Installation
 
