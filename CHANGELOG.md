@@ -1,5 +1,12 @@
 # noScribe Changelog
 
+## version 0.7
+- Batch transcription: process several files at once
+- Improved speaker identification
+- Improved handling of punctuation issues
+- Command line interface for scripting
+- many small fixes, improvements and updates
+
 ## version 0.6:
 - 3x faster transcription
 - new possibility to install custom models
