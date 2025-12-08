@@ -3,7 +3,7 @@
 </br>
 
 > [!WARNING]
-> Somebody has registered the domain **noscribe(dot)ai** to sell transcription services. **Stay away from this platform, I have nothing to do with it.** The real noScribe is free and will always stay that way. This is obviously an attempt to profit from the popularity of my software and the reputation it gained over the years. Very sad. 
+> Somebody has registered the domain **noscribe(dot)ai** to sell transcription services. **Stay away from this platform, I have nothing to do with it.** The real noScribe is free and always will be. This is obviously an attempt to profit from the popularity of my software and the reputation it gained over the years. Very sad. 
 
 ## What is noScribe?
 - An app to produce **high quality transcripts of interviews** for qualitative social research or journalistic use
@@ -31,6 +31,10 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 
 ## About Me
 **Kai Dröge**, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).
+
+## Donate
+NoScribe is free and always will be. However, developing it costs real money. I have purchased hardware for testing and pay Apple annually for a developer ID. If you would like to support this project, you can make a donation on Ko-Fi. Thanks! 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O4O61PWJNK)
 
 ## Download and Installation
 
