@@ -116,6 +116,7 @@ en:
   err_options: 'Error in options'
   err_no_audio_file: 'Error: Please select an audio file.'
   err_no_transcript_file: 'Error: Please choose a filename for the finished transcript.'
+  err_unsupported_output_format: 'Error: Output format "%{file_type}" is not supported.'
   err_ffmpeg: 'ffmpeg returned an error'
   err_converting_audio: Error in step 1 - converting the audio.
   err_identifying_speakers: Error in step 2 - identifiying the speakers.

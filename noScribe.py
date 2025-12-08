@@ -688,6 +688,8 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     job.transcript_file = transcript_file or ''
     if job.transcript_file:
         job.file_ext = os.path.splitext(job.transcript_file)[1][1:]
+        if not job.file_ext in ['html', 'txt', 'vtt']:
+            raise Exception(t('err_unsupported_output_format', file_type=job.file_ext))
     
     # Time range
     job.start = start_time if start_time is not None else 0
@@ -2091,16 +2093,16 @@ class App(ctk.CTk):
 
     def create_default_transcript_names(self, dir=None):
         self.transcript_files_list = []
-        if 'last_filetype' not in config:
-            config['last_filetype'] = 'html'
+        if 'default_filetype' not in config:
+            config['default_filetype'] = 'html'
 
         # Collect audio file names.
         for f in self.audio_files_list:
             f = Path(f)
             if dir:
-                self.transcript_files_list.append(Path(dir) / f'{f.stem}.{config['last_filetype']}')
+                self.transcript_files_list.append(Path(dir) / f'{f.stem}.{config['default_filetype']}')
             else:
-                self.transcript_files_list.append(f'{f.with_name(f.stem)}.{config['last_filetype']}')
+                self.transcript_files_list.append(f'{f.with_name(f.stem)}.{config['default_filetype']}')
 
         # Ensure to not override anything and that we have unique file names.
         # Make sure here that every file is a `Path`.
@@ -2173,9 +2175,13 @@ class App(ctk.CTk):
                                                 filetypes=filetypes, 
                                                 defaultextension=config['last_filetype'])
             if fn:
+                file_ext = os.path.splitext(fn)[1][1:].lower()
+                if not file_ext in ['html', 'txt', 'vtt']:
+                    tk.messagebox.showerror(title='noScribe', message=t('err_unsupported_output_format', file_type=file_ext))
+                    return                    
                 self.transcript_files_list = [fn]
                 self.button_transcript_file_name.configure(text=os.path.basename(fn))
-                config['last_filetype'] = os.path.splitext(fn)[1][1:]
+                config['last_filetype'] = file_ext
             else:
                 return
         
