@@ -92,6 +92,7 @@ ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](htt
 #### Executable Installation
 
   - Download the CUDA or CPU version of noScribe 0.7 for Linux here: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FLinux](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FLinux)
+    - Issues with noScribe 0.7 for Linux on some systems have been reported. If noScribe 0.7 for Linux does not work on your system, please use noScribe 0.6.2 while we try to solve these issues: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.6%2FLinux](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.6%2FLinux)
   - Untar the file using the terminal command `tar -xzvf noScribe_0.7.0_cpu_linux_amd64.tar.gz` or `tar -xzvf noScribe_0.7.0_cuda_linux_amd64.tar.gz`.
   - Execute noScribe using the terminal by `cd`ing into the noScribe folder and executing `./noScribe`.
   - Optionally: Edit the files `noScribe.desktop` and `noScribeEdit.desktop` with a text editor and enter the complete path in the lines starting with `Exec=` and `Icon=`.
