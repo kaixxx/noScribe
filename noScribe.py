@@ -1039,19 +1039,25 @@ class JobEntryFrame(ctk.CTkFrame, CTkScalingBaseClass):
             )
 
 class App(ctk.CTk):
-    def __init__(self):
+    def __init__(self, headless=False):
         super().__init__()
 
+        self._headless = headless
+
+        # In headless mode, hide window immediately and skip GUI setup
+        if headless:
+            self.withdraw()
+
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
-        
+
         self.user_models_dir = os.path.join(config_dir, 'whisper_models')
         os.makedirs(self.user_models_dir, exist_ok=True)
         whisper_models_readme = os.path.join(self.user_models_dir, 'readme.txt')
         if not os.path.exists(whisper_models_readme):
             with open(whisper_models_readme, 'w') as file:
-                file.write('You can download custom Whisper-models for the transcription into this folder. \n' 
-                           'See here for more information: https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription')            
-        
+                file.write('You can download custom Whisper-models for the transcription into this folder. \n'
+                           'See here for more information: https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription')
+
         self.queue = TranscriptionQueue()
         self.audio_files_list = []
         self.transcript_files_list = []
@@ -1066,6 +1072,10 @@ class App(ctk.CTk):
         self._mp_queue = None
         self._ffmpeg_proc = None
         self._shutting_down = False
+
+        # Skip GUI setup in headless mode
+        if headless:
+            return
 
         # configure window
         self.title('noScribe - ' + t('app_header'))
@@ -1518,6 +1528,10 @@ class App(ctk.CTk):
                         
     def update_queue_table(self):
         """Update the queue table by diffing: update existing rows, add new ones, remove missing."""
+        # Skip GUI updates in headless mode
+        if getattr(self, '_headless', False):
+            return
+
         current_keys = []
         for i in range(len(self.queue.jobs)):
             job = self.queue.jobs[i]
@@ -1819,6 +1833,9 @@ class App(ctk.CTk):
 
     def update_queue_controls(self):
         """Enable/disable and label the queue control buttons based on state."""
+        # Skip in headless mode
+        if getattr(self, '_headless', False):
+            return
         try:
             has_running = len(self.queue.get_running_jobs()) > 0
             has_pending = self.queue.has_pending_jobs()
@@ -2102,7 +2119,7 @@ class App(ctk.CTk):
 
     def logr(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '', tb: str = '') -> None:
         """ Replace the last line of the log """
-        if where != 'file':
+        if where != 'file' and hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
             self.log_textbox.configure(state=ctk.NORMAL)
             tmp_txt = self.log_textbox.get("end-1c linestart", "end-1c")
             self.log_textbox.delete("end-1c linestart", "end-1c")
@@ -2211,6 +2228,10 @@ class App(ctk.CTk):
         
     def set_progress(self, step, value, speaker_detection='none'):
         """ Update state of the progress bar """
+        # Skip GUI updates in headless mode
+        if getattr(self, '_headless', False):
+            return
+
         progr = -1
         if step == 1:
             progr = value * 0.05 / 100
@@ -2396,15 +2417,16 @@ class App(ctk.CTk):
             total_time_str = f'{int(total_time.total_seconds() // 60)}:{total_seconds}'
             self.logn(t('processing_time', total_time_str=total_time_str))
             
-            # open editor if only a single file was processed
-            if queue_jobs_processed == 1 \
+            # open editor if only a single file was processed (skip in headless mode)
+            if not getattr(self, '_headless', False) \
+                    and queue_jobs_processed == 1 \
                     and job \
                     and job.file_ext == 'html' \
                     and job.status == JobStatus.FINISHED \
                     and get_config('auto_edit_transcript', 'True') == 'True':
                 self.launch_editor(job.transcript_file)
-            elif queue_jobs_processed > 1:
-                # if more than one job has been processed, switch to queue tab for an overview 
+            elif queue_jobs_processed > 1 and not getattr(self, '_headless', False):
+                # if more than one job has been processed, switch to queue tab for an overview
                 self.tabview.set(self.tabview._name_list[1])
             
         except Exception as e:
@@ -3383,16 +3405,75 @@ class App(ctk.CTk):
                 pass
             self.destroy()
 
+def _cleanup_app(app):
+    """Cleanup app instance for proper process exit in CLI mode.
+
+    This performs the same cleanup as on_closing() but without GUI interactions.
+    """
+    try:
+        # Signal shutdown to stop background activity
+        app._shutting_down = True
+        app.cancel = True
+
+        # Terminate active multiprocessing child (diarization/whisper) if present
+        if getattr(app, "_mp_proc", None) is not None:
+            try:
+                if app._mp_proc.is_alive():
+                    app._mp_proc.terminate()
+                    app._mp_proc.join(timeout=1.0)
+            except Exception:
+                pass
+            finally:
+                app._mp_proc = None
+
+        # Close multiprocessing queue
+        if getattr(app, "_mp_queue", None) is not None:
+            try:
+                app._mp_queue.close()
+                app._mp_queue.join_thread()
+            except Exception:
+                pass
+            finally:
+                app._mp_queue = None
+
+        # Terminate ffmpeg if currently converting
+        if getattr(app, "_ffmpeg_proc", None) is not None:
+            try:
+                if app._ffmpeg_proc.poll() is None:
+                    app._ffmpeg_proc.terminate()
+                    app._ffmpeg_proc.wait(timeout=1.0)
+            except Exception:
+                try:
+                    app._ffmpeg_proc.kill()
+                except Exception:
+                    pass
+            finally:
+                app._ffmpeg_proc = None
+
+        # Join worker threads briefly
+        for th in list(getattr(app, "_worker_threads", [])):
+            try:
+                th.join(timeout=0.5)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # Finally destroy Tkinter
+    try:
+        app.quit()
+    except Exception:
+        pass
+    try:
+        app.destroy()
+    except Exception:
+        pass
+
 def run_cli_mode(args):
     """Run noScribe in CLI mode"""
     try:
-        # Create a minimal app instance to access model paths and logging
-        app = App()
-        # Hide GUI window for headless execution
-        try:
-            app.withdraw()
-        except Exception:
-            pass
+        # Create a headless app instance (no GUI window)
+        app = App(headless=True)
         
         # Validate and set the whisper model
         available_models = app.get_whisper_models()
@@ -3449,43 +3530,25 @@ def run_cli_mode(args):
         if final_summary['finished'] > 0:
             print(f"\nTranscription completed successfully!")
             print(f"Output saved to: {job.transcript_file}")
-            # Cleanup Tkinter to allow process exit
-            try:
-                app.quit()
-            except Exception:
-                pass
-            app.destroy()
+            _cleanup_app(app)
             return 0
         else:
             if final_summary.get('canceled', 0) > 0:
                 print(f"\nTranscription canceled by user.")
-                try:
-                    app.quit()
-                except Exception:
-                    pass
-                app.destroy()
+                _cleanup_app(app)
                 return 1
             print(f"\nTranscription failed!")
             failed_jobs = app.queue.get_failed_jobs()
             if failed_jobs:
                 print(f"Error: {failed_jobs[0].error_message}")
-            # Cleanup Tkinter to allow process exit
-            try:
-                app.quit()
-            except Exception:
-                pass
-            app.destroy()
+            _cleanup_app(app)
             return 1
 
     except Exception as e:
         print(f"Error: {str(e)}")
-        # Cleanup Tkinter if app was created
+        # Cleanup if app was created
         try:
-            app.quit()
-        except Exception:
-            pass
-        try:
-            app.destroy()
+            _cleanup_app(app)
         except Exception:
             pass
         return 1
@@ -3493,8 +3556,8 @@ def run_cli_mode(args):
 def show_available_models():
     """Show available Whisper models"""
     try:
-        # Create minimal app instance to get models
-        app = App()
+        # Create headless app instance to get models
+        app = App(headless=True)
         models = app.get_whisper_models()
 
         print("Available Whisper models:")
@@ -3504,12 +3567,7 @@ def show_available_models():
         if not models:
             print("  No models found. Please check your installation.")
 
-        # Cleanup Tkinter to allow process exit
-        try:
-            app.quit()
-        except Exception:
-            pass
-        app.destroy()
+        _cleanup_app(app)
 
     except Exception as e:
         print(f"Error getting models: {str(e)}")
