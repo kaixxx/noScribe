@@ -1,3 +1,21 @@
+#!/usr/bin/env -S uv run --python 3.12 --script
+# /// script
+# requires-python = ">=3.12,<3.14"
+# dependencies = [
+#     "torchaudio==2.8",
+#     "AdvancedHTMLParser",
+#     "appdirs",
+#     "customtkinter",
+#     "CTkToolTip",
+#     "faster-whisper",
+#     "Pillow",
+#     "pyannote.audio>=4",
+#     "pyobjc",
+#     "python-i18n",
+#     "PyYAML",
+# ]
+# ///
+
 # noScribe - AI-powered Audio Transcription
 # Copyright (C) 2025 Kai Dröge
 # ported to MAC by Philipp Schneider (gernophil)
@@ -3431,19 +3449,45 @@ def run_cli_mode(args):
         if final_summary['finished'] > 0:
             print(f"\nTranscription completed successfully!")
             print(f"Output saved to: {job.transcript_file}")
+            # Cleanup Tkinter to allow process exit
+            try:
+                app.quit()
+            except Exception:
+                pass
+            app.destroy()
             return 0
         else:
             if final_summary.get('canceled', 0) > 0:
                 print(f"\nTranscription canceled by user.")
+                try:
+                    app.quit()
+                except Exception:
+                    pass
+                app.destroy()
                 return 1
             print(f"\nTranscription failed!")
             failed_jobs = app.queue.get_failed_jobs()
             if failed_jobs:
                 print(f"Error: {failed_jobs[0].error_message}")
+            # Cleanup Tkinter to allow process exit
+            try:
+                app.quit()
+            except Exception:
+                pass
+            app.destroy()
             return 1
-            
+
     except Exception as e:
         print(f"Error: {str(e)}")
+        # Cleanup Tkinter if app was created
+        try:
+            app.quit()
+        except Exception:
+            pass
+        try:
+            app.destroy()
+        except Exception:
+            pass
         return 1
 
 def show_available_models():
@@ -3452,14 +3496,21 @@ def show_available_models():
         # Create minimal app instance to get models
         app = App()
         models = app.get_whisper_models()
-        
+
         print("Available Whisper models:")
         for model in models:
             print(f"  - {model}")
-        
+
         if not models:
             print("  No models found. Please check your installation.")
-            
+
+        # Cleanup Tkinter to allow process exit
+        try:
+            app.quit()
+        except Exception:
+            pass
+        app.destroy()
+
     except Exception as e:
         print(f"Error getting models: {str(e)}")
 
