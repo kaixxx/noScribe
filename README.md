@@ -53,6 +53,9 @@ NoScribe is free and always will be. However, developing it costs real money. I 
     - Start the downloaded setup file. This may take a while, be patient.
     - If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
     - To do a silent install on a larger group of computers, start the setup with the argument `/S`.
+- **Known Issues:**
+    - It seems that the RTX/GTX 1XXX generation of cards is no longer supported in CUDA. Use the normal version instead. 
+    - If you receive the following error message: "Transcription worker exited unexpectedly (code 3221226505)," try forcing the use of the CPU for transcription instead of the graphics card. This method is slower but more reliable. To do so, follow these steps: Close noScribe. Open the file `C:\Users\<USERNAME>\AppData\Local\noScribe\noScribe\config.yml` in a text editor. Change the value for `force_whisper_cpu` to `'True'`. Don't forget the quotation marks around 'True'. Now, restart NoScribe. 
 
 </details>
 
