@@ -135,6 +135,7 @@ git merge upstream/main
 ## Models
 
 Whisper models are stored in `models/` directory:
+- `models/swiss-german` - Swiss German fine-tuned model (default, best for Swiss German)
 - `models/fast` - faster-whisper-int8 (quick transcription)
 - `models/precise` - faster-whisper-large-v3-turbo (accurate transcription)
 

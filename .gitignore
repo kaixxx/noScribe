@@ -22,6 +22,8 @@ models/precise/*
 !models/precise/NOSCRIBE_README.txt
 models/fast/*
 !models/fast/NOSCRIBE_README.txt
+models/swiss-german/*
+!models/swiss-german/NOSCRIBE_README.txt
 
 # Old requirement files
 environments/marked_for_deletion/

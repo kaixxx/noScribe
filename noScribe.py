@@ -707,7 +707,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
         job.language_name = 'Auto'
     
     # Model (will be validated later when we have access to the app instance)
-    job.whisper_model = whisper_model_name or 'precise'
+    job.whisper_model = whisper_model_name or 'swiss-german'
     
     # Processing options with defaults
     job.speaker_detection = speaker_detection if speaker_detection is not None else 'auto'
@@ -1207,7 +1207,7 @@ class App(ctk.CTk):
                                                        values=models,
                                                        dynamic_resizing=False)
         self.option_menu_whisper_model.grid(column=1, row=3, sticky='e', pady=5)
-        last_whisper_model = get_config('last_whisper_model', 'precise')
+        last_whisper_model = get_config('last_whisper_model', 'swiss-german')
         if last_whisper_model in models:
             self.option_menu_whisper_model.set(last_whisper_model)
         elif len(models) > 0:
