@@ -45,7 +45,7 @@ TITLE_RECORDING = "🔴"
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("MeetingRecorder")
@@ -300,8 +300,11 @@ class MeetingRecorderApp(rumps.App):
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         output_file = self.recordings_dir / f"{timestamp}.wav"
 
+        logger.info("_start_recording_internal: attempting to start recording to %s", output_file)
+
         try:
-            self.recorder.start(output_file)
+            result = self.recorder.start(output_file)
+            logger.info("_start_recording_internal: recorder.start() returned %s", result)
             self.recording_start_time = datetime.now()
             self._auto_recording = True
 
@@ -309,9 +312,10 @@ class MeetingRecorderApp(rumps.App):
             self.title = TITLE_RECORDING
             self.menu["Start Recording"].title = "Stop Recording"
 
+            logger.info("_start_recording_internal: recording started successfully")
             return True
         except Exception as e:
-            logger.error("Failed to start recording: %s", e)
+            logger.error("_start_recording_internal: Failed to start recording: %s", e, exc_info=True)
             return False
 
     def _stop_recording(self, sender):
@@ -444,12 +448,17 @@ class MeetingRecorderApp(rumps.App):
                         )
             else:
                 logger.info("Auto-starting recording for: %s", title)
-                if self._start_recording_internal():
+                result = self._start_recording_internal()
+                logger.info("Auto-start result: %s", result)
+                if result:
+                    logger.info("Sending notification for auto-recording")
                     rumps.notification(
                         title="MeetingRecorder",
                         subtitle="Auto-Recording Started",
                         message="Teams meeting detected"
                     )
+                else:
+                    logger.error("Auto-start failed, not sending notification")
 
         if getattr(self, '_should_auto_stop', False):
             self._should_auto_stop = False

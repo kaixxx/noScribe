@@ -310,6 +310,15 @@ class TeamsDetector:
         """Check current meeting status and handle state transitions."""
         result = is_teams_call_active()
 
+        # Debug logging every check
+        self.logger.debug(
+            "Check: active=%s, state=%s, UDP=%d, servers=%d",
+            result.is_meeting_active,
+            self._current_state.value,
+            result.udp_connections,
+            getattr(result, 'meeting_servers', 0)
+        )
+
         with self._lock:
             if result.is_meeting_active:
                 # Meeting is active - reset grace period timer

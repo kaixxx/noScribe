@@ -52,3 +52,4 @@ diarize_x86_64_mod_unsigned
 workflows/
 transcript-mcp-server/
 .claude/
+venv_py312/
