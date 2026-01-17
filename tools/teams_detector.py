@@ -41,8 +41,9 @@ MEETING_PATTERNS = [
 ]
 
 # Threshold for UDP connections to indicate active meeting
-# During a meeting, Teams typically has 5+ UDP connections for audio/video
-UDP_CONNECTION_THRESHOLD = 4
+# Teams uses UDP for audio/video - even 1 UDP connection can indicate a call
+# (mic/camera off uses fewer connections than active participation)
+UDP_CONNECTION_THRESHOLD = 1
 
 
 @dataclass
@@ -59,8 +60,8 @@ def count_teams_network_connections() -> dict:
     """
     Count Teams network connections using lsof.
 
-    Returns dict with 'tcp', 'udp', and 'total' counts.
-    High UDP count (>4) indicates active audio/video call.
+    Returns dict with 'tcp', 'udp', 'meeting_servers', and 'total' counts.
+    Connections to meeting servers (52.112.x.x, 52.123.x.x) indicate active call.
     """
     try:
         result = subprocess.run(
@@ -72,6 +73,12 @@ def count_teams_network_connections() -> dict:
 
         tcp_count = 0
         udp_count = 0
+        meeting_server_count = 0
+
+        # Microsoft Teams meeting server IP ranges
+        # 52.112.x.x and 52.123.x.x are commonly used for Teams calls
+        meeting_server_prefixes = ('52.112.', '52.113.', '52.114.', '52.120.',
+                                   '52.121.', '52.122.', '52.123.')
 
         for line in result.stdout.split('\n'):
             # Match both "MSTeams" (new Teams) and "Microsoft Teams" (classic)
@@ -80,12 +87,22 @@ def count_teams_network_connections() -> dict:
                     udp_count += 1
                 elif 'TCP' in line and 'ESTABLISHED' in line:
                     tcp_count += 1
+                    # Check if connected to meeting servers
+                    for prefix in meeting_server_prefixes:
+                        if prefix in line:
+                            meeting_server_count += 1
+                            break
 
-        return {'tcp': tcp_count, 'udp': udp_count, 'total': tcp_count + udp_count}
+        return {
+            'tcp': tcp_count,
+            'udp': udp_count,
+            'meeting_servers': meeting_server_count,
+            'total': tcp_count + udp_count
+        }
 
     except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
         logging.getLogger(__name__).debug("Network check failed: %s", e)
-        return {'tcp': 0, 'udp': 0, 'total': 0}
+        return {'tcp': 0, 'udp': 0, 'meeting_servers': 0, 'total': 0}
 
 
 def is_teams_running() -> bool:
@@ -160,8 +177,10 @@ def is_teams_call_active() -> TeamsDetectionResult:
     # Method 1: Network-based detection (primary, works with new Teams)
     network_counts = count_teams_network_connections()
     udp_count = network_counts['udp']
+    meeting_servers = network_counts['meeting_servers']
 
-    if udp_count >= UDP_CONNECTION_THRESHOLD:
+    # Detect meeting if: UDP connections OR connections to meeting servers
+    if udp_count >= UDP_CONNECTION_THRESHOLD or meeting_servers >= 1:
         return TeamsDetectionResult(
             is_meeting_active=True,
             meeting_title="Teams Meeting",

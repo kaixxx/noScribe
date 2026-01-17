@@ -24,10 +24,12 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+import objc
 import rumps
 import sounddevice as sd
 import soundfile as sf
 import yaml
+from Foundation import NSObject, NSTimer, NSRunLoop, NSDefaultRunLoopMode
 
 from teams_detector import TeamsDetector, check_screen_recording_permission
 
@@ -226,6 +228,14 @@ class MeetingRecorderApp(rumps.App):
         # Build menu
         self._build_menu()
 
+        # Initialize meeting detection flags
+        self._meeting_detected = False
+        self._should_auto_stop = False
+
+        # Start a periodic timer to check meeting flags (runs on main thread)
+        self._meeting_check_timer = rumps.Timer(self._check_meeting_flag, 1)
+        self._meeting_check_timer.start()
+
         # Start Teams detector if enabled
         if self.config['teams'].get('auto_record', False):
             self._start_teams_detector()
@@ -386,6 +396,20 @@ class MeetingRecorderApp(rumps.App):
             self.teams_detector.stop()
             self.teams_detector = None
 
+    def _schedule_on_main_thread(self, callback):
+        """Schedule a callback to run on the main thread using NSTimer."""
+        def timer_callback(timer):
+            timer.invalidate()
+            try:
+                callback()
+            except Exception as e:
+                logger.error("Main thread callback error: %s", e)
+
+        # Create selector for the callback
+        NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+            0.1, self, objc.selector(timer_callback, signature=b'v@:@'), None, False
+        )
+
     def _on_teams_meeting_start(self, meeting_title: str):
         """Called when Teams meeting starts (from background thread)."""
         if self.recorder.is_recording:
@@ -393,51 +417,50 @@ class MeetingRecorderApp(rumps.App):
             return
 
         self._pending_meeting_title = meeting_title
+        self._should_show_confirmation = self.config['teams'].get('confirm_before_record', True)
+        self._meeting_detected = True
+        logger.info("Meeting detected, flagging for main thread processing")
 
-        if self.config['teams'].get('confirm_before_record', True):
-            # Schedule confirmation dialog on main thread
-            rumps.Timer(self._show_meeting_confirmation, 0).start()
-        else:
-            # Auto-start immediately
-            rumps.Timer(self._auto_start_recording, 0).start()
+    def _check_meeting_flag(self, _=None):
+        """Called periodically to check if meeting was detected (runs on main thread)."""
+        if getattr(self, '_meeting_detected', False):
+            self._meeting_detected = False
+            title = getattr(self, '_pending_meeting_title', 'Teams Meeting')
 
-    def _show_meeting_confirmation(self, _):
-        """Show confirmation dialog for auto-recording (main thread)."""
-        title = self._pending_meeting_title or "Teams Meeting"
-        response = rumps.alert(
-            title="Teams Meeting Detected",
-            message=f"Start recording?\n\n{title}",
-            ok="Start Recording",
-            cancel="Don't Record"
-        )
-        if response == 1:  # OK clicked
-            if self._start_recording_internal():
-                rumps.notification(
-                    title="MeetingRecorder",
-                    subtitle="Recording Started",
-                    message="Teams meeting detected"
+            if getattr(self, '_should_show_confirmation', True):
+                logger.info("Showing meeting confirmation dialog for: %s", title)
+                response = rumps.alert(
+                    title="Teams Meeting Detected",
+                    message=f"Start recording?\n\n{title}",
+                    ok="Start Recording",
+                    cancel="Don't Record"
                 )
+                if response == 1:  # OK clicked
+                    if self._start_recording_internal():
+                        rumps.notification(
+                            title="MeetingRecorder",
+                            subtitle="Recording Started",
+                            message="Teams meeting detected"
+                        )
+            else:
+                logger.info("Auto-starting recording for: %s", title)
+                if self._start_recording_internal():
+                    rumps.notification(
+                        title="MeetingRecorder",
+                        subtitle="Auto-Recording Started",
+                        message="Teams meeting detected"
+                    )
 
-    def _auto_start_recording(self, _):
-        """Auto-start recording without confirmation (main thread)."""
-        if not self.recorder.is_recording:
-            if self._start_recording_internal():
-                rumps.notification(
-                    title="MeetingRecorder",
-                    subtitle="Auto-Recording Started",
-                    message="Teams meeting detected"
-                )
+        if getattr(self, '_should_auto_stop', False):
+            self._should_auto_stop = False
+            if self.recorder.is_recording and self._auto_recording:
+                self._stop_recording_internal()
 
     def _on_teams_meeting_end(self):
         """Called when Teams meeting ends (from background thread)."""
         if self.recorder.is_recording and self._auto_recording:
-            # Only auto-stop if we auto-started
-            rumps.Timer(self._auto_stop_recording, 0).start()
-
-    def _auto_stop_recording(self, _):
-        """Auto-stop recording (main thread)."""
-        if self.recorder.is_recording and self._auto_recording:
-            self._stop_recording_internal()
+            self._should_auto_stop = True
+            logger.info("Meeting ended, flagging for auto-stop")
 
     def toggle_teams_detection(self, sender):
         """Toggle Teams auto-detection on/off."""
