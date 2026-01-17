@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """
-Teams Meeting Detector - Detects Microsoft Teams meetings via window monitoring
+Teams Meeting Detector - Detects Microsoft Teams meetings
 
-Uses macOS Quartz APIs to monitor window titles and detect when Teams
-meetings start or end. Requires Screen Recording permission on macOS 10.15+.
+Uses multiple detection methods:
+1. Network connections: Teams uses UDP for audio/video during meetings
+2. Window titles: Fallback for classic Teams (requires Screen Recording permission)
+
+The network-based detection is more reliable for the new Teams app which
+doesn't expose window titles.
 """
 
 import logging
+import subprocess
 import threading
 import time
 from dataclasses import dataclass
@@ -27,13 +32,17 @@ class MeetingState(Enum):
     MEETING_ACTIVE = "meeting_active"
 
 
-# Window title patterns indicating active call/meeting
+# Window title patterns indicating active call/meeting (for classic Teams)
 MEETING_PATTERNS = [
     "Meeting with",
     "Call with",
     "| Chat",      # Chat window during call shows this
     "| Meeting",   # Meeting window
 ]
+
+# Threshold for UDP connections to indicate active meeting
+# During a meeting, Teams typically has 5+ UDP connections for audio/video
+UDP_CONNECTION_THRESHOLD = 4
 
 
 @dataclass
@@ -42,49 +51,144 @@ class TeamsDetectionResult:
     is_meeting_active: bool
     meeting_title: Optional[str] = None
     teams_running: bool = False
+    detection_method: str = "none"
+    udp_connections: int = 0
+
+
+def count_teams_network_connections() -> dict:
+    """
+    Count Teams network connections using lsof.
+
+    Returns dict with 'tcp', 'udp', and 'total' counts.
+    High UDP count (>4) indicates active audio/video call.
+    """
+    try:
+        result = subprocess.run(
+            ['lsof', '-i', '-n', '-P'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        tcp_count = 0
+        udp_count = 0
+
+        for line in result.stdout.split('\n'):
+            # Match both "MSTeams" (new Teams) and "Microsoft Teams" (classic)
+            if 'MSTeams' in line or 'Microsoft Teams' in line:
+                if 'UDP' in line:
+                    udp_count += 1
+                elif 'TCP' in line and 'ESTABLISHED' in line:
+                    tcp_count += 1
+
+        return {'tcp': tcp_count, 'udp': udp_count, 'total': tcp_count + udp_count}
+
+    except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
+        logging.getLogger(__name__).debug("Network check failed: %s", e)
+        return {'tcp': 0, 'udp': 0, 'total': 0}
+
+
+def is_teams_running() -> bool:
+    """Check if Teams process is running."""
+    try:
+        result = subprocess.run(
+            ['pgrep', '-x', 'MSTeams'],
+            capture_output=True,
+            timeout=2
+        )
+        if result.returncode == 0:
+            return True
+
+        # Also check for classic Teams
+        result = subprocess.run(
+            ['pgrep', '-f', 'Microsoft Teams'],
+            capture_output=True,
+            timeout=2
+        )
+        return result.returncode == 0
+
+    except subprocess.SubprocessError:
+        return False
+
+
+def check_window_titles() -> Optional[str]:
+    """
+    Check Teams window titles for meeting indicators.
+
+    Returns meeting title if found, None otherwise.
+    Note: Requires Screen Recording permission on macOS 10.15+
+    """
+    options = kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements
+    window_list = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
+
+    if window_list is None:
+        return None
+
+    for window in window_list:
+        owner_name = window.get("kCGWindowOwnerName", "") or ""
+        window_title = window.get("kCGWindowName", "") or ""
+
+        # Check if this is a Teams window with meeting pattern
+        if "Microsoft Teams" in owner_name:
+            for pattern in MEETING_PATTERNS:
+                if pattern in window_title:
+                    return window_title
+
+    return None
 
 
 def is_teams_call_active() -> TeamsDetectionResult:
     """
     Check if a Teams meeting/call is currently active.
 
-    Returns TeamsDetectionResult with meeting status and optional title.
+    Uses two detection methods:
+    1. Network connections (primary): UDP connections > threshold indicates meeting
+    2. Window titles (fallback): For classic Teams with Screen Recording permission
 
-    Note: Requires Screen Recording permission on macOS 10.15+
-    to access window titles from other applications.
+    Returns TeamsDetectionResult with meeting status and detection details.
     """
-    options = kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements
-    window_list = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
+    # Check if Teams is running at all
+    teams_running = is_teams_running()
 
-    if window_list is None:
+    if not teams_running:
         return TeamsDetectionResult(
             is_meeting_active=False,
-            teams_running=False
+            teams_running=False,
+            detection_method="process_check"
         )
 
-    teams_windows_found = False
+    # Method 1: Network-based detection (primary, works with new Teams)
+    network_counts = count_teams_network_connections()
+    udp_count = network_counts['udp']
 
-    for window in window_list:
-        owner_name = window.get("kCGWindowOwnerName", "") or ""
-        window_title = window.get("kCGWindowName", "") or ""
+    if udp_count >= UDP_CONNECTION_THRESHOLD:
+        return TeamsDetectionResult(
+            is_meeting_active=True,
+            meeting_title="Teams Meeting",
+            teams_running=True,
+            detection_method="network",
+            udp_connections=udp_count
+        )
 
-        # Check if this is a Teams window
-        if "Microsoft Teams" in owner_name:
-            teams_windows_found = True
+    # Method 2: Window title detection (fallback for classic Teams)
+    meeting_title = check_window_titles()
 
-            # Check for meeting patterns in window title
-            for pattern in MEETING_PATTERNS:
-                if pattern in window_title:
-                    return TeamsDetectionResult(
-                        is_meeting_active=True,
-                        meeting_title=window_title,
-                        teams_running=True
-                    )
+    if meeting_title:
+        return TeamsDetectionResult(
+            is_meeting_active=True,
+            meeting_title=meeting_title,
+            teams_running=True,
+            detection_method="window_title",
+            udp_connections=udp_count
+        )
 
+    # No meeting detected
     return TeamsDetectionResult(
         is_meeting_active=False,
         meeting_title=None,
-        teams_running=teams_windows_found
+        teams_running=True,
+        detection_method="none",
+        udp_connections=udp_count
     )
 
 
@@ -93,7 +197,7 @@ def check_screen_recording_permission() -> bool:
     Check if app likely has screen recording permission.
 
     Returns True if permission appears to be granted.
-    If Teams is running but all window titles are empty, we likely lack permission.
+    Note: Network-based detection doesn't require this permission.
     """
     options = kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements
     window_list = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
@@ -196,7 +300,12 @@ class TeamsDetector:
                     # Transition: NO_MEETING -> MEETING_ACTIVE
                     self._current_state = MeetingState.MEETING_ACTIVE
                     self._current_meeting_title = result.meeting_title
-                    self.logger.info("Meeting started: %s", result.meeting_title)
+                    self.logger.info(
+                        "Meeting started: %s (detected via %s, UDP=%d)",
+                        result.meeting_title,
+                        result.detection_method,
+                        result.udp_connections
+                    )
 
                     # Invoke callback (on this background thread)
                     self._safe_callback(
@@ -210,8 +319,9 @@ class TeamsDetector:
                     if self._meeting_ended_at is None:
                         self._meeting_ended_at = time.time()
                         self.logger.debug(
-                            "Meeting ended, starting grace period (%.1fs)",
-                            self.grace_period
+                            "Meeting ended, starting grace period (%.1fs), UDP=%d",
+                            self.grace_period,
+                            result.udp_connections
                         )
 
                     # Check if grace period has elapsed
@@ -258,7 +368,13 @@ if __name__ == "__main__":
         print("[MEETING END]")
 
     print("Testing Teams detection...")
-    print(f"Current status: {is_teams_call_active()}")
+    result = is_teams_call_active()
+    print(f"  is_meeting_active: {result.is_meeting_active}")
+    print(f"  teams_running: {result.teams_running}")
+    print(f"  detection_method: {result.detection_method}")
+    print(f"  udp_connections: {result.udp_connections}")
+    print(f"  meeting_title: {result.meeting_title}")
+    print()
     print(f"Screen recording permission: {check_screen_recording_permission()}")
 
     if len(sys.argv) > 1 and sys.argv[1] == "--monitor":
