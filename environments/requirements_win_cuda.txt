@@ -9,6 +9,7 @@ cpufeature
 customtkinter
 CTkToolTip
 faster-whisper
+omegaconf
 Pillow
 pyannote.audio>=4.0
 pyinstaller==6.14.1 
