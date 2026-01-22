@@ -202,14 +202,11 @@ class GeminiAudioProcessor:
         try:
             from google import genai
             from google.genai import types
-            import httpx
             self.genai = genai
             self.types = types
-            # Create client with custom timeout
-            self.client = genai.Client(
-                api_key=self.api_key,
-                http_options={"timeout": timeout_seconds}
-            )
+            # Use standard client - custom httpx clients cause issues
+            # The Files API handles large uploads reliably
+            self.client = genai.Client(api_key=self.api_key)
         except ImportError:
             raise ImportError(
                 "google-genai package not installed. "
@@ -254,26 +251,24 @@ class GeminiAudioProcessor:
         }
         mime_type = mime_types.get(suffix, 'audio/mpeg')
 
-        # Use inline data for files under 15MB (safer threshold)
-        # Use Files API for larger files
-        if file_size_mb < 15:
-            logger.info("Using inline audio data (file < 15MB)...")
-            with open(audio_path, 'rb') as f:
-                audio_bytes = f.read()
-            audio_content = self.types.Part.from_bytes(
-                data=audio_bytes,
-                mime_type=mime_type
+        # Always use Files API for audio files (more reliable for uploads)
+        # The inline approach can timeout on slower connections
+        logger.info(f"Uploading audio to Gemini Files API ({file_size_mb:.1f} MB)...")
+
+        try:
+            uploaded_file = self.client.files.upload(
+                file=str(audio_path),
+                config={"mime_type": mime_type}
             )
-            uploaded_file = None
-        else:
-            # Upload file to Gemini Files API for larger files
-            logger.info("Uploading audio to Gemini Files API...")
-            uploaded_file = self.client.files.upload(file=str(audio_path))
             logger.debug(f"Uploaded file: {uploaded_file.name}")
 
             # Wait for file to be processed
+            wait_count = 0
             while uploaded_file.state.name == "PROCESSING":
-                logger.debug("Waiting for file processing...")
+                wait_count += 1
+                if wait_count > 60:  # Max 2 minutes waiting
+                    raise RuntimeError("File processing timeout")
+                logger.debug(f"Waiting for file processing... ({wait_count})")
                 time.sleep(2)
                 uploaded_file = self.client.files.get(name=uploaded_file.name)
 
@@ -281,6 +276,22 @@ class GeminiAudioProcessor:
                 raise RuntimeError(f"File upload failed: {uploaded_file.state.name}")
 
             audio_content = uploaded_file
+            logger.info("Audio uploaded successfully")
+
+        except Exception as e:
+            logger.error(f"Files API upload failed: {e}")
+            # Fallback to inline data for small files
+            if file_size_mb < 5:
+                logger.info("Falling back to inline data...")
+                with open(audio_path, 'rb') as f:
+                    audio_bytes = f.read()
+                audio_content = self.types.Part.from_bytes(
+                    data=audio_bytes,
+                    mime_type=mime_type
+                )
+                uploaded_file = None
+            else:
+                raise
 
         # Generate content with audio
         logger.info(f"Generating transcript and analysis with {self.model}...")
