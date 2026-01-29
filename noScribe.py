@@ -2100,9 +2100,9 @@ class App(ctk.CTk):
         for f in self.audio_files_list:
             f = Path(f)
             if dir:
-                self.transcript_files_list.append(Path(dir) / f'{f.stem}.{config['default_filetype']}')
+                self.transcript_files_list.append(Path(dir) / f'{f.stem}.{config["default_filetype"]}')
             else:
-                self.transcript_files_list.append(f'{f.with_name(f.stem)}.{config['default_filetype']}')
+                self.transcript_files_list.append(f'{f.with_name(f.stem)}.{config["default_filetype"]}')
 
         # Ensure to not override anything and that we have unique file names.
         # Make sure here that every file is a `Path`.
