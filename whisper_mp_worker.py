@@ -43,11 +43,24 @@ def whisper_proc_entrypoint(args: dict, q):
         except Exception:
             # Safe fallback: leave i18n defaults; keys may pass through
             pass
+        
+        # determine device
+        device = args.get("device", "")
+        if device != 'cpu':
+            if platform.system() == "Darwin":  # MAC
+                device = 'auto'
+            elif platform.system() in ('Windows', 'Linux'):
+                try:
+                    device = 'cuda' if torch.cuda.is_available() and torch.cuda.device_count() > 0 else 'cpu'
+                except:
+                    device = 'cpu'
+            else:
+                raise Exception('Platform not supported yet.')
             
         # Build model in child using provided options
         model = WhisperModel(
             args["model_name_or_path"],
-            device=args.get("device", "auto"),
+            device=device,
             compute_type=args.get("compute_type", "float16"),
             cpu_threads=args.get("cpu_threads", 4),
             local_files_only=args.get("local_files_only", True),
