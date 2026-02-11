@@ -2,6 +2,16 @@
 ### Cutting Edge AI Technology for Automated Audio Transcription
 </br>
 
+> [!NOTE]
+> ### 🚀 The new official website for noScribe: https://noscribe.de
+> Learn how to install and use the software, and find tips to improve transcription quality.
+>
+> 🌐 Available in **English, German, Spanish, Italian, and Dutch**.
+>
+> Please update your links. 
+
+---
+
 > [!WARNING]
 > Somebody has registered the domain **noscribe(dot)ai** to sell transcription services. **Stay away from this platform, I have nothing to do with it.** The real noScribe is free and always will be. This is obviously an attempt to profit from the popularity of my software and the reputation it gained over the years. Very sad. 
 
