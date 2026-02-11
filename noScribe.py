@@ -3194,6 +3194,11 @@ class App(ctk.CTk):
                 proc.close()
             except Exception:
                 pass
+            try:
+                q.close()
+                q.join_thread()
+            except Exception:
+                pass
             # Clear exposed handles
             self._mp_proc = None
             self._mp_queue = None
@@ -3278,6 +3283,11 @@ class App(ctk.CTk):
                     pass
             try:
                 proc.close()
+            except Exception:
+                pass
+            try:
+                q.close()
+                q.join_thread()
             except Exception:
                 pass
             self._mp_proc = None
