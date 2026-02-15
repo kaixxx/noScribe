@@ -242,7 +242,7 @@ def version_higher(version1, version2, subversion_level=99) -> int:
             return 2
         if i >= subversion_level:
             break
-    # must be completly equal
+    # must be completely equal
     return 0
     
 config['app_version'] = app_version
@@ -1786,7 +1786,7 @@ class App(ctk.CTk):
                 if row['frame'].winfo_exists():
                     row['frame'].destroy()
                     
-        # Udate queue tab title
+        # Update queue tab title
         new_name = f'{t("tab_queue")} ({len(self.queue.jobs) - len(self.queue.get_waiting_jobs()) - len(self.queue.get_running_jobs())}/{len(self.queue.jobs)})'
         old_name = self.tabview._name_list[1]
         if new_name != old_name:
@@ -1972,7 +1972,7 @@ class App(ctk.CTk):
             pass
 
     def launch_editor(self, file=''):
-        # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
+        # Launch the editor in a separate process so that in can stay running even if noScribe quits.
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
         # set system/version dependent "start_new_session" analogs
   
@@ -2621,7 +2621,7 @@ class App(ctk.CTk):
                         self.update_queue_table()
 
                         self.logn()
-                        self.logn(t('start_identifiying_speakers'), 'highlight')
+                        self.logn(t('start_identifying_speakers'), 'highlight')
                         self.logn(t('loading_pyannote'))
                         # self.set_progress(1, 100, job.speaker_detection)
 
@@ -2820,7 +2820,7 @@ class App(ctk.CTk):
                         # get time of the segment in milliseconds
                         start = round(segment.start * 1000.0)
                         end = round(segment.end * 1000.0)
-                        # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestaps will not match the original audio:
+                        # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestamps will not match the original audio:
                         orig_audio_start = job.start + start
                         orig_audio_end = job.start + end
 
