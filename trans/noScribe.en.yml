@@ -71,7 +71,7 @@ en:
   job_tt_finished: 'Finished. Click "✔" on the right to see the result.'
   job_tt_canceling: 'Canceling...'
   job_tt_canceled: 'Job was canceled by the user.'
-  job_tt_error: 'An error occured during job processing: %{error_msg}'
+  job_tt_error: 'An error occurred during job processing: %{error_msg}'
   job_tt_transcript_file: 'Transcript:'
 
  
@@ -85,7 +85,7 @@ en:
   start_job: 'Starting job: %{audio_file}'
   start_audio_conversion: 'Converting audio...'
   audio_conversion_finished: 'Audio conversion finished'
-  start_identifiying_speakers: 'Speaker identification...'
+  start_identifying_speakers: 'Speaker identification...'
   loading_pyannote: 'Loading pyannote'
   start_canceling: 'Canceling... (please wait a second)'
   start_transcription: 'Transcription...'
@@ -111,7 +111,7 @@ en:
   output_override: >
     Another job in the queue (waiting, running, or finished) uses the same output file.
     Do you want to override the output file?
-  err_setup: 'An error occured during the setup. Check if you have a working internet connection and restart the program.'
+  err_setup: 'An error occurred during the setup. Check if you have a working internet connection and restart the program.'
   err_invalid_time_string: 'This is not a valid time: "%{time}"'
   err_options: 'Error in options'
   err_no_audio_file: 'Error: Please select an audio file.'
@@ -119,7 +119,7 @@ en:
   err_unsupported_output_format: 'Error: Output format "%{file_type}" is not supported.'
   err_ffmpeg: 'ffmpeg returned an error'
   err_converting_audio: Error in step 1 - converting the audio.
-  err_identifying_speakers: Error in step 2 - identifiying the speakers.
+  err_identifying_speakers: Error in step 2 - identifying the speakers.
   err_loading_prompt: 'Warning: Failed to load whisper prompt.'
   transcription_canceled: 'Do you really want to cancel the transcription?'  
   queue_cancel_all_confirm: 'This will cancel all unfinished jobs in the queue. Do you want to continue?' 

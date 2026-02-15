@@ -84,7 +84,7 @@ Section -MainProgram
 
 ; Uninstall system wide
 
-; Read unistall string from registry
+; Read uninstall string from registry
 ReadRegStr $0 ${REG_ROOT} "${UNINSTALL_PATH}" "UninstallString"
 
 StrCmp $0 "" uninstallUser 
