@@ -2789,25 +2789,35 @@ class App(ctk.CTk):
                     speech_chunks = get_speech_timestamps(audio, vad_parameters)
 
                     def adjust_for_pause(segment):
-                        """Adjusts start and end of segment if it falls into a pause 
+                        """Adjusts start and end of segment if it falls into a pause
                         identified by the VAD"""
                         pause_extend = 0.2  # extend the pauses by 200ms to make the detection more robust
-                        
+
+                        original_start = segment.start
+                        original_end = segment.end
+
                         # iterate through the pauses and adjust segment boundaries accordingly
                         for i in range(0, len(speech_chunks)):
                             pause_start = (speech_chunks[i]['end'] / sampling_rate) - pause_extend
-                            if i == (len(speech_chunks) - 1): 
+                            if i == (len(speech_chunks) - 1):
                                 pause_end = duration + pause_extend # last segment, pause till the end
                             else:
                                 pause_end = (speech_chunks[i+1]['start']  / sampling_rate) + pause_extend
-                            
+
                             if pause_start > segment.end:
                                 break  # we moved beyond the segment, stop going further
                             if segment.start > pause_start and segment.start < pause_end:
                                 segment.start = pause_end - pause_extend
                             if segment.end > pause_start and segment.end < pause_end:
                                 segment.end = pause_start + pause_extend
-                        
+
+                        # Safety check: if pause adjustments caused start >= end
+                        # (e.g. short segment fully inside a pause), revert to
+                        # original boundaries to avoid negative durations (#253)
+                        if segment.start >= segment.end:
+                            segment.start = original_start
+                            segment.end = original_end
+
                         return segment
                                     
                     # Run Faster-Whisper in a spawned subprocess and stream segments
