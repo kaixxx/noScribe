@@ -377,7 +377,7 @@ def html_to_text(parser: AdvancedHTMLParser.AdvancedHTMLParser) -> str:
 # Helper for WebVTT output
 
 def vtt_escape(txt: str) -> str:
-    txt = html.escape(txt)
+    txt = html.escape(txt, quote=False)
     while txt.find('\n\n') > -1:
         txt = txt.replace('\n\n', '\n')
     return txt    
@@ -2710,7 +2710,7 @@ class App(ctk.CTk):
                     br = d.createElement('br')
                     s.appendChild(br)
 
-                    s.appendText(f'({html.escape(option_info)})')
+                    s.appendText(f'({html.escape(option_info, quote=False)})')
 
                     p.appendChild(s)
                     main_body.appendChild(p)
@@ -2856,7 +2856,7 @@ class App(ctk.CTk):
                         # write text to the doc
                         # diarization (speaker detection)?
                         seg_text = segment.text
-                        seg_html = html.escape(seg_text)
+                        seg_html = html.escape(seg_text, quote=False)
 
                         if job.speaker_detection != 'none':
                             new_speaker = find_speaker(diarization, start, end)
@@ -2865,11 +2865,11 @@ class App(ctk.CTk):
                                     prev_speaker = speaker
                                     speaker = new_speaker
                                     seg_text = f' {speaker}:{seg_text}'
-                                    seg_html = html.escape(seg_text)                                
+                                    seg_html = html.escape(seg_text, quote=False)                                
                                 elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker 
                                     speaker = new_speaker
                                     seg_text = f'//{seg_text}'
-                                    seg_html = html.escape(seg_text)
+                                    seg_html = html.escape(seg_text, quote=False)
                                 else: # new speaker, not overlapping
                                     if speaker[:2] == '//': # was overlapping speech, mark the end
                                         last_elem = p.lastElementChild
@@ -2886,33 +2886,33 @@ class App(ctk.CTk):
                                     speaker = new_speaker
                                     # add timestamp
                                     if job.timestamps:
-                                        seg_html = f'{speaker}: <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
+                                        seg_html = f'{speaker}: <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                         seg_text = f'{speaker}: {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
                                         if job.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
                                             seg_text = f'{speaker}:{seg_text}'
-                                            seg_html = html.escape(seg_text)
+                                            seg_html = html.escape(seg_text, quote=False)
                                         else:
-                                            seg_html = html.escape(seg_text).lstrip()
+                                            seg_html = html.escape(seg_text, quote=False).lstrip()
                                             seg_text = f'{speaker}:{seg_text}'
                                         
                             else: # same speaker
                                 if job.timestamps:
                                     if (start - last_timestamp_ms) > job.timestamp_interval:
-                                        seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text)}'
+                                        seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                         seg_text = f' {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
-                                        seg_html = html.escape(seg_text)
+                                        seg_html = html.escape(seg_text, quote=False)
 
                         else: # no speaker detection
                             if job.timestamps and (first_segment or (start - last_timestamp_ms) > job.timestamp_interval):
-                                seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text)}'
+                                seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                 seg_text = f' {ts}{seg_text}'
                                 last_timestamp_ms = start
                             else:
-                                seg_html = html.escape(seg_text)
+                                seg_html = html.escape(seg_text, quote=False)
                             # avoid leading whitespace in first paragraph
                             if first_segment:
                                 seg_text = seg_text.lstrip()
