@@ -334,80 +334,6 @@ else:
 # timestamp regex
 timestamp_re = re.compile(r'\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]')
 
-# Helper functions
-
-def iter_except(function, exception):
-        # Works like builtin 2-argument `iter()`, but stops on `exception`.
-        try:
-            while True:
-                yield function()
-        except exception:
-            return
-        
-# Helper for text only output
-        
-def html_node_to_text(node: AdvancedHTMLParser.AdvancedTag) -> str:
-    """
-    Recursively get all text from a html node and its children. 
-    """
-    # For text nodes, return their value directly
-    if AdvancedHTMLParser.isTextNode(node): # node.nodeType == node.TEXT_NODE:
-        return html.unescape(node)
-    # For element nodes, recursively process their children
-    elif AdvancedHTMLParser.isTagNode(node):
-        text_parts = []
-        for child in node.childBlocks:
-            text = html_node_to_text(child)
-            if text:
-                text_parts.append(text)
-        # For block-level elements, prepend and append newlines
-        if node.tagName.lower() in ['p', 'div', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'br']:
-            if node.tagName.lower() == 'br':
-                return '\n'
-            else:
-                return '\n' + ''.join(text_parts).strip() + '\n'
-        else:
-            return ''.join(text_parts)
-    else:
-        return ''
-
-def html_to_text(parser: AdvancedHTMLParser.AdvancedHTMLParser) -> str:
-    return html_node_to_text(parser.body)
-
-# Helper for WebVTT output
-
-def vtt_escape(txt: str) -> str:
-    txt = html.escape(txt, quote=False)
-    while txt.find('\n\n') > -1:
-        txt = txt.replace('\n\n', '\n')
-    return txt    
-
-
-def html_to_webvtt(parser: AdvancedHTMLParser.AdvancedHTMLParser, media_path: str):
-    vtt = 'WEBVTT '
-    paragraphs = parser.getElementsByTagName('p')
-    # The first paragraph contains the title
-    vtt += vtt_escape(paragraphs[0].textContent) + '\n\n'
-    # Next paragraph contains info about the transcript. Add as a note.
-    vtt += vtt_escape('NOTE\n' + html_node_to_text(paragraphs[1])) + '\n\n'
-    # Add media source:
-    vtt += f'NOTE media: {media_path}\n\n'
-
-    #Add all segments as VTT cues
-    segments = parser.getElementsByTagName('a')
-    i = 0
-    for i in range(len(segments)):
-        segment = segments[i]
-        name = segment.attributes['name']
-        if name is not None:
-            name_elems = name.split('_', 4)
-            if len(name_elems) > 1 and name_elems[0] == 'ts':
-                start = utils.ms_to_webvtt(int(name_elems[1]))
-                end = utils.ms_to_webvtt(int(name_elems[2]))
-                spkr = name_elems[3]
-                txt = vtt_escape(html_node_to_text(segment))
-                vtt += f'{i+1}\n{start} --> {end}\n<v {spkr}>{txt.lstrip()}\n\n'
-    return vtt
 
 # Transcription Job Management Classes
 
@@ -2740,9 +2666,9 @@ class App(ctk.CTk):
                         if job.file_ext == 'html':
                             txt = d.asHTML()
                         elif job.file_ext == 'txt':
-                            txt = html_to_text(d)
+                            txt = utils.html_to_text(d.asHTML(), use_only_body=True)
                         elif job.file_ext == 'vtt':
-                            txt = html_to_webvtt(d, job.audio_file)
+                            txt = utils.html_to_webvtt(d.asHTML())
                         else:
                             raise TypeError(f'Invalid file type "{job.file_ext}".')
                         try:
