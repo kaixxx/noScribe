@@ -80,7 +80,7 @@ fr:
   start_job: 'Démarrage de la tâche : %{audio_file}'
   start_audio_conversion: "Conversion audio en cours..."
   audio_conversion_finished: "Conversion audio terminée"
-  start_identifiying_speakers: "Identification des locuteurs en cours..."
+  start_identifying_speakers: "Identification des locuteurs en cours..."
   loading_pyannote: "Chargement de pyannote"
   start_canceling: "Annulation en cours... (veuillez patienter un instant)"
   start_transcription: "Transcription en cours..."
