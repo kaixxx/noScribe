@@ -80,7 +80,7 @@ zh-CN: &defaults
   start_job: '开始任务：%{audio_file}'
   start_audio_conversion: '正在转换音频...'
   audio_conversion_finished: '音频转换完成'
-  start_identifiying_speakers: '正在识别说话人...'
+  start_identifying_speakers: '正在识别说话人...'
   loading_pyannote: '加载pyannote中'
   start_canceling: '正在取消...（请稍候）'
   start_transcription: '正在转录...'

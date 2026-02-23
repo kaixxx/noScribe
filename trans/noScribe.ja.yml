@@ -80,7 +80,7 @@ ja:
   start_job: 'ジョブを開始: %{audio_file}'
   start_audio_conversion: '音声の変換を開始中...'
   audio_conversion_finished: '音声の変換が完了しました'
-  start_identifiying_speakers: '話者の識別を開始中...'
+  start_identifying_speakers: '話者の識別を開始中...'
   loading_pyannote: 'pyannoteの読み込み中'
   start_canceling: 'キャンセル中...（しばらくお待ちください）'
   start_transcription: '転写を開始中...'

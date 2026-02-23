@@ -80,7 +80,7 @@ es:
   start_job: 'Iniciando trabajo: %{audio_file}'
   start_audio_conversion: 'Convirtiendo audio...'
   audio_conversion_finished: 'Conversión de audio finalizada'
-  start_identifiying_speakers: 'Identificación de oradores...'
+  start_identifying_speakers: 'Identificación de oradores...'
   loading_pyannote: 'Cargando pyannote'
   start_canceling: 'Cancelando... (por favor, espera un momento)'
   start_transcription: 'Transcribiendo...'

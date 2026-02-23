@@ -37,7 +37,7 @@
 
 ## version 0.4 beta:
 - much improved **speaker detection/separation**
-- new option to mark **pauses** (sections with no voice activity) in the transkript
+- new option to mark **pauses** (sections with no voice activity) in the transcript
 - new option to mark **overlapping speech** (experimental)
 - new option to include **timestamps** in the transcript
 - new **noScribe Editor** app to check and correct transcripts (no MS Word-Macros anymore)
