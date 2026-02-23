@@ -2986,11 +2986,15 @@ class App(ctk.CTk):
                             job.has_partial_transcript = False
                         if transcription_success:
                             if job.transcript_file != orig_transcript_file: # used alternative filename because saving under the initial name failed
-                                self.log(t('rescue_saving'))
-                                self.logn(job.transcript_file, link=f'file://{job.transcript_file}')
+                                self.logn(
+                                    t('rescue_saving', file=job.transcript_file),
+                                    link=f'file://{job.transcript_file}'
+                                )
                             else:
-                                self.log(t('transcription_saved'))
-                                self.logn(job.transcript_file, link=f'file://{job.transcript_file}')
+                                self.logn(
+                                    t('transcription_saved', file=job.transcript_file),
+                                    link=f'file://{job.transcript_file}'
+                                )
                     if retry_cuda:
                         self.logn(t('whisper_cuda_retry'), 'highlight')
                         continue

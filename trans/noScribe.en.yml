@@ -97,7 +97,7 @@ en:
   language_en_only: 'Note that the AI model selected for transcription is English-only.'
 
   transcription_finished: 'Transcription finished.' 
-  transcription_saved: 'Saved to: '
+  transcription_saved: 'Saved to: %{file}'
   trancription_time: 'Duration: %{duration} minutes'
   
   queue_complete: '=== Queue processing complete ==='
@@ -126,7 +126,7 @@ en:
   err_user_cancelation: 'Process has been canceled by the user.'
   err_whisper_main: whisper terminated with the error code %{e}
   err_transcription: 'Error in step 3 - transcription'
-  rescue_saving: 'Saving to the original filename failed. Saved instead in this file: '
+  rescue_saving: 'Saving to the original filename failed. Saved instead in this file: %{file}'
   rescue_saving_failed: 'Error: Saving to the original filename failed. The alternate filename also exists. I have to quit. (Make sure your transcript is not already opened in Word!)'
   pyannote_cuda_error_prompt: |-
     PyAnnote diarization failed with a CUDA error:

@@ -107,6 +107,7 @@ ja:
     出力ファイルを上書きしますか？
   err_invalid_time_string: '無効な時間です：" %{time}"'
   err_options: 'オプションのエラー'
+  err_unsupported_output_format: 'エラー: 出力形式 "%{file_type}" はサポートされていません。'
   err_no_audio_file: 'エラー：音声ファイルを選択してください。'
   err_no_transcript_file: 'エラー：転写が完了したファイル名を選択してください。'
   err_ffmpeg: 'ffmpegでエラーが発生しました'

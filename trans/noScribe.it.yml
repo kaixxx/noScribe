@@ -91,7 +91,7 @@ it:
   language_detect: 'Lingua rilevata "%{lang}" con probabilità %{prob}'
   language_en_only: 'Tieni presente che il modello di IA scelto per la trascrizione è solo in inglese.'
   transcription_finished: 'Trascrizione completata.'
-  transcription_saved: 'Salvato in '
+  transcription_saved: 'Salvato in %{file}'
   trancription_time: 'Durata: %{duration} minuti'
   queue_complete: '=== Elaborazione della coda completata ==='
   total_jobs: 'Attività totali: %{total}'
@@ -107,6 +107,7 @@ it:
     Vuoi sovrascrivere il file di output?
   err_invalid_time_string: 'Questa non è una stringa di tempo valida: "%{time}"'
   err_options: 'Errore nelle opzioni'
+  err_unsupported_output_format: 'Errore: Il formato di output "%{file_type}" non è supportato.'
   err_no_audio_file: 'Errore: seleziona un file audio.'
   err_no_transcript_file: 'Errore: scegli un nome per la trascrizione finale.'
   err_ffmpeg: 'ffmpeg ha restituito un errore'

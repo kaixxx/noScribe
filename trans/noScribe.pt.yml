@@ -92,7 +92,7 @@ pt:
   language_detect: 'Idioma detectado "%{lang}" com probabilidade %{prob}'
   language_en_only: 'Tenha em atenção que o modelo de IA selecionado para a transcrição é apenas em inglês.'
   transcription_finished: 'Transcrição concluída.'
-  transcription_saved: 'Salvo em '
+  transcription_saved: 'Salvo em %{file}'
   trancription_time: 'Duração: %{duration} minutos'
   queue_complete: '=== Processamento da fila concluído ==='
   total_jobs: 'Total de tarefas: %{total}'
@@ -108,6 +108,7 @@ pt:
     Deseja substituir o arquivo de saída?
   err_invalid_time_string: 'Este não é um horário válido: "%{time}"'
   err_options: 'Erro nas opções'
+  err_unsupported_output_format: 'Erro: O formato de saída "%{file_type}" não é suportado.'
   err_no_audio_file: 'Erro: Por favor, selecione um arquivo de áudio.'
   err_no_transcript_file: 'Erro: Por favor, escolha um nome de arquivo para a transcrição concluída.'
   err_ffmpeg: 'ffmpeg retornou um erro'
