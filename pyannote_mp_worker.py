@@ -25,7 +25,14 @@ def pyannote_proc_entrypoint(args: dict, q):
         import yaml
         import torch
         if platform.system() == "Darwin" and platform.machine() == "x86_64":
-           torch.set_num_threads(1)        
+           torch.set_num_threads(1)
+
+        # PyTorch 2.6+ changed weights_only default to True.
+        # Add safe globals for pyannote model checkpoint loading.
+        from pyannote.audio.core.task import Specifications, Problem, Resolution
+        from omegaconf import ListConfig, DictConfig
+        torch.serialization.add_safe_globals([Specifications, Problem, Resolution, ListConfig, DictConfig])
+
         from pyannote.audio import Pipeline
         from tempfile import TemporaryDirectory
 
