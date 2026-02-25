@@ -103,14 +103,39 @@ def pyannote_proc_entrypoint(args: dict, q):
         speaker_embeddings = {}
         try:
             import numpy as np
-            from pyannote.core import Segment as _Seg
 
-            embedding_inference = getattr(pipeline, '_embedding', None)
+            # Try to get the embedding model from pipeline internals first
+            # (avoids loading a second copy of the model into memory).
+            embedding_inference = None
+            for _attr in ('_embedding', 'embedding_', '_embedding_model'):
+                embedding_inference = getattr(pipeline, _attr, None)
+                if embedding_inference is not None:
+                    plog("debug", f"Using pipeline.{_attr} for speaker embeddings")
+                    break
+
+            # Fallback: load the embedding model directly from disk
+            if embedding_inference is None:
+                plog("debug", "pipeline._embedding not found – loading embedding model from disk")
+                try:
+                    from pyannote.audio import Inference, Model
+                    emb_model_path = Path(os.path.join(app_dir, 'pyannote', 'embedding', 'pytorch_model.bin'))
+                    if emb_model_path.exists():
+                        emb_model = Model.from_pretrained(emb_model_path)
+                        emb_model.to(torch.device(device))
+                        embedding_inference = Inference(emb_model, window="whole")
+                        plog("debug", "Loaded embedding model from disk")
+                    else:
+                        plog("debug", f"Embedding model not found at {emb_model_path}")
+                except Exception as load_err:
+                    plog("debug", f"Could not load embedding model from disk: {load_err}")
+
             if embedding_inference is not None:
                 # Collect all segments per speaker label
                 speaker_windows = {}
                 for turn, _, label in diarization.itertracks(yield_label=True):
                     speaker_windows.setdefault(label, []).append(turn)
+
+                plog("debug", f"Extracting embeddings for {len(speaker_windows)} speaker(s)")
 
                 for label, windows in speaker_windows.items():
                     # Use up to 5 longest segments that are at least 1.5 s
@@ -136,8 +161,8 @@ def pyannote_proc_entrypoint(args: dict, q):
                             arr = arr.astype(np.float32)
                             if arr.size > 0 and not np.any(np.isnan(arr)):
                                 embs.append(arr)
-                        except Exception:
-                            pass
+                        except Exception as seg_err:
+                            plog("debug", f"Embedding segment error ({label}): {seg_err}")
 
                     if embs:
                         avg = np.mean(np.stack(embs), axis=0)
@@ -145,8 +170,14 @@ def pyannote_proc_entrypoint(args: dict, q):
                         if n > 1e-6:
                             avg = avg / n
                         speaker_embeddings[label] = avg.tolist()
+                        plog("debug", f"Embedding extracted for {label} ({len(embs)} segments)")
+                    else:
+                        plog("debug", f"No valid embedding segments for {label}")
+            else:
+                plog("debug", "No embedding model available – skipping embedding extraction")
+
         except Exception as emb_err:
-            plog("debug", f"Speaker embedding extraction skipped: {emb_err}")
+            plog("debug", f"Speaker embedding extraction failed: {emb_err}")
 
         try:
             q.put({"type": "result", "ok": True, "segments": seg_list,

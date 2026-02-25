@@ -2816,52 +2816,52 @@ class App(ctk.CTk):
                         self.logn()
 
                         # --------------------------------------------------
-                        # Speaker naming dialog: match embeddings against the
-                        # stored database and ask the user to confirm / assign
-                        # names for this session.
+                        # Speaker naming dialog: always shown when speaker
+                        # detection is active so the user can assign names.
+                        # If voice embeddings were extracted they are matched
+                        # against the DB; the Save checkbox is only shown
+                        # when an embedding is available for that speaker.
                         # --------------------------------------------------
-                        if _embeddings:
-                            # Build data list for the dialog
-                            seen_labels = set()
-                            speakers_data = []
-                            for seg in diarization:
-                                lbl = seg["label"]
-                                if lbl in seen_labels:
-                                    continue
-                                seen_labels.add(lbl)
-                                short = f'S{lbl[8:]}'  # "SPEAKER_01" -> "S01"
-                                emb = _embeddings.get(lbl)
-                                matched_name, sim = (None, 0.0)
-                                if emb:
-                                    try:
-                                        matched_name, sim = speaker_db.find_match(emb)
-                                    except Exception:
-                                        pass
-                                speakers_data.append({
-                                    'label': lbl,
-                                    'short_label': short,
-                                    'matched_name': matched_name,
-                                    'similarity': sim,
-                                    'embedding': emb,
-                                })
-
-                            # Show the dialog in the main GUI thread and wait
-                            import threading as _threading
-                            _result_holder = [{}]
-                            _dialog_done = _threading.Event()
-
-                            def _open_naming_dialog():
+                        seen_labels = set()
+                        speakers_data = []
+                        for seg in diarization:
+                            lbl = seg["label"]
+                            if lbl in seen_labels:
+                                continue
+                            seen_labels.add(lbl)
+                            short = f'S{lbl[8:]}'  # "SPEAKER_01" -> "S01"
+                            emb = _embeddings.get(lbl)
+                            matched_name, sim = (None, 0.0)
+                            if emb:
                                 try:
-                                    _result_holder[0] = self._run_speaker_naming_dialog(
-                                        speakers_data)
+                                    matched_name, sim = speaker_db.find_match(emb)
                                 except Exception:
-                                    _result_holder[0] = {}
-                                finally:
-                                    _dialog_done.set()
+                                    pass
+                            speakers_data.append({
+                                'label': lbl,
+                                'short_label': short,
+                                'matched_name': matched_name,
+                                'similarity': sim,
+                                'embedding': emb,
+                            })
 
-                            self.after(0, _open_naming_dialog)
-                            _dialog_done.wait()
-                            speaker_name_map.update(_result_holder[0])
+                        # Show the dialog in the main GUI thread and wait
+                        import threading as _threading
+                        _result_holder = [{}]
+                        _dialog_done = _threading.Event()
+
+                        def _open_naming_dialog():
+                            try:
+                                _result_holder[0] = self._run_speaker_naming_dialog(
+                                    speakers_data)
+                            except Exception:
+                                _result_holder[0] = {}
+                            finally:
+                                _dialog_done.set()
+
+                        self.after(0, _open_naming_dialog)
+                        _dialog_done.wait()
+                        speaker_name_map.update(_result_holder[0])
 
                     except Exception as e:
                         traceback_str = traceback.format_exc()
