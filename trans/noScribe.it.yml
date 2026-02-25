@@ -159,3 +159,14 @@ it:
   # Pulsanti UI aggiuntivi
   send_queue: 'Invia attività alla coda'
   queue_run_button: 'Esegui'
+
+  # Finestra di riconoscimento parlatori
+  speaker_naming_title: 'Riconoscimento parlatori'
+  speaker_naming_hint: >
+    Inserire nomi per i parlatori rilevati. I parlatori selezionati avranno la loro
+    voce salvata in modo che noScribe li riconosca automaticamente nelle registrazioni future.
+  speaker_name_placeholder: 'Inserire nome...'
+  speaker_new_badge: 'Nuovo'
+  speaker_save_checkbox: 'Salva'
+  btn_ok: 'OK'
+  btn_skip: 'Salta'
