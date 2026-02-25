@@ -1,0 +1,69 @@
+# noScribe – Transcription Language List
+# ----------------------------------------
+# Each uncommented line enables that language in the dropdown menu.
+# To hide a language, add '#' at the beginning of the line.
+# This file is NEVER rewritten by noScribe, so your edits are safe.
+#
+# Tip: keep only the languages you actually use to shorten the list.
+# 'Auto' lets noScribe detect the language automatically (recommended).
+# 'Multilingual' is an experimental mode for mixed-language recordings.
+
+- Auto
+- Multilingual
+# - Afrikaans
+# - Arabic
+# - Armenian
+# - Azerbaijani
+# - Belarusian
+# - Bosnian
+# - Bulgarian
+# - Catalan
+# - Chinese
+# - Croatian
+# - Czech
+# - Danish
+# - Dutch
+- English
+# - Estonian
+# - Finnish
+# - French
+# - Galician
+# - German
+# - Greek
+# - Hebrew
+# - Hindi
+# - Hungarian
+# - Icelandic
+# - Indonesian
+# - Italian
+# - Japanese
+# - Kannada
+# - Kazakh
+# - Korean
+# - Latvian
+# - Lithuanian
+# - Macedonian
+# - Malay
+# - Marathi
+# - Maori
+# - Nepali
+# - Norwegian
+# - Persian
+# - Polish
+- Portuguese
+# - Romanian
+# - Russian
+# - Serbian
+# - Slovak
+# - Slovenian
+- Spanish
+# - Swahili
+# - Swedish
+# - Tagalog
+# - Tamil
+# - Thai
+# - Turkish
+# - Ukrainian
+# - Urdu
+# - Vietnamese
+# - Welsh

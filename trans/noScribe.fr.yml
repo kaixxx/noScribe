@@ -160,3 +160,14 @@ fr:
   # Boutons supplémentaires de l’UI
   send_queue: 'Envoyer la tâche à la file'
   queue_run_button: 'Exécuter'
+
+  # Dialogue de nommage des locuteurs
+  speaker_naming_title: 'Reconnaissance des locuteurs'
+  speaker_naming_hint: >
+    Entrez des noms pour les locuteurs détectés. Les locuteurs cochés auront leur
+    voix enregistrée afin que noScribe les reconnaisse automatiquement dans les enregistrements futurs.
+  speaker_name_placeholder: 'Entrer un nom...'
+  speaker_new_badge: 'Nouveau'
+  speaker_save_checkbox: 'Enregistrer'
+  btn_ok: 'OK'
+  btn_skip: 'Ignorer'
