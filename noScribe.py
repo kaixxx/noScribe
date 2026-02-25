@@ -295,7 +295,7 @@ def version_higher(version1, version2, subversion_level=99) -> int:
             return 2
         if i >= subversion_level:
             break
-    # must be completly equal
+    # must be completely equal
     return 0
     
 config['app_version'] = app_version
@@ -430,7 +430,7 @@ def html_to_text(parser: AdvancedHTMLParser.AdvancedHTMLParser) -> str:
 # Helper for WebVTT output
 
 def vtt_escape(txt: str) -> str:
-    txt = html.escape(txt)
+    txt = html.escape(txt, quote=False)
     while txt.find('\n\n') > -1:
         txt = txt.replace('\n\n', '\n')
     return txt    
@@ -1203,29 +1203,8 @@ class App(ctk.CTk):
         super().__init__()
 
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
-        
-        self.user_models_dir = os.path.join(config_dir, 'whisper_models')
-        os.makedirs(self.user_models_dir, exist_ok=True)
-        whisper_models_readme = os.path.join(self.user_models_dir, 'readme.txt')
-        if not os.path.exists(whisper_models_readme):
-            with open(whisper_models_readme, 'w') as file:
-                file.write('You can download custom Whisper-models for the transcription into this folder. \n' 
-                           'See here for more information: https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription')            
-        
-        self.queue = TranscriptionQueue()
-        self.audio_files_list = []
-        self.transcript_files_list = []
-        self.log_file = None
-        self.cancel = False # if set to True, transcription will be canceled
-        # If True, cancel only the currently running job (triggered from queue row "X")
-        self._cancel_job_only = False
-        self.current_progress = -1
-        # Track background activity for robust shutdown
-        self._worker_threads = []
-        self._mp_proc = None
-        self._mp_queue = None
-        self._ffmpeg_proc = None
-        self._shutting_down = False
+
+        _init_app_state(self)
 
         # configure window
         self.title('noScribe - ' + t('app_header'))
@@ -1678,6 +1657,8 @@ class App(ctk.CTk):
                         
     def update_queue_table(self):
         """Update the queue table by diffing: update existing rows, add new ones, remove missing."""
+        if getattr(self, '_headless', False):
+            return
         current_keys = []
         for i in range(len(self.queue.jobs)):
             job = self.queue.jobs[i]
@@ -1964,7 +1945,7 @@ class App(ctk.CTk):
                 if row['frame'].winfo_exists():
                     row['frame'].destroy()
                     
-        # Udate queue tab title
+        # Update queue tab title
         new_name = f'{t("tab_queue")} ({len(self.queue.jobs) - len(self.queue.get_waiting_jobs()) - len(self.queue.get_running_jobs())}/{len(self.queue.jobs)})'
         old_name = self.tabview._name_list[1]
         if new_name != old_name:
@@ -1979,6 +1960,8 @@ class App(ctk.CTk):
 
     def update_queue_controls(self):
         """Enable/disable and label the queue control buttons based on state."""
+        if getattr(self, '_headless', False):
+            return
         try:
             has_running = len(self.queue.get_running_jobs()) > 0
             has_pending = self.queue.has_pending_jobs()
@@ -2150,7 +2133,7 @@ class App(ctk.CTk):
             pass
 
     def launch_editor(self, file=''):
-        # Launch the editor in a seperate process so that in can stay running even if noScribe quits.
+        # Launch the editor in a separate process so that in can stay running even if noScribe quits.
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
         # set system/version dependent "start_new_session" analogs
   
@@ -2219,7 +2202,7 @@ class App(ctk.CTk):
         if where != 'file': 
             if txt[:-1] != t('welcome_instructions'):
                 print(txt, end='')            
-            if hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
+            if not getattr(self, '_headless', False) and hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
                 try:
                     self.log_textbox.configure(state=tk.NORMAL)
                     # To prevent slowing down the UI, limit the content of log_textbox to max 5000 characters
@@ -2262,7 +2245,7 @@ class App(ctk.CTk):
 
     def logr(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '', tb: str = '') -> None:
         """ Replace the last line of the log """
-        if where != 'file':
+        if where != 'file' and not getattr(self, '_headless', False) and hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
             self.log_textbox.configure(state=ctk.NORMAL)
             tmp_txt = self.log_textbox.get("end-1c linestart", "end-1c")
             self.log_textbox.delete("end-1c linestart", "end-1c")
@@ -2371,6 +2354,8 @@ class App(ctk.CTk):
         
     def set_progress(self, step, value, speaker_detection='none'):
         """ Update state of the progress bar """
+        if getattr(self, '_headless', False):
+            return
         progr = -1
         if step == 1:
             progr = value * 0.05 / 100
@@ -2557,13 +2542,14 @@ class App(ctk.CTk):
             self.logn(t('processing_time', total_time_str=total_time_str))
             
             # open editor if only a single file was processed
-            if queue_jobs_processed == 1 \
+            if not getattr(self, '_headless', False) \
+                    and queue_jobs_processed == 1 \
                     and job \
                     and job.file_ext == 'html' \
                     and job.status == JobStatus.FINISHED \
                     and get_config('auto_edit_transcript', 'True') == 'True':
                 self.launch_editor(job.transcript_file)
-            elif queue_jobs_processed > 1:
+            elif queue_jobs_processed > 1 and not getattr(self, '_headless', False):
                 # if more than one job has been processed, switch to queue tab for an overview 
                 self.tabview.set(self.tabview._name_list[1])
             
@@ -2808,7 +2794,7 @@ class App(ctk.CTk):
                         self.update_queue_table()
 
                         self.logn()
-                        self.logn(t('start_identifiying_speakers'), 'highlight')
+                        self.logn(t('start_identifying_speakers'), 'highlight')
                         self.logn(t('loading_pyannote'))
                         # self.set_progress(1, 100, job.speaker_detection)
 
@@ -2945,7 +2931,7 @@ class App(ctk.CTk):
                     br = d.createElement('br')
                     s.appendChild(br)
 
-                    s.appendText(f'({html.escape(option_info)})')
+                    s.appendText(f'({html.escape(option_info, quote=False)})')
 
                     p.appendChild(s)
                     main_body.appendChild(p)
@@ -3012,25 +2998,35 @@ class App(ctk.CTk):
                     speech_chunks = get_speech_timestamps(audio, vad_parameters)
 
                     def adjust_for_pause(segment):
-                        """Adjusts start and end of segment if it falls into a pause 
+                        """Adjusts start and end of segment if it falls into a pause
                         identified by the VAD"""
                         pause_extend = 0.2  # extend the pauses by 200ms to make the detection more robust
-                        
+
+                        original_start = segment.start
+                        original_end = segment.end
+
                         # iterate through the pauses and adjust segment boundaries accordingly
                         for i in range(0, len(speech_chunks)):
                             pause_start = (speech_chunks[i]['end'] / sampling_rate) - pause_extend
-                            if i == (len(speech_chunks) - 1): 
+                            if i == (len(speech_chunks) - 1):
                                 pause_end = duration + pause_extend # last segment, pause till the end
                             else:
                                 pause_end = (speech_chunks[i+1]['start']  / sampling_rate) + pause_extend
-                            
+
                             if pause_start > segment.end:
                                 break  # we moved beyond the segment, stop going further
                             if segment.start > pause_start and segment.start < pause_end:
                                 segment.start = pause_end - pause_extend
                             if segment.end > pause_start and segment.end < pause_end:
                                 segment.end = pause_start + pause_extend
-                        
+
+                        # Safety check: if pause adjustments caused start >= end
+                        # (e.g. short segment fully inside a pause), revert to
+                        # original boundaries to avoid negative durations (#253)
+                        if segment.start >= segment.end:
+                            segment.start = original_start
+                            segment.end = original_end
+
                         return segment
                                     
                     # Run Faster-Whisper in a spawned subprocess and stream segments
@@ -3055,7 +3051,7 @@ class App(ctk.CTk):
                         # get time of the segment in milliseconds
                         start = round(segment.start * 1000.0)
                         end = round(segment.end * 1000.0)
-                        # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestaps will not match the original audio:
+                        # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestamps will not match the original audio:
                         orig_audio_start = job.start + start
                         orig_audio_end = job.start + end
 
@@ -3091,7 +3087,7 @@ class App(ctk.CTk):
                         # write text to the doc
                         # diarization (speaker detection)?
                         seg_text = segment.text
-                        seg_html = html.escape(seg_text)
+                        seg_html = html.escape(seg_text, quote=False)
 
                         if job.speaker_detection != 'none':
                             new_speaker = find_speaker(diarization, start, end)
@@ -3100,11 +3096,11 @@ class App(ctk.CTk):
                                     prev_speaker = speaker
                                     speaker = new_speaker
                                     seg_text = f' {speaker}:{seg_text}'
-                                    seg_html = html.escape(seg_text)                                
+                                    seg_html = html.escape(seg_text, quote=False)                                
                                 elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker 
                                     speaker = new_speaker
                                     seg_text = f'//{seg_text}'
-                                    seg_html = html.escape(seg_text)
+                                    seg_html = html.escape(seg_text, quote=False)
                                 else: # new speaker, not overlapping
                                     if speaker[:2] == '//': # was overlapping speech, mark the end
                                         last_elem = p.lastElementChild
@@ -3121,33 +3117,33 @@ class App(ctk.CTk):
                                     speaker = new_speaker
                                     # add timestamp
                                     if job.timestamps:
-                                        seg_html = f'{speaker}: <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text)}'
+                                        seg_html = f'{speaker}: <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                         seg_text = f'{speaker}: {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
                                         if job.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
                                             seg_text = f'{speaker}:{seg_text}'
-                                            seg_html = html.escape(seg_text)
+                                            seg_html = html.escape(seg_text, quote=False)
                                         else:
-                                            seg_html = html.escape(seg_text).lstrip()
+                                            seg_html = html.escape(seg_text, quote=False).lstrip()
                                             seg_text = f'{speaker}:{seg_text}'
                                         
                             else: # same speaker
                                 if job.timestamps:
                                     if (start - last_timestamp_ms) > job.timestamp_interval:
-                                        seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text)}'
+                                        seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                         seg_text = f' {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
-                                        seg_html = html.escape(seg_text)
+                                        seg_html = html.escape(seg_text, quote=False)
 
                         else: # no speaker detection
                             if job.timestamps and (first_segment or (start - last_timestamp_ms) > job.timestamp_interval):
-                                seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text)}'
+                                seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                 seg_text = f' {ts}{seg_text}'
                                 last_timestamp_ms = start
                             else:
-                                seg_html = html.escape(seg_text)
+                                seg_html = html.escape(seg_text, quote=False)
                             # avoid leading whitespace in first paragraph
                             if first_segment:
                                 seg_text = seg_text.lstrip()
@@ -3199,11 +3195,15 @@ class App(ctk.CTk):
                             job.has_partial_transcript = False
                         if transcription_success:
                             if job.transcript_file != orig_transcript_file: # used alternative filename because saving under the initial name failed
-                                self.log(t('rescue_saving'))
-                                self.logn(job.transcript_file, link=f'file://{job.transcript_file}')
+                                self.logn(
+                                    t('rescue_saving', file=job.transcript_file),
+                                    link=f'file://{job.transcript_file}'
+                                )
                             else:
-                                self.log(t('transcription_saved'))
-                                self.logn(job.transcript_file, link=f'file://{job.transcript_file}')
+                                self.logn(
+                                    t('transcription_saved', file=job.transcript_file),
+                                    link=f'file://{job.transcript_file}'
+                                )
                     if retry_cuda:
                         self.logn(t('whisper_cuda_retry'), 'highlight')
                         continue
@@ -3417,6 +3417,11 @@ class App(ctk.CTk):
                 proc.close()
             except Exception:
                 pass
+            try:
+                q.close()
+                q.join_thread()
+            except Exception:
+                pass
             # Clear exposed handles
             self._mp_proc = None
             self._mp_queue = None
@@ -3507,6 +3512,11 @@ class App(ctk.CTk):
                     pass
             try:
                 proc.close()
+            except Exception:
+                pass
+            try:
+                q.close()
+                q.join_thread()
             except Exception:
                 pass
             self._mp_proc = None
@@ -3614,16 +3624,85 @@ class App(ctk.CTk):
                 pass
             self.destroy()
 
-def run_cli_mode(args):
-    """Run noScribe in CLI mode"""
+
+class HeadlessApp(App):
+    def __init__(self):
+        # Do not initialize Tk/CTk to avoid DISPLAY requirements
+        _init_app_state(self)
+        self._headless = True
+
+    def __getattr__(self, name):
+        # Avoid Tk attribute delegation recursion when CTk isn't initialized
+        raise AttributeError(name)
+
+
+def _cleanup_app(app):
+    """Cleanup app instance for proper process exit in CLI mode."""
     try:
-        # Create a minimal app instance to access model paths and logging
-        app = App()
-        # Hide GUI window for headless execution
+        # Signal shutdown to stop background activity
+        app._shutting_down = True
+        app.cancel = True
+
+        # Terminate active multiprocessing child (diarization/whisper) if present
+        if getattr(app, "_mp_proc", None) is not None:
+            try:
+                if app._mp_proc.is_alive():
+                    app._mp_proc.terminate()
+                    app._mp_proc.join(timeout=1.0)
+            except Exception:
+                pass
+            finally:
+                app._mp_proc = None
+
+        # Close multiprocessing queue
+        if getattr(app, "_mp_queue", None) is not None:
+            try:
+                app._mp_queue.close()
+                app._mp_queue.join_thread()
+            except Exception:
+                pass
+            finally:
+                app._mp_queue = None
+
+        # Terminate ffmpeg if currently converting
+        if getattr(app, "_ffmpeg_proc", None) is not None:
+            try:
+                if app._ffmpeg_proc.poll() is None:
+                    app._ffmpeg_proc.terminate()
+                    app._ffmpeg_proc.wait(timeout=1.0)
+            except Exception:
+                try:
+                    app._ffmpeg_proc.kill()
+                except Exception:
+                    pass
+            finally:
+                app._ffmpeg_proc = None
+
+        # Join worker threads briefly
+        for th in list(getattr(app, "_worker_threads", [])):
+            try:
+                th.join(timeout=0.5)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    if not getattr(app, '_headless', False):
         try:
-            app.withdraw()
+            app.quit()
         except Exception:
             pass
+        try:
+            app.destroy()
+        except Exception:
+            pass
+
+def run_cli_mode(args):
+    """Run noScribe in CLI mode"""
+    app = None
+    try:
+        # Create a headless app instance (no GUI initialization)
+        app = HeadlessApp()
         
         # Validate and set the whisper model
         available_models = app.get_whisper_models()
@@ -3694,12 +3773,16 @@ def run_cli_mode(args):
     except Exception as e:
         print(f"Error: {str(e)}")
         return 1
+    finally:
+        if app is not None:
+            _cleanup_app(app)
 
 def show_available_models():
     """Show available Whisper models"""
+    app = None
     try:
-        # Create minimal app instance to get models
-        app = App()
+        # Create headless app instance to get models
+        app = HeadlessApp()
         models = app.get_whisper_models()
         
         print("Available Whisper models:")
@@ -3708,9 +3791,11 @@ def show_available_models():
         
         if not models:
             print("  No models found. Please check your installation.")
-            
     except Exception as e:
         print(f"Error getting models: {str(e)}")
+    finally:
+        if app is not None:
+            _cleanup_app(app)
 
 if __name__ == "__main__":
     # Parse command line arguments

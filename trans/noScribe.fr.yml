@@ -80,7 +80,7 @@ fr:
   start_job: 'Démarrage de la tâche : %{audio_file}'
   start_audio_conversion: "Conversion audio en cours..."
   audio_conversion_finished: "Conversion audio terminée"
-  start_identifiying_speakers: "Identification des locuteurs en cours..."
+  start_identifying_speakers: "Identification des locuteurs en cours..."
   loading_pyannote: "Chargement de pyannote"
   start_canceling: "Annulation en cours... (veuillez patienter un instant)"
   start_transcription: "Transcription en cours..."
@@ -91,7 +91,7 @@ fr:
   language_detect: 'Langue détectée « %{lang} » avec une probabilité de %{prob}'
   language_en_only: "Notez que le modèle d'IA sélectionné pour la transcription est réservé à l'anglais."
   transcription_finished: "Transcription terminée."
-  transcription_saved: "Enregistré sous "
+  transcription_saved: 'Enregistré sous %{file}'
   trancription_time: "Durée : %{duration} minutes"
   queue_complete: "=== Traitement de la file d'attente terminé ==="
   total_jobs: 'Tâches totales : %{total}'
@@ -107,6 +107,7 @@ fr:
     Voulez-vous écraser ce fichier de sortie ?
   err_invalid_time_string: "Il s'agit d'une heure invalide : \"%{time}\""
   err_options: "Erreur dans les options"
+  err_unsupported_output_format: "Erreur : Le format de sortie \"%{file_type}\" n'est pas pris en charge."
   err_no_audio_file: "Erreur : Veuillez sélectionner un fichier audio."
   err_no_transcript_file: "Erreur : Veuillez choisir un nom de fichier pour la transcription terminée."
   err_ffmpeg: "ffmpeg a renvoyé une erreur"
