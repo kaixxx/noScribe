@@ -179,6 +179,68 @@ if not os.path.exists(config_dir):
 
 config_file = os.path.join(config_dir, 'config.yml')
 
+# -----------------------------------------------------------------------
+# languages.yml – user-editable language filter
+# -----------------------------------------------------------------------
+# The file lives in the noScribe config folder (same directory as
+# config.yml).  noScribe reads it but NEVER overwrites it, so comments
+# and formatting are always preserved.
+#
+# On first run the file is created automatically with all languages
+# listed and an explanatory header, so users can immediately start
+# commenting out the ones they don't need.
+#
+# Config folder locations:
+#   Linux   :  ~/.config/noScribe/
+#   macOS   :  ~/Library/Application Support/noScribe/
+#   Windows :  %APPDATA%\noScribe\
+
+_languages_file = os.path.join(config_dir, 'languages.yml')
+
+_LANGUAGES_FILE_HEADER = """\
+# noScribe – Transcription Language List
+# ----------------------------------------
+# Each uncommented line enables that language in the dropdown menu.
+# To hide a language, add '#' at the beginning of the line.
+# This file is NEVER rewritten by noScribe, so your edits are safe.
+#
+# Config folder (this file's location):
+#   Linux   : ~/.config/noScribe/
+#   macOS   : ~/Library/Application Support/noScribe/
+#   Windows : %APPDATA%\\noScribe\\
+#
+# Tip: keep only the languages you actually use to shorten the list.
+# 'Auto' lets noScribe detect the language automatically (recommended).
+# 'Multilingual' is an experimental mode for mixed-language recordings.
+
+"""
+
+def _build_languages_file_content() -> str:
+    lines = [_LANGUAGES_FILE_HEADER]
+    for name in languages:
+        lines.append(f"- {name}\n")
+    return "".join(lines)
+
+if not os.path.exists(_languages_file):
+    try:
+        with open(_languages_file, 'w', encoding='utf-8') as _f:
+            _f.write(_build_languages_file_content())
+    except Exception:
+        pass  # Non-fatal: fall back to full list
+
+# Load and apply the language filter (if the file exists and is readable)
+try:
+    with open(_languages_file, 'r', encoding='utf-8') as _f:
+        _lang_list = yaml.safe_load(_f)
+    if isinstance(_lang_list, list) and _lang_list:
+        _allowed = {str(x) for x in _lang_list if x is not None}
+        _filtered = {k: v for k, v in languages.items() if k in _allowed}
+        # 'Auto' must always be present so the dropdown never breaks
+        _filtered.setdefault('Auto', 'auto')
+        languages = _filtered
+except Exception:
+    pass  # Non-fatal: keep the full list
+
 try:
     with open(config_file, 'r') as file:
         config = yaml.safe_load(file)
