@@ -182,20 +182,15 @@ config_file = os.path.join(config_dir, 'config.yml')
 # -----------------------------------------------------------------------
 # languages.yml – user-editable language filter
 # -----------------------------------------------------------------------
-# The file lives in the noScribe config folder (same directory as
-# config.yml).  noScribe reads it but NEVER overwrites it, so comments
-# and formatting are always preserved.
+# The file lives in the same folder as noScribe.py (app_dir).
+# noScribe reads it but NEVER overwrites it, so comments and formatting
+# are always preserved.
 #
 # On first run the file is created automatically with all languages
 # listed and an explanatory header, so users can immediately start
 # commenting out the ones they don't need.
-#
-# Config folder locations:
-#   Linux   :  ~/.config/noScribe/
-#   macOS   :  ~/Library/Application Support/noScribe/
-#   Windows :  %APPDATA%\noScribe\
 
-_languages_file = os.path.join(config_dir, 'languages.yml')
+_languages_file = os.path.join(app_dir, 'languages.yml')
 
 _LANGUAGES_FILE_HEADER = """\
 # noScribe – Transcription Language List
@@ -203,11 +198,6 @@ _LANGUAGES_FILE_HEADER = """\
 # Each uncommented line enables that language in the dropdown menu.
 # To hide a language, add '#' at the beginning of the line.
 # This file is NEVER rewritten by noScribe, so your edits are safe.
-#
-# Config folder (this file's location):
-#   Linux   : ~/.config/noScribe/
-#   macOS   : ~/Library/Application Support/noScribe/
-#   Windows : %APPDATA%\\noScribe\\
 #
 # Tip: keep only the languages you actually use to shorten the list.
 # 'Auto' lets noScribe detect the language automatically (recommended).
