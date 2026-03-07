@@ -2649,24 +2649,24 @@ class App(ctk.CTk):
                             self.logn(t('rescue_saving', file=job.transcript_file), 'error', link=f'file://{job.transcript_file}')
                             last_auto_save = datetime.datetime.now()
 
-                # Prepare VAD data locally for pause adjustment (audio is 16kHz mono after ffmpeg conversion)
-                try:
-                    job.vad_threshold = float(config['voice_activity_detection_threshold'])
-                except Exception:
-                    config['voice_activity_detection_threshold'] = '0.5'
-                    job.vad_threshold = 0.5
-                sampling_rate = 16000
-                audio_array = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
-                duration = audio_array.shape[0] / sampling_rate
-                try:
-                    vad_parameters = VadOptions(min_silence_duration_ms=500,
-                                                threshold=job.vad_threshold,
-                                                speech_pad_ms=0)
-                except TypeError:
-                    vad_parameters = VadOptions(min_silence_duration_ms=500,
-                                                onset=job.vad_threshold,
-                                                speech_pad_ms=0)
-                speech_chunks = get_speech_timestamps(audio_array, vad_parameters)
+                    # Prepare VAD data locally for pause adjustment (audio is 16kHz mono after ffmpeg conversion)
+                    try:
+                        job.vad_threshold = float(config['voice_activity_detection_threshold'])
+                    except Exception:
+                        config['voice_activity_detection_threshold'] = '0.5'
+                        job.vad_threshold = 0.5
+                    sampling_rate = 16000
+                    audio_array = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
+                    duration = audio_array.shape[0] / sampling_rate
+                    try:
+                        vad_parameters = VadOptions(min_silence_duration_ms=500,
+                                                    threshold=job.vad_threshold,
+                                                    speech_pad_ms=0)
+                    except TypeError:
+                        vad_parameters = VadOptions(min_silence_duration_ms=500,
+                                                    onset=job.vad_threshold,
+                                                    speech_pad_ms=0)
+                    speech_chunks = get_speech_timestamps(audio_array, vad_parameters)
 
                     def adjust_for_pause(segment):
                         """Adjusts start and end of segment if it falls into a pause
