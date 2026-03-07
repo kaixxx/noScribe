@@ -272,6 +272,13 @@ class TranscribeWatcher:
         """Stop the watcher."""
         self.logger.info("Stopping watcher...")
         self.running = False
+
+        # Terminate any running Claude sessions
+        for proc in getattr(self, '_claude_pids', []):
+            if proc.poll() is None:
+                self.logger.info(f"Terminating Claude session PID={proc.pid}")
+                proc.terminate()
+
         self.observer.stop()
         self.observer.join()
         self.logger.info("Watcher stopped.")
@@ -450,6 +457,9 @@ class TranscribeWatcher:
         if self.config.get('webhook', {}).get('enabled', False):
             self._send_webhook(audio_file, transcript_file, processing_time)
 
+        # Trigger Claude for immediate processing
+        self._trigger_claude(transcript_file)
+
     def _send_webhook(self, audio_file: Path, transcript_file: Path, processing_time: float):
         """Send transcription result to n8n webhook.
 
@@ -561,6 +571,9 @@ class TranscribeWatcher:
             # Step 5: Send webhook if configured
             if self.config.get('webhook_gemini', {}).get('enabled', False):
                 self._send_gemini_webhook(audio_file, mp3_path, result, audio_duration, processing_time)
+
+            # Trigger Claude for immediate processing
+            self._trigger_claude(json_path)
 
         except Exception as e:
             self.logger.error(f"Gemini processing failed: {e}")
@@ -674,6 +687,44 @@ class TranscribeWatcher:
             self.logger.error(f"❌ Gemini webhook request failed: {e}")
         except Exception as e:
             self.logger.error(f"❌ Error preparing Gemini webhook: {e}")
+
+    def _trigger_claude(self, transcript_path: Path):
+        """Fire-and-forget headless Claude session to process transcript."""
+        claude_config = self.config.get('claude_trigger', {})
+        if not claude_config.get('enabled', False):
+            self.logger.debug("Claude trigger disabled, skipping")
+            return
+
+        claude_path = claude_config.get('claude_path', '/Users/Matthias/.local/bin/claude')
+        brain_repo = claude_config.get('brain_repo', '/Users/Matthias/Desktop/Repos/Brain')
+        command = claude_config.get('command', 'meeting-actions')
+
+        prompt = f"Read .claude/commands/{command}.md and process transcript: {transcript_path}"
+
+        # Log file for this Claude session
+        log_dir = expand_path(self.config['paths']['logs'])
+        log_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        log_file = log_dir / f"claude-{timestamp}.log"
+
+        env = os.environ.copy()
+        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/Users/Matthias/.local/bin"
+
+        try:
+            with open(log_file, 'w') as lf:
+                proc = subprocess.Popen(
+                    [claude_path, "-p", prompt, "--dangerously-skip-permissions"],
+                    cwd=brain_repo,
+                    env=env,
+                    stdout=lf,
+                    stderr=lf,
+                )
+            self.logger.info(f"Claude trigger fired: PID={proc.pid}, log={log_file.name}")
+            if not hasattr(self, '_claude_pids'):
+                self._claude_pids = []
+            self._claude_pids.append(proc)
+        except Exception as e:
+            self.logger.error(f"Failed to trigger Claude: {e}")
 
 
 def main():
