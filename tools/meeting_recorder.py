@@ -5,33 +5,23 @@ MeetingRecorder - macOS menu bar app for recording meetings
 A simple menu bar app that records audio from your microphone (or combined
 mic + system audio via BlackHole) and saves it for automatic transcription.
 
-Features:
-- Manual start/stop recording
-- Automatic Teams meeting detection (optional)
-- Preferences GUI for configuration
-
 Usage:
     python meeting_recorder.py [--config PATH]
 """
 
-import logging
 import os
-import subprocess
 import sys
 import threading
-from datetime import datetime
+import subprocess
 from pathlib import Path
+from datetime import datetime
 from typing import Optional
 
+import yaml
 import numpy as np
-import objc
-import rumps
 import sounddevice as sd
 import soundfile as sf
-import yaml
-from Foundation import NSObject, NSTimer, NSRunLoop, NSDefaultRunLoopMode
-
-from teams_detector import TeamsDetector, check_screen_recording_permission
+import rumps
 
 
 # Default config path
@@ -43,13 +33,6 @@ ICON_RECORDING = None
 TITLE_IDLE = "🎙️"
 TITLE_RECORDING = "🔴"
 
-# Set up logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger("MeetingRecorder")
-
 
 def expand_path(path: str) -> Path:
     """Expand ~ and environment variables in path."""
@@ -58,48 +41,23 @@ def expand_path(path: str) -> Path:
 
 def load_config(config_path: Path) -> dict:
     """Load configuration from YAML file."""
-    defaults = {
-        'audio': {
-            'device': 'default',
-            'sample_rate': 16000,
-            'channels': 1
-        },
-        'paths': {
-            'recordings': '~/Documents/MeetingRecorder/Recordings',
-            'transcripts': '~/Documents/MeetingRecorder/Transcripts',
-            'logs': '~/Documents/MeetingRecorder/logs'
-        },
-        'teams': {
-            'auto_record': False,
-            'confirm_before_record': True,
-            'grace_period': 10,
-            'poll_interval': 3
-        }
-    }
-
     if not config_path.exists():
-        return defaults
+        # Return defaults if config doesn't exist
+        return {
+            'audio': {
+                'device': 'default',
+                'sample_rate': 16000,
+                'channels': 1
+            },
+            'paths': {
+                'recordings': '~/Documents/MeetingRecorder/Recordings',
+                'transcripts': '~/Documents/MeetingRecorder/Transcripts',
+                'logs': '~/Documents/MeetingRecorder/logs'
+            }
+        }
 
     with open(config_path, 'r') as f:
-        config = yaml.safe_load(f) or {}
-
-    # Merge with defaults (config values override defaults)
-    for key, value in defaults.items():
-        if key not in config:
-            config[key] = value
-        elif isinstance(value, dict):
-            for subkey, subvalue in value.items():
-                if subkey not in config[key]:
-                    config[key][subkey] = subvalue
-
-    return config
-
-
-def save_config(config: dict, config_path: Path):
-    """Save configuration to YAML file."""
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(config_path, 'w') as f:
-        yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
+        return yaml.safe_load(f)
 
 
 def get_audio_device_index(device_name: str) -> Optional[int]:
@@ -220,37 +178,13 @@ class MeetingRecorderApp(rumps.App):
         self.recorder = AudioRecorder(config)
         self.recording_start_time: Optional[datetime] = None
 
-        # Teams detection
-        self.teams_detector: Optional[TeamsDetector] = None
-        self._pending_meeting_title: Optional[str] = None
-        self._auto_recording = False  # Track if current recording was auto-started
-
         # Build menu
         self._build_menu()
 
-        # Initialize meeting detection flags
-        self._meeting_detected = False
-        self._should_auto_stop = False
-
-        # Start a periodic timer to check meeting flags (runs on main thread)
-        self._meeting_check_timer = rumps.Timer(self._check_meeting_flag, 1)
-        self._meeting_check_timer.start()
-
-        # Start Teams detector if enabled
-        if self.config['teams'].get('auto_record', False):
-            self._start_teams_detector()
-
     def _build_menu(self):
         """Build the menu bar menu."""
-        teams_enabled = self.config['teams'].get('auto_record', False)
-        teams_label = "Teams Auto-Record: ON" if teams_enabled else "Teams Auto-Record: OFF"
-
-        self.teams_menu_item = rumps.MenuItem(teams_label, callback=self.toggle_teams_detection)
-
         self.menu = [
             rumps.MenuItem("Start Recording", callback=self.toggle_recording),
-            None,  # Separator
-            self.teams_menu_item,
             None,  # Separator
             rumps.MenuItem("Open Recordings Folder", callback=self.open_recordings),
             rumps.MenuItem("Open Transcripts Folder", callback=self.open_transcripts),
@@ -295,33 +229,9 @@ class MeetingRecorderApp(rumps.App):
                 message=str(e)
             )
 
-    def _start_recording_internal(self):
-        """Start recording without a menu sender (for auto-start)."""
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        output_file = self.recordings_dir / f"{timestamp}.wav"
-
-        logger.info("_start_recording_internal: attempting to start recording to %s", output_file)
-
-        try:
-            result = self.recorder.start(output_file)
-            logger.info("_start_recording_internal: recorder.start() returned %s", result)
-            self.recording_start_time = datetime.now()
-            self._auto_recording = True
-
-            # Update UI
-            self.title = TITLE_RECORDING
-            self.menu["Start Recording"].title = "Stop Recording"
-
-            logger.info("_start_recording_internal: recording started successfully")
-            return True
-        except Exception as e:
-            logger.error("_start_recording_internal: Failed to start recording: %s", e, exc_info=True)
-            return False
-
     def _stop_recording(self, sender):
         """Stop the current recording."""
         output_file = self.recorder.stop()
-        self._auto_recording = False
 
         # Calculate duration
         duration = ""
@@ -349,253 +259,6 @@ class MeetingRecorderApp(rumps.App):
                 message="No audio was captured."
             )
 
-    def _stop_recording_internal(self):
-        """Stop recording without a menu sender (for auto-stop)."""
-        output_file = self.recorder.stop()
-        was_auto = self._auto_recording
-        self._auto_recording = False
-
-        duration = ""
-        if self.recording_start_time:
-            elapsed = datetime.now() - self.recording_start_time
-            minutes = int(elapsed.total_seconds() // 60)
-            seconds = int(elapsed.total_seconds() % 60)
-            duration = f" ({minutes}m {seconds}s)"
-
-        self.title = TITLE_IDLE
-        self.menu["Start Recording"].title = "Start Recording"
-        self.recording_start_time = None
-
-        if output_file and output_file.exists() and was_auto:
-            rumps.notification(
-                title="MeetingRecorder",
-                subtitle="Auto-recording saved" + duration,
-                message=f"File: {output_file.name}"
-            )
-
-    # --- Teams Detection ---
-
-    def _start_teams_detector(self):
-        """Initialize and start the Teams detector."""
-        if self.teams_detector is not None:
-            return
-
-        # Check screen recording permission first
-        if not check_screen_recording_permission():
-            logger.warning("Screen recording permission may not be granted")
-
-        teams_config = self.config.get('teams', {})
-        self.teams_detector = TeamsDetector(
-            on_meeting_start=self._on_teams_meeting_start,
-            on_meeting_end=self._on_teams_meeting_end,
-            poll_interval=teams_config.get('poll_interval', 3),
-            grace_period=teams_config.get('grace_period', 10),
-            logger=logger
-        )
-        self.teams_detector.start()
-
-    def _stop_teams_detector(self):
-        """Stop the Teams detector."""
-        if self.teams_detector:
-            self.teams_detector.stop()
-            self.teams_detector = None
-
-    def _schedule_on_main_thread(self, callback):
-        """Schedule a callback to run on the main thread using NSTimer."""
-        def timer_callback(timer):
-            timer.invalidate()
-            try:
-                callback()
-            except Exception as e:
-                logger.error("Main thread callback error: %s", e)
-
-        # Create selector for the callback
-        NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-            0.1, self, objc.selector(timer_callback, signature=b'v@:@'), None, False
-        )
-
-    def _on_teams_meeting_start(self, meeting_title: str):
-        """Called when Teams meeting starts (from background thread)."""
-        if self.recorder.is_recording:
-            logger.info("Meeting detected but already recording, skipping auto-start")
-            return
-
-        self._pending_meeting_title = meeting_title
-        self._should_show_confirmation = self.config['teams'].get('confirm_before_record', True)
-        self._meeting_detected = True
-        logger.info("Meeting detected, flagging for main thread processing")
-
-    def _check_meeting_flag(self, _=None):
-        """Called periodically to check if meeting was detected (runs on main thread)."""
-        if getattr(self, '_meeting_detected', False):
-            self._meeting_detected = False
-            title = getattr(self, '_pending_meeting_title', 'Teams Meeting')
-
-            if getattr(self, '_should_show_confirmation', True):
-                logger.info("Showing meeting confirmation dialog for: %s", title)
-                response = rumps.alert(
-                    title="Teams Meeting Detected",
-                    message=f"Start recording?\n\n{title}",
-                    ok="Start Recording",
-                    cancel="Don't Record"
-                )
-                if response == 1:  # OK clicked
-                    if self._start_recording_internal():
-                        rumps.notification(
-                            title="MeetingRecorder",
-                            subtitle="Recording Started",
-                            message="Teams meeting detected"
-                        )
-            else:
-                logger.info("Auto-starting recording for: %s", title)
-                result = self._start_recording_internal()
-                logger.info("Auto-start result: %s", result)
-                if result:
-                    logger.info("Sending notification for auto-recording")
-                    rumps.notification(
-                        title="MeetingRecorder",
-                        subtitle="Auto-Recording Started",
-                        message="Teams meeting detected"
-                    )
-                else:
-                    logger.error("Auto-start failed, not sending notification")
-
-        if getattr(self, '_should_auto_stop', False):
-            self._should_auto_stop = False
-            if self.recorder.is_recording and self._auto_recording:
-                self._stop_recording_internal()
-
-    def _on_teams_meeting_end(self):
-        """Called when Teams meeting ends (from background thread)."""
-        if self.recorder.is_recording and self._auto_recording:
-            self._should_auto_stop = True
-            logger.info("Meeting ended, flagging for auto-stop")
-
-    def toggle_teams_detection(self, sender):
-        """Toggle Teams auto-detection on/off."""
-        currently_enabled = self.config['teams'].get('auto_record', False)
-
-        if currently_enabled:
-            # Disable
-            self._stop_teams_detector()
-            self.config['teams']['auto_record'] = False
-            sender.title = "Teams Auto-Record: OFF"
-            rumps.notification(
-                title="MeetingRecorder",
-                subtitle="Teams Auto-Record Disabled",
-                message="Manual recording only"
-            )
-        else:
-            # Enable
-            self.config['teams']['auto_record'] = True
-            self._start_teams_detector()
-            sender.title = "Teams Auto-Record: ON"
-            rumps.notification(
-                title="MeetingRecorder",
-                subtitle="Teams Auto-Record Enabled",
-                message="Will auto-record when Teams meetings start"
-            )
-
-        # Save config
-        save_config(self.config, self.config_path)
-
-    # --- Preferences ---
-
-    def open_preferences(self, _):
-        """Open preferences dialog."""
-        self._show_preferences_main()
-
-    def _show_preferences_main(self):
-        """Show main preferences menu."""
-        response = rumps.alert(
-            title="MeetingRecorder Preferences",
-            message="Choose a category to configure:",
-            ok="Teams Settings",
-            cancel="Close",
-            other="Open Config File"
-        )
-
-        if response == 1:  # Teams Settings
-            self._show_teams_preferences()
-        elif response == 0:  # Open Config File
-            subprocess.run(["open", str(self.config_path)])
-
-    def _show_teams_preferences(self):
-        """Show Teams-specific preferences."""
-        teams_config = self.config.get('teams', {})
-        auto_record = teams_config.get('auto_record', False)
-        confirm = teams_config.get('confirm_before_record', True)
-        grace_period = teams_config.get('grace_period', 10)
-
-        # Toggle auto-record
-        status = "ON" if auto_record else "OFF"
-        response = rumps.alert(
-            title="Teams Auto-Record",
-            message=f"Current status: {status}\n\nEnable automatic recording when Teams meetings are detected?",
-            ok="Enable",
-            cancel="Disable"
-        )
-        new_auto_record = response == 1
-
-        # Toggle confirmation
-        if new_auto_record:
-            status = "ON" if confirm else "OFF"
-            response = rumps.alert(
-                title="Confirmation Dialog",
-                message=f"Current status: {status}\n\nShow confirmation dialog before auto-starting recording?",
-                ok="Yes, ask me",
-                cancel="No, auto-start silently"
-            )
-            new_confirm = response == 1
-
-            # Grace period
-            window = rumps.Window(
-                title="Grace Period",
-                message="Seconds to wait before stopping after meeting ends.\n(Prevents premature stop if you briefly leave and rejoin)",
-                default_text=str(grace_period),
-                ok="Save",
-                cancel="Cancel",
-                dimensions=(100, 24)
-            )
-            result = window.run()
-
-            if result.clicked == 1:
-                try:
-                    new_grace = max(0, min(60, int(result.text)))
-                except ValueError:
-                    new_grace = grace_period
-            else:
-                new_grace = grace_period
-        else:
-            new_confirm = confirm
-            new_grace = grace_period
-
-        # Apply changes
-        old_auto_record = self.config['teams'].get('auto_record', False)
-        self.config['teams']['auto_record'] = new_auto_record
-        self.config['teams']['confirm_before_record'] = new_confirm
-        self.config['teams']['grace_period'] = new_grace
-
-        # Update detector if auto_record changed
-        if new_auto_record != old_auto_record:
-            if new_auto_record:
-                self._start_teams_detector()
-                self.teams_menu_item.title = "Teams Auto-Record: ON"
-            else:
-                self._stop_teams_detector()
-                self.teams_menu_item.title = "Teams Auto-Record: OFF"
-
-        # Save config
-        save_config(self.config, self.config_path)
-
-        rumps.notification(
-            title="MeetingRecorder",
-            subtitle="Preferences Saved",
-            message="Teams settings updated"
-        )
-
-    # --- Other Menu Actions ---
-
     def open_recordings(self, _):
         """Open the recordings folder in Finder."""
         subprocess.run(["open", str(self.recordings_dir)])
@@ -603,6 +266,10 @@ class MeetingRecorderApp(rumps.App):
     def open_transcripts(self, _):
         """Open the transcripts folder in Finder."""
         subprocess.run(["open", str(self.transcripts_dir)])
+
+    def open_preferences(self, _):
+        """Open the config file in the default editor."""
+        subprocess.run(["open", str(self.config_path)])
 
     def list_devices(self, _):
         """Show available audio devices."""
@@ -626,13 +293,8 @@ class MeetingRecorderApp(rumps.App):
 
     def quit_app(self, _):
         """Quit the application, stopping any active recording."""
-        # Stop Teams detector
-        self._stop_teams_detector()
-
-        # Stop recording if active
         if self.recorder.is_recording:
             self.recorder.stop()
-
         rumps.quit_application()
 
 
