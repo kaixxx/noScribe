@@ -163,3 +163,14 @@ en:
   queue_tt_repeat_job: 'Repeat this job'
   queue_tt_edit_job: 'Open the result in the noScribe Editor'
   queue_tt_open_partial_job: 'Open partial result in the noScribe Editor'
+
+  # Speaker naming dialog
+  speaker_naming_title: 'Speaker Recognition'
+  speaker_naming_hint: >
+    Enter names for the detected speakers. Checked speakers will have their
+    voice saved so noScribe can recognise them automatically in future recordings.
+  speaker_name_placeholder: 'Enter name...'
+  speaker_new_badge: 'New'
+  speaker_save_checkbox: 'Save'
+  btn_ok: 'OK'
+  btn_skip: 'Skip'

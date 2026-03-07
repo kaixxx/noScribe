@@ -162,3 +162,14 @@ de:
   # Additional UI buttons
   send_queue: 'Auftrag in Warteschlange senden'
   queue_run_button: 'Ausführen'
+
+  # Dialogfeld Sprecherbenennung
+  speaker_naming_title: 'Sprechererkennung'
+  speaker_naming_hint: >
+    Namen für die erkannten Sprecher eingeben. Aktivierte Sprecher werden mit ihrer
+    Stimme gespeichert, damit noScribe sie in künftigen Aufnahmen automatisch erkennt.
+  speaker_name_placeholder: 'Name eingeben...'
+  speaker_new_badge: 'Neu'
+  speaker_save_checkbox: 'Speichern'
+  btn_ok: 'OK'
+  btn_skip: 'Überspringen'

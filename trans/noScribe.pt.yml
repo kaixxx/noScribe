@@ -161,3 +161,14 @@ pt:
   # Botões adicionais da UI
   send_queue: 'Enviar tarefa para a fila'
   queue_run_button: 'Executar'
+
+  # Diálogo de nomeação de falantes
+  speaker_naming_title: 'Reconhecimento de falantes'
+  speaker_naming_hint: >
+    Insira nomes para os falantes detectados. Os falantes marcados terão a sua voz
+    guardada para que noScribe os reconheça automaticamente em gravações futuras.
+  speaker_name_placeholder: 'Inserir nome...'
+  speaker_new_badge: 'Novo'
+  speaker_save_checkbox: 'Guardar'
+  btn_ok: 'OK'
+  btn_skip: 'Ignorar'

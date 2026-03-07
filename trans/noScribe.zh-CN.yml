@@ -164,3 +164,14 @@ zh-CN: &defaults
 
 zh:
   <<: *defaults
+
+  # 说话人命名对话框
+  speaker_naming_title: '说话人识别'
+  speaker_naming_hint: >
+    为检测到的说话人输入名称。勾选的说话人将保存其声音特征，
+    以便 noScribe 在未来的录音中自动识别他们。
+  speaker_name_placeholder: '输入名称...'
+  speaker_new_badge: '新'
+  speaker_save_checkbox: '保存'
+  btn_ok: '确定'
+  btn_skip: '跳过'

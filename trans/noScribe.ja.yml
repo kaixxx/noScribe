@@ -160,3 +160,14 @@ ja:
   # 追加のUIボタン
   send_queue: 'ジョブをキューに送る'
   queue_run_button: '実行'
+
+  # 話者命名ダイアログ
+  speaker_naming_title: '話者認識'
+  speaker_naming_hint: >
+    検出された話者に名前を入力してください。チェックした話者は声紋が保存され、
+    noScribeが将来の録音で自動的に認識できるようになります。
+  speaker_name_placeholder: '名前を入力...'
+  speaker_new_badge: '新規'
+  speaker_save_checkbox: '保存'
+  btn_ok: 'OK'
+  btn_skip: 'スキップ'
