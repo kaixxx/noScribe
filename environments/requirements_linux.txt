@@ -1,6 +1,7 @@
 # Install with `pip install -r requirements_linux.txt`
 # torch==2.8 # pyannote 4 is currently not compatible with torch 2.9; torch version is set by torchaudio
 torchaudio==2.8
+av
 AdvancedHTMLParser
 appdirs
 customtkinter

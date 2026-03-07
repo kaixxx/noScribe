@@ -1,5 +1,6 @@
 # Install with `pip install -r requirements_win_cpu.txt`
 # torchaudio # install as dependency
+av
 AdvancedHTMLParser
 appdirs
 cpufeature

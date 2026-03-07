@@ -10,7 +10,7 @@ block_cipher = None
 # noScribe:
 
 noScribe_datas = [] 
-noScribe_binaries = [('../ffmpeg.exe', '.')]
+noScribe_binaries = []
 noScribe_hiddenimports = []
 
 noScribe_datas += [
