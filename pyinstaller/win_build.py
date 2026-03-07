@@ -50,7 +50,7 @@ def run_pyinstaller(cuda=False):
         print(final_report)
         quit(proc.returncode)
     else:
-        final_report += 'PyInstaller build with cuda succeded\n' if cuda else 'PyInstaller build without cuda succeded\n'
+        final_report += 'PyInstaller build with cuda succeeded\n' if cuda else 'PyInstaller build without cuda succeeded\n'
 
 ##### NSIS Installer #####
 
@@ -143,7 +143,7 @@ def run_nsis(cuda=False):
         print(final_report)
         quit(proc.returncode)
     else:
-        final_report += 'NSIS compiler with cuda succeded\n' if cuda else 'NSIS compiler without cuda succeded\n'
+        final_report += 'NSIS compiler with cuda succeeded\n' if cuda else 'NSIS compiler without cuda succeeded\n'
 
 ########################## Main ################################
 

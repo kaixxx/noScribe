@@ -80,15 +80,18 @@ it:
   start_job: 'Avvio attività: %{audio_file}'
   start_audio_conversion: 'Conversione audio in corso...'
   audio_conversion_finished: 'Conversione audio completata'
-  start_identifiying_speakers: 'Identificazione degli speaker in corso...'
+  start_identifying_speakers: 'Identificazione degli speaker in corso...'
   loading_pyannote: 'Caricamento di pyannote'
   start_canceling: 'Annullamento in corso... (attendere un secondo)'
   start_transcription: 'Trascrizione in corso...'
   loading_whisper: 'Caricamento di whisper'
+  pyannote_cuda_retry: 'Rilevato errore CUDA di PyAnnote. Riprovo sulla CPU.'
+  whisper_cuda_retry: 'Rilevato errore CUDA di Whisper. Riprovo sulla CPU.'
   vad: "Rilevamento dell'attività vocale..."
   language_detect: 'Lingua rilevata "%{lang}" con probabilità %{prob}'
+  language_en_only: 'Tieni presente che il modello di IA scelto per la trascrizione è solo in inglese.'
   transcription_finished: 'Trascrizione completata.'
-  transcription_saved: 'Salvato in '
+  transcription_saved: 'Salvato in %{file}'
   trancription_time: 'Durata: %{duration} minuti'
   queue_complete: '=== Elaborazione della coda completata ==='
   total_jobs: 'Attività totali: %{total}'
@@ -104,6 +107,7 @@ it:
     Vuoi sovrascrivere il file di output?
   err_invalid_time_string: 'Questa non è una stringa di tempo valida: "%{time}"'
   err_options: 'Errore nelle opzioni'
+  err_unsupported_output_format: 'Errore: Il formato di output "%{file_type}" non è supportato.'
   err_no_audio_file: 'Errore: seleziona un file audio.'
   err_no_transcript_file: 'Errore: scegli un nome per la trascrizione finale.'
   err_ffmpeg: 'ffmpeg ha restituito un errore'
@@ -117,11 +121,25 @@ it:
   err_transcription: 'Errore nella fase 3 - trascrizione'
   rescue_saving: 'Salvataggio con il nome originale non riuscito. Salvato invece in questo file: %{file}'
   rescue_saving_failed: 'Errore: salvataggio con il nome originale non riuscito. Il nome alternativo esiste già. Il programma deve essere chiuso. (Assicurati che la trascrizione non sia già aperta in Word!)'
+  pyannote_cuda_error_prompt: |-
+    La diarizzazione PyAnnote è fallita con un errore CUDA:
+
+    %{error}
+
+    Passare all'elaborazione su CPU e riprovare?
+  whisper_cuda_error_prompt: |-
+    La trascrizione Whisper è fallita con un errore CUDA:
+
+    %{error}
+
+    Passare all'elaborazione su CPU e riprovare?
   err_noScribeEdit_not_found: "Errore: impossibile trovare l'editor di noScribe."
   err_vtt_invalid_options: 'Avviso: le opzioni "Discorso sovrapposto", "Segna le pause" e "Timestamps" non sono supportate nei file VTT.'
   err_editor_invalid_format: "L'editor può essere utilizzato solo con file HTML. Vuoi avviarlo comunque?"
   err_editor_no_file: 'Nessuna attività di trascrizione completata disponibile. Avviare comunque l’editor?'
   err_invalid_model: 'Nome duplicato ignorato per il modello whisper: "%{model_name}"'
+  err_partial_not_found: "File di trascrizione parziale non trovato."
+  log_open_partial: "Apertura trascrizione parziale: %{file}"
 
   # Contenuti del documento
   doc_header: 'Trascritto con noScribe vers. %{version}'
@@ -137,6 +155,7 @@ it:
   queue_tt_remove_entry: 'Rimuovi dall’elenco'
   queue_tt_repeat_job: 'Ripeti questa attività'
   queue_tt_edit_job: 'Apri il risultato nell’editor di noScribe'
+  queue_tt_open_partial_job: "Apri il risultato parziale nell'editor di noScribe"
 
   # Pulsanti UI aggiuntivi
   send_queue: 'Invia attività alla coda'

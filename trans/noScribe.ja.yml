@@ -80,13 +80,16 @@ ja:
   start_job: 'ジョブを開始: %{audio_file}'
   start_audio_conversion: '音声の変換を開始中...'
   audio_conversion_finished: '音声の変換が完了しました'
-  start_identifiying_speakers: '話者の識別を開始中...'
+  start_identifying_speakers: '話者の識別を開始中...'
   loading_pyannote: 'pyannoteの読み込み中'
   start_canceling: 'キャンセル中...（しばらくお待ちください）'
   start_transcription: '転写を開始中...'
   loading_whisper: 'whisperの読み込み中'
+  pyannote_cuda_retry: 'PyAnnote の CUDA エラーを検出しました。CPU で再試行します。'
+  whisper_cuda_retry: 'Whisper の CUDA エラーを検出しました。CPU で再試行します。'
   vad: '音声活動検出...'
   language_detect: '検出された言語は「%{lang}」（確率 %{prob}）'
+  language_en_only: '選択した文字起こし用のAIモデルは英語専用です。'
   transcription_finished: '転写が完了しました。'
   transcription_saved: '%{file}に保存されました'
   trancription_time: '所要時間：%{duration}分'
@@ -104,6 +107,7 @@ ja:
     出力ファイルを上書きしますか？
   err_invalid_time_string: '無効な時間です：" %{time}"'
   err_options: 'オプションのエラー'
+  err_unsupported_output_format: 'エラー: 出力形式 "%{file_type}" はサポートされていません。'
   err_no_audio_file: 'エラー：音声ファイルを選択してください。'
   err_no_transcript_file: 'エラー：転写が完了したファイル名を選択してください。'
   err_ffmpeg: 'ffmpegでエラーが発生しました'
@@ -117,11 +121,25 @@ ja:
   err_transcription: 'ステップ3でエラーが発生しました-転写'
   rescue_saving: '元のファイル名への保存に失敗しました。代わりにこのファイルに保存されました：%{file}'
   rescue_saving_failed: 'エラー：元のファイル名への保存に失敗しました。代替のファイル名も存在します。終了する必要があります。（Wordでトランスクリプトが既に開かれていないことを確認してください！）'
+  pyannote_cuda_error_prompt: |-
+    PyAnnote の話者分離が CUDA エラーで失敗しました。
+
+    %{error}
+
+    CPU 処理に切り替えて再試行しますか？
+  whisper_cuda_error_prompt: |-
+    Whisper の文字起こしが CUDA エラーで失敗しました。
+
+    %{error}
+
+    CPU 処理に切り替えて再試行しますか？
   err_noScribeEdit_not_found: 'エラー: noScribe エディターが見つかりませんでした。'
   err_vtt_invalid_options: '警告: 「オーバーラッピング・スピーチ」、「マークはポーズをとる」と「タイムスタンプ」は VTT ファイルでサポートされていません。'
   err_editor_invalid_format: 'エディターは html ファイルでのみ使用できます。それでも起動しますか？'
   err_editor_no_file: '完了した転写ジョブがありません。エディターを起動しますか？'
   err_invalid_model: 'Whisper モデルの重複名を無視しました: "%{model_name}"'
+  err_partial_not_found: "部分的な書き起こしファイルが見つかりません。"
+  log_open_partial: "部分的な書き起こしを開く: %{file}"
 
   # ドキュメント内容
   doc_header: 'noScribe vers. %{version}で転写されました'
@@ -137,6 +155,7 @@ ja:
   queue_tt_remove_entry: 'リストから削除'
   queue_tt_repeat_job: 'このジョブを再実行'
   queue_tt_edit_job: '結果を noScribe エディターで開く'
+  queue_tt_open_partial_job: "noScribe エディターで部分結果を開く"
 
   # 追加のUIボタン
   send_queue: 'ジョブをキューに送る'

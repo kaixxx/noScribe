@@ -43,11 +43,24 @@ def whisper_proc_entrypoint(args: dict, q):
         except Exception:
             # Safe fallback: leave i18n defaults; keys may pass through
             pass
+        
+        # determine device
+        device = args.get("device", "")
+        if device != 'cpu':
+            if platform.system() == "Darwin":  # MAC
+                device = 'auto'
+            elif platform.system() in ('Windows', 'Linux'):
+                try:
+                    device = 'cuda' if torch.cuda.is_available() and torch.cuda.device_count() > 0 else 'cpu'
+                except:
+                    device = 'cpu'
+            else:
+                raise Exception('Platform not supported yet.')
             
         # Build model in child using provided options
         model = WhisperModel(
             args["model_name_or_path"],
-            device=args.get("device", "auto"),
+            device=device,
             compute_type=args.get("compute_type", "float16"),
             cpu_threads=args.get("cpu_threads", 4),
             local_files_only=args.get("local_files_only", True),
@@ -79,6 +92,12 @@ def whisper_proc_entrypoint(args: dict, q):
         language_code = args.get("language_code")
         multilingual = False
         whisper_lang = None
+        
+        if not model.model.is_multilingual and language_code != 'en':
+            language_name = 'English'
+            language_code = 'en'
+            log_cb("info", t('language_en_only'))
+        
         if language_name == "Multilingual":
             multilingual = True
             whisper_lang = None
@@ -89,11 +108,10 @@ def whisper_proc_entrypoint(args: dict, q):
 
         # Detect language if requested (Auto)
         if language_name == "Auto":
-            language, language_probability, _ = model.detect_language(
+            whisper_lang, language_probability, _ = model.detect_language(
                 audio, vad_filter=True, vad_parameters=vad_parameters
             )
-            log_cb("info", t('language_detect', lang=language, prob=f'{language_probability:.2f}'))
-            whisper_lang = language
+            log_cb("info", t('language_detect', lang=whisper_lang, prob=f'{language_probability:.2f}'))
 
         # Build prompt/hotwords if disfluencies suppression is requested
         prompt = ""
@@ -117,7 +135,7 @@ def whisper_proc_entrypoint(args: dict, q):
             beam_size=args.get("beam_size", 5),
             # temperature=args.get("temperature"),
             word_timestamps=args.get("word_timestamps", True),
-            # initial_prompt=args.get("initial_prompt"),
+            # initial_prompt=prompt,
             hotwords=prompt,
             vad_filter=args.get("vad_filter", True),
             vad_parameters=vad_parameters,

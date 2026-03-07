@@ -81,15 +81,18 @@ pt:
   start_job: 'Iniciando tarefa: %{audio_file}'
   start_audio_conversion: 'Convertendo áudio...'
   audio_conversion_finished: 'Conversão de áudio concluída'
-  start_identifiying_speakers: 'Identificação de alto-falantes...'
+  start_identifying_speakers: 'Identificação de alto-falantes...'
   loading_pyannote: 'Carregando pyannote'
   start_canceling: 'Cancelando... (aguarde um segundo)'
   start_transcription: 'Transcrição...'
   loading_whisper: 'Carregando whisper'
+  pyannote_cuda_retry: 'Erro CUDA do PyAnnote detectado. Tentando novamente na CPU.'
+  whisper_cuda_retry: 'Erro CUDA do Whisper detectado. Tentando novamente na CPU.'
   vad: 'Detecção de atividade de voz...'
   language_detect: 'Idioma detectado "%{lang}" com probabilidade %{prob}'
+  language_en_only: 'Tenha em atenção que o modelo de IA selecionado para a transcrição é apenas em inglês.'
   transcription_finished: 'Transcrição concluída.'
-  transcription_saved: 'Salvo em '
+  transcription_saved: 'Salvo em %{file}'
   trancription_time: 'Duração: %{duration} minutos'
   queue_complete: '=== Processamento da fila concluído ==='
   total_jobs: 'Total de tarefas: %{total}'
@@ -105,6 +108,7 @@ pt:
     Deseja substituir o arquivo de saída?
   err_invalid_time_string: 'Este não é um horário válido: "%{time}"'
   err_options: 'Erro nas opções'
+  err_unsupported_output_format: 'Erro: O formato de saída "%{file_type}" não é suportado.'
   err_no_audio_file: 'Erro: Por favor, selecione um arquivo de áudio.'
   err_no_transcript_file: 'Erro: Por favor, escolha um nome de arquivo para a transcrição concluída.'
   err_ffmpeg: 'ffmpeg retornou um erro'
@@ -118,11 +122,25 @@ pt:
   err_transcription: 'Erro na etapa 3 - transcrição'
   rescue_saving: 'Falha ao salvar com o nome de arquivo original. Salvo em vez disso neste arquivo: %{file}'
   rescue_saving_failed: 'Erro: Falha ao salvar com o nome de arquivo original. O nome alternativo também existe. Preciso sair. (Certifique-se de que sua transcrição não esteja aberta no Word!)'
+  pyannote_cuda_error_prompt: |-
+    A diarização do PyAnnote falhou com um erro CUDA:
+
+    %{error}
+
+    Alternar para processamento na CPU e tentar novamente?
+  whisper_cuda_error_prompt: |-
+    A transcrição do Whisper falhou com um erro CUDA:
+
+    %{error}
+
+    Alternar para processamento na CPU e tentar novamente?
   err_noScribeEdit_not_found: 'Erro: não foi possível encontrar o editor do noScribe.'
   err_vtt_invalid_options: 'Aviso: as opções "Sobreposição", "Marcar pausas" e "Registos temporais" não são suportadas em arquivos VTT.'
   err_editor_invalid_format: 'O editor só pode ser usado com arquivos HTML. Deseja iniciá-lo mesmo assim?'
   err_editor_no_file: 'Nenhuma tarefa de transcrição concluída disponível. Iniciar o editor mesmo assim?'
   err_invalid_model: 'Nome duplicado ignorado para o modelo whisper: "%{model_name}"'
+  err_partial_not_found: 'Arquivo de transcrição parcial não encontrado.'
+  log_open_partial: 'Abrindo transcrição parcial: %{file}'
 
   # Conteúdo do documento
   doc_header: 'Transcrito com noScribe versão %{version}'
@@ -138,6 +156,7 @@ pt:
   queue_tt_remove_entry: 'Remover da lista'
   queue_tt_repeat_job: 'Repetir esta tarefa'
   queue_tt_edit_job: 'Abrir o resultado no editor noScribe'
+  queue_tt_open_partial_job: 'Abrir resultado parcial no editor noScribe'
 
   # Botões adicionais da UI
   send_queue: 'Enviar tarefa para a fila'
