@@ -2,9 +2,27 @@
 Different small and distinct helper functions
 """
 
+import html
+import html.parser
+import re
 from pathlib import Path
 
 import i18n
+
+HTML_BLOCK_LEVEL_ELEMENTS = {
+    "p",
+    "div",
+    "ul",
+    "ol",
+    "li",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+}
+REGEX_DETECT_TIMESTAMP = re.compile(r"\[\d\d:\d\d:\d\d\]")
 
 
 def str_to_ms(time_str: str) -> int:
@@ -99,8 +117,8 @@ def _build_inc_filename(path_input: Path, inc: int) -> Path:
 
     path_output = path_input.parent / f"{path_input.stem}_{inc}{path_input.suffix}"
     return path_output
-  
-  
+
+
 def ms_to_str(milliseconds: int, include_ms: bool = False) -> str:
     """
     Convert milliseconds to a formatted timestamp string in "HH:MM:SS" format.
@@ -131,7 +149,7 @@ def ms_to_str(milliseconds: int, include_ms: bool = False) -> str:
     return formatted
 
 
-def ms_to_webvtt(milliseconds: int) -> str:
+def _ms_to_webvtt(milliseconds: int) -> str:
     """
     Converts milliseconds to a WebVTT timestamp string (HH:MM:SS.mmm).
 
@@ -143,3 +161,213 @@ def ms_to_webvtt(milliseconds: int) -> str:
     """
 
     return ms_to_str(milliseconds, include_ms=True)
+
+
+def html_to_text(html_str: str, use_only_body=False) -> str:
+    """
+    Recursively extracts text content from an HTML node and its children.
+
+    Args:
+        node: An HTML node to extract text from.
+
+    Returns:
+        A string containing the extracted text.
+    """
+
+    # Define the parser class. See
+    # https://stackoverflow.com/questions/14694482/converting-html-to-text-with-python
+    # for more information on this approach.
+    #
+    # TODO: move this function and class to its own module.
+    class MyHTMLParser(html.parser.HTMLParser):
+        def __init__(self, use_only_body=False):
+            super().__init__()
+            self.result = []
+            self.body_found = not use_only_body
+
+        def handle_starttag(self, tag, attrs):
+            if self.body_found:
+                if tag in HTML_BLOCK_LEVEL_ELEMENTS or tag == "br":
+                    self.result.append("\n")
+            else:
+                if tag == "body":
+                    self.body_found = True
+
+        def handle_endtag(self, tag):
+            if self.body_found:
+                if tag in HTML_BLOCK_LEVEL_ELEMENTS:
+                    self.result.append("\n")
+
+        def handle_data(self, data):
+            if self.body_found:
+                text = html.unescape(data).strip()
+                if text:
+                    self.result.append(text)
+
+        def get_text(self):
+            ret = ""
+
+            for item in self.result:
+                if ret and not ret[-1].isspace() and not item.isspace():
+                    ret += " "
+
+                ret += item
+
+            return ret.strip()
+
+    parser = MyHTMLParser(use_only_body)
+    parser.feed(html_str)
+
+    return parser.get_text()
+
+
+def _vtt_escape(txt: str) -> str:
+    """
+    Escapes a string and normalizes newline characters.
+
+    This function takes a string as input, escapes HTML special characters
+    using html.escape, and then normalizes consecutive newline characters
+    into single newlines.
+
+    Args:
+        txt: The input string to be processed.
+
+    Returns:
+        The processed string with escaped HTML characters and normalized newlines.
+    """
+
+    txt = html.escape(txt)
+
+    # Make sure to replace all double newlines with a single newline. Use a
+    # while loop to find repetitive occurences.
+    #
+    # This could also be done using a regular expression. But I'm not sure
+    # what's faster and this is probably easier and doesn't require an
+    # additional library.
+    while "\n\n" in txt:
+        txt = txt.replace("\n\n", "\n")
+
+    return txt
+
+
+def html_to_webvtt(html_string: str) -> str:
+    """
+    Converts an HTML interview output file to a WebVTT transcript.
+
+    This function extracts text from an HTML interview output file and
+    transforms it into a WebVTT format. Each segment is converted into a WebVTT
+    cue with start and end times, speaker information, and the text content.
+
+    Args:
+        html_string: The input string to be processed.
+
+    Returns:
+        A string containing the WebVTT transcript.
+    """
+
+    # Define the parser class. See
+    # https://stackoverflow.com/questions/14694482/converting-html-to-text-with-python
+    # for more information on this approach.
+    #
+    # TODO: move this function and class to its own module.
+    class MyHTMLParser(html.parser.HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.body_found = False
+            self.segments = []
+
+        def handle_starttag(self, tag, attrs):
+            # Look for body tag.
+            if tag == "body":
+                self.body_found = True
+                return
+
+            # Make sure here that we are in the body.
+            if not self.body_found:
+                return
+
+            if tag == "p":
+                self.segments.append(
+                    {
+                        "text": "",
+                        "speaker": None,
+                        "time_start": None,
+                        "time_end": None,
+                    }
+                )
+            elif tag == "a":
+                tmp = None
+                for item in attrs:
+                    if item[0] == "name":
+                        tmp = item[1].split("_")
+                self.segments[-1]["time_start"] = tmp[1]
+                self.segments[-1]["time_end"] = tmp[2]
+                self.segments[-1]["speaker"] = tmp[3]
+
+        def handle_endtag(self, tag):
+            pass
+
+        def handle_data(self, data):
+            # Use data only in body.
+            if not self.body_found:
+                return
+
+            if not data or data.isspace():
+                return
+
+            # If `data` is the same as speaker, we don't need it in VTT.
+            if data.strip().replace(":", "") == self.segments[-1]["speaker"]:
+                return
+
+            # If `data` is a timestamp, we can omit as well.
+            if REGEX_DETECT_TIMESTAMP.match(data.strip()):
+                return
+
+            if (
+                self.segments[-1]["text"]
+                and not self.segments[-1]["text"][-1].isspace()
+            ):
+                self.segments[-1]["text"] += " "
+
+            self.segments[-1]["text"] += html.unescape(data).strip()
+
+        def get_title(self):
+            # The first paragraph contains the title.
+            return self.segments[0]["text"]
+
+        def get_info(self):
+            # The second paragraph contains the info field (including path).
+            return self.segments[1]["text"]
+
+        def get_segments(self):
+            for item in self.segments[2:]:
+                # Check if text is empty or only whitespace. Skip otherwise.
+                if item["text"] and not item["text"].isspace():
+                    yield item
+
+    parser = MyHTMLParser()
+    parser.feed(html_string)
+
+    ret = "WEBVTT "
+
+    ret += _vtt_escape(parser.get_title()) + "\n\n"
+    ret += _vtt_escape("NOTE\n" + parser.get_info()) + "\n\n"
+
+    for index, item in enumerate(parser.get_segments()):
+        # Add index.
+        ret += f"{index + 1}\n"
+
+        # Add start time.
+        start = _ms_to_webvtt(int(item["time_start"]))
+        end = _ms_to_webvtt(int(item["time_end"]))
+        ret += f"{start} --> {end}\n"
+
+        # Add speaker if available.
+        if item["speaker"]:
+            ret += f"<v {item['speaker']}>"
+
+        # Add text.
+        ret += _vtt_escape(item["text"])
+        ret += "\n\n"
+
+    return ret
