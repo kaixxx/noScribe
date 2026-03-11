@@ -56,7 +56,7 @@ tmp_ret = collect_all('speechbrain')
 noScribe_datas += tmp_ret[0]; noScribe_binaries += tmp_ret[1]; noScribe_hiddenimports += tmp_ret[2]
 
 noScribe_a = Analysis(
-    ['../noScribe.py'],
+    ['../noScribe/noScribe.py'],
     pathex=[],
     binaries=noScribe_binaries,
     datas=noScribe_datas,
