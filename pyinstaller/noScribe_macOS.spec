@@ -19,9 +19,9 @@ noScribe_datas = [
     ('../models/fast/', './models/fast/'),
     # ('../noScribeEdit/', './noScribeEdit/'),
     ('../trans/', './trans/'),
-    ('../graphic_sw.png', '.'),
+    ('../img/graphic_sw.png', '.'),
     ('../LICENSE.txt', '.'),
-    ('../noScribeLogo.ico', '.'),
+    ('../img/noScribeLogo.ico', '.'),
     ('../prompt.yml', '.'),
     ('../prompt_nd.yml', '.'),
     ('../README.md', '.'),
@@ -65,7 +65,7 @@ noScribe_binaries += tmp_ret[1]
 noScribe_hiddenimports += tmp_ret[2]
 
 noScribe_a = Analysis(
-    ['../noScribe.py'],
+    ['../noScribe/noScribe.py'],
     pathex=[],
     binaries=noScribe_binaries,
     datas=noScribe_datas,
@@ -98,7 +98,7 @@ noScribe_exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['../noScribeLogo.ico'],
+    icon=['../img/noScribeLogo.ico'],
 )
 
 coll = COLLECT(
@@ -115,8 +115,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='noScribe.app',
-    icon='../noScribeLogo.ico',
+    icon='../img/noScribeLogo.ico',
     bundle_identifier=None,
     info_plist={"CFBundleShortVersionString":"0.7"},
 )
-
