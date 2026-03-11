@@ -18,9 +18,9 @@ noScribe_datas += [
 ('../models/fast/', './models/fast/'), 
 ('../noScribeEdit/', './noScribeEdit/'), 
 ('../trans/', './trans/'), 
-('../graphic_sw.png', '.'), 
+('../img/graphic_sw.png', '.'), 
 ('../LICENSE.txt', '.'), 
-('../noScribeLogo.ico', '.'), 
+('../img/noScribeLogo.ico', '.'), 
 ('../prompt.yml', '.'),
 ('../prompt_nd.yml', '.'), 
 ('../README.md', '.')]
@@ -90,7 +90,7 @@ noScribe_exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['../noScribeLogo.ico'],
+    icon=['../img/noScribeLogo.ico'],
 )
 
 # assemble the dist folder with all needed DLLs, datas, etc.
