@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('../graphic_sw.png', '.'), ('../LICENSE.txt', '.'), ('../models/precise', 'models/precise/'), ('../models/fast', 'models/fast/'), ('../prompt.yml', '.'), ('../prompt_nd.yml', '.'), ('../pyannote', 'pyannote/'), ('../README.md', '.'), ('../trans', 'trans/')]
+datas = [('../img/graphic_sw.png', '.'), ('../LICENSE.txt', '.'), ('../models/precise', 'models/precise/'), ('../models/fast', 'models/fast/'), ('../prompt.yml', '.'), ('../prompt_nd.yml', '.'), ('../pyannote', 'pyannote/'), ('../README.md', '.'), ('../trans', 'trans/')]
 binaries = []
 hiddenimports = []
 datas += collect_data_files('faster_whisper')
@@ -44,7 +44,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['../noScribeLogo.ico'],
+    icon=['../img/noScribeLogo.ico'],
 )
 coll = COLLECT(
     exe,
@@ -58,7 +58,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='noScribe.app',
-    icon='../noScribeLogo.ico',
+    icon='../img/noScribeLogo.ico',
     bundle_identifier='org.noScribe.noScribe',
     info_plist={"CFBundleShortVersionString":"0.7.1"},
 )

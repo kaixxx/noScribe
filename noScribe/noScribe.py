@@ -992,12 +992,12 @@ class App(ctk.CTk):
         else:
             self.geometry(f"{1100}x{690}")
         if platform.system() in ("Darwin", "Windows"):
-            self.iconbitmap(os.path.join(app_dir, 'noScribeLogo.ico'))
+            self.iconbitmap(os.path.join(app_dir, "img", "noScribeLogo.ico"))
         if platform.system() == "Linux":
             if hasattr(sys, "_MEIPASS"):
-                self.iconphoto(True, tk.PhotoImage(file=os.path.join(sys._MEIPASS, "noScribeLogo.png")))
+                self.iconphoto(True, tk.PhotoImage(file=os.path.join(sys._MEIPASS, "img", "noScribeLogo.png")))
             else:
-                self.iconphoto(True, tk.PhotoImage(file='noScribeLogo.png'))
+                self.iconphoto(True, tk.PhotoImage(file=os.path.join("img", "noScribeLogo.png")))
 
         # header
         self.frame_header = ctk.CTkFrame(self, height=100)
@@ -1014,7 +1014,7 @@ class App(ctk.CTk):
         self.header_label = ctk.CTkLabel(self.frame_header_logo, text=t('app_header'), font=ctk.CTkFont(size=16, weight="bold"))
         self.header_label.pack(padx=20, pady=[0, 20], anchor='w')
         # graphic
-        self.header_graphic = ctk.CTkImage(dark_image=Image.open(os.path.join(app_dir, 'graphic_sw.png')), size=(926,119))
+        self.header_graphic = ctk.CTkImage(dark_image=Image.open(os.path.join(app_dir, "img", "graphic_sw.png")), size=(926,119))
         self.header_graphic_label = ctk.CTkLabel(self.frame_header, image=self.header_graphic, text='')
         self.header_graphic_label.pack(anchor='ne', side='right', padx=[30,30])
 
