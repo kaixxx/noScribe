@@ -2401,10 +2401,10 @@ class App(ctk.CTk):
                 #-------------------------------------------------------
                 # 1) Convert Audio
 
-                try:
-                    self.logn()
-                    self.logn(t('start_audio_conversion'), 'highlight')
+                self.logn()
+                self.logn(t('start_audio_conversion'), 'highlight')
 
+                try:
                     # Add audio conversion job.
                     self._ffmpeg_proc = audio.convert.ToWav(
                         Path(job.audio_file),
@@ -2419,29 +2419,32 @@ class App(ctk.CTk):
                     if job.stop > 0:
                         self._ffmpeg_proc.stop_after(job.stop)
 
-                    try:
-                        # Poll loop to allow responsive cancel during conversion
-                        while self._ffmpeg_proc.convert():
-                            if self.cancel:
-                                break
-                    except Exception as e:
-                        raise Exception(t('err_ffmpeg')) from e
-                    finally:
-                        self._ffmpeg_proc.close()
-                        self._ffmpeg_proc = None
-                    self.logn(t('audio_conversion_finished'))
-                    self.set_progress(1, 100, job.speaker_detection)
+                    # Poll loop to allow responsive cancel during conversion
+                    while self._ffmpeg_proc.convert():
+                        if self.cancel:
+                            # TODO: replace this with an UserCancelException or
+                            # similar.
+                            raise Exception(t('err_user_cancelation'))
+
                 except Exception as e:
                     traceback_str = traceback.format_exc()
+
                     # Distinguish cancel vs. real error during audio conversion
                     if str(e) == t('err_user_cancelation') or self.cancel:
                         job.set_canceled(t('err_user_cancelation'))
                         self.update_queue_table()
-                        raise Exception(t('err_user_cancelation'))
+                        raise e
                     else:
                         job.set_error(f"{t('err_converting_audio')}: {e}", traceback_str)
                         self.update_queue_table()
-                        raise Exception(job.error_message)
+                        raise Exception(t('err_ffmpeg'), job.error_message) from e
+
+                finally:
+                    self._ffmpeg_proc.close()
+                    self._ffmpeg_proc = None
+
+                self.logn(t('audio_conversion_finished'))
+                self.set_progress(1, 100, job.speaker_detection)
 
                 #-------------------------------------------------------
                 # 2) Speaker identification (diarization) with pyannote
