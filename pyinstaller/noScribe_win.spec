@@ -1,4 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
+
 from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import collect_dynamic_libs
 from PyInstaller.utils.hooks import collect_submodules
@@ -6,6 +8,7 @@ from PyInstaller.utils.hooks import collect_all
 from PyInstaller.utils.hooks import copy_metadata
 
 block_cipher = None
+project_root = os.path.abspath(os.path.join(SPECPATH, '..'))
 
 # noScribe:
 
@@ -57,7 +60,7 @@ noScribe_datas += tmp_ret[0]; noScribe_binaries += tmp_ret[1]; noScribe_hiddenim
 
 noScribe_a = Analysis(
     ['../noScribe.py'],
-    pathex=[],
+    pathex=[project_root],
     binaries=noScribe_binaries,
     datas=noScribe_datas,
     hiddenimports=noScribe_hiddenimports,   # <-- use them

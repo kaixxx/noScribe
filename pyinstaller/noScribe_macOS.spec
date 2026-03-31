@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 
 ############################################
 # Run from /noScribe/pyinstaller subdir!
@@ -11,6 +12,7 @@ from PyInstaller.utils.hooks import collect_all
 from PyInstaller.utils.hooks import copy_metadata
 
 block_cipher = None
+project_root = os.path.abspath(os.path.join(SPECPATH, '..'))
 
 # noScribe (macOS, integrated pyannote)
 
@@ -66,7 +68,7 @@ noScribe_hiddenimports += tmp_ret[2]
 
 noScribe_a = Analysis(
     ['../noScribe.py'],
-    pathex=[],
+    pathex=[project_root],
     binaries=noScribe_binaries,
     datas=noScribe_datas,
     hiddenimports=noScribe_hiddenimports,
