@@ -1,7 +1,8 @@
 # Install with `pip install -r requirements_macOS_x86_64.txt`
-av
 # torch==2.8 # pyannote 4 is currently not compatible with torch 2.9; torch version is set by torchaudio
 torchaudio==2.8
+torchcodec==0.7.0
+av
 AdvancedHTMLParser
 appdirs
 customtkinter
@@ -13,4 +14,5 @@ pyinstaller
 pyobjc
 python-i18n
 PyYAML
+soundfile
 numpy<2

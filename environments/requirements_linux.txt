@@ -1,6 +1,7 @@
 # Install with `pip install -r requirements_linux.txt`
 # torch==2.8 # pyannote 4 is currently not compatible with torch 2.9; torch version is set by torchaudio
 torchaudio==2.8
+torchcodec==0.7.0
 av
 AdvancedHTMLParser
 appdirs
@@ -12,3 +13,4 @@ pyannote.audio>=4
 pyinstaller
 python-i18n
 PyYAML
+soundfile
