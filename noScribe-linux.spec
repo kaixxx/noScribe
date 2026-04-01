@@ -4,10 +4,10 @@ import site
 # noScribe
 
 noScribe_a = Analysis(
-    ['noScribe.py'],
+    ['noScribe/noScribe.py'],
     pathex=[],
     binaries=[],
-    datas=[('trans', 'trans/'), ('noScribeLogo.png', '.'), ('graphic_sw.png', '.'), ('models/faster-whisper-small', 'models/faster-whisper-small/'), ('models/faster-whisper-large-v2', 'models/faster-whisper-large-v2/'), ('prompt.yml', '.'), ('LICENSE.txt', '.'), ('README.md', '.')],
+    datas=[('trans', 'trans/'), ('img/noScribeLogo.png', '.'), ('img/graphic_sw.png', '.'), ('models/faster-whisper-small', 'models/faster-whisper-small/'), ('models/faster-whisper-large-v2', 'models/faster-whisper-large-v2/'), ('prompt.yml', '.'), ('LICENSE.txt', '.'), ('README.md', '.')],
     hiddenimports=['PIL', 'PIL._imagingtk', 'PIL._tkinter_finder'],
     hookspath=[],
     hooksconfig={},
@@ -34,7 +34,7 @@ noScribe_exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['noScribeLogo.ico'],
+    icon=['img/noScribeLogo.ico'],
 )
 
 # diarize
@@ -97,6 +97,6 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='noScribe.app',
-    icon='noScribeLogo.ico',
+    icon='img/noScribeLogo.ico',
     bundle_identifier='org.noScribe.noScribe',
 )

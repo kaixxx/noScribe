@@ -151,7 +151,7 @@ git clone https://huggingface.co/mukowaty/faster-whisper-int8 models/fast
 git clone https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo models/precise
 
 # Run noScribe.
-python3 ./noScribe.py
+python3 -m noScribe
 ```
 
 </details>
@@ -257,7 +257,6 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at my other project [QualCoder](https://github.com/ccbogel/QualCoder).
-
 
 
 

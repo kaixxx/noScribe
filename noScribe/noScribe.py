@@ -27,8 +27,8 @@ if sys.stderr is None:
 import tkinter as tk
 import customtkinter as ctk
 from customtkinter.windows.widgets.scaling import CTkScalingBaseClass
-from CTkToolTips import CTkToolTip
-from tkHyperlinkManager import HyperlinkManager
+from .CTkToolTips import CTkToolTip
+from .tkHyperlinkManager import HyperlinkManager
 import webbrowser
 from functools import partial
 from PIL import Image
@@ -74,8 +74,10 @@ from enum import Enum
 from typing import Optional, List
 import time
 
-import utils
-import audio
+import importlib.resources as impres
+
+from . import utils
+from . import audio
 
  # Pyinstaller fix, used to open multiple instances on Mac
 mp.freeze_support()
@@ -85,7 +87,10 @@ logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
 app_version = '0.7'
 app_year = '2025'
-app_dir = os.path.abspath(os.path.dirname(__file__))
+# TODO: All the uses of `app_dir` can be simplified using e.g.
+# `impres.files("noScribeEdit")` to get the path to `./noScribeEdit`. This will
+# be done in a later commit.
+app_dir = impres.files("noScribe") / ".."
 
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
@@ -724,10 +729,10 @@ def parse_cli_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python noScribe.py audio.wav transcript.html
-  python noScribe.py audio.mp3 transcript.txt --language en --speaker-detection 2
-  python noScribe.py audio.wav transcript.vtt --start 00:01:30 --stop 00:05:00
-  python noScribe.py --help-models  # Show available models
+  python -m noScribe audio.wav transcript.html
+  python -m noScribe audio.mp3 transcript.txt --language en --speaker-detection 2
+  python -m noScribe audio.wav transcript.vtt --start 00:01:30 --stop 00:05:00
+  python -m noScribe --help-models  # Show available models
         """
     )
     
@@ -988,12 +993,12 @@ class App(ctk.CTk):
         else:
             self.geometry(f"{1100}x{690}")
         if platform.system() in ("Darwin", "Windows"):
-            self.iconbitmap(os.path.join(app_dir, 'noScribeLogo.ico'))
+            self.iconbitmap(os.path.join(app_dir, "img", "noScribeLogo.ico"))
         if platform.system() == "Linux":
             if hasattr(sys, "_MEIPASS"):
-                self.iconphoto(True, tk.PhotoImage(file=os.path.join(sys._MEIPASS, "noScribeLogo.png")))
+                self.iconphoto(True, tk.PhotoImage(file=os.path.join(sys._MEIPASS, "img", "noScribeLogo.png")))
             else:
-                self.iconphoto(True, tk.PhotoImage(file='noScribeLogo.png'))
+                self.iconphoto(True, tk.PhotoImage(file=os.path.join("img", "noScribeLogo.png")))
 
         # header
         self.frame_header = ctk.CTkFrame(self, height=100)
@@ -1010,7 +1015,7 @@ class App(ctk.CTk):
         self.header_label = ctk.CTkLabel(self.frame_header_logo, text=t('app_header'), font=ctk.CTkFont(size=16, weight="bold"))
         self.header_label.pack(padx=20, pady=[0, 20], anchor='w')
         # graphic
-        self.header_graphic = ctk.CTkImage(dark_image=Image.open(os.path.join(app_dir, 'graphic_sw.png')), size=(926,119))
+        self.header_graphic = ctk.CTkImage(dark_image=Image.open(os.path.join(app_dir, "img", "graphic_sw.png")), size=(926,119))
         self.header_graphic_label = ctk.CTkLabel(self.frame_header, image=self.header_graphic, text='')
         self.header_graphic_label.pack(anchor='ne', side='right', padx=[30,30])
 
@@ -3011,7 +3016,7 @@ class App(ctk.CTk):
         # Spawn child process using spawn start method
         ctx = mp.get_context("spawn")
         q = ctx.Queue()
-        from whisper_mp_worker import whisper_proc_entrypoint
+        from .whisper_mp_worker import whisper_proc_entrypoint
         proc = ctx.Process(target=whisper_proc_entrypoint, args=(args, q))
         proc.start()
         # Expose to allow cancel to terminate the child
@@ -3114,7 +3119,7 @@ class App(ctk.CTk):
         global force_pyannote_cpu
         ctx = mp.get_context("spawn")
         q = ctx.Queue()
-        from pyannote_mp_worker import pyannote_proc_entrypoint
+        from .pyannote_mp_worker import pyannote_proc_entrypoint
         args = {
             "device": 'cpu' if force_pyannote_cpu else '',
             "audio_path": tmp_audio_file,
@@ -3449,7 +3454,7 @@ def show_available_models():
         if app is not None:
             _cleanup_app(app)
 
-if __name__ == "__main__":
+def noScribeMain():
     # Parse command line arguments
     args = parse_cli_args()
 
@@ -3465,7 +3470,7 @@ if __name__ == "__main__":
             sys.exit(exit_code)
         else:
             print("Error: --no-gui requires both audio_file and output_file.")
-            print("Usage: python noScribe.py <audio_file> <output_file> [options] --no-gui")
+            print("Usage: python -m noScribe <audio_file> <output_file> [options] --no-gui")
             sys.exit(1)
 
     # Default: show GUI, even with CLI args
@@ -3547,3 +3552,6 @@ if __name__ == "__main__":
 
     # Enter GUI main loop
     app.mainloop()
+
+if __name__ == "__main__":
+    noScribeMain()
