@@ -83,8 +83,8 @@ mp.freeze_support()
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
-app_version = '0.7'
-app_year = '2025'
+app_version = '0.7.2'
+app_year = '2026'
 app_dir = os.path.abspath(os.path.dirname(__file__))
 
 ctk.set_appearance_mode('dark')
