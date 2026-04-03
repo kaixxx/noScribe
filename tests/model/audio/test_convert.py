@@ -1,9 +1,9 @@
 import importlib.resources as impres
 
-import pytest
 import av
+import pytest
 
-from noScribe import audio
+from noScribe.model import audio
 
 
 def test_to_wav_with_expected_input(tmp_path):
@@ -16,7 +16,7 @@ def test_to_wav_with_expected_input(tmp_path):
     path_output = tmp_path / "interview.wav"
 
     # Convert
-    with audio.convert.ToWav(path_input, path_output) as towav:
+    with audio.ConvertToWav(path_input, path_output) as towav:
         while towav.convert():
             pass
 
@@ -47,18 +47,18 @@ def test_to_wav_overwrites_output_file(tmp_path):
     path_input = impres.files("tests") / "data" / "interview.mp3"
     path_output = tmp_path / "interview.wav"
 
-    with audio.convert.ToWav(path_input, path_output) as towav:
+    with audio.ConvertToWav(path_input, path_output) as towav:
         while towav.convert():
             pass
 
     # Check that another process is only overwriting if `force=True`.
     with pytest.raises(FileExistsError):
-        with audio.convert.ToWav(path_input, path_output, force=False) as towav:
+        with audio.ConvertToWav(path_input, path_output, force=False) as towav:
             while towav.convert():
                 pass
 
     last_mod = path_output.stat().st_mtime
-    with audio.convert.ToWav(path_input, path_output, force=True) as towav:
+    with audio.ConvertToWav(path_input, path_output, force=True) as towav:
         while towav.convert():
             pass
     assert last_mod < path_output.stat().st_mtime
@@ -73,7 +73,7 @@ def test_to_wav_start_stop_args(tmp_path):
     path_output = tmp_path / "interview-part0.wav"
 
     # Use a start time for conversion.
-    with audio.convert.ToWav(path_input, path_output) as towav:
+    with audio.ConvertToWav(path_input, path_output) as towav:
         # Seek to 6 minutes.
         towav.seek(6 * 60 * 1000)
 
@@ -96,7 +96,7 @@ def test_to_wav_start_stop_args(tmp_path):
 
     # Use a start and end time for conversion.
     path_output = tmp_path / "interview-part1.wav"
-    with audio.convert.ToWav(path_input, path_output) as towav:
+    with audio.ConvertToWav(path_input, path_output) as towav:
         # Seek to 6 minutes and end after 7 minutes.
         towav.seek(6 * 60 * 1000)
         towav.stop_after(7 * 60 * 1000)

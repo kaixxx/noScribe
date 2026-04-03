@@ -2,15 +2,15 @@
 All classes and functions related to audio conversion.
 """
 
-from pathlib import Path
 import logging
+from pathlib import Path
 
 import av
 
 logger = logging.getLogger(__name__)
 
 
-class ToWav:
+class ConvertToWav:
     """
     Convert an arbitrary file to wave format.
     """

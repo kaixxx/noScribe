@@ -77,7 +77,6 @@ import importlib.resources as impres
 import contextlib
 
 from . import utils
-from . import audio
 from . import model
 
  # Pyinstaller fix, used to open multiple instances on Mac
@@ -2400,7 +2399,7 @@ class App(ctk.CTk):
 
                 try:
                     # Add audio conversion job.
-                    self._ffmpeg_proc = audio.convert.ToWav(
+                    self._ffmpeg_proc = model.audio.ConvertToWav(
                         Path(job.audio_file),
                         Path(tmp_audio_file),
                         force=True
