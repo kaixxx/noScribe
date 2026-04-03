@@ -4,11 +4,11 @@ torchaudio==2.8
 torchcodec==0.7.0
 av
 AdvancedHTMLParser
-appdirs
 customtkinter
 CTkToolTip
 faster-whisper
 Pillow
+appdirs
 pyannote.audio>=4
 pyinstaller
 pyobjc

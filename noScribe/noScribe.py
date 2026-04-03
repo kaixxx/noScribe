@@ -35,7 +35,6 @@ from PIL import Image
 import platform
 import yaml
 import locale
-import appdirs
 from subprocess import run, Popen, PIPE, STDOUT, DEVNULL
 if platform.system() == 'Windows':
     # import torch.cuda # to check with torch.cuda.is_available()
@@ -75,9 +74,11 @@ from typing import Optional, List
 import time
 
 import importlib.resources as impres
+import contextlib
 
 from . import utils
 from . import audio
+from . import model
 
  # Pyinstaller fix, used to open multiple instances on Mac
 mp.freeze_support()
@@ -177,7 +178,7 @@ languages = {
 }
 
 # config
-config_dir = appdirs.user_config_dir('noScribe')
+config_dir = model.config.PATH_USER_CONFIG
 if not os.path.exists(config_dir):
     os.makedirs(config_dir)
 
@@ -952,15 +953,20 @@ class JobEntryFrame(ctk.CTkFrame, CTkScalingBaseClass):
             )
 
 def _init_app_state(app):
-    app._headless = False
-    app.user_models_dir = os.path.join(config_dir, 'whisper_models')
-    os.makedirs(app.user_models_dir, exist_ok=True)
-    whisper_models_readme = os.path.join(app.user_models_dir, 'readme.txt')
-    if not os.path.exists(whisper_models_readme):
-        with open(whisper_models_readme, 'w') as file:
-            file.write('You can download custom Whisper-models for the transcription into this folder. \n'
-                       'See here for more information: https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription')
+    # Handle whisper models.
+    #
+    # First, specify the user model directory, then initialize this directory,
+    # and finally collect all available models.
+    #
+    # TODO: For xdg-compatible system (linux) it is probably much better to
+    # place the models under `.local/share` or the cache directory.
+    app.user_models_dir = config_dir / "whisper_models"
+    model.transcription.initialize_user_whisper_model_dir(app.user_models_dir)
+    app.whisper_models = model.transcription.WhisperModelCollector(
+        [app.user_models_dir]
+    )
 
+    app._headless = False
     app.queue = TranscriptionQueue()
     app.audio_files_list = []
     app.transcript_files_list = []
@@ -1108,7 +1114,7 @@ class App(ctk.CTk):
 
             def _clicked(self, event=0):
                 self.old_value = self.get()
-                self._values = self.noScribe_parent.get_whisper_models()
+                self._values = list(self.noScribe_parent.whisper_models.get_names())
                 self._values.append('--------------------')
                 self._values.append(t('label_add_custom_models'))
                 self._dropdown_menu.configure(values=self._values)
@@ -1138,7 +1144,7 @@ class App(ctk.CTk):
         self.label_whisper_model = ctk.CTkLabel(self.frame_options, text=t('label_whisper_model'))
         self.label_whisper_model.grid(column=0, row=3, sticky='w', pady=5)
 
-        models = self.get_whisper_models()
+        models = list(self.whisper_models.get_names())
         self.option_menu_whisper_model = CustomCTkOptionMenu(self, 
                                                        self.frame_options, 
                                                        width=100,
@@ -1393,26 +1399,6 @@ class App(ctk.CTk):
                 pass
             
     # Events and Methods
-
-    def get_whisper_models(self):
-        self.whisper_model_paths = {}
-        
-        def collect_models(dir):        
-            for entry in os.listdir(dir):
-                entry_path = os.path.join(dir, entry)
-                if os.path.isdir(entry_path):
-                    if entry in self.whisper_model_paths:
-                        self.logn(t('err_invalid_model', entry), 'error')
-                    else:
-                        self.whisper_model_paths[entry]=entry_path 
-       
-        # collect system models:
-        collect_models(os.path.join(app_dir, 'models'))
-        
-        # collect user defined models:        
-        collect_models(self.user_models_dir)
-
-        return list(self.whisper_model_paths.keys())
     
     def on_whisper_model_selected(self, value):
         print(self.option_menu_whisper_model.old_value)
@@ -2205,10 +2191,14 @@ class App(ctk.CTk):
             stop_time = utils.str_to_ms(val)
         
         # Get whisper model path
-        sel_whisper_model = self.option_menu_whisper_model.get()
-        if sel_whisper_model not in self.whisper_model_paths.keys():
-            raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
-        whisper_model_path = self.whisper_model_paths[sel_whisper_model]
+        whisper_model_path = self.whisper_models.get_path_for(
+            self.option_menu_whisper_model.get()
+        )
+        if not whisper_model_path:
+            raise ValueError(
+                "Model not found",
+                self.option_menu_whisper_model.get()
+            )
         
         queue = TranscriptionQueue()
         if len(self.audio_files_list) != len(self.transcript_files_list):
@@ -3356,32 +3346,37 @@ def _cleanup_app(app):
 def run_cli_mode(args):
     """Run noScribe in CLI mode"""
     app = None
+
     try:
-        # Create a headless app instance (no GUI initialization)
+        # Create a headless app instance (no GUI initialization).
         app = HeadlessApp()
         
-        # Validate and set the whisper model
-        available_models = app.get_whisper_models()
-        if args.model:
-            if args.model not in available_models:
-                print(f"Error: Model '{args.model}' not found.")
-                print(f"Available models: {', '.join(available_models)}")
-                return 1
-        else:
-            # Use default model
-            if 'precise' in available_models:
-                args.model = 'precise'
-            elif available_models:
-                args.model = available_models[0]
-            else:
-                print("Error: No Whisper models found.")
-                return 1
-        
-        # Create job from CLI arguments
+        # Create job from CLI arguments.
         job = create_job_from_cli_args(args)
         
-        # Set the whisper model path
-        job.whisper_model = app.whisper_model_paths[args.model]
+        # Set path to the whisper model.
+        #
+        # - First, check whether there are any models.
+        # - If given, select the user desired model.
+        # - Use the default "precise" model otherwise.
+        # - If the "precise" model is not available, use any available model.
+        model_names = app.whisper_models.get_names()
+
+        if not model_names:
+            print("Error: No Whisper models found.")
+            return 1
+
+        if args.model:
+            if args.model in model_names:
+                job.whisper_model = app.whisper_models.get_path_for(args.model)
+            else:
+                print(f"Error: Model '{args.model}' not found.")
+                print(f"Available models: {', '.join(model_names)}")
+                return 1
+        elif "precise" in model_names:
+            job.whisper_model = app.whisper_models.get_path_for("precise")
+        else:
+            job.whisper_model = app.whisper_models.get_path_for(next(iter(model_names)))
         
         # Validate files
         if not os.path.exists(job.audio_file):
@@ -3434,24 +3429,22 @@ def run_cli_mode(args):
             _cleanup_app(app)
 
 def show_available_models():
-    """Show available Whisper models"""
-    app = None
-    try:
-        # Create headless app instance to get models
-        app = HeadlessApp()
-        models = app.get_whisper_models()
+    """
+    Show available Whisper models.
+    """
+
+    whisper_models = model.transcription.WhisperModelCollector(
+        [config_dir / "whisper_models"]
+    )
+
+    if not whisper_models.get_names():
+        print("No models found. Please check your installation.")
+        return
         
-        print("Available Whisper models:")
-        for model in models:
-            print(f"  - {model}")
-        
-        if not models:
-            print("  No models found. Please check your installation.")
-    except Exception as e:
-        print(f"Error getting models: {str(e)}")
-    finally:
-        if app is not None:
-            _cleanup_app(app)
+    print("Available Whisper models:")
+    for name in whisper_models.get_names():
+        print(f" - {name}")
+
 
 def noScribeMain():
     # Parse command line arguments
@@ -3476,22 +3469,19 @@ def noScribeMain():
     app = App()
 
     # If arguments were provided, prefill and optionally auto-start
+
+    # Prefill selected model if provided
+    if args.model:
+        if args.model in app.whisper_models.get_names():
+            with contextlib.suppress(Exception):
+                app.option_menu_whisper_model.set(args.model)
+        else:
+            app.logn(
+                f"Warning: Model '{args.model}' not found. "
+                "Using default GUI selection."
+            )
+
     try:
-        # Prefill selected model if provided
-        desired_model_name = None
-        available_models = app.get_whisper_models()
-        if getattr(args, 'model', None):
-            if args.model in available_models:
-                desired_model_name = args.model
-            else:
-                app.logn(f"Warning: Model '{args.model}' not found. Using default GUI selection.")
-
-        if desired_model_name:
-            try:
-                app.option_menu_whisper_model.set(desired_model_name)
-            except Exception:
-                pass
-
         # Prefill files if provided
         if getattr(args, 'audio_file', None):
             app.audio_files_list = [args.audio_file]
