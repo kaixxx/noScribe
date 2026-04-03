@@ -76,6 +76,8 @@ import contextlib
 
 from . import utils
 from . import model
+from . import view
+from . import controller
 
 from .view.tk.CTkToolTips import CTkToolTip
 from .view.tk.tkHyperlinkManager import HyperlinkManager
@@ -3428,31 +3430,17 @@ def run_cli_mode(args):
         if app is not None:
             _cleanup_app(app)
 
-def show_available_models():
-    """
-    Show available Whisper models.
-    """
-
-    whisper_models = model.transcription.WhisperModelCollector(
-        [config_dir / "whisper_models"]
-    )
-
-    if not whisper_models.get_names():
-        print("No models found. Please check your installation.")
-        return
-        
-    print("Available Whisper models:")
-    for name in whisper_models.get_names():
-        print(f" - {name}")
-
-
 def noScribeMain():
     # Parse command line arguments
     args = parse_cli_args()
 
     # Handle special case: show available models
     if args.help_models:
-        show_available_models()
+        # Create view, model and controller objects.
+        myview = view.cli.CommandLine()
+        mymodel = model.transcription.WhisperModelCollector()
+        mycontr = controller.cli.Controller(myview)
+        mycontr.print_available_whisper_models(mymodel)
         sys.exit(0)
 
     # If explicit headless requested, run pure CLI mode
