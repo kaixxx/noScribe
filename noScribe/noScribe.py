@@ -27,8 +27,6 @@ if sys.stderr is None:
 import tkinter as tk
 import customtkinter as ctk
 from customtkinter.windows.widgets.scaling import CTkScalingBaseClass
-from .CTkToolTips import CTkToolTip
-from .tkHyperlinkManager import HyperlinkManager
 import webbrowser
 from functools import partial
 from PIL import Image
@@ -78,6 +76,9 @@ import contextlib
 
 from . import utils
 from . import model
+
+from .view.tk.CTkToolTips import CTkToolTip
+from .view.tk.tkHyperlinkManager import HyperlinkManager
 
  # Pyinstaller fix, used to open multiple instances on Mac
 mp.freeze_support()
