@@ -12,3 +12,7 @@ class CommandLine:
         print("Available Whisper models:")
         for name in model_names:
             print(f" - {name}")
+
+    @staticmethod
+    def download_model(model_name: str):
+        print(f"Downloading model '{model_name}'.")

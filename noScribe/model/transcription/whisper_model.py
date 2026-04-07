@@ -3,6 +3,8 @@ import importlib.resources as impres
 import logging
 from pathlib import Path
 
+import huggingface_hub
+
 PATH_PACKAGE_MODELS = impres.files("models")
 
 logger = logging.getLogger(__name__)
@@ -79,6 +81,68 @@ class WhisperModelCollector:
             ret = ret.path
 
         return ret
+
+
+class WhisperModelDownloader:
+    # Define a dict of available models.
+    # TODO: store this somewhere else in the future.
+    models: dict = {
+        "precise": {
+            "repository": "dropbox-dash/faster-whisper-large-v3-turbo",
+            "subfolder": None,
+            "files": [
+                "README.md",
+                "config.json",
+                "model.bin",
+                "preprocessor_config.json",
+                "tokenizer.json",
+                "vocabulary.json",
+            ],
+            "revision": "0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf",
+        },
+        "fast": {
+            "repository": "mukowaty/faster-whisper-int8",
+            "subfolder": "faster-whisper-large-v3-turbo-int8",
+            "files": [
+                "config.json",
+                "model.bin",
+                "preprocessor_config.json",
+                "tokenizer.json",
+                "vocabulary.json",
+            ],
+            "revision": "db1cdb5990df067cf53670d86241330c7ea454cf",
+        },
+        "ci": {
+            "repository": "mukowaty/faster-whisper-int8",
+            "subfolder": "faster-whisper-tiny-int8",
+            "files": [
+                "config.json",
+                "model.bin",
+                "tokenizer.json",
+                "vocabulary.json",
+            ],
+            "revision": "db1cdb5990df067cf53670d86241330c7ea454cf",
+        },
+    }
+
+    def get_avail_models(self) -> set[str]:
+        return self.models.keys()
+
+    def download(self, model: str, path_target: Path):
+        tmp = self.models[model]
+
+        for file in tmp["files"]:
+            local_file: str = huggingface_hub.hf_hub_download(
+                repo_id=tmp["repository"],
+                filename=file,
+                subfolder=tmp["subfolder"],
+                local_dir=path_target / model,
+            )
+
+            # Move files one level up if `subfolder` is given.
+            if tmp["subfolder"]:
+                local_file = Path(local_file)
+                local_file.rename(path_target / model / local_file.name)
 
 
 # Helper functions

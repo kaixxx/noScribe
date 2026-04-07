@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from noScribe import model, view
 
 
@@ -16,3 +18,19 @@ class Controller:
 
         # Show in view.
         self.view.show_available_models(model_names)
+
+    def download_model_files(
+        self,
+        whisper_downloader: model.transcription.WhisperModelDownloader,
+        model_name: str,
+        user_whisper_dir: Path,
+    ):
+        # Check if desired model is in available models.
+        if model_name not in whisper_downloader.get_avail_models():
+            raise ValueError(f"model '{model}' not available")
+
+        # Print some overview.
+        self.view.download_model(model_name)
+
+        # Download desired model.
+        whisper_downloader.download(model_name, user_whisper_dir)

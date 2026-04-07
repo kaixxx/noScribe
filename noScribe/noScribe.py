@@ -741,6 +741,11 @@ Examples:
     # Special argument to show available models
     parser.add_argument('--help-models', action='store_true',
                        help='Show available Whisper models and exit')
+
+    # Special argument to download models
+    parser.add_argument('--download-package-model',
+                       choices=['precise', 'fast', 'ci'],
+                       help='Download Whisper model into package dir and exit')
     
     # Required arguments (when not using --help-models)
     parser.add_argument('audio_file', nargs='?',
@@ -3435,12 +3440,27 @@ def noScribeMain():
     args = parse_cli_args()
 
     # Handle special case: show available models
+    # TODO: extend CLI controller and view and reduce redundancies on this way.
     if args.help_models:
         # Create view, model and controller objects.
         myview = view.cli.CommandLine()
         mymodel = model.transcription.WhisperModelCollector()
         mycontr = controller.cli.Controller(myview)
         mycontr.print_available_whisper_models(mymodel)
+        sys.exit(0)
+
+    # Handle special case: download models
+    # TODO: extend CLI controller and view and reduce redundancies on this way.
+    if args.download_package_model:
+        # Create view, model and controller objects.
+        myview = view.cli.CommandLine()
+        mymodel = model.transcription.WhisperModelDownloader()
+        mycontr = controller.cli.Controller(myview)
+        mycontr.download_model_files(
+            mymodel, 
+            args.download_package_model, 
+            impres.files("models")
+        )
         sys.exit(0)
 
     # If explicit headless requested, run pure CLI mode
