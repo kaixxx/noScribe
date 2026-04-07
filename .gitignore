@@ -18,10 +18,9 @@ ROADMAP.md
 whisper_test.py
 codex*.*
 
-models/precise/*
-!models/precise/NOSCRIBE_README.txt
-models/fast/*
-!models/fast/NOSCRIBE_README.txt
+models/precise/
+models/fast/
+models/ci/
 
 .DS_Store
 stuff/

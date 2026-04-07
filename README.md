@@ -115,10 +115,10 @@ ported by [Eckhard Kadasch](https://github.com/eckhrd) and [Florian Dobener](htt
 See [this discussion](https://github.com/kaixxx/noScribe/discussions/83) for
 more information.
 
-If you want to install from source, `git` and `git-lfs` are necessary to get
-all required pieces. The latest sources are directly fetched from the
-repository. Please use the installation above (executable installation) if
-you want to install a specific version.
+If you want to install from source, `git` is necessary to get all required
+pieces. The latest sources are directly fetched from the repository. Please use
+the installation above (executable installation) if you want to install a
+specific version.
 
 ```bash
 git clone https://github.com/kaixxx/noScribe.git
@@ -144,11 +144,11 @@ pip install -r noScribeEdit/environments/requirements.txt
 
 # Download model files. Here, the precise as well as the fast models are
 # downloaded. If you use only one of them, it is enough to download only the
-# respective models.
-rm -rf models/fast
-rm -rf models/precise
-git clone https://huggingface.co/mukowaty/faster-whisper-int8 models/fast
-git clone https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo models/precise
+# respective models. See
+# https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription
+# for the installation of custom models.
+python3 -m noScribe --download-package-model fast
+python3 -m noScribe --download-package-model precise
 
 # Run noScribe.
 python3 -m noScribe

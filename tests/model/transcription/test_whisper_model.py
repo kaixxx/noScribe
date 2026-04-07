@@ -1,3 +1,5 @@
+import pytest
+
 from noScribe import model
 
 
@@ -34,3 +36,28 @@ def test_whisper_model_collector(tmp_path):
     assert model2.absolute() in result
 
     assert tmp.get_path_for("model2") == model2.absolute()
+
+
+class TestModelDownloader:
+    """
+    Testing the model downloader. Don't checking the actual downloading as this
+    requires too much resources from huggingface. 
+
+    TODO: maybe it could be an option to find a very small model on huggingface
+    (around 1MB) to test the download process.
+    """
+
+    def test_fails_with_existing_model(self, tmp_path):
+        """
+        Check whether the model downloader fails if a model already exists and
+        force is not true.
+        """
+
+        # Create model directory.
+        model_name = "ci"
+        (tmp_path / model_name).mkdir()
+
+        # Download model and expect exception.
+        tmp = model.transcription.WhisperModelDownloader(tmp_path)
+        with pytest.raises(model.transcription.exception.ModelAlreadyExists):
+            tmp.download("ci", force=False)

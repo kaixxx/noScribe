@@ -7,6 +7,7 @@ AdvancedHTMLParser
 customtkinter
 CTkToolTip
 faster-whisper
+huggingface_hub
 Pillow
 platformdirs
 pyannote.audio>=4

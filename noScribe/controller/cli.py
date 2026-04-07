@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from noScribe import model, view
 
 
@@ -16,3 +18,17 @@ class Controller:
 
         # Show in view.
         self.view.show_available_models(model_names)
+
+    def download_model_files(
+        self,
+        whisper_downloader: model.transcription.WhisperModelDownloader,
+        model_name: str,
+    ):
+        # Print some overview.
+        self.view.download_model(model_name)
+
+        # Download desired model.
+        try:
+            whisper_downloader.download(model=model_name, force=False)
+        except model.transcription.exception.ModelAlreadyExists:
+            self.view.download_model_failed_already_exists(model_name)

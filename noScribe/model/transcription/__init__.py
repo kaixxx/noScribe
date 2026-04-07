@@ -1,3 +1,5 @@
+from .whisper_model import PATH_PACKAGE_MODELS
 from .whisper_model import WhisperModel
 from .whisper_model import WhisperModelCollector
+from .whisper_model import WhisperModelDownloader
 from .whisper_model import initialize_user_whisper_model_dir
