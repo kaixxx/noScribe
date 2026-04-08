@@ -12,15 +12,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.13"]
+        # Use python 3.12 as the minimum supported version of python. 3.13 can
+        # be incremented in the future.
+        python-version: ["3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
+
       # You can test your matrix by printing the current Python version
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
@@ -30,7 +34,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r environments/requirements_linux.txt
 
+      - name: Download small whisper model for integration tests
+        run: |
+          python -m noScribe --download-package-model ci
+
       - name: Test with pytest
         run: |
           pip install pytest pytest-cov
-          python -m pytest --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+          python -m pytest --junitxml=junit/test-results.xml --cov=noScribe --cov-report=xml --cov-report=html

@@ -1,3 +1,4 @@
+import importlib.resources as impres
 import gc
 import os
 import platform
@@ -32,10 +33,13 @@ def whisper_proc_entrypoint(args: dict, q):
 
         # Initialize i18n in child process (PyInstaller uses spawn; no globals shared)
         try:
-            app_dir = os.path.abspath(os.path.dirname(__file__))
             i18n.set('filename_format', '{locale}.{format}')
             # Ensure translations directory is available to python-i18n
-            i18n.load_path.append(os.path.join(app_dir, 'trans'))
+            # TODO: python-i18n is unmaintained for more than five years.
+            # Switch away from it and be able to use `impres.files("trans")`
+            # directly.
+            path_trans = impres.files("trans") / ".." / "trans"
+            i18n.load_path.append(path_trans)
             i18n.set('fallback', 'en')
             # Use locale passed by parent when available
             child_locale = args.get('locale') or 'en'
@@ -59,7 +63,7 @@ def whisper_proc_entrypoint(args: dict, q):
             
         # Build model in child using provided options
         model = WhisperModel(
-            args["model_name_or_path"],
+            str(args["model_name_or_path"]),
             device=device,
             compute_type=args.get("compute_type", "float16"),
             cpu_threads=args.get("cpu_threads", 4),
@@ -120,7 +124,7 @@ def whisper_proc_entrypoint(args: dict, q):
         else:
             prompt_file = 'prompt_nd.yml'         
         try:
-            with open(os.path.join(app_dir, prompt_file), 'r', encoding='utf-8') as f:
+            with impres.files(prompt_file).open("r", encoding="utf-8") as f:
                 prompts = yaml.safe_load(f) or {}
             prompt = prompts.get(whisper_lang, '')
         except Exception:
