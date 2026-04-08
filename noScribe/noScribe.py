@@ -724,7 +724,7 @@ def create_job_from_cli_args(args) -> TranscriptionJob:
         cli_mode=True
     )
 
-def parse_cli_args():
+def parse_cli_args(argv=None):
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(
         description='noScribe - AI-powered Audio Transcription',
@@ -780,8 +780,9 @@ Examples:
                        help='Exclude disfluencies from transcript')
     parser.add_argument('--pause', choices=['none', '1sec+', '2sec+', '3sec+'], default=None,
                        help='Mark pauses in transcript')
-    
-    return parser.parse_args()
+
+    ret = parser.parse_args(argv) if argv else parser.parse_args()
+    return ret
 
 
 class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format hh:mm:ss
@@ -3435,9 +3436,9 @@ def run_cli_mode(args):
         if app is not None:
             _cleanup_app(app)
 
-def noScribeMain():
+def noScribeMain(argv=None):
     # Parse command line arguments
-    args = parse_cli_args()
+    args = parse_cli_args(argv)
 
     # Handle special case: show available models
     # TODO: extend CLI controller and view and reduce redundancies on this way.
@@ -3447,7 +3448,7 @@ def noScribeMain():
         mymodel = model.transcription.WhisperModelCollector()
         mycontr = controller.cli.Controller(myview)
         mycontr.print_available_whisper_models(mymodel)
-        sys.exit(0)
+        return
 
     # Handle special case: download models
     # TODO: extend CLI controller and view and reduce redundancies on this way.
@@ -3460,13 +3461,16 @@ def noScribeMain():
             mymodel, 
             args.download_package_model
         )
-        sys.exit(0)
+        return
 
     # If explicit headless requested, run pure CLI mode
     if getattr(args, 'no_gui', False):
         if args.audio_file and args.output_file:
             exit_code = run_cli_mode(args)
-            sys.exit(exit_code)
+            if exit_code == 0:
+                return
+            else:
+                sys.exit(exit_code)
         else:
             print("Error: --no-gui requires both audio_file and output_file.")
             print("Usage: python -m noScribe <audio_file> <output_file> [options] --no-gui")
@@ -3548,6 +3552,3 @@ def noScribeMain():
 
     # Enter GUI main loop
     app.mainloop()
-
-if __name__ == "__main__":
-    noScribeMain()

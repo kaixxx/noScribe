@@ -12,15 +12,23 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.13"]
+        # Use python 3.12 as the minimum supported version of python. Upper
+        # version needs to be incremented over time to ensure noScribe working
+        # with newer version.
+        # 
+        # Staying on python 3.13 as long torchaudio is not updated to > 2.8.
+        python-version: ["3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
+          cache-dependency-path: './environments/requirements_linux.txt'
+
       # You can test your matrix by printing the current Python version
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
@@ -30,7 +38,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r environments/requirements_linux.txt
 
+      # Trying to get a small whisper model from cache. If it is not present,
+      # download it.
+      - name: Cache whisper model for integration tests
+        id: cache-whisper-model
+        uses: actions/cache@v5
+        with:
+          path: ./models/ci
+          # This key does not make sense but I didn't want to rely on the path
+          # for python file of the whisper model downloader. A cache does expire
+          # within a week. Thus, this shouldn't be too much of a problem.
+          key: ${{ hashFiles('./environments/requirements_linux.txt') }}
+
+      - name: Download small whisper model for integration tests
+        if: steps.cache-whisper-model.outputs.cache-hit != 'true'
+        run: |
+          python -m noScribe --download-package-model ci
+
+      # Actually run tests.
       - name: Test with pytest
         run: |
           pip install pytest pytest-cov
-          python -m pytest --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+          python -m pytest --junitxml=junit/test-results.xml --cov=noScribe --cov-report=xml --cov-report=html
