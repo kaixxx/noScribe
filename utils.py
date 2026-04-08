@@ -194,9 +194,8 @@ def html_to_text(html_str: str, use_only_body=False) -> str:
                     self.body_found = True
 
         def handle_endtag(self, tag):
-            if self.body_found:
-                if tag in HTML_BLOCK_LEVEL_ELEMENTS:
-                    self.result.append("\n")
+            if self.body_found and tag in HTML_BLOCK_LEVEL_ELEMENTS:
+                self.result.append("\n")
 
         def handle_data(self, data):
             if self.body_found:
@@ -236,7 +235,7 @@ def _vtt_escape(txt: str) -> str:
         The processed string with escaped HTML characters and normalized newlines.
     """
 
-    txt = html.escape(txt)
+    txt = html.escape(txt, quote=False)
 
     # Make sure to replace all double newlines with a single newline. Use a
     # while loop to find repetitive occurences.
