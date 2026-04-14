@@ -12,7 +12,6 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import AdvancedHTMLParser
-import utils
 
 
 def _build_doc_with_text(text: str) -> AdvancedHTMLParser.AdvancedHTMLParser:
