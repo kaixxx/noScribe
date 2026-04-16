@@ -61,14 +61,14 @@ if platform.system() in ("Darwin", "Linux"):
     import shlex
 if platform.system() == 'Windows':
     import cpufeature
-if platform.system() == 'Darwin':
-    import Foundation
 import logging
 import json
 import urllib
 import multiprocessing as mp
 import queue as pyqueue
 import gc
+import i18n
+from i18n import t
 import traceback
 from enum import Enum
 from typing import Optional, List
@@ -78,18 +78,19 @@ import importlib.resources as impres
 
 from . import utils
 from . import audio
+from . import exception
 
  # Pyinstaller fix, used to open multiple instances on Mac
 mp.freeze_support()
 
+
+# Initialize logging facility
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
+logger = logging.getLogger()
 
 app_version = '0.7.2'
 app_year = '2026'
-# TODO: All the uses of `app_dir` can be simplified using e.g.
-# `impres.files("noScribeEdit")` to get the path to `./noScribeEdit`.
-app_dir = impres.files("noScribe") / ".."
 
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
@@ -176,6 +177,8 @@ languages = {
     "Welsh": "cy",
 }
 
+suppported_locales = ["de", "en", "es", "fr", "it", "ja", "pt", "ru", "zh"]
+
 # config
 config_dir = appdirs.user_config_dir('noScribe')
 if not os.path.exists(config_dir):
@@ -258,14 +261,6 @@ def save_config():
 
 save_config()
 
-# locale: setting the language of the UI
-# see https://pypi.org/project/python-i18n/
-import i18n
-from i18n import t
-i18n.set('filename_format', '{locale}.{format}')
-i18n.load_path.append(os.path.join(app_dir, 'trans'))
-
-
 def _show_startup_error(message: str) -> None:
     """Show a message box during startup failures if possible."""
     root = None
@@ -278,47 +273,6 @@ def _show_startup_error(message: str) -> None:
     finally:
         if root is not None:
             root.destroy()
-
-try:
-    app_locale = config['locale']
-except:
-    app_locale = 'auto'
-
-if app_locale == 'auto': # read system locale settings
-    try:
-        if platform.system() == 'Windows':
-            app_locale = locale.getdefaultlocale()[0][0:2]
-        elif platform.system() == "Darwin": # = MAC
-            app_locale = Foundation.NSUserDefaults.standardUserDefaults().stringForKey_('AppleLocale')[0:2]
-    except:
-        app_locale = 'en'
-i18n.set('fallback', 'en')
-
-translation_error = ''
-print('\nnoScribe')
-try:
-    i18n.set('locale', app_locale)
-    print(t('app_header'), '\n')
-    config['locale'] = app_locale
-except Exception as locale_error:
-    translation_error = f"Failed to load translation for locale '{app_locale}'. Falling back to English.\n\n"
-    if app_locale != 'en':
-        try:
-            i18n.set('locale', 'en')
-            print(t('app_header'), '\n')
-            app_locale = 'en'
-        except Exception as english_error:
-            print("Failed to load English fallback translation.")
-            _show_startup_error(
-                'NoScribe could not load the English fallback translation and needs to close.'
-            )
-            raise SystemExit(1) from english_error
-    else:
-        print("English translation failed to load during startup.")
-        _show_startup_error(
-            'noScribe could not load the English translation and needs to close.'
-        )
-        raise SystemExit(1) from locale_error
 
 # determine optimal number of threads for faster-whisper (depending on cpu cores)
 if platform.system() == 'Windows':
@@ -991,13 +945,13 @@ class App(ctk.CTk):
             self.geometry(f"{1100}x{765}")
         else:
             self.geometry(f"{1100}x{690}")
+
         if platform.system() in ("Darwin", "Windows"):
-            self.iconbitmap(os.path.join(app_dir, "img", "noScribeLogo.ico"))
+            self.iconbitmap(impres.files("img") / "noScribeLogo.ico")
         if platform.system() == "Linux":
-            if hasattr(sys, "_MEIPASS"):
-                self.iconphoto(True, tk.PhotoImage(file=os.path.join(sys._MEIPASS, "img", "noScribeLogo.png")))
-            else:
-                self.iconphoto(True, tk.PhotoImage(file=os.path.join("img", "noScribeLogo.png")))
+            self.iconphoto(
+                True, tk.PhotoImage(file=impres.files("img") / "noScribeLogo.png")
+            )
 
         # header
         self.frame_header = ctk.CTkFrame(self, height=100)
@@ -1014,7 +968,10 @@ class App(ctk.CTk):
         self.header_label = ctk.CTkLabel(self.frame_header_logo, text=t('app_header'), font=ctk.CTkFont(size=16, weight="bold"))
         self.header_label.pack(padx=20, pady=[0, 20], anchor='w')
         # graphic
-        self.header_graphic = ctk.CTkImage(dark_image=Image.open(os.path.join(app_dir, "img", "graphic_sw.png")), size=(926,119))
+        self.header_graphic = ctk.CTkImage(
+            dark_image=Image.open(impres.files("img") / "graphic_sw.png"),
+            size=(926,119)
+        )
         self.header_graphic_label = ctk.CTkLabel(self.frame_header, image=self.header_graphic, text='')
         self.header_graphic_label.pack(anchor='ne', side='right', padx=[30,30])
 
@@ -1366,8 +1323,6 @@ class App(ctk.CTk):
 
         self.update_scrollbar_visibility()
         
-        self.log(translation_error, 'error') # will be empty if no error occurred        
-
         self.logn(t('welcome_message'), 'highlight')
         self.log(t('welcome_credits', v=app_version, y=app_year))
         self.logn('https://github.com/kaixxx/noScribe', link='https://github.com/kaixxx/noScribe#readme')
@@ -1407,7 +1362,8 @@ class App(ctk.CTk):
                         self.whisper_model_paths[entry]=entry_path 
        
         # collect system models:
-        collect_models(os.path.join(app_dir, 'models'))
+        with impres.as_file(impres.files("models")) as mypath:
+            collect_models(mypath)
         
         # collect user defined models:        
         collect_models(self.user_models_dir)
@@ -1936,17 +1892,17 @@ class App(ctk.CTk):
 
         program: str = None
         if platform.system() == 'Windows':
-            program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit.exe')
+            program = impres.files("noScribeEdit") / "noScribeEdit.exe"
         elif platform.system() == "Darwin": # = MAC
             # use local copy in development, installed one if used as an app:
-            program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit')
-            if not os.path.exists(program):
-                program = os.path.join(os.sep, 'Applications', 'noScribeEdit.app', 'Contents', 'MacOS', 'noScribeEdit')
+            program = impres.files("noScribeEdit") / "noScribeEdit"
+            if not program.exists():
+                program = Path("/Applications") / "noScribeEdit.app" / "Contents" / "MacOS" / "noScribeEdit"
         elif platform.system() == "Linux":
             if hasattr(sys, "_MEIPASS"):
-                program = os.path.join(sys._MEIPASS, 'noScribeEdit', "noScribeEdit")
+                program = Path(sys._MEIPASS) / "noScribeEdit" / "noScribeEdit"
             else:
-                program = os.path.join(app_dir, 'noScribeEdit', "noScribeEdit.py")
+                program = impres.files("noScribeEdit") / "noScribeEdit.py"
         kwargs = {}
         if platform.system() == 'Windows':
             # from msdn [1]
@@ -3009,7 +2965,7 @@ class App(ctk.CTk):
             "word_timestamps": True,
             "vad_filter": True,
             "vad_threshold": vad_threshold,
-            "locale": app_locale,
+            "locale": config.get("locale", "en"),
         }
 
         # Spawn child process using spawn start method
@@ -3454,6 +3410,80 @@ def show_available_models():
             _cleanup_app(app)
 
 def noScribeMain():
+    """
+    Main entry point for the noScribe app.
+    """
+
+    # Get desired locale from the user as defined in the config file or use
+    # the system locale.
+    app_locale = config.get("locale", "auto")
+
+    if app_locale == "auto":
+        try:
+            app_locale = locale.getlocale()[0][0:2].lower()
+            logger.debug("Identifying user locale as \"%s\".", app_locale)
+        except Exception as e:
+            logger.exception(e)
+            logger.warning(
+                "Could not determine system locale. "
+                "Using \"en\" as fallback."
+            )
+            # If anything goes wrong, use English as the default setting.
+            app_locale = "en"
+
+        config["locale"] = app_locale
+
+    # This is necessary due to the use of python-i18n. It does not work very
+    # well with pyinstaller and the use of `importlib.resources` but which is
+    # necessary if using an own noScribe module directory. i18n will fail every
+    # time it can't find a string in an unsupported language if the directory
+    # from `i18n.load_path.append()` is not avaible anymore (which is the case
+    # for `importlib.resources` files). Thus, we need to check whether the
+    # current locale is a supported one in i18n translation files.
+    #
+    # TODO: switch to getttext soon (see below).
+    if app_locale not in suppported_locales:
+        logger.warning(
+            "Unsupported system locale \"%s\". Using \"en\" as fallback.",
+            app_locale
+        )
+        app_locale = "en"
+        config["locale"] = app_locale
+
+    # Localisation settings
+    #
+    # See: https://pypi.org/project/python-i18n/
+    #
+    # TODO: python-i18n is unmaintaind for 6 years now. Replace it with the gettext
+    # implementation from the python standard library.
+    #
+    # Using memoization (keeps all translations in memory instead of loading
+    # each translation from file). This should make things faster and increased
+    # memory usage should be negligible (in the case of a ML app). This way, it
+    # is possible to use `importlib.ressources` to provide the translation file
+    # once and i18n does not need to access it later. However, it is necessary
+    # to translate one string to have it available throughout the app lifetime.
+    i18n.set("filename_format", "{locale}.{format}")
+    i18n.set("enable_memoization", True)
+    i18n.set("fallback", "en")
+    i18n.set("locale", app_locale)
+
+    with impres.as_file(impres.files("trans")) as mypath:
+        i18n.load_path.append(mypath)
+
+        try:
+            print("\nnoScribe")
+            print(t("app_header"), "\n")
+        except Exception as e:
+            logger.error(
+                "Failed to load localization files. "
+                "noScribe cannot start without them and needs to close."
+            )
+            _show_startup_error(
+                "noScribe could not load localization files and needs to close."
+            )
+            raise exception.LocalizationLoadingError from e
+
     # Parse command line arguments
     args = parse_cli_args()
 

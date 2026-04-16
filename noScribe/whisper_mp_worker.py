@@ -31,22 +31,25 @@ def whisper_proc_entrypoint(args: dict, q):
             except Exception:
                 pass
 
-        # Initialize i18n in child process (PyInstaller uses spawn; no globals shared)
-        try:
-            i18n.set('filename_format', '{locale}.{format}')
-            # Ensure translations directory is available to python-i18n
-            # TODO: python-i18n is unmaintained for more than five years.
-            # Switch away from it and be able to use `impres.files("trans")`
-            # directly.
-            path_trans = impres.files("trans") / ".." / "trans"
-            i18n.load_path.append(path_trans)
-            i18n.set('fallback', 'en')
-            # Use locale passed by parent when available
-            child_locale = args.get('locale') or 'en'
-            i18n.set('locale', child_locale)
-        except Exception:
-            # Safe fallback: leave i18n defaults; keys may pass through
-            pass
+        # Initialize python-i18n in child process (PyInstaller uses spawn; no
+        # globals shared).
+        #
+        # TODO: python-i18n is unmaintained for more than five years.
+        #
+        # See the main file for more information on python-i18n and the
+        # approach. Here nothing should actually fail as any possible
+        # exceptions were already handled/checked in the main app.
+        i18n.set("filename_format", "{locale}.{format}")
+        i18n.set("enable_memoization", True)
+        i18n.set("fallback", "en")
+        i18n.set("locale", args.get("locale", "en"))
+
+        with impres.as_file(impres.files("trans")) as mypath:
+            i18n.load_path.append(mypath)
+
+            # Using `t` once here to load the localization files into memory.
+            # As there is no `print`, nothing happens really.
+            t("app_header")
         
         # determine device
         device = args.get("device", "")
