@@ -1,6 +1,6 @@
 # This Github Action is based on
 # https://docs.github.com/en/actions/tutorials/build-and-test-code/python
-name: noScribe
+name: pytest
 
 on: [push, pull_request]
 
