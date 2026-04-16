@@ -1,1 +1,1 @@
-from . import noScribe
+from noScribe import main
