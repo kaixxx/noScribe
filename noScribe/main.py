@@ -15,70 +15,61 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import sys
 import argparse
+import datetime
+import html
+import importlib.resources as impres
+import json
+import locale
+import logging
+import multiprocessing as mp
 import os
+import platform
+import queue as pyqueue
+import re
+import sys
+import tkinter as tk
+import traceback
+import urllib
+import webbrowser
+from enum import Enum
+from functools import partial
+from pathlib import Path
+from subprocess import Popen, run
+from tempfile import TemporaryDirectory
+from threading import Thread
+from typing import Optional
+
+import AdvancedHTMLParser
+import appdirs
+import customtkinter as ctk
+import i18n
+import yaml
+from customtkinter.windows.widgets.scaling import CTkScalingBaseClass
+from faster_whisper.audio import decode_audio
+from faster_whisper.vad import VadOptions, get_speech_timestamps
+from i18n import t
+from PIL import Image
+
+from . import audio, exception, utils
+from .CTkToolTips import CTkToolTip
+from .tkHyperlinkManager import HyperlinkManager
+
+if platform.system() == "Darwin": # = MAC
+    from subprocess import check_output
+    if platform.machine() == "x86_64":
+        # prevent OMP: Error #15: Initializing libomp.dylib, but found
+        # libiomp5.dylib already initialized.
+        os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
+if platform.system() == 'Windows':
+    import cpufeature
+
 # In the compiled version (no command line), stdout is None which might lead to errors
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w")
 if sys.stderr is None:
     sys.stderr = open(os.devnull, "w")
-
-import tkinter as tk
-import customtkinter as ctk
-from customtkinter.windows.widgets.scaling import CTkScalingBaseClass
-from .CTkToolTips import CTkToolTip
-from .tkHyperlinkManager import HyperlinkManager
-import webbrowser
-from functools import partial
-from PIL import Image
-import platform
-import yaml
-import locale
-import appdirs
-from subprocess import run, Popen, PIPE, STDOUT, DEVNULL
-if platform.system() == 'Windows':
-    # import torch.cuda # to check with torch.cuda.is_available()
-    from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
-#if platform.system() in ("Windows", "Linux"):
-#    from ctranslate2 import get_cuda_device_count
-#    import torch
-import re
-if platform.system() == "Darwin": # = MAC
-    from subprocess import check_output
-    if platform.machine() == "x86_64":
-        os.environ['KMP_DUPLICATE_LIB_OK']='True' # prevent OMP: Error #15: Initializing libomp.dylib, but found libiomp5.dylib already initialized.
-    # import torch.backends.mps # loading torch modules leads to segmentation fault later
-from faster_whisper.audio import decode_audio
-from faster_whisper.vad import VadOptions, get_speech_timestamps
-import AdvancedHTMLParser
-import html
-from threading import Thread
-from tempfile import TemporaryDirectory
-import datetime
-from pathlib import Path
-if platform.system() in ("Darwin", "Linux"):
-    import shlex
-if platform.system() == 'Windows':
-    import cpufeature
-import logging
-import json
-import urllib
-import multiprocessing as mp
-import queue as pyqueue
-import gc
-import i18n
-from i18n import t
-import traceback
-from enum import Enum
-from typing import Optional, List
-import time
-
-import importlib.resources as impres
-
-from . import utils
-from . import audio
-from . import exception
 
  # Pyinstaller fix, used to open multiple instances on Mac
 mp.freeze_support()
@@ -466,30 +457,30 @@ class TranscriptionQueue:
     """Manages a queue of transcription jobs"""
     
     def __init__(self):
-        self.jobs: List[TranscriptionJob] = []
+        self.jobs: list[TranscriptionJob] = []
         self.current_job: Optional[TranscriptionJob] = None  # Track currently running job
     
     def add_job(self, job: TranscriptionJob):
         """Add a job to the queue"""
         self.jobs.append(job)
     
-    def get_waiting_jobs(self) -> List[TranscriptionJob]:
+    def get_waiting_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs with WAITING status"""
         return [job for job in self.jobs if job.status == JobStatus.WAITING]
     
-    def get_running_jobs(self) -> List[TranscriptionJob]:
+    def get_running_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs currently being processed"""
         return [job for job in self.jobs if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION, JobStatus.CANCELING]]
     
-    def get_finished_jobs(self) -> List[TranscriptionJob]:
+    def get_finished_jobs(self) -> list[TranscriptionJob]:
         """Get all successfully completed jobs"""
         return [job for job in self.jobs if job.status == JobStatus.FINISHED]
     
-    def get_failed_jobs(self) -> List[TranscriptionJob]:
+    def get_failed_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs that encountered errors"""
         return [job for job in self.jobs if job.status == JobStatus.ERROR]
 
-    def get_canceled_jobs(self) -> List[TranscriptionJob]:
+    def get_canceled_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs that were canceled by the user"""
         return [job for job in self.jobs if job.status == JobStatus.CANCELED]
     
