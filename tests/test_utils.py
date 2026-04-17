@@ -2,9 +2,11 @@
 Tests for the `utils.py` file / module.
 """
 
-from pathlib import Path
+import html
 import importlib.resources as impres
+from pathlib import Path
 
+import AdvancedHTMLParser
 import pytest
 import utils
 
@@ -282,7 +284,7 @@ def test_html_to_webvtt():
         <p></p>
         <p><a name="ts_0_12140_s1"></a></p>
         <p><a name="ts_0_12140_s1"> </a></p>
-        <p><a name="ts_0_12140_s1">I said something.</a></p>
+        <p><a name="ts_0_12140_s1">I said something about Romy's story.</a></p>
     </body>
     """
     result_string = (
@@ -291,7 +293,7 @@ def test_html_to_webvtt():
         "My Information Header\n\n"
         "1\n"
         "00:00:00.000 --> 00:00:12.140\n"
-        "<v s1>I said something.\n\n"
+        "<v s1>I said something about Romy's story.\n\n"
     )
     assert utils.html_to_webvtt(html_string) == result_string
 
@@ -303,3 +305,63 @@ def test_html_to_webvtt():
     result_string = result_file.read_text(encoding="utf-8")
 
     assert utils.html_to_webvtt(html_string) == result_string
+
+
+class TestApostropheFix:
+    """
+    Tests that apostrophes are correctly preserved in all output formats.
+
+    See https://github.com/kaixxx/noScribe/issues/272 and
+    https://github.com/kaixxx/noScribe/pull/273 for a discussion. However,
+    other entities should still be transformed.
+
+    TODO: Do this for all different output formats. After refactoring the
+    remaining code, check the HTML output format here as well.
+    """
+
+    def _build_doc_with_text(self, text: str) -> AdvancedHTMLParser.AdvancedHTMLParser:
+        """
+        Simulate how noScribe builds the HTML DOM with transcript text. TODO:
+        replace this with the actual code from noscribe after refactoring.
+        """
+
+        d = AdvancedHTMLParser.AdvancedHTMLParser()
+        d.parseStr("<html><body></body></html>")
+
+        p = d.createElement("p")
+        d.body.appendChild(p)
+
+        # This mirrors line 2859 + 2922-2923 of noScribe.py (after the fix)
+        seg_html = html.escape(text, quote=False)
+        a_html = f'<a name="ts_0_1000_S01" >{seg_html}</a>'
+        a = d.createElementFromHTML(a_html)
+        p.appendChild(a)
+
+        return d
+
+    def test_not_escaping_apostrophes_webvtt(self):
+        result = utils._vtt_escape("Romy's story")
+
+        assert "Romy's" in result, (
+            f"Expected literal apostrophe in VTT output, got: {result}"
+        )
+        assert "&#x27;" not in result, f"Found &#x27; entity in VTT output: {result}"
+
+        # Ensure that <, >, & are still properly escaped in VTT.
+        result = utils._vtt_escape("a < b & c > d")
+        assert "&lt;" in result, "< should be escaped to &lt;"
+        assert "&amp;" in result, "& should be escaped to &amp;"
+        assert "&gt;" in result, "> should be escaped to &gt;"
+
+    def test_not_escaping_apostrophes_txt(self):
+        d = self._build_doc_with_text("Romy's story")
+        txt_out = utils.html_to_text(d.asHTML(), use_only_body=True)
+        assert "Romy's" in txt_out, (
+            f"Expected literal apostrophe in TXT output, got: {txt_out}"
+        )
+        assert "&#x27;" not in txt_out, f"Found &#x27; entity in TXT output: {txt_out}"
+
+        # Ensure that <, >, & are still the same in plain text.
+        d = self._build_doc_with_text("a < b & c > d")
+        txt_out = utils.html_to_text(d.asHTML(), use_only_body=True)
+        assert txt_out == "a < b & c > d"
