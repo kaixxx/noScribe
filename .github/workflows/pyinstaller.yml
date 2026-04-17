@@ -1,0 +1,61 @@
+name: pyinstaller
+
+# Running on push events as well as on pull requests to ensure that merge
+# requests lead to a working pyinstaller build as well. However, only after the
+# pytest workflow succeeded.
+on:
+  workflow_run:
+    workflows: [pytest]
+    types: [completed]
+# TODO: change this in something like that after publishing the pyinstaller
+# builds from the CI directly to github releases.
+#on:
+#  workflow_run:
+#    workflows: ["noScribe - pytest"]
+#    types:
+#      - completed
+#    push:
+#      branches:
+#        main
+
+# Restrict permissions for safety reasons.
+# See here: https://openssf.org/blog/2024/08/12/mitigating-attack-vectors-in-github-workflows/
+permissions:
+  contents: read
+
+jobs:
+  pyinstaller:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        # Use other operating systems as well when builds are actually used and
+        # distributed this way.
+        #os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
+        # Use the highest supported python version by noScribe.
+        python-version: ["3.13"]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      # You can test your matrix by printing the current Python version
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+        
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r environments/requirements_linux.txt
+
+      - name: Build with pyinstaller
+        run: pyinstaller pyinstaller/noScribe_linux.spec
+
+      - name: Check whether build works basically
+        run: ./dist/noScribe/noScribe -h

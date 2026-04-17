@@ -1,3 +1,4 @@
+import importlib.resources as impres
 import gc
 import os
 import platform
@@ -30,19 +31,25 @@ def whisper_proc_entrypoint(args: dict, q):
             except Exception:
                 pass
 
-        # Initialize i18n in child process (PyInstaller uses spawn; no globals shared)
-        try:
-            app_dir = os.path.abspath(os.path.dirname(__file__))
-            i18n.set('filename_format', '{locale}.{format}')
-            # Ensure translations directory is available to python-i18n
-            i18n.load_path.append(os.path.join(app_dir, 'trans'))
-            i18n.set('fallback', 'en')
-            # Use locale passed by parent when available
-            child_locale = args.get('locale') or 'en'
-            i18n.set('locale', child_locale)
-        except Exception:
-            # Safe fallback: leave i18n defaults; keys may pass through
-            pass
+        # Initialize python-i18n in child process (PyInstaller uses spawn; no
+        # globals shared).
+        #
+        # TODO: python-i18n is unmaintained for more than five years.
+        #
+        # See the main file for more information on python-i18n and the
+        # approach. Here nothing should actually fail as any possible
+        # exceptions were already handled/checked in the main app.
+        i18n.set("filename_format", "{locale}.{format}")
+        i18n.set("enable_memoization", True)
+        i18n.set("fallback", "en")
+        i18n.set("locale", args.get("locale", "en"))
+
+        with impres.as_file(impres.files("trans")) as mypath:
+            i18n.load_path.append(mypath)
+
+            # Using `t` once here to load the localization files into memory.
+            # As there is no `print`, nothing happens really.
+            t("app_header")
         
         # determine device
         device = args.get("device", "")
@@ -59,7 +66,7 @@ def whisper_proc_entrypoint(args: dict, q):
             
         # Build model in child using provided options
         model = WhisperModel(
-            args["model_name_or_path"],
+            str(args["model_name_or_path"]),
             device=device,
             compute_type=args.get("compute_type", "float16"),
             cpu_threads=args.get("cpu_threads", 4),
@@ -120,7 +127,7 @@ def whisper_proc_entrypoint(args: dict, q):
         else:
             prompt_file = 'prompt_nd.yml'         
         try:
-            with open(os.path.join(app_dir, prompt_file), 'r', encoding='utf-8') as f:
+            with impres.files(prompt_file).open("r", encoding="utf-8") as f:
                 prompts = yaml.safe_load(f) or {}
             prompt = prompts.get(whisper_lang, '')
         except Exception:

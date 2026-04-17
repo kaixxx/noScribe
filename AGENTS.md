@@ -1,1 +1,1 @@
-Main app is in noScribe.py
+Module of the app is in "noScribe/" module directory.

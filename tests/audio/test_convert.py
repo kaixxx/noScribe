@@ -3,7 +3,7 @@ import importlib.resources as impres
 import pytest
 import av
 
-import audio
+from noScribe import audio
 
 
 def test_to_wav_with_expected_input(tmp_path):
@@ -12,7 +12,7 @@ def test_to_wav_with_expected_input(tmp_path):
     """
 
     # Use whole interview file.
-    path_input = impres.files("noScribe") / "tests" / "data" / "interview.mp3"
+    path_input = impres.files("tests") / "data" / "interview.mp3"
     path_output = tmp_path / "interview.wav"
 
     # Convert
@@ -44,7 +44,7 @@ def test_to_wav_overwrites_output_file(tmp_path):
     """
 
     # Use whole interview file.
-    path_input = impres.files("noScribe") / "tests" / "data" / "interview.mp3"
+    path_input = impres.files("tests") / "data" / "interview.mp3"
     path_output = tmp_path / "interview.wav"
 
     with audio.convert.ToWav(path_input, path_output) as towav:
@@ -69,7 +69,7 @@ def test_to_wav_start_stop_args(tmp_path):
     Test the `ToWav` class that only parts of a file can be converted.
     """
 
-    path_input = impres.files("noScribe") / "tests" / "data" / "interview.mp3"
+    path_input = impres.files("tests") / "data" / "interview.mp3"
     path_output = tmp_path / "interview-part0.wav"
 
     # Use a start time for conversion.

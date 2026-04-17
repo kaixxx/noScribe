@@ -15,77 +15,73 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import sys
 import argparse
+import datetime
+import html
+import importlib.resources as impres
+import json
+import locale
+import logging
+import multiprocessing as mp
 import os
+import platform
+import queue as pyqueue
+import re
+import sys
+import tkinter as tk
+import traceback
+import urllib
+import webbrowser
+from enum import Enum
+from functools import partial
+from pathlib import Path
+from subprocess import Popen, run
+from tempfile import TemporaryDirectory
+from threading import Thread
+from typing import Optional
+
+import AdvancedHTMLParser
+import appdirs
+import customtkinter as ctk
+import i18n
+import yaml
+from customtkinter.windows.widgets.scaling import CTkScalingBaseClass
+from faster_whisper.audio import decode_audio
+from faster_whisper.vad import VadOptions, get_speech_timestamps
+from i18n import t
+from PIL import Image
+
+from . import audio, exception, utils
+from .CTkToolTips import CTkToolTip
+from .tkHyperlinkManager import HyperlinkManager
+
+if platform.system() == "Darwin": # = MAC
+    from subprocess import check_output
+    if platform.machine() == "x86_64":
+        # prevent OMP: Error #15: Initializing libomp.dylib, but found
+        # libiomp5.dylib already initialized.
+        os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
+if platform.system() == 'Windows':
+    import cpufeature
+
 # In the compiled version (no command line), stdout is None which might lead to errors
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w")
 if sys.stderr is None:
     sys.stderr = open(os.devnull, "w")
 
-import tkinter as tk
-import customtkinter as ctk
-from customtkinter.windows.widgets.scaling import CTkScalingBaseClass
-from CTkToolTips import CTkToolTip
-from tkHyperlinkManager import HyperlinkManager
-import webbrowser
-from functools import partial
-from PIL import Image
-import platform
-import yaml
-import locale
-import appdirs
-from subprocess import run, Popen, PIPE, STDOUT, DEVNULL
-if platform.system() == 'Windows':
-    # import torch.cuda # to check with torch.cuda.is_available()
-    from subprocess import STARTUPINFO, STARTF_USESHOWWINDOW
-#if platform.system() in ("Windows", "Linux"):
-#    from ctranslate2 import get_cuda_device_count
-#    import torch
-import re
-if platform.system() == "Darwin": # = MAC
-    from subprocess import check_output
-    if platform.machine() == "x86_64":
-        os.environ['KMP_DUPLICATE_LIB_OK']='True' # prevent OMP: Error #15: Initializing libomp.dylib, but found libiomp5.dylib already initialized.
-    # import torch.backends.mps # loading torch modules leads to segmentation fault later
-from faster_whisper.audio import decode_audio
-from faster_whisper.vad import VadOptions, get_speech_timestamps
-import AdvancedHTMLParser
-import html
-from threading import Thread
-from tempfile import TemporaryDirectory
-import datetime
-from pathlib import Path
-if platform.system() in ("Darwin", "Linux"):
-    import shlex
-if platform.system() == 'Windows':
-    import cpufeature
-if platform.system() == 'Darwin':
-    import Foundation
-import logging
-import json
-import urllib
-import multiprocessing as mp
-import queue as pyqueue
-import gc
-import traceback
-from enum import Enum
-from typing import Optional, List
-import time
-
-import utils
-import audio
-
  # Pyinstaller fix, used to open multiple instances on Mac
 mp.freeze_support()
 
+
+# Initialize logging facility
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
+logger = logging.getLogger()
 
 app_version = '0.7.2'
 app_year = '2026'
-app_dir = os.path.abspath(os.path.dirname(__file__))
 
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
@@ -172,6 +168,8 @@ languages = {
     "Welsh": "cy",
 }
 
+suppported_locales = ["de", "en", "es", "fr", "it", "ja", "pt", "ru", "zh"]
+
 # config
 config_dir = appdirs.user_config_dir('noScribe')
 if not os.path.exists(config_dir):
@@ -254,14 +252,6 @@ def save_config():
 
 save_config()
 
-# locale: setting the language of the UI
-# see https://pypi.org/project/python-i18n/
-import i18n
-from i18n import t
-i18n.set('filename_format', '{locale}.{format}')
-i18n.load_path.append(os.path.join(app_dir, 'trans'))
-
-
 def _show_startup_error(message: str) -> None:
     """Show a message box during startup failures if possible."""
     root = None
@@ -274,47 +264,6 @@ def _show_startup_error(message: str) -> None:
     finally:
         if root is not None:
             root.destroy()
-
-try:
-    app_locale = config['locale']
-except:
-    app_locale = 'auto'
-
-if app_locale == 'auto': # read system locale settings
-    try:
-        if platform.system() == 'Windows':
-            app_locale = locale.getdefaultlocale()[0][0:2]
-        elif platform.system() == "Darwin": # = MAC
-            app_locale = Foundation.NSUserDefaults.standardUserDefaults().stringForKey_('AppleLocale')[0:2]
-    except:
-        app_locale = 'en'
-i18n.set('fallback', 'en')
-
-translation_error = ''
-print('\nnoScribe')
-try:
-    i18n.set('locale', app_locale)
-    print(t('app_header'), '\n')
-    config['locale'] = app_locale
-except Exception as locale_error:
-    translation_error = f"Failed to load translation for locale '{app_locale}'. Falling back to English.\n\n"
-    if app_locale != 'en':
-        try:
-            i18n.set('locale', 'en')
-            print(t('app_header'), '\n')
-            app_locale = 'en'
-        except Exception as english_error:
-            print("Failed to load English fallback translation.")
-            _show_startup_error(
-                'NoScribe could not load the English fallback translation and needs to close.'
-            )
-            raise SystemExit(1) from english_error
-    else:
-        print("English translation failed to load during startup.")
-        _show_startup_error(
-            'noScribe could not load the English translation and needs to close.'
-        )
-        raise SystemExit(1) from locale_error
 
 # determine optimal number of threads for faster-whisper (depending on cpu cores)
 if platform.system() == 'Windows':
@@ -508,30 +457,30 @@ class TranscriptionQueue:
     """Manages a queue of transcription jobs"""
     
     def __init__(self):
-        self.jobs: List[TranscriptionJob] = []
+        self.jobs: list[TranscriptionJob] = []
         self.current_job: Optional[TranscriptionJob] = None  # Track currently running job
     
     def add_job(self, job: TranscriptionJob):
         """Add a job to the queue"""
         self.jobs.append(job)
     
-    def get_waiting_jobs(self) -> List[TranscriptionJob]:
+    def get_waiting_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs with WAITING status"""
         return [job for job in self.jobs if job.status == JobStatus.WAITING]
     
-    def get_running_jobs(self) -> List[TranscriptionJob]:
+    def get_running_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs currently being processed"""
         return [job for job in self.jobs if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION, JobStatus.CANCELING]]
     
-    def get_finished_jobs(self) -> List[TranscriptionJob]:
+    def get_finished_jobs(self) -> list[TranscriptionJob]:
         """Get all successfully completed jobs"""
         return [job for job in self.jobs if job.status == JobStatus.FINISHED]
     
-    def get_failed_jobs(self) -> List[TranscriptionJob]:
+    def get_failed_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs that encountered errors"""
         return [job for job in self.jobs if job.status == JobStatus.ERROR]
 
-    def get_canceled_jobs(self) -> List[TranscriptionJob]:
+    def get_canceled_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs that were canceled by the user"""
         return [job for job in self.jobs if job.status == JobStatus.CANCELED]
     
@@ -724,10 +673,10 @@ def parse_cli_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python noScribe.py audio.wav transcript.html
-  python noScribe.py audio.mp3 transcript.txt --language en --speaker-detection 2
-  python noScribe.py audio.wav transcript.vtt --start 00:01:30 --stop 00:05:00
-  python noScribe.py --help-models  # Show available models
+  python -m noScribe audio.wav transcript.html
+  python -m noScribe audio.mp3 transcript.txt --language en --speaker-detection 2
+  python -m noScribe audio.wav transcript.vtt --start 00:01:30 --stop 00:05:00
+  python -m noScribe --help-models  # Show available models
         """
     )
     
@@ -987,13 +936,13 @@ class App(ctk.CTk):
             self.geometry(f"{1100}x{765}")
         else:
             self.geometry(f"{1100}x{690}")
+
         if platform.system() in ("Darwin", "Windows"):
-            self.iconbitmap(os.path.join(app_dir, 'noScribeLogo.ico'))
+            self.iconbitmap(impres.files("img") / "noScribeLogo.ico")
         if platform.system() == "Linux":
-            if hasattr(sys, "_MEIPASS"):
-                self.iconphoto(True, tk.PhotoImage(file=os.path.join(sys._MEIPASS, "noScribeLogo.png")))
-            else:
-                self.iconphoto(True, tk.PhotoImage(file='noScribeLogo.png'))
+            self.iconphoto(
+                True, tk.PhotoImage(file=impres.files("img") / "noScribeLogo.png")
+            )
 
         # header
         self.frame_header = ctk.CTkFrame(self, height=100)
@@ -1010,7 +959,10 @@ class App(ctk.CTk):
         self.header_label = ctk.CTkLabel(self.frame_header_logo, text=t('app_header'), font=ctk.CTkFont(size=16, weight="bold"))
         self.header_label.pack(padx=20, pady=[0, 20], anchor='w')
         # graphic
-        self.header_graphic = ctk.CTkImage(dark_image=Image.open(os.path.join(app_dir, 'graphic_sw.png')), size=(926,119))
+        self.header_graphic = ctk.CTkImage(
+            dark_image=Image.open(impres.files("img") / "graphic_sw.png"),
+            size=(926,119)
+        )
         self.header_graphic_label = ctk.CTkLabel(self.frame_header, image=self.header_graphic, text='')
         self.header_graphic_label.pack(anchor='ne', side='right', padx=[30,30])
 
@@ -1362,8 +1314,6 @@ class App(ctk.CTk):
 
         self.update_scrollbar_visibility()
         
-        self.log(translation_error, 'error') # will be empty if no error occurred        
-
         self.logn(t('welcome_message'), 'highlight')
         self.log(t('welcome_credits', v=app_version, y=app_year))
         self.logn('https://github.com/kaixxx/noScribe', link='https://github.com/kaixxx/noScribe#readme')
@@ -1403,7 +1353,8 @@ class App(ctk.CTk):
                         self.whisper_model_paths[entry]=entry_path 
        
         # collect system models:
-        collect_models(os.path.join(app_dir, 'models'))
+        with impres.as_file(impres.files("models")) as mypath:
+            collect_models(mypath)
         
         # collect user defined models:        
         collect_models(self.user_models_dir)
@@ -1932,17 +1883,17 @@ class App(ctk.CTk):
 
         program: str = None
         if platform.system() == 'Windows':
-            program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit.exe')
+            program = impres.files("noScribeEdit") / "noScribeEdit.exe"
         elif platform.system() == "Darwin": # = MAC
             # use local copy in development, installed one if used as an app:
-            program = os.path.join(app_dir, 'noScribeEdit', 'noScribeEdit')
-            if not os.path.exists(program):
-                program = os.path.join(os.sep, 'Applications', 'noScribeEdit.app', 'Contents', 'MacOS', 'noScribeEdit')
+            program = impres.files("noScribeEdit") / "noScribeEdit"
+            if not program.exists():
+                program = Path("/Applications") / "noScribeEdit.app" / "Contents" / "MacOS" / "noScribeEdit"
         elif platform.system() == "Linux":
             if hasattr(sys, "_MEIPASS"):
-                program = os.path.join(sys._MEIPASS, 'noScribeEdit', "noScribeEdit")
+                program = Path(sys._MEIPASS) / "noScribeEdit" / "noScribeEdit"
             else:
-                program = os.path.join(app_dir, 'noScribeEdit', "noScribeEdit.py")
+                program = impres.files("noScribeEdit") / "noScribeEdit.py"
         kwargs = {}
         if platform.system() == 'Windows':
             # from msdn [1]
@@ -3005,13 +2956,13 @@ class App(ctk.CTk):
             "word_timestamps": True,
             "vad_filter": True,
             "vad_threshold": vad_threshold,
-            "locale": app_locale,
+            "locale": config.get("locale", "en"),
         }
 
         # Spawn child process using spawn start method
         ctx = mp.get_context("spawn")
         q = ctx.Queue()
-        from whisper_mp_worker import whisper_proc_entrypoint
+        from .whisper_mp_worker import whisper_proc_entrypoint
         proc = ctx.Process(target=whisper_proc_entrypoint, args=(args, q))
         proc.start()
         # Expose to allow cancel to terminate the child
@@ -3114,7 +3065,7 @@ class App(ctk.CTk):
         global force_pyannote_cpu
         ctx = mp.get_context("spawn")
         q = ctx.Queue()
-        from pyannote_mp_worker import pyannote_proc_entrypoint
+        from .pyannote_mp_worker import pyannote_proc_entrypoint
         args = {
             "device": 'cpu' if force_pyannote_cpu else '',
             "audio_path": tmp_audio_file,
@@ -3449,7 +3400,81 @@ def show_available_models():
         if app is not None:
             _cleanup_app(app)
 
-if __name__ == "__main__":
+def noScribeMain():
+    """
+    Main entry point for the noScribe app.
+    """
+
+    # Get desired locale from the user as defined in the config file or use
+    # the system locale.
+    app_locale = config.get("locale", "auto")
+
+    if app_locale == "auto":
+        try:
+            app_locale = locale.getlocale()[0][0:2].lower()
+            logger.debug("Identifying user locale as \"%s\".", app_locale)
+        except Exception as e:
+            logger.exception(e)
+            logger.warning(
+                "Could not determine system locale. "
+                "Using \"en\" as fallback."
+            )
+            # If anything goes wrong, use English as the default setting.
+            app_locale = "en"
+
+        config["locale"] = app_locale
+
+    # This is necessary due to the use of python-i18n. It does not work very
+    # well with pyinstaller and the use of `importlib.resources` but which is
+    # necessary if using an own noScribe module directory. i18n will fail every
+    # time it can't find a string in an unsupported language if the directory
+    # from `i18n.load_path.append()` is not avaible anymore (which is the case
+    # for `importlib.resources` files). Thus, we need to check whether the
+    # current locale is a supported one in i18n translation files.
+    #
+    # TODO: switch to getttext soon (see below).
+    if app_locale not in suppported_locales:
+        logger.warning(
+            "Unsupported system locale \"%s\". Using \"en\" as fallback.",
+            app_locale
+        )
+        app_locale = "en"
+        config["locale"] = app_locale
+
+    # Localisation settings
+    #
+    # See: https://pypi.org/project/python-i18n/
+    #
+    # TODO: python-i18n is unmaintaind for 6 years now. Replace it with the gettext
+    # implementation from the python standard library.
+    #
+    # Using memoization (keeps all translations in memory instead of loading
+    # each translation from file). This should make things faster and increased
+    # memory usage should be negligible (in the case of a ML app). This way, it
+    # is possible to use `importlib.ressources` to provide the translation file
+    # once and i18n does not need to access it later. However, it is necessary
+    # to translate one string to have it available throughout the app lifetime.
+    i18n.set("filename_format", "{locale}.{format}")
+    i18n.set("enable_memoization", True)
+    i18n.set("fallback", "en")
+    i18n.set("locale", app_locale)
+
+    with impres.as_file(impres.files("trans")) as mypath:
+        i18n.load_path.append(mypath)
+
+        try:
+            print("\nnoScribe")
+            print(t("app_header"), "\n")
+        except Exception as e:
+            logger.error(
+                "Failed to load localization files. "
+                "noScribe cannot start without them and needs to close."
+            )
+            _show_startup_error(
+                "noScribe could not load localization files and needs to close."
+            )
+            raise exception.LocalizationLoadingError from e
+
     # Parse command line arguments
     args = parse_cli_args()
 
@@ -3465,7 +3490,7 @@ if __name__ == "__main__":
             sys.exit(exit_code)
         else:
             print("Error: --no-gui requires both audio_file and output_file.")
-            print("Usage: python noScribe.py <audio_file> <output_file> [options] --no-gui")
+            print("Usage: python -m noScribe <audio_file> <output_file> [options] --no-gui")
             sys.exit(1)
 
     # Default: show GUI, even with CLI args
@@ -3547,3 +3572,6 @@ if __name__ == "__main__":
 
     # Enter GUI main loop
     app.mainloop()
+
+if __name__ == "__main__":
+    noScribeMain()
