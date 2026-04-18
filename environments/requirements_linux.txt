@@ -8,6 +8,7 @@ appdirs
 customtkinter
 CTkToolTip
 faster-whisper
+omegaconf
 Pillow
 pyannote.audio>=4
 pyinstaller
