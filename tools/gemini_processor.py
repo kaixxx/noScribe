@@ -165,6 +165,38 @@ class GeminiResult:
     # Raw response for debugging
     raw_response: Optional[dict] = None
 
+    # Error (if processing failed)
+    error: Optional[str] = None
+
+    @property
+    def parsed_response(self) -> dict:
+        """Reconstruct the dict form that legacy consumers expect."""
+        d = {
+            "transcript": self.transcript,
+            "language": self.language,
+            "title": self.title,
+            "summary": self.summary,
+            "key_points": self.key_points,
+            "tags": self.tags,
+            "participants": self.participants,
+            "sentiment": self.sentiment,
+            "meeting_type": self.meeting_type,
+            "action_items": self.action_items,
+            "decisions_made": self.decisions_made,
+        }
+        if self.lailix_feedback:
+            d["lailix_feedback"] = {
+                "communication_score": self.lailix_feedback.communication_score,
+                "communication_feedback": self.lailix_feedback.communication_feedback,
+                "sales_score": self.lailix_feedback.sales_score,
+                "sales_feedback": self.lailix_feedback.sales_feedback,
+                "strategic_alignment": self.lailix_feedback.strategic_alignment,
+                "improvement_areas": self.lailix_feedback.improvement_areas,
+                "strengths": self.lailix_feedback.strengths,
+                "overall_assessment": self.lailix_feedback.overall_assessment,
+            }
+        return d
+
 
 class GeminiAudioProcessor:
     """Processor for audio files using Gemini 2.5 Flash."""
@@ -213,6 +245,67 @@ class GeminiAudioProcessor:
                 "Install with: pip install google-genai"
             )
 
+    # Audio duration (seconds) above which chunked processing is used.
+    # Flash models hallucinate on long single-shot audio; Pro is slow+flaky.
+    # 15 min is a sweet spot — stays well under model thinking-loop thresholds.
+    CHUNK_THRESHOLD_SEC = 15 * 60
+    CHUNK_DURATION_SEC = 15 * 60
+    CHUNK_OVERLAP_SEC = 30
+
+    def _get_duration(self, audio_path: Path) -> float:
+        import subprocess
+        r = subprocess.run(
+            ['/opt/homebrew/bin/ffprobe', '-v', 'error',
+             '-show_entries', 'format=duration',
+             '-of', 'default=nw=1:nk=1', str(audio_path)],
+            capture_output=True, text=True)
+        return float(r.stdout.strip() or 0)
+
+    def _chunk_audio(self, audio_path: Path) -> list:
+        """Split audio into overlapping chunks for reliable long-audio transcription.
+
+        Returns list of (chunk_path, offset_seconds) tuples.
+        Single-element list if audio doesn't need chunking.
+        """
+        import subprocess, tempfile
+        duration = self._get_duration(audio_path)
+        if duration <= self.CHUNK_THRESHOLD_SEC:
+            return [(audio_path, 0.0)]
+
+        temp_dir = Path(tempfile.gettempdir()) / f"gemini_chunks_{audio_path.stem}"
+        temp_dir.mkdir(exist_ok=True)
+        chunks = []
+        start = 0.0
+        idx = 0
+        while start < duration:
+            end = min(start + self.CHUNK_DURATION_SEC, duration)
+            chunk_path = temp_dir / f"chunk_{idx:02d}.mp3"
+            r = subprocess.run(
+                ['/opt/homebrew/bin/ffmpeg', '-y', '-i', str(audio_path),
+                 '-ss', f'{start:.2f}', '-t', f'{end-start:.2f}',
+                 '-c', 'copy', str(chunk_path)],
+                capture_output=True)
+            if r.returncode != 0:
+                raise RuntimeError(f"ffmpeg chunk failed: {r.stderr.decode()[:200]}")
+            chunks.append((chunk_path, start))
+            if end >= duration:
+                break
+            start = end - self.CHUNK_OVERLAP_SEC
+            idx += 1
+        logger.info(f"Split {duration/60:.1f}min audio into {len(chunks)} chunks")
+        return chunks
+
+    def _shift_timestamps(self, text: str, offset_sec: float) -> str:
+        """Add offset to [MM:SS] or [HH:MM:SS] timestamps in transcript text."""
+        import re
+        def shift(m):
+            parts = [int(x) for x in m.group(1).split(':')]
+            total = sum(p * 60**(len(parts)-1-i) for i, p in enumerate(parts)) + int(offset_sec)
+            h, rem = divmod(total, 3600)
+            mm, ss = divmod(rem, 60)
+            return f"[{h:02d}:{mm:02d}:{ss:02d}]" if h else f"[{mm:02d}:{ss:02d}]"
+        return re.sub(r'\[(\d{1,2}(?::\d{2}){1,2})\]', shift, text)
+
     def process_audio(
         self,
         audio_path: Path,
@@ -230,6 +323,12 @@ class GeminiAudioProcessor:
         audio_path = Path(audio_path)
         if not audio_path.exists():
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
+
+        # If audio is long, chunk-and-merge. Each chunk goes through the
+        # single-shot path below via recursion, then we stitch.
+        total_duration = self._get_duration(audio_path)
+        if total_duration > self.CHUNK_THRESHOLD_SEC:
+            return self._process_chunked(audio_path, custom_prompt, total_duration)
 
         start_time = time.time()
         prompt = custom_prompt or LAILIX_ANALYSIS_PROMPT
@@ -361,6 +460,91 @@ class GeminiAudioProcessor:
                     logger.info(f"Retrying in {wait}s...")
                     time.sleep(wait)
         raise RuntimeError(f"All {max_attempts} attempts failed: {last_error}")
+
+    def _process_chunked(self, audio_path: Path, custom_prompt: Optional[str],
+                          total_duration: float) -> GeminiResult:
+        """Chunk long audio, transcribe each chunk, merge results.
+
+        Analysis (title/summary/action_items/feedback) comes from the first
+        chunk only — reliable enough for routing/logging, and the Claude
+        meeting-actions skill redoes its own deeper analysis from the full
+        merged transcript anyway.
+        """
+        start_time = time.time()
+        chunks = self._chunk_audio(audio_path)
+        logger.info(f"Processing {len(chunks)} chunks of {audio_path.name}")
+
+        merged_transcript_parts = []
+        input_tokens_total = 0
+        output_tokens_total = 0
+        first_result = None
+        last_overlap_tail = None  # used to dedupe across chunk boundaries
+
+        for i, (chunk_path, offset) in enumerate(chunks):
+            logger.info(f"  Chunk {i+1}/{len(chunks)} at offset {offset/60:.1f}min")
+            try:
+                # Recurse with single-shot path (chunks are all ≤15min)
+                chunk_result = self.process_audio(chunk_path, custom_prompt)
+            except Exception as e:
+                logger.error(f"  Chunk {i+1} failed: {e}, continuing with others")
+                merged_transcript_parts.append(f"\n\n[CHUNK {i+1} FAILED: {e}]\n\n")
+                continue
+
+            input_tokens_total += chunk_result.input_tokens
+            output_tokens_total += chunk_result.output_tokens
+            if first_result is None:
+                first_result = chunk_result
+
+            # Shift timestamps in chunk transcript by the chunk's start offset
+            shifted = self._shift_timestamps(chunk_result.transcript, offset)
+            merged_transcript_parts.append(shifted)
+
+        # Merge transcripts (naive concat — overlap region appears twice but
+        # timestamp ordering lets downstream consumers dedupe if needed)
+        merged_transcript = '\n\n'.join(t for t in merged_transcript_parts if t.strip())
+        processing_time = time.time() - start_time
+        logger.info(f"Chunked processing complete in {processing_time:.1f}s")
+
+        # Cleanup chunk files
+        import shutil
+        if chunks and chunks[0][0] != audio_path:
+            try:
+                shutil.rmtree(chunks[0][0].parent)
+            except Exception as e:
+                logger.warning(f"Cleanup failed: {e}")
+
+        # Build result: use first chunk's analysis for metadata
+        if first_result is None:
+            return GeminiResult(
+                transcript=merged_transcript,
+                language="unknown",
+                title="All chunks failed",
+                summary="All transcription chunks failed",
+                key_points=[], tags=["chunked_processing_error"],
+                participants=[], sentiment="neutral", meeting_type="other",
+                processing_time_seconds=processing_time,
+                error="All chunks failed",
+            )
+
+        return GeminiResult(
+            transcript=merged_transcript,
+            language=first_result.language,
+            title=first_result.title,
+            summary=first_result.summary,
+            key_points=first_result.key_points,
+            tags=first_result.tags + ["chunked"],
+            participants=first_result.participants,
+            sentiment=first_result.sentiment,
+            meeting_type=first_result.meeting_type,
+            action_items=first_result.action_items,
+            decisions_made=first_result.decisions_made,
+            lailix_feedback=first_result.lailix_feedback,
+            input_tokens=input_tokens_total,
+            output_tokens=output_tokens_total,
+            audio_duration_seconds=total_duration,
+            processing_time_seconds=processing_time,
+            model=self.model,
+        )
 
     def _parse_response(self, response: Any, processing_time: float,
                          text: Optional[str] = None) -> GeminiResult:
