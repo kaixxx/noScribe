@@ -111,6 +111,34 @@ def get_channel_count(audio_path: Path) -> int:
     return int(result.stdout.strip())
 
 
+def detect_active_channels(audio_path: Path, probe_seconds: int = 60,
+                            silence_db: float = -60.0) -> list:
+    """Detect which channels contain audio above the silence threshold.
+
+    Some macOS capture pipelines (e.g. BlackHole with unusual routing) put
+    audio on only one of the 3 channels, with the other two at digital silence.
+    Equal-weight pre-mixing attenuates the real signal; extracting only the
+    active channel(s) preserves Swiss German ASR accuracy.
+
+    Returns list of channel indices that exceed the silence threshold.
+    """
+    import re
+    channels = get_channel_count(audio_path)
+    active = []
+    for i in range(channels):
+        p = subprocess.run(
+            [FFMPEG_PATH, '-i', str(audio_path), '-t', str(probe_seconds),
+             '-af', f'pan=mono|c0=c{i},volumedetect', '-f', 'null', '-'],
+            capture_output=True, text=True,
+        )
+        m = re.search(r'mean_volume:\s*(-?[0-9.]+)\s*dB', p.stderr)
+        mean_db = float(m.group(1)) if m else float('-inf')
+        logger.debug(f"  channel {i}: mean_volume={mean_db} dB")
+        if mean_db > silence_db:
+            active.append(i)
+    return active
+
+
 def convert_to_mp3(
     input_path: Path,
     output_path: Optional[Path] = None,
@@ -154,28 +182,40 @@ def convert_to_mp3(
     # Determine channel extraction
     if extract_channel is not None:
         # User specified a channel
-        channel_idx = extract_channel
-    elif num_channels == 3:
-        # MeetingRecorder format: extract mic channel (index 2)
-        channel_idx = 2
-        logger.info("Detected 3-channel audio, extracting channel 3 (mic)")
+        active_channels = [extract_channel]
+        logger.info(f"Using user-specified channel {extract_channel}")
     elif num_channels == 1:
-        # Already mono, no extraction needed
-        channel_idx = None
+        active_channels = None
         logger.info("Input is mono, no channel extraction needed")
+    elif num_channels >= 3:
+        # Detect active channels — BlackHole routing sometimes puts audio on
+        # only one of 3 channels; averaging silent channels attenuates signal.
+        active_channels = detect_active_channels(input_path)
+        if not active_channels:
+            logger.warning(f"No active channels detected, falling back to equal-weight mix")
+            active_channels = list(range(num_channels))
+        else:
+            logger.info(f"Detected active channels: {active_channels}")
     else:
-        # Stereo or other - mix to mono
-        channel_idx = None
+        # Stereo — standard case, downmix with -ac 1
+        active_channels = None
         logger.info(f"Input has {num_channels} channels, will mix to mono")
 
     # Build ffmpeg command
     cmd = [FFMPEG_PATH, '-y', '-i', str(input_path)]
 
-    if channel_idx is not None:
-        # Extract specific channel and duplicate to stereo for compatibility
-        cmd.extend(['-af', f'pan=stereo|c0=c{channel_idx}|c1=c{channel_idx}'])
+    if active_channels and len(active_channels) == 1:
+        # Single active channel — extract directly
+        cmd.extend(['-af', f'pan=mono|c0=c{active_channels[0]}'])
+    elif active_channels and len(active_channels) > 1:
+        # Multiple active channels — equal-weight mix
+        weight = 1.0 / len(active_channels)
+        mix_filter = 'pan=mono|c0=' + '+'.join(
+            f'{weight}*c{i}' for i in active_channels
+        )
+        cmd.extend(['-af', mix_filter])
     else:
-        # Mix to mono then duplicate to stereo
+        # Mono or standard stereo
         cmd.extend(['-ac', '1'])
 
     # High-quality MP3 encoding

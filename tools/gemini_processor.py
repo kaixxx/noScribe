@@ -293,23 +293,22 @@ class GeminiAudioProcessor:
             else:
                 raise
 
-        # Generate content with audio
+        # Generate content with audio, using streaming + retry to handle
+        # server-side disconnects that occur on long audio requests.
+        # Note: Do NOT use response_mime_type="application/json" — it causes
+        # RemoteProtocolError on audio >15min. The prompt already requests JSON.
         logger.info(f"Generating transcript and analysis with {self.model}...")
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=[prompt, audio_content],
-            config=self.types.GenerateContentConfig(
-                temperature=self.temperature,
-                max_output_tokens=self.max_output_tokens,
-                response_mime_type="application/json",  # Force JSON output
-            )
+        response_text, response = self._generate_with_retry(
+            prompt=prompt,
+            audio_content=audio_content,
+            max_attempts=3,
         )
 
         processing_time = time.time() - start_time
         logger.info(f"Processing completed in {processing_time:.1f}s")
 
         # Parse response
-        result = self._parse_response(response, processing_time)
+        result = self._parse_response(response, processing_time, response_text)
 
         # Clean up uploaded file if we used Files API
         if uploaded_file is not None:
@@ -321,12 +320,56 @@ class GeminiAudioProcessor:
 
         return result
 
-    def _parse_response(self, response: Any, processing_time: float) -> GeminiResult:
+    def _generate_with_retry(self, prompt: str, audio_content: Any,
+                              max_attempts: int = 3) -> tuple:
+        """Stream generate_content with retry on transient disconnects.
+
+        Gemini's server disconnects with RemoteProtocolError on ~30% of
+        long-audio requests. Streaming + retry makes the pipeline reliable.
+
+        Returns: (text, response) where response has usage_metadata and text.
+        """
+        last_error = None
+        for attempt in range(1, max_attempts + 1):
+            chunks = []
+            try:
+                stream = self.client.models.generate_content_stream(
+                    model=self.model,
+                    contents=[prompt, audio_content],
+                    config=self.types.GenerateContentConfig(
+                        temperature=self.temperature,
+                        max_output_tokens=self.max_output_tokens,
+                    ),
+                )
+                final_response = None
+                for chunk in stream:
+                    if chunk.text:
+                        chunks.append(chunk.text)
+                    final_response = chunk  # last chunk carries usage_metadata
+                text = ''.join(chunks)
+                if not text:
+                    raise RuntimeError("Empty response from Gemini")
+                return text, final_response
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    f"Gemini attempt {attempt}/{max_attempts} failed after "
+                    f"{len(''.join(chunks))} chars: {e}"
+                )
+                if attempt < max_attempts:
+                    wait = 10 * attempt
+                    logger.info(f"Retrying in {wait}s...")
+                    time.sleep(wait)
+        raise RuntimeError(f"All {max_attempts} attempts failed: {last_error}")
+
+    def _parse_response(self, response: Any, processing_time: float,
+                         text: Optional[str] = None) -> GeminiResult:
         """Parse Gemini response into GeminiResult.
 
         Args:
             response: Gemini API response
             processing_time: Time taken to process
+            text: Pre-collected text (from streaming). If None, uses response.text.
 
         Returns:
             GeminiResult with parsed data
@@ -337,7 +380,8 @@ class GeminiAudioProcessor:
         output_tokens = usage.candidates_token_count if usage else 0
 
         # Parse JSON from response text
-        text = response.text
+        if text is None:
+            text = response.text
         logger.debug(f"Response length: {len(text)} chars")
 
         # Clean potential markdown code blocks

@@ -332,15 +332,24 @@ class TranscribeWatcher:
             self.queue.current_file = None
 
     def _premix_audio(self, audio_file: Path) -> Path:
-        """Pre-mix multi-channel audio to mono, ensuring all channels are included.
+        """Pre-mix multi-channel audio to mono, dropping silent channels.
 
-        noScribe's ffmpeg uses -ac 1 which ignores channel 3 in 3-channel files.
-        This function properly mixes all channels with equal weight.
+        Background: the macOS capture pipeline sometimes writes a 3-channel WAV
+        where only one channel contains audio (observed with BlackHole routing:
+        audio lands in channel 2 (LFE); channels 0/1 are digital silence). A
+        naive equal-weight mix across all channels attenuates the signal by
+        ~10dB and pushes Swiss German ASR below its accuracy threshold.
+
+        Strategy: per-channel volumedetect → keep channels with mean_volume
+        above SILENCE_THRESHOLD_DB → mix only those channels.
         """
         import tempfile
 
-        # Check channel count (use full path for ffprobe in case PATH isn't set in launchd)
         ffprobe_path = '/opt/homebrew/bin/ffprobe'
+        ffmpeg_path = '/opt/homebrew/bin/ffmpeg'
+        SILENCE_THRESHOLD_DB = -60.0  # channels below this are treated as silent
+
+        # Check channel count
         probe_cmd = [ffprobe_path, '-v', 'error', '-select_streams', 'a:0',
                      '-show_entries', 'stream=channels', '-of', 'csv=p=0',
                      str(audio_file)]
@@ -350,30 +359,54 @@ class TranscribeWatcher:
             self.logger.debug(f"Detected {channels} channels in {audio_file.name}")
         except Exception as e:
             self.logger.warning(f"ffprobe failed: {e}, assuming 2 channels")
-            channels = 2  # Assume stereo if probe fails
+            channels = 2
 
-        if channels <= 2:
-            # Standard stereo or mono, no pre-processing needed
+        if channels <= 1:
             return audio_file
 
-        self.logger.info(f"Pre-mixing {channels}-channel audio to mono")
+        # Measure per-channel mean volume (probe first 60s for speed)
+        active_channels = []
+        for i in range(channels):
+            probe = subprocess.run(
+                [ffmpeg_path, '-i', str(audio_file), '-t', '60',
+                 '-af', f'pan=mono|c0=c{i},volumedetect', '-f', 'null', '-'],
+                capture_output=True, text=True,
+            )
+            import re
+            m = re.search(r'mean_volume:\s*(-?[0-9.]+)\s*dB', probe.stderr)
+            mean_db = float(m.group(1)) if m else float('-inf')
+            self.logger.debug(f"  channel {i}: mean_volume={mean_db} dB")
+            if mean_db > SILENCE_THRESHOLD_DB:
+                active_channels.append(i)
 
-        # Create temp file for mixed audio
+        if not active_channels:
+            self.logger.warning(f"No active channels detected in {audio_file.name}, "
+                                f"falling back to equal-weight mix of all {channels}")
+            active_channels = list(range(channels))
+
+        if channels == 2 and active_channels == [0, 1]:
+            # Standard stereo with audio on both channels — noScribe's -ac 1 handles this fine
+            return audio_file
+
+        self.logger.info(
+            f"Pre-mixing to mono: {channels} channels detected, "
+            f"using active channels {active_channels}"
+        )
+
         temp_dir = Path(tempfile.gettempdir())
         mixed_file = temp_dir / f"{audio_file.stem}_mixed.wav"
 
-        # Mix all channels equally: for 3 channels, each gets 1/3 weight
-        # pan filter: mono output, mix all input channels
-        weight = 1.0 / channels
-        mix_filter = f"pan=mono|c0={'+'.join([f'{weight}*c{i}' for i in range(channels)])}"
+        weight = 1.0 / len(active_channels)
+        mix_filter = (
+            f"pan=mono|c0=" + '+'.join([f'{weight}*c{i}' for i in active_channels])
+        )
 
-        ffmpeg_path = '/opt/homebrew/bin/ffmpeg'
         mix_cmd = [
             ffmpeg_path, '-y', '-i', str(audio_file),
             '-af', mix_filter,
-            '-ar', '48000',  # Keep original sample rate
+            '-ar', '48000',
             '-c:a', 'pcm_s16le',
-            str(mixed_file)
+            str(mixed_file),
         ]
 
         try:
