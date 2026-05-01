@@ -381,6 +381,7 @@ class TranscriptionJob:
         self.speaker_detection: str = 'auto'
         self.overlapping: bool = True
         self.timestamps: bool = False
+        self.word_timestamps: bool = False
         self.disfluencies: bool = True
         self.pause: int = 0  # index value (0=none, 1=1sec+, etc.)
         
@@ -601,7 +602,7 @@ class TranscriptionQueue:
 
 def create_transcription_job(audio_file=None, transcript_file=None, start_time=None, stop_time=None,
                            language_name=None, whisper_model_name=None, speaker_detection=None,
-                           overlapping=None, timestamps=None, disfluencies=None, pause=None,
+                           overlapping=None, timestamps=None, word_timestamps=None, disfluencies=None, pause=None,
                            cli_mode=False) -> TranscriptionJob:
     """Create a TranscriptionJob with all default values
     
@@ -642,6 +643,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     job.speaker_detection = speaker_detection if speaker_detection is not None else 'auto'
     job.overlapping = overlapping if overlapping is not None else True
     job.timestamps = timestamps if timestamps is not None else False
+    job.word_timestamps = word_timestamps if word_timestamps is not None else False
     job.disfluencies = disfluencies if disfluencies is not None else True
     
     # Pause setting
@@ -1198,7 +1200,18 @@ class App(ctk.CTk):
             self.check_box_timestamps.select()
         else:
             self.check_box_timestamps.deselect()
-        
+
+        # Word-level timestamps
+        self.label_word_timestamps = ctk.CTkLabel(self.frame_options, text=t('label_word_timestamps'))
+        self.label_word_timestamps.grid(column=0, row=9, sticky='w', pady=5)
+        self.check_box_word_timestamps = ctk.CTkCheckBox(self.frame_options, text='')
+        self.check_box_word_timestamps.grid(column=1, row=9, sticky='e', pady=5)
+        check_box_word_timestamps = config.get('last_word_timestamps', False)
+        if check_box_word_timestamps:
+            self.check_box_word_timestamps.select()
+        else:
+            self.check_box_word_timestamps.deselect()
+
         # Start control: single CTkOptionMenu styled like a button
         # Create a container so we can show/hide as one control
         self.start_button_container = ctk.CTkFrame(self.sidebar_frame, fg_color='transparent')
@@ -2221,6 +2234,7 @@ class App(ctk.CTk):
                 speaker_detection=self.option_menu_speaker.get(),
                 overlapping=self.check_box_overlapping.get(),
                 timestamps=self.check_box_timestamps.get(),
+                word_timestamps=self.check_box_word_timestamps.get(),
                 disfluencies=self.check_box_disfluencies.get(),
                 pause=self.option_menu_pause.get(),  # Pass string value
                 cli_mode=False
@@ -2760,8 +2774,12 @@ class App(ctk.CTk):
 
                         # write text to the doc
                         # diarization (speaker detection)?
+                        # Run speaker detection ONCE. Builds seg_html/seg_text (segment-level output)
+                        # and word_prefix_html (prefix for the first word anchor) in parallel so both
+                        # output modes use identical, proven detection logic.
                         seg_text = segment.text
                         seg_html = html.escape(seg_text, quote=False)
+                        word_prefix_html = ''
 
                         if job.speaker_detection != 'none':
                             new_speaker = find_speaker(diarization, start, end)
@@ -2770,11 +2788,15 @@ class App(ctk.CTk):
                                     prev_speaker = speaker
                                     speaker = new_speaker
                                     seg_text = f' {speaker}:{seg_text}'
-                                    seg_html = html.escape(seg_text, quote=False)                                
-                                elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker 
+                                    seg_html = html.escape(seg_text, quote=False)
+                                    word_prefix_html = html.escape(f' {speaker}:', quote=False)
+                                    self.log(f' {speaker}:')
+                                elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker
                                     speaker = new_speaker
                                     seg_text = f'//{seg_text}'
                                     seg_html = html.escape(seg_text, quote=False)
+                                    word_prefix_html = '//'
+                                    self.log('//')
                                 else: # new speaker, not overlapping
                                     if speaker[:2] == '//': # was overlapping speech, mark the end
                                         last_elem = p.lastElementChild
@@ -2791,30 +2813,40 @@ class App(ctk.CTk):
                                     speaker = new_speaker
                                     # add timestamp
                                     if job.timestamps:
-                                        seg_html = f'{speaker}: <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text, quote=False)}'
+                                        seg_html = f'{html.escape(speaker + ": ", quote=False)}<span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                         seg_text = f'{speaker}: {ts}{seg_text}'
+                                        word_prefix_html = f'{html.escape(speaker + ": ", quote=False)}<span style="color: {job.timestamp_color}" >{ts}</span>'
+                                        self.log(f'{speaker}: {ts}')
                                         last_timestamp_ms = start
                                     else:
                                         if job.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
                                             seg_text = f'{speaker}:{seg_text}'
                                             seg_html = html.escape(seg_text, quote=False)
+                                            word_prefix_html = html.escape(f'{speaker}:', quote=False)
+                                            self.log(f'{speaker}:')
                                         else:
                                             seg_html = html.escape(seg_text, quote=False).lstrip()
                                             seg_text = f'{speaker}:{seg_text}'
-                                        
+                                            word_prefix_html = html.escape(f'{speaker}:', quote=False)
+                                            self.log(f'{speaker}:')
+
                             else: # same speaker
                                 if job.timestamps:
                                     if (start - last_timestamp_ms) > job.timestamp_interval:
-                                        seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
+                                        seg_html = f' <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                         seg_text = f' {ts}{seg_text}'
+                                        word_prefix_html = f'<span style="color: {job.timestamp_color}" >{ts}</span>'
+                                        self.log(ts)
                                         last_timestamp_ms = start
                                     else:
                                         seg_html = html.escape(seg_text, quote=False)
 
                         else: # no speaker detection
                             if job.timestamps and (first_segment or (start - last_timestamp_ms) > job.timestamp_interval):
-                                seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
+                                seg_html = f' <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                 seg_text = f' {ts}{seg_text}'
+                                word_prefix_html = f'<span style="color: {job.timestamp_color}" >{ts}</span>'
+                                self.log(ts)
                                 last_timestamp_ms = start
                             else:
                                 seg_html = html.escape(seg_text, quote=False)
@@ -2823,13 +2855,32 @@ class App(ctk.CTk):
                                 seg_text = seg_text.lstrip()
                                 seg_html = seg_html.lstrip()
 
-                        # Create bookmark with audio timestamps start to end and add the current segment.
-                        a_html = f'<a name=\"ts_{orig_audio_start}_{orig_audio_end}_{speaker}\" >{seg_html}</a>'
-                        a = d.createElementFromHTML(a_html)
-                        p.appendChild(a)
+                        if job.word_timestamps and segment.words:
+                            # Emit one anchor per word; prefix is embedded in the first word's anchor
+                            # so every piece of text stays reachable via an anchor (required by noScribeEdit).
+                            first_word = True
+                            for w in segment.words:
+                                w_start_orig = job.start + round(w['start'] * 1000.0)
+                                w_end_orig   = job.start + round(w['end']   * 1000.0)
+                                w_html = html.escape(w['word'], quote=False)
+                                if first_word:
+                                    if first_segment:
+                                        w_html = w_html.lstrip()
+                                    w_html = word_prefix_html + w_html
+                                    first_word = False
+                                a_html = f'<a name="ts_{w_start_orig}_{w_end_orig}_{speaker}">{w_html}</a>'
+                                p.appendChild(d.createElementFromHTML(a_html))
 
-                        self.log(seg_text)
-                        
+                            self.log(seg_text)
+
+                        else:
+                            # Create bookmark with audio timestamps start to end and add the current segment.
+                            a_html = f'<a name="ts_{orig_audio_start}_{orig_audio_end}_{speaker}" >{seg_html}</a>'
+                            a = d.createElementFromHTML(a_html)
+                            p.appendChild(a)
+
+                            self.log(seg_text)
+
                         first_segment = False
 
                         # auto save periodically
@@ -3264,6 +3315,7 @@ class App(ctk.CTk):
             config['last_pause'] = self.option_menu_pause.get()
             config['last_overlapping'] = self.check_box_overlapping.get()
             config['last_timestamps'] = self.check_box_timestamps.get()
+            config['last_word_timestamps'] = self.check_box_word_timestamps.get()
             config['last_disfluencies'] = self.check_box_disfluencies.get()
             config['force_pyannote_cpu'] = str(force_pyannote_cpu)
             config['force_whisper_cpu'] = str(force_whisper_cpu)

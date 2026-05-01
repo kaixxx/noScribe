@@ -43,6 +43,7 @@ ja:
   label_overlapping: 'オーバーラッピング・スピーチ：'
   label_pause: 'マークはポーズをとる：'
   label_timestamps: 'タイムスタンプ：'
+  label_word_timestamps: '単語レベルのタイムスタンプ：'
   label_disfluencies: 'フィラー：'
 
   start_button: 開始

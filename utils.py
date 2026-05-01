@@ -299,9 +299,15 @@ def html_to_webvtt(html_string: str) -> str:
                 for item in attrs:
                     if item[0] == "name":
                         tmp = item[1].split("_")
-                self.segments[-1]["time_start"] = tmp[1]
-                self.segments[-1]["time_end"] = tmp[2]
-                self.segments[-1]["speaker"] = tmp[3]
+                if tmp:
+                    # First anchor in a paragraph sets the cue start time;
+                    # every anchor updates the cue end (last anchor wins).
+                    # This is a no-op for single-anchor paragraphs and correctly
+                    # spans first-to-last word for word-level anchor paragraphs.
+                    if self.segments[-1]["time_start"] is None:
+                        self.segments[-1]["time_start"] = tmp[1]
+                    self.segments[-1]["time_end"] = tmp[2]
+                    self.segments[-1]["speaker"] = tmp[3]
 
         def handle_endtag(self, tag):
             pass

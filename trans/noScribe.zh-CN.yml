@@ -42,6 +42,7 @@ zh-CN: &defaults
   label_overlapping: '重叠发言：'
   label_pause: '标记停顿：'
   label_timestamps: '时间戳：'
+  label_word_timestamps: '词级时间戳：'
   label_disfluencies: '语言停顿：'
   
   start_button: 开始 

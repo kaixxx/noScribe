@@ -43,6 +43,7 @@ ru:
   label_overlapping: 'Перекрытие речи:'
   label_pause: 'Отметьте паузы:'
   label_timestamps: 'Временные метки:'
+  label_word_timestamps: 'Временные метки на уровне слов:'
   label_disfluencies: 'Паразитные слова:'
   
   start_button: Старт

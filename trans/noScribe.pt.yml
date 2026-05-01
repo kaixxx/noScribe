@@ -43,6 +43,7 @@ pt:
   label_overlapping: 'Sobreposição:'
   label_pause: 'Marcar pausas:'
   label_timestamps: 'Registos temporais:'
+  label_word_timestamps: 'Marcações temporais por palavra:'
   label_disfluencies: 'Disfluências:'
   
   start_button: Iniciar
