@@ -42,6 +42,7 @@ fr:
   label_overlapping: 'Chevauchements de parole'
   label_pause: 'Marquer les pauses :'
   label_timestamps: 'Horodatage :'
+  label_word_timestamps: 'Horodatage au niveau du mot :'
   label_disfluencies: 'Mots de remplissage :'
   
   start_button: "Démarrer"

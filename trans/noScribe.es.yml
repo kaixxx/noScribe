@@ -42,6 +42,7 @@ es:
   label_overlapping: 'Discurso solapado:'
   label_pause: 'Marca pausas:'
   label_timestamps: 'Timestamps:'
+  label_word_timestamps: 'Marcas de tiempo por palabra:'
   label_disfluencies: 'Disfluencias:'
   
   start_button: Iniciar

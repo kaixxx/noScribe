@@ -42,6 +42,7 @@ it:
   label_overlapping: 'Discorso sovrapposto:'
   label_pause: 'Segna le pause:'
   label_timestamps: 'Timestamps:'
+  label_word_timestamps: 'Timestamp a livello di parola:'
   label_disfluencies: 'Disfluenze:'
   
   start_button: Avvia
