@@ -1,10 +1,13 @@
 import importlib.resources as impres
+import logging
 import gc
 import os
 import platform
 import traceback
 from dataclasses import asdict, is_dataclass
 from i18n import t
+
+logger = logging.getLogger(__name__)
 
 
 def whisper_proc_entrypoint(args: dict, q):
@@ -66,7 +69,7 @@ def whisper_proc_entrypoint(args: dict, q):
             
         # Build model in child using provided options
         model = WhisperModel(
-            str(args["model_name_or_path"]),
+            str(args["whisper_model"].path),
             device=device,
             compute_type=args.get("compute_type", "float16"),
             cpu_threads=args.get("cpu_threads", 4),
@@ -123,16 +126,15 @@ def whisper_proc_entrypoint(args: dict, q):
         # Build prompt/hotwords if disfluencies suppression is requested
         prompt = ""
         if args.get("disfluencies", False):
-            prompt_file = 'prompt.yml'
+            prompt_file = impres.files("prompts") / "prompt.yml"
         else:
-            prompt_file = 'prompt_nd.yml'         
+            prompt_file = impres.files("prompts") / "prompt_nd.yml"
         try:
-            with impres.files(prompt_file).open("r", encoding="utf-8") as f:
-                prompts = yaml.safe_load(f) or {}
-            prompt = prompts.get(whisper_lang, '')
-        except Exception:
+            with prompt_file.open("r", encoding="utf-8") as f:
+                prompt = yaml.safe_load(f).get(whisper_lang, "")
+        except Exception as e:
+            logger.exception(e)
             log_cb('error', t('err_loading_prompt') + '\n')
-            prompt = ""
 
         # Perform transcription (streaming)
         segments, info = model.transcribe(

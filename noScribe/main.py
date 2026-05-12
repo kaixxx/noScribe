@@ -51,7 +51,7 @@ from faster_whisper.vad import VadOptions, get_speech_timestamps
 from i18n import t
 from PIL import Image
 
-from . import audio, exception, utils
+from . import audio, exception, transcription, utils
 from .CTkToolTips import CTkToolTip
 from .tkHyperlinkManager import HyperlinkManager
 
@@ -324,7 +324,7 @@ class TranscriptionJob:
         
         # Language and model settings
         self.language_name: str = 'Auto'
-        self.whisper_model: str = ''  # path to the model
+        self.whisper_model: transcription.WhisperModel = None
         
         # Processing options
         self.speaker_detection: str = 'auto'
@@ -898,11 +898,11 @@ class JobEntryFrame(ctk.CTkFrame, CTkScalingBaseClass):
 
 def _init_app_state(app):
     app._headless = False
-    app.user_models_dir = os.path.join(config_dir, 'whisper_models')
-    os.makedirs(app.user_models_dir, exist_ok=True)
-    whisper_models_readme = os.path.join(app.user_models_dir, 'readme.txt')
-    if not os.path.exists(whisper_models_readme):
-        with open(whisper_models_readme, 'w') as file:
+    app.user_models_dir = Path(config_dir) / "whisper_models"
+    app.user_models_dir.mkdir(exist_ok=True)
+    whisper_models_readme = app.user_models_dir / "readme.txt"
+    if not whisper_models_readme.exists():
+        with open(whisper_models_readme, "w") as file:
             file.write('You can download custom Whisper-models for the transcription into this folder. \n'
                        'See here for more information: https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription')
 
@@ -920,6 +920,10 @@ def _init_app_state(app):
     app._mp_queue = None
     app._ffmpeg_proc = None
     app._shutting_down = False
+
+    # Get a list of available Whisper models.
+    tmp = transcription.WhisperModelManager(app.user_models_dir)
+    app.whisper_models = tmp.get_installed_models()
 
 
 class App(ctk.CTk):
@@ -1056,7 +1060,7 @@ class App(ctk.CTk):
 
             def _clicked(self, event=0):
                 self.old_value = self.get()
-                self._values = self.noScribe_parent.get_whisper_models()
+                self._values = list(self.noScribe_parent.whisper_models.keys())
                 self._values.append('--------------------')
                 self._values.append(t('label_add_custom_models'))
                 self._dropdown_menu.configure(values=self._values)
@@ -1086,18 +1090,17 @@ class App(ctk.CTk):
         self.label_whisper_model = ctk.CTkLabel(self.frame_options, text=t('label_whisper_model'))
         self.label_whisper_model.grid(column=0, row=3, sticky='w', pady=5)
 
-        models = self.get_whisper_models()
         self.option_menu_whisper_model = CustomCTkOptionMenu(self, 
                                                        self.frame_options, 
                                                        width=100,
-                                                       values=models,
+                                                       values=list(self.whisper_models.keys()),
                                                        dynamic_resizing=False)
         self.option_menu_whisper_model.grid(column=1, row=3, sticky='e', pady=5)
         last_whisper_model = get_config('last_whisper_model', 'precise')
-        if last_whisper_model in models:
+        if last_whisper_model in self.whisper_models:
             self.option_menu_whisper_model.set(last_whisper_model)
-        elif len(models) > 0:
-            self.option_menu_whisper_model.set(models[0])
+        elif len(self.whisper_models) > 0:
+            self.option_menu_whisper_model.set(next(self.whisper_models.keys()))
 
         # Mark pauses
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
@@ -1340,27 +1343,6 @@ class App(ctk.CTk):
             
     # Events and Methods
 
-    def get_whisper_models(self):
-        self.whisper_model_paths = {}
-        
-        def collect_models(dir):        
-            for entry in os.listdir(dir):
-                entry_path = os.path.join(dir, entry)
-                if os.path.isdir(entry_path):
-                    if entry in self.whisper_model_paths:
-                        self.logn(t('err_invalid_model', entry), 'error')
-                    else:
-                        self.whisper_model_paths[entry]=entry_path 
-       
-        # collect system models:
-        with impres.as_file(impres.files("models")) as mypath:
-            collect_models(mypath)
-        
-        # collect user defined models:        
-        collect_models(self.user_models_dir)
-
-        return list(self.whisper_model_paths.keys())
-    
     def on_whisper_model_selected(self, value):
         print(self.option_menu_whisper_model.old_value)
         print(value)
@@ -2153,10 +2135,8 @@ class App(ctk.CTk):
         
         # Get whisper model path
         sel_whisper_model = self.option_menu_whisper_model.get()
-        if sel_whisper_model not in self.whisper_model_paths.keys():
+        if sel_whisper_model not in self.whisper_models:
             raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
-        whisper_model_path = self.whisper_model_paths[sel_whisper_model]
-        
         queue = TranscriptionQueue()
         if len(self.audio_files_list) != len(self.transcript_files_list):
             self.create_default_transcript_names()
@@ -2168,7 +2148,7 @@ class App(ctk.CTk):
                 start_time=start_time,
                 stop_time=stop_time,
                 language_name=self.option_menu_language.get(),
-                whisper_model_name=whisper_model_path,  # Pass the full path
+                whisper_model_name=self.whisper_models[sel_whisper_model],  # Pass the full model object
                 speaker_detection=self.option_menu_speaker.get(),
                 overlapping=self.check_box_overlapping.get(),
                 timestamps=self.check_box_timestamps.get(),
@@ -2943,7 +2923,7 @@ class App(ctk.CTk):
             vad_threshold = 0.5
 
         args = {
-            "model_name_or_path": job.whisper_model,
+            "whisper_model": job.whisper_model,
             "device": 'cpu' if force_whisper_cpu else 'auto',
             "compute_type": job.whisper_compute_type,
             "cpu_threads": number_threads,
@@ -3308,18 +3288,17 @@ def run_cli_mode(args):
         app = HeadlessApp()
         
         # Validate and set the whisper model
-        available_models = app.get_whisper_models()
         if args.model:
-            if args.model not in available_models:
+            if args.model not in app.whisper_models:
                 print(f"Error: Model '{args.model}' not found.")
-                print(f"Available models: {', '.join(available_models)}")
+                print(f"Available models: {', '.join(app.whisper_models.keys())}")
                 return 1
         else:
             # Use default model
-            if 'precise' in available_models:
+            if 'precise' in app.whisper_models:
                 args.model = 'precise'
-            elif available_models:
-                args.model = available_models[0]
+            elif app.whisper_models:
+                args.model = app.whisper_models.keys()[0]
             else:
                 print("Error: No Whisper models found.")
                 return 1
@@ -3328,7 +3307,7 @@ def run_cli_mode(args):
         job = create_job_from_cli_args(args)
         
         # Set the whisper model path
-        job.whisper_model = app.whisper_model_paths[args.model]
+        job.whisper_model = app.whisper_models[args.model]
         
         # Validate files
         if not os.path.exists(job.audio_file):
@@ -3386,7 +3365,7 @@ def show_available_models():
     try:
         # Create headless app instance to get models
         app = HeadlessApp()
-        models = app.get_whisper_models()
+        models = app.whisper_models.keys()
         
         print("Available Whisper models:")
         for model in models:
@@ -3500,9 +3479,8 @@ def noScribeMain():
     try:
         # Prefill selected model if provided
         desired_model_name = None
-        available_models = app.get_whisper_models()
         if getattr(args, 'model', None):
-            if args.model in available_models:
+            if args.model in app.whisper_models:
                 desired_model_name = args.model
             else:
                 app.logn(f"Warning: Model '{args.model}' not found. Using default GUI selection.")
