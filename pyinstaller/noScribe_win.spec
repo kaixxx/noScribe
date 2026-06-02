@@ -12,20 +12,20 @@ project_root = os.path.abspath(os.path.join(SPECPATH, '..'))
 
 # noScribe:
 
-noScribe_datas = [] 
+noScribe_datas = []
 noScribe_binaries = []
 noScribe_hiddenimports = []
 
 noScribe_datas += [
-('../models/precise/', './models/precise/'), 
-('../models/fast/', './models/fast/'), 
-('../noScribeEdit/', './noScribeEdit/'), 
-('../trans/', './trans/'), 
-('../img/graphic_sw.png', 'img/'), 
-('../LICENSE.txt', '.'), 
-('../img/noScribeLogo.ico', 'img/'), 
+('../models/precise/', './models/precise/'),
+('../models/fast/', './models/fast/'),
+('../noScribeEdit/', './noScribeEdit/'),
+('../trans/', './trans/'),
+('../img/graphic_sw.png', 'img/'),
+('../LICENSE.txt', '.'),
+('../img/noScribeLogo.ico', 'img/'),
 ('../prompts/prompt.yml', 'prompts/'),
-('../prompts/prompt_nd.yml', 'prompts/'), 
+('../prompts/prompt_nd.yml', 'prompts/'),
 ('../README.md', '.')]
 noScribe_datas += collect_data_files('customtkinter')
 noScribe_datas += copy_metadata('AdvancedHTMLParser')

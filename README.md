@@ -8,16 +8,16 @@
 >
 > 🌐 Available in **English, German, Spanish, Italian, and Dutch**.
 >
-> Please update your links. 
+> Please update your links.
 
 ---
 
 > [!WARNING]
-> Somebody has registered the domain **noscribe(dot)ai** to sell transcription services. **Stay away from this platform, I have nothing to do with it.** The real noScribe is free and always will be. This is obviously an attempt to profit from the popularity of my software and the reputation it gained over the years. Very sad. 
+> Somebody has registered the domain **noscribe(dot)ai** to sell transcription services. **Stay away from this platform, I have nothing to do with it.** The real noScribe is free and always will be. This is obviously an attempt to profit from the popularity of my software and the reputation it gained over the years. Very sad.
 
 ## What is noScribe?
 - An app to produce **high quality transcripts of interviews** for qualitative social research or journalistic use
-- noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)), available for Windows, MacOS and Linux 
+- noScribe is **free and open source** ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)), available for Windows, MacOS and Linux
 - It runs **completely locally** on your computer, protecting the confidentiality of your interviews. No cloud, no worries
 - It can distinguish between different **speakers** and understands around 60 languages (more or less, see below)
 - It includes a **nice editor** to review, verify and correct the resulting transcript
@@ -29,8 +29,8 @@
 (The transcript is from [this interview](https://www.youtube.com/watch?v=vOwajAbvPzQ&t=2018s) which I did in May 2022 with the Russian sociologist Natalia Savelyeva.)
 
 ## Limitations
-- The download is quite large (several gigabytes) due to the included AI models. 
-- Beware that a one hour interview can take up to three hours to transcribe, depending on your machine. 
+- The download is quite large (several gigabytes) due to the included AI models.
+- Beware that a one hour interview can take up to three hours to transcribe, depending on your machine.
 - Poor audio and background noise will lead to poor transcription results.
 - No automatic transcription is perfect, there will always be some manual revision necessary. Use the [included Editor](#noscribeedit) to check your transcripts thoroughly. (See also ["Factors Influencing the Quality"](#factors-influencing-the-quality-of-the-transcription) and ["Known Issues"](#known-issues) below.)
 
@@ -43,7 +43,7 @@ The [urban dictionary](https://www.urbandictionary.com/define.php?term=Scribe) d
 **Kai Dröge**, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).
 
 ## Donate
-NoScribe is free and always will be. However, developing it costs real money. I have purchased hardware for testing and pay Apple annually for a developer ID. If you would like to support this project, you can make a donation on Ko-Fi. Thanks! 
+NoScribe is free and always will be. However, developing it costs real money. I have purchased hardware for testing and pay Apple annually for a developer ID. If you would like to support this project, you can make a donation on Ko-Fi. Thanks!
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/noscribe)
 
@@ -57,15 +57,15 @@ NoScribe is free and always will be. However, developing it costs real money. I 
     <summary>Click to expand</summary>
 
 - **Download:**
-    - The **general purpose version** for normal PCs without an NVIDIA graphics card: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal) 
+    - The **general purpose version** for normal PCs without an NVIDIA graphics card: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal)
     - A special version using **CUDA acceleration on NVIDIA graphics cards** with at least 6 GB of VRAM: [https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fcuda](https://drive.switch.ch/index.php/s/EIVup04qkSHb54j?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fcuda). Make sure that your NVIDIA drivers are on version 570.65 or higher. You must also install the [CUDA toolkit from here](https://developer.nvidia.com/cuda-downloads?target_os=Windows) (a reboot is required afterwards).
-- **Installation**: 
+- **Installation**:
     - Start the downloaded setup file. This may take a while, be patient.
     - If you get a warning that "Windows protected your PC" and the app comes from an "Unknown publisher", you have to trust us and click "Run anyway"
     - To do a silent install on a larger group of computers, start the setup with the argument `/S`.
 - **Known Issues:**
-    - It seems that the RTX/GTX 1XXX generation of cards is no longer supported in CUDA. Use the normal version instead. 
-    - If you receive the following error message: "Transcription worker exited unexpectedly (code 3221226505)," try forcing the use of the CPU for transcription instead of the graphics card. This method is slower but more reliable. To do so, follow these steps: Close noScribe. Open the file `C:\Users\<USERNAME>\AppData\Local\noScribe\noScribe\config.yml` in a text editor. Change the value for `force_whisper_cpu` to `'True'`. Don't forget the quotation marks around 'True'. Now, restart NoScribe. 
+    - It seems that the RTX/GTX 1XXX generation of cards is no longer supported in CUDA. Use the normal version instead.
+    - If you receive the following error message: "Transcription worker exited unexpectedly (code 3221226505)," try forcing the use of the CPU for transcription instead of the graphics card. This method is slower but more reliable. To do so, follow these steps: Close noScribe. Open the file `C:\Users\<USERNAME>\AppData\Local\noScribe\noScribe\config.yml` in a text editor. Change the value for `force_whisper_cpu` to `'True'`. Don't forget the quotation marks around 'True'. Now, restart NoScribe.
 
 </details>
 
@@ -174,7 +174,7 @@ Dröge, K. (2025). noScribe. AI-powered Audio Transcription (Version XXX) [Compu
 - **Mark Pause**: If enabled, parts of your audio without voice activity will be marked as pauses. Pauses are transcribed as round brackets with one dot per second inside, e.g., "(..)" for a two-second pause. Pauses longer than 10 seconds are written out as "(XX seconds pause)" or "(XX minutes pause)". You have the option to mark either pauses of one second and more ("1sec+"), two seconds and more ("2sec+"), or only the longer ones of three seconds and more ("3sec+"). Choose "none" to disable this feature entirely.
 - **Speaker Detection:** This feature uses the Pyannote AI model to identify distinct speakers in your audio and organizes the transcript accordingly. Choose the number of speakers if known, or select "auto." Opting for "none" bypasses this step altogether, reducing the processing time by approximately half. However, the resultant transcript will be a continuous block of text without any indicators of speaker transitions.
 - **Overlapping Speech**: If enabled, noScribe attempts to mark instances where two people speak simultaneously. The overlapping section is demarcated with //double slashes//. (Note: This is an experimental feature.)
-- **Disfluencies**: If enabled, common speech disfluencies like filler words ("um"), unfinished words or sentences, etc. will also be transcribed. Note that this is not a hard on/off switch, but more of a 'recommendation' for the transcription AI model which only works to some extent.   
+- **Disfluencies**: If enabled, common speech disfluencies like filler words ("um"), unfinished words or sentences, etc. will also be transcribed. Note that this is not a hard on/off switch, but more of a 'recommendation' for the transcription AI model which only works to some extent.
 - **Timestamps**: When enabled, noScribe incorporates timestamps in the format [hh:mm:ss] into the transcript either at every change of speaker or every 60 seconds. I find these timestamps somewhat distracting, hence my decision to disable them by default. However, they can be quite useful in certain contexts. Even with timestamps disabled, determining the audio timecode for a specific segment is straightforward: simply open the transcript in the noScribe Editor, navigate through the text, and the corresponding timecode will appear in the bottom right corner of the app.
 
 ### Transcription process
@@ -186,18 +186,18 @@ Dröge, K. (2025). noScribe. AI-powered Audio Transcription (Version XXX) [Compu
 - By default, noScribe produces an HTML-file. This can be opened in every common word editor (including MS Word, LibreOffice) or QDA-package (MAXQDA, ATLAS.ti, QualCoder...).
 - Before working with the transcript though, you should check it with the included editor. There will always be some errors.
 
-### Batch transcription 
+### Batch transcription
 (new in version 0.7)
 
 <img src="img/queue.png" width="800">
 
 - The "Queue" tab in the main window shows a list of all jobs as well as their state and progress.
 - If you start a new job while another is still running, the new job will wait in the queue to be processed afterwards.
-- To start multiple jobs at once with the same settings, select as many files as you want in the audio file dialog. The output files will be named automatically. Use the "Save transcript as" dialog to select a different output folder if needed. Otherwise, the transcripts will be stored in the same folders as the audio. 
+- To start multiple jobs at once with the same settings, select as many files as you want in the audio file dialog. The output files will be named automatically. Use the "Save transcript as" dialog to select a different output folder if needed. Otherwise, the transcripts will be stored in the same folders as the audio.
 - The job buttons:
     - `X` Deletes a job from the list or cancels a running one.
     - `✔` Opens the transcript in the included editor. This also works for unfinished transcripts in case of an error or if the job was canceled by the user.
-    - `⟲` Restarts the job (only available in case of errors or cancelation).       
+    - `⟲` Restarts the job (only available in case of errors or cancelation).
 
 ## noScribeEdit
 The included editor to check the final transcript.
@@ -224,9 +224,9 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 
 ## Known Issues
 - The output of this software always needs to be checked for quality, misunderstandings, and wrong speaker diarization. This software is based on [OpenAI's Whisper model](https://github.com/openai/whisper). Typical word error rates can be seen [here](https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages). See also [this paper](https://doi.org/10.1145/3576915.3624380) for a comparison of different transcription services and their errors.
-- Like any other large language model, the whisper model can sometimes **hallucinate**. This is especially prevalent in silent audio passages or when background noise is treated as "text" (see [this study from the Cornell University](https://facctconference.org/static/papers24/facct24-111.pdf) for more info about the issue). We use voice activity detection (VAD) to filter out sections without speech as best as possible. 
+- Like any other large language model, the whisper model can sometimes **hallucinate**. This is especially prevalent in silent audio passages or when background noise is treated as "text" (see [this study from the Cornell University](https://facctconference.org/static/papers24/facct24-111.pdf) for more info about the issue). We use voice activity detection (VAD) to filter out sections without speech as best as possible.
   More severely, users also reported cases where words were hallucinated that would fit syntactically into the context, but were actually not present in the original audio. Such errors are especially hard to catch.
-- **Names of people, places or organizations** are often transcribed with errors.  
+- **Names of people, places or organizations** are often transcribed with errors.
 - The whisper AI can sometimes get **stuck in a loop of repeating text,** especially on longer audio files. If this happens, try to transcribe shorter sections (using the "Start" and "Stop" fields in noScribe), and join them manually.
 - **Multilingual audio** is now supported, but experimental. Sometimes it can happen that words in other languages than the main language are translated.
 - **Nonverbal expressions** like laughter are not included in the transcript and must be added later in the editor if you need them.
@@ -238,7 +238,7 @@ The source code of the editor can be found here: [https://github.com/kaixxx/noSc
 
 ## Advanced Options
 
-- NoScribe now also includes a command line interface, ideal for scripting. Type in `noScribe.exe --help` for more information. You may also want to use the `--no-gui` option in scripting scenarios. 
+- NoScribe now also includes a command line interface, ideal for scripting. Type in `noScribe.exe --help` for more information. You may also want to use the `--no-gui` option in scripting scenarios.
 - Config file: After the app has run for the first time, you will find a file named `config.yml` in the user config directory (on Windows: `C:\Users\<username>\AppData\Local\noScribe\noScribe\config.yml`; on Mac OS: `~/Library/Application Support/noscribe/config.yml`; on Linux: `~/.config/noScribe/config.yml`). Here, you can change a few **extra settings**, e.g., the language of the user interface and model parameters.
 - Also in the user config directory you will find a folder named `log` with detailed log-files for every transcript (also unfinished ones). This can be helpful in the case of any errors. Be aware though that these files also contain the text of your transcripts which might include sensitive information.
 - If you want to use **custom whisper models** with noScribe, follow the [instructions in the Wiki](https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription).

@@ -4,15 +4,15 @@ fr:
   welcome_credits: >
 
     Version %{v}, Kai Dröge %{y}
-    
+
     porté sur macOS par Philipp Schneider
-    
+
     propulsé par Whisper (OpenAI), faster-whisper (Guillaume Klein) & pyannote (Hervé Bredin)
   welcome_instructions: >
 
     Utilisez les boutons à gauche pour sélectionner un fichier audio et un nom de fichier pour votre transcription terminée.
-    Veuillez patienter. La transcription peut prendre de 2 à 5 fois plus de temps que votre fichier audio. Testez vos paramètres 
-    avec une section plus courte avant de transcrire l'audio complet. (Début = 00:00:00 et Fin = 00:03:00 transcriront les trois premières minutes.)   
+    Veuillez patienter. La transcription peut prendre de 2 à 5 fois plus de temps que votre fichier audio. Testez vos paramètres
+    avec une section plus courte avant de transcrire l'audio complet. (Début = 00:00:00 et Fin = 00:03:00 transcriront les trois premières minutes.)
 
 
     Profitez-en !
@@ -27,13 +27,13 @@ fr:
   label_audio_file: "Fichier audio :"
   label_audio_file_name: <sélectionner un fichier>
   multiple_audio_files: '(plusieurs fichiers sélectionnés)'
-  
+
   label_transcript_file: "Enregistrer la transcription sous :"
   label_transcript_file_name: <sélectionner un nom de fichier>
   output_dir_selection: 'Plusieurs fichiers audio : sélectionnez un dossier où enregistrer les transcriptions. Les noms seront générés automatiquement.'
 
   label_start: "Début (hh:mm:ss) : "
-  label_stop: "Fin (hh:mm:ss) : " 
+  label_stop: "Fin (hh:mm:ss) : "
 
   label_language: "Langue :"
   label_speaker: "Détection des locuteurs :"
@@ -43,7 +43,7 @@ fr:
   label_pause: 'Marquer les pauses :'
   label_timestamps: 'Horodatage :'
   label_disfluencies: 'Mots de remplissage :'
-  
+
   start_button: "Démarrer"
   start_queue: 'Démarrer la tâche maintenant'
   stop_button: "Annuler"
@@ -114,7 +114,7 @@ fr:
   err_converting_audio: "Erreur à l'étape 1 - conversion de l'audio."
   err_identifying_speakers: "Erreur à l'étape 2 - identification des locuteurs."
   err_loading_prompt: 'Avertissement : échec du chargement du prompt Whisper.'
-  transcription_canceled: "Voulez-vous vraiment annuler la transcription ?"   
+  transcription_canceled: "Voulez-vous vraiment annuler la transcription ?"
   queue_cancel_all_confirm: 'Cela annulera toutes les tâches non terminées dans la file. Voulez-vous continuer ?'
   err_user_cancelation: "Le processus a été annulé par l'utilisateur."
   err_whisper_main: "Arrêt de whisper avec le code d'erreur %{e}"
@@ -146,7 +146,7 @@ fr:
   doc_header_audio: "Fichier audio : %{file}"
   pause_minutes: '(%{minutes} minute[s] pause)'
   pause_seconds: '(%{seconds} secondes pause)'
-  
+
   # Actions de file d'attente
   queue_remove_waiting: 'Retirer cette tâche de la file d’attente ?'
   queue_remove_entry: 'Retirer cette entrée de la liste ?'

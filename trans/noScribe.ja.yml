@@ -2,11 +2,11 @@ ja:
   app_header: AIパワード音声転写
   welcome_message: こんにちは、noScribeが準備完了です！
   welcome_credits: >
-    
+
     バージョン %{v}、Kai Dröge %{y}
-    
+
     ported to macOS by Philipp Schneider
-    
+
     Whisper (OpenAI)、faster-whisper (Guillaume Klein) & pyannote (Hervé Bredin)によって提供されています
   welcome_instructions: >
 
@@ -28,13 +28,13 @@ ja:
   label_audio_file: '音声ファイル：'
   label_audio_file_name: <ファイルを選択>
   multiple_audio_files: '（複数のファイルが選択されています）'
-  
+
   label_transcript_file: '転写を保存：'
-  label_transcript_file_name: <ファイル名を選択> 
+  label_transcript_file_name: <ファイル名を選択>
   output_dir_selection: '複数の音声ファイル: 文字起こしの保存先フォルダを選択してください。ファイル名は自動で生成されます。'
 
   label_start: '開始（hh:mm:ss）：'
-  label_stop: '終了（hh:mm:ss）：' 
+  label_stop: '終了（hh:mm:ss）：'
 
   label_language: '言語：'
   label_speaker: '話者検出：'
@@ -114,7 +114,7 @@ ja:
   err_converting_audio: 'ステップ1でエラーが発生しました-音声の変換。'
   err_identifying_speakers: 'ステップ2でエラーが発生しました-話者の識別。'
   err_loading_prompt: '警告: Whisperのプロンプトを読み込めませんでした。'
-  transcription_canceled: '本当に転写をキャンセルしますか？'   
+  transcription_canceled: '本当に転写をキャンセルしますか？'
   queue_cancel_all_confirm: 'キュー内の未完了のジョブがすべてキャンセルされます。続行しますか？'
   err_user_cancelation: 'ユーザーによってプロセスがキャンセルされました。'
   err_whisper_main: 'Whisperメインがエラーコード %{e} で終了しました'
@@ -146,7 +146,7 @@ ja:
   doc_header_audio: '音声ファイル：%{file}'
   pause_minutes: '(%{minutes}分[秒]休止)'
   pause_seconds: '(%{seconds}秒休止)'
-  
+
   # キュー操作
   queue_remove_waiting: 'このジョブをキューから削除しますか？'
   queue_remove_entry: 'この項目をリストから削除しますか？'

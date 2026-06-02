@@ -27,7 +27,7 @@ def get_pyinstaller_out_path(cuda=False):
         return os.path.join(script_dir, 'dist', 'noScribe_noncuda')
 
 def run_pyinstaller(cuda=False):
-    global final_report 
+    global final_report
     print('##############################################################')
     print('PyInstaller cuda' if cuda else 'PyInstaller non cuda')
 
@@ -36,11 +36,11 @@ def run_pyinstaller(cuda=False):
         pyinstaller_cmd = f'conda activate {conda_env_cuda} &&'
     else:
         pyinstaller_cmd = f'conda activate {conda_env_noncuda} &&'
-        
+
     pyinstaller_cmd += f'python  "{pyinstaller_path}" --noconfirm "{os.path.join(script_dir, 'noScribe_win.spec')}" --distpath {pyinstaller_out_path}'
     if clean_build:
         pyinstaller_cmd += ' --clean'
-    
+
     print(pyinstaller_cmd)
     proc = Popen(pyinstaller_cmd, shell=True, cwd=script_dir)
     proc.communicate()
@@ -64,13 +64,13 @@ def run_nsis(cuda=False):
         segments = version_string.split('.')
         # Calculate how many additional "0" segments need to be appended
         missing_segments = target_length - len(segments)
-        
+
         if missing_segments > 0:
             # Append "0" for each missing segment
             segments.extend(['0'] * missing_segments)
 
         return '.'.join(segments)
-   
+
     global final_report
     pyinstaller_out_path = get_pyinstaller_out_path(cuda)
     installer_name = 'noScribe_setup_' + noScribe_version.replace('.', '_')
@@ -78,10 +78,10 @@ def run_nsis(cuda=False):
         installer_name += '_cuda'
     installer_name += '.exe'
     installer_name = os.path.join(script_dir, 'win_installer', installer_name)
-        
+
     print('##############################################################')
     print('NISIS cuda' if cuda else 'NSIS non cuda')
-    
+
     # prepare template
     with open(os.path.join(script_dir, 'nsis_template.txt'), 'r', encoding="utf-8") as nsis_templ_file:
         nsis_templ = nsis_templ_file.read()
@@ -90,7 +90,7 @@ def run_nsis(cuda=False):
 
     # Recursively generate NSIS commands for installation and uninstallation
     # of directories and files from the specified directory.
-    
+
     base_directory = os.path.join(pyinstaller_out_path, 'noScribe')
 
     install_entries = '' # "Section \"Install\"\n"
@@ -110,7 +110,7 @@ def run_nsis(cuda=False):
 
         if relative_path:
             directories_created.append(relative_path.replace(os.sep, "\\"))
-        
+
         for filename in files:
             # Generate File command for each file
             filepath = os.path.join(root, filename).replace(os.sep, "\\")
@@ -136,7 +136,7 @@ def run_nsis(cuda=False):
     nsis_cmd = '"' + nsis_path + '" /V4 "' + os.path.join(script_dir, 'nsis_tmp.nsi') + '"'
 
     proc = Popen(nsis_cmd, shell=True, cwd=os.path.join(script_dir, 'win_installer'))
-    proc.communicate()    
+    proc.communicate()
     if proc.returncode != 0:
         final_report += 'NSIS commpiler failed.\n'
         final_report += 'Cmd: ' + nsis_cmd

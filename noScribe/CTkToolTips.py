@@ -20,7 +20,7 @@ class CTkToolTip(object):
 
         :param widget: The widget object to assign the tooltip to.
         :param text: The text to be displayed as the tooltip.
-        :param fg_color:  Hex colour code (#RRGGBB), defining the colour of the tooltip. 
+        :param fg_color:  Hex colour code (#RRGGBB), defining the colour of the tooltip.
         """
         if fg_color is None:
             self.fg_color = self.get_color_from_name('CTkFrame', 'fg_color')
@@ -35,7 +35,7 @@ class CTkToolTip(object):
         self.y_offset: int = +10
         self.corner_radius: int = 10
         self.border_width: int = 1
-        self.padding: tuple = (10, 2)       
+        self.padding: tuple = (10, 2)
         # Bind to the primary widget; use add="+" to avoid clobbering existing bindings
         self._widget.bind("<Enter>", self.on_enter, add="+")
         self._widget.bind("<Leave>", self.on_leave, add="+")
@@ -73,7 +73,7 @@ class CTkToolTip(object):
     def on_leave(self, event=None):
         self._unschedule()
         self.hide_tooltip()
-        
+
     def set_text(self, text):
         self.text = text
 
@@ -94,7 +94,7 @@ class CTkToolTip(object):
 
         # Leaves only the label and removes the app window
         self._tw.wm_overrideredirect(True)
-        
+
         if sys.platform.startswith("win"):
             self._tw.transparent_color = self._widget._apply_appearance_mode(
                 ThemeManager.theme["CTkToplevel"]["fg_color"])
@@ -112,11 +112,11 @@ class CTkToolTip(object):
         # self.resizable(width=True, height=True)
 
         # Make the background transparent
-        self._tw.config(background=self._tw.transparent_color)        
-        
+        self._tw.config(background=self._tw.transparent_color)
+
         #self._tw.wm_attributes("-transparentcolor", "white")  # Set transparent color
         # self._tw.wm_geometry("+%d+%d" % (x, y))
-        
+
         # create frame and label
         self.frame = ctk.CTkFrame(
             self._tw,
@@ -134,7 +134,7 @@ class CTkToolTip(object):
         )
         # Pack the frame into the Toplevel so the label becomes visible
         self.frame.pack(fill="both", expand=True)
-        
+
         # Determine current pointer position for robust placement (works with synthetic events)
         try:
             pointer_x, pointer_y = self._widget.winfo_pointerxy()
@@ -157,7 +157,7 @@ class CTkToolTip(object):
 
         # Position the tooltip near the pointer
         self._tw.geometry(f"+{pointer_x + offset_x}+{pointer_y + self.y_offset}")
-        
+
         # label = tk.Label(self._tw, text=self._text, justify='left', fg=self._fg_color,
         #                 bg=self._bg_colour, relief='solid', borderwidth=1,
         #                 wraplength=self._wrap_length)
@@ -168,7 +168,7 @@ class CTkToolTip(object):
         self._tw = None
         if tw:
             tw.destroy()
-            
+
     @staticmethod
     def get_color_from_name(widget, name: str):
         """Gets the colour code associated with the supplied widget property,

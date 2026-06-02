@@ -1,0 +1,19 @@
+# EditorConfig is awesome: https://editorconfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Applies to all files.
+[*]
+# Insert final newline
+insert_final_newline = true
+# Use spaces for indentation
+indent_style = space
+# Delete trailing whitespace
+trim_trailing_whitespace = true
+
+[*.md]
+indent_size = 2
+
+[*.py]
+indent_size = 4

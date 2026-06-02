@@ -4,15 +4,15 @@ es:
   welcome_credits: >
 
     Versión %{v}, Kai Dröge %{y}
-    
+
     adaptado a macOS por Philipp Schneider
-    
+
     impulsado por Whisper (OpenAI), faster-whisper (Guillaume Klein) y pyannote (Hervé Bredin)
   welcome_instructions: >
 
     Usa los botones de la izquierda para seleccionar un archivo de audio y un nombre de archivo para tu transcripción finalizada.
-    Por favor, ten paciencia. La transcripción puede llevar de 2 a 5 veces más tiempo que el archivo de audio. Prueba tus ajustes 
-    con una sección más corta antes de transcribir el audio completo. (Inicio = 00:00:00 y Fin = 00:03:00 transcribirán los primeros 3 minutos.)   
+    Por favor, ten paciencia. La transcripción puede llevar de 2 a 5 veces más tiempo que el archivo de audio. Prueba tus ajustes
+    con una sección más corta antes de transcribir el audio completo. (Inicio = 00:00:00 y Fin = 00:03:00 transcribirán los primeros 3 minutos.)
 
 
     ¡Disfruta!
@@ -27,13 +27,13 @@ es:
   label_audio_file: 'Archivo de audio:'
   label_audio_file_name: <seleccionar archivo>
   multiple_audio_files: '(varios archivos seleccionados)'
-  
+
   label_transcript_file: 'Guardar transcripción como:'
-  label_transcript_file_name: <seleccionar nombre de archivo> 
+  label_transcript_file_name: <seleccionar nombre de archivo>
   output_dir_selection: 'Varios archivos de audio: Selecciona un directorio donde se guardarán las transcripciones. Los nombres se generarán automáticamente.'
 
   label_start: 'Inicio (hh:mm:ss): '
-  label_stop: 'Fin (hh:mm:ss): ' 
+  label_stop: 'Fin (hh:mm:ss): '
 
   label_language: 'Idioma:'
   label_speaker: 'Detección de oradores:'
@@ -43,7 +43,7 @@ es:
   label_pause: 'Marca pausas:'
   label_timestamps: 'Timestamps:'
   label_disfluencies: 'Disfluencias:'
-  
+
   start_button: Iniciar
   start_queue: 'Iniciar trabajo ahora'
   stop_button: Cancelar
@@ -114,7 +114,7 @@ es:
   err_converting_audio: 'Error en el paso 1: conversión de audio.'
   err_identifying_speakers: 'Error en el paso 2: identificación de oradores.'
   err_loading_prompt: 'Advertencia: no se pudo cargar el prompt de Whisper.'
-  transcription_canceled: '¿Realmente deseas cancelar la transcripción?'   
+  transcription_canceled: '¿Realmente deseas cancelar la transcripción?'
   queue_cancel_all_confirm: 'Esto cancelará todos los trabajos no finalizados en la cola. ¿Deseas continuar?'
   err_user_cancelation: 'El proceso ha sido cancelado por el usuario.'
   err_whisper_main: 'Terminación de Whisper con el código de error %{e}'
@@ -146,7 +146,7 @@ es:
   doc_header_audio: 'Archivo de audio: %{file}'
   pause_minutes: '(%{minutes} minuto[s] pausa)'
   pause_seconds: '(%{seconds} segundos de pausa)'
-  
+
   # Acciones de la cola
   queue_remove_waiting: '¿Eliminar este trabajo de la cola?'
   queue_remove_entry: '¿Eliminar esta entrada de la lista?'

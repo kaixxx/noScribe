@@ -2,16 +2,16 @@ de:
   app_header: KI-basierte Audio-Transkription
   welcome_message: Hallo, noScribe ist bereit!
   welcome_credits: >
-    
+
     Version %{v}, Kai Dröge %{y}
-    
+
     portiert nach macOS von Philipp Schneider
-    
+
     powered by Whisper (OpenAI), faster-whisper (Guillaume Klein) & pyannote (Hervé Bredin)
   welcome_instructions: >
 
     Bitte wähle links eine Audiodatei und den Dateinamen, unter dem das fertige Transkript gespeichert werden
-    soll. Hab Geduld, die Transkription braucht üblicherweise 2 bis 5 Mal so lang wie die Audiodatei ist. 
+    soll. Hab Geduld, die Transkription braucht üblicherweise 2 bis 5 Mal so lang wie die Audiodatei ist.
     Bevor man die gesamte Datei transkribiert, sollte man die Einstellungen an einem kurzen Ausschnitt testen.
     (Start = 00.00.00 and Stop = 00.03.00 bspw. transkribiert nur die ersten drei Minuten.)
 
@@ -28,13 +28,13 @@ de:
   label_audio_file: 'Audiodatei:'
   label_audio_file_name: <Audiodatei wählen>
   multiple_audio_files: '(mehrere Dateien ausgewählt)'
-  
+
   label_transcript_file: 'Transkript speichern unter:'
-  label_transcript_file_name: <Dateinamen auswählen> 
+  label_transcript_file_name: <Dateinamen auswählen>
   output_dir_selection: 'Mehrere Audiodateien: Bitte einen Ordner wählen, in dem die Transkripte gespeichert werden. Die Dateinamen werden automatisch erzeugt.'
 
   label_start: 'Start (hh:mm:ss): '
-  label_stop: 'Stop (hh:mm:ss): ' 
+  label_stop: 'Stop (hh:mm:ss): '
 
   label_language: 'Sprache:'
   label_speaker: 'Sprecher:in erkennen:'
@@ -57,7 +57,7 @@ de:
   audio_conversion: 'Audiokonvertierung'
   speaker_identification: 'Sprecher:innenidentifikation'
   transcription: 'Transkription'
-  canceling: 'Abbruch läuft' 
+  canceling: 'Abbruch läuft'
   canceled: 'Abgebrochen'
   finished: 'Abgeschlossen'
   error: 'Fehler'
@@ -113,7 +113,7 @@ de:
   err_no_transcript_file: 'Fehler: Bitte einen Dateinamen für das fertige Transkript wählen.'
   err_ffmpeg: 'ffmpeg hat einen Fehler gemeldet.'
   err_converting_audio: Fehler im 1. Schritt - Audiokonvertierung.
-  err_identifying_speakers: Fehler im 2. Schritt - Erkennung der Sprecher:innen. 
+  err_identifying_speakers: Fehler im 2. Schritt - Erkennung der Sprecher:innen.
   err_loading_prompt: 'Warnung: Whisper-Prompt konnte nicht geladen werden.'
   transcription_canceled: 'Transkription wirklich abbrechen?'
   queue_cancel_all_confirm: 'Dadurch werden alle unerledigten Aufträge in der Warteschlange abgebrochen. Möchtest du fortfahren?'
@@ -148,7 +148,7 @@ de:
   doc_header_audio: 'Audiodatei: %{file}'
   pause_minutes: '(%{minutes} Minute[n] Pause)'
   pause_seconds: '(%{seconds} Sekunden Pause)'
-  
+
   # Queue actions
   queue_remove_waiting: 'Diesen Auftrag aus der Warteschlange entfernen?'
   queue_remove_entry: 'Diesen Eintrag aus der Liste entfernen?'
