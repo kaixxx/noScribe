@@ -1,10 +1,9 @@
+import importlib.resources as impres
 import os
 import platform
 import traceback
-from dataclasses import asdict, is_dataclass
-import os
+
 import torchaudio
-from pathlib import Path
 
 if platform.system() == "Darwin" and platform.machine() == "x86_64":
     os.environ.setdefault("OMP_NUM_THREADS", "1")
@@ -22,12 +21,10 @@ def pyannote_proc_entrypoint(args: dict, q):
     """
     device = ''
     try:
-        import yaml
         import torch
         if platform.system() == "Darwin" and platform.machine() == "x86_64":
            torch.set_num_threads(1)        
         from pyannote.audio import Pipeline
-        from tempfile import TemporaryDirectory
 
         def plog(level, msg):
             try:
@@ -58,7 +55,6 @@ def pyannote_proc_entrypoint(args: dict, q):
 
         audio_file = args.get("audio_path")
         num_speakers = args.get("num_speakers")
-        app_dir = os.path.abspath(os.path.dirname(__file__))
         if not os.path.exists(audio_file):
             raise FileNotFoundError(audio_file)
 
@@ -77,7 +73,8 @@ def pyannote_proc_entrypoint(args: dict, q):
             else:
                 raise Exception('Platform not supported yet.')
 
-        pipeline = Pipeline.from_pretrained(Path(os.path.join(app_dir, 'pyannote')))
+        with impres.as_file(impres.files("pyannote")) as mypath:
+            pipeline = Pipeline.from_pretrained(mypath)
         waveform, sample_rate = torchaudio.load(audio_file)        
         pipeline.to(torch.device(device))
 
@@ -104,12 +101,11 @@ def pyannote_proc_entrypoint(args: dict, q):
         try:
             error_str = f"{type(e).__name__}: {e}"
             error_str += f' (device_{device[:3]})' # device_cpu or device_cud or device_mps
-            import traceback as tb
             q.put({
                 "type": "result",
                 "ok": False,
                 "error": error_str,
-                "trace": tb.format_exc(),
+                "trace": traceback.format_exc(),
             })
         except Exception:
             pass

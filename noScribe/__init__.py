@@ -1,0 +1,1 @@
+from noScribe import main

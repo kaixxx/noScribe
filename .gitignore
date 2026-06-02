@@ -22,6 +22,7 @@ models/precise/*
 !models/precise/NOSCRIBE_README.txt
 models/fast/*
 !models/fast/NOSCRIBE_README.txt
+models/empty
 
 .DS_Store
 stuff/

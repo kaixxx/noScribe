@@ -21,11 +21,11 @@ noScribe_datas += [
 ('../models/fast/', './models/fast/'), 
 ('../noScribeEdit/', './noScribeEdit/'), 
 ('../trans/', './trans/'), 
-('../graphic_sw.png', '.'), 
+('../img/graphic_sw.png', 'img/'), 
 ('../LICENSE.txt', '.'), 
-('../noScribeLogo.ico', '.'), 
-('../prompt.yml', '.'),
-('../prompt_nd.yml', '.'), 
+('../img/noScribeLogo.ico', 'img/'), 
+('../prompts/prompt.yml', 'prompts/'),
+('../prompts/prompt_nd.yml', 'prompts/'), 
 ('../README.md', '.')]
 noScribe_datas += collect_data_files('customtkinter')
 noScribe_datas += copy_metadata('AdvancedHTMLParser')
@@ -59,7 +59,7 @@ tmp_ret = collect_all('speechbrain')
 noScribe_datas += tmp_ret[0]; noScribe_binaries += tmp_ret[1]; noScribe_hiddenimports += tmp_ret[2]
 
 noScribe_a = Analysis(
-    ['../noScribe.py'],
+    ['../noScribe/__main__.py'],
     pathex=[project_root],
     binaries=noScribe_binaries,
     datas=noScribe_datas,
@@ -93,7 +93,7 @@ noScribe_exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['../noScribeLogo.ico'],
+    icon=['../img/noScribeLogo.ico'],
 )
 
 # assemble the dist folder with all needed DLLs, datas, etc.

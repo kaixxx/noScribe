@@ -8,7 +8,7 @@ from pathlib import Path
 
 import AdvancedHTMLParser
 import pytest
-import utils
+from noScribe import utils
 
 
 def test_str_to_ms():
@@ -200,10 +200,10 @@ def test_html_to_text():
     )
 
     # Use actual interview file.
-    html_file = impres.files("noScribe") / "tests" / "data" / "interview.html"
+    html_file = impres.files("tests") / "data" / "interview.html"
     html_string = html_file.read_text(encoding="utf-8")
 
-    result_file = impres.files("noScribe") / "tests" / "data" / "interview.txt"
+    result_file = impres.files("tests") / "data" / "interview.txt"
     result_string = result_file.read_text(encoding="utf-8")
 
     assert utils.html_to_text(html_string, use_only_body=True) == result_string
@@ -298,10 +298,10 @@ def test_html_to_webvtt():
     assert utils.html_to_webvtt(html_string) == result_string
 
     # Use actual interview file.
-    html_file = impres.files("noScribe") / "tests" / "data" / "interview.html"
+    html_file = impres.files("tests") / "data" / "interview.html"
     html_string = html_file.read_text(encoding="utf-8")
 
-    result_file = impres.files("noScribe") / "tests" / "data" / "interview.vtt"
+    result_file = impres.files("tests") / "data" / "interview.vtt"
     result_string = result_file.read_text(encoding="utf-8")
 
     assert utils.html_to_webvtt(html_string) == result_string
