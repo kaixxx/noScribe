@@ -273,7 +273,10 @@ def html_to_webvtt(html_string: str) -> str:
         def __init__(self):
             super().__init__()
             self.body_found = False
+            self.paragraphs = []
             self.segments = []
+            self.current_paragraph = None
+            self.current_segment = None
 
         def handle_starttag(self, tag, attrs):
             # Look for body tag.
@@ -286,25 +289,37 @@ def html_to_webvtt(html_string: str) -> str:
                 return
 
             if tag == "p":
-                self.segments.append(
-                    {
-                        "text": "",
-                        "speaker": None,
-                        "time_start": None,
-                        "time_end": None,
-                    }
-                )
+                self.current_paragraph = {"text": ""}
             elif tag == "a":
                 tmp = None
                 for item in attrs:
-                    if item[0] == "name":
+                    if item[0] == "name" and item[1].startswith("ts_"):
                         tmp = item[1].split("_")
-                self.segments[-1]["time_start"] = tmp[1]
-                self.segments[-1]["time_end"] = tmp[2]
-                self.segments[-1]["speaker"] = tmp[3]
+                        break
+
+                if tmp is None:
+                    return
+
+                self.current_segment = {
+                    "text": "",
+                    "speaker": tmp[3],
+                    "time_start": tmp[1],
+                    "time_end": tmp[2],
+                }
+                self.segments.append(self.current_segment)
 
         def handle_endtag(self, tag):
-            pass
+            if tag == "a":
+                self.current_segment = None
+            elif tag == "p":
+                if self.current_paragraph is not None:
+                    self.paragraphs.append(self.current_paragraph["text"])
+                self.current_paragraph = None
+
+        def _append_text(self, target: dict, text: str):
+            if target["text"] and not target["text"][-1].isspace():
+                target["text"] += " "
+            target["text"] += html.unescape(text).strip()
 
         def handle_data(self, data):
             # Use data only in body.
@@ -314,32 +329,31 @@ def html_to_webvtt(html_string: str) -> str:
             if not data or data.isspace():
                 return
 
+            if self.current_segment is None:
+                if self.current_paragraph is not None:
+                    self._append_text(self.current_paragraph, data)
+                return
+
             # If `data` is the same as speaker, we don't need it in VTT.
-            if data.strip().replace(":", "") == self.segments[-1]["speaker"]:
+            if data.strip().replace(":", "") == self.current_segment["speaker"]:
                 return
 
             # If `data` is a timestamp, we can omit as well.
             if REGEX_DETECT_TIMESTAMP.match(data.strip()):
                 return
 
-            if (
-                self.segments[-1]["text"]
-                and not self.segments[-1]["text"][-1].isspace()
-            ):
-                self.segments[-1]["text"] += " "
-
-            self.segments[-1]["text"] += html.unescape(data).strip()
+            self._append_text(self.current_segment, data)
 
         def get_title(self):
             # The first paragraph contains the title.
-            return self.segments[0]["text"]
+            return self.paragraphs[0]
 
         def get_info(self):
             # The second paragraph contains the info field (including path).
-            return self.segments[1]["text"]
+            return self.paragraphs[1]
 
         def get_segments(self):
-            for item in self.segments[2:]:
+            for item in self.segments:
                 # Check if text is empty or only whitespace. Skip otherwise.
                 if item["text"] and not item["text"].isspace():
                     yield item

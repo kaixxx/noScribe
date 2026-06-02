@@ -276,6 +276,30 @@ def test_html_to_webvtt():
     )
     assert utils.html_to_webvtt(html_string) == result_string
 
+    # Multiple timestamp anchors in one paragraph must still become separate cues.
+    html_string = """
+    <body>
+        <p>My Title</p>
+        <p>My Information Header</p>
+        <p>
+            <a name="ts_0_1000_">First segment.</a>
+            <a name="ts_1000_2500_">Second segment.</a>
+        </p>
+    </body>
+    """
+    result_string = (
+        "WEBVTT My Title\n\n"
+        "NOTE\n"
+        "My Information Header\n\n"
+        "1\n"
+        "00:00:00.000 --> 00:00:01.000\n"
+        "First segment.\n\n"
+        "2\n"
+        "00:00:01.000 --> 00:00:02.500\n"
+        "Second segment.\n\n"
+    )
+    assert utils.html_to_webvtt(html_string) == result_string
+
     # Test empty paragraphs.
     html_string = """
     <body>
