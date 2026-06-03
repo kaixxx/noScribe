@@ -23,7 +23,7 @@ def pyannote_proc_entrypoint(args: dict, q):
     try:
         import torch
         if platform.system() == "Darwin" and platform.machine() == "x86_64":
-           torch.set_num_threads(1)        
+           torch.set_num_threads(1)
         from pyannote.audio import Pipeline
 
         def plog(level, msg):
@@ -59,7 +59,7 @@ def pyannote_proc_entrypoint(args: dict, q):
             raise FileNotFoundError(audio_file)
 
         plog("debug", "Subprocess (diarize) started. Initializing PyAnnote pipeline...")
-        
+
         # determine xpu
         device = args.get("device", "")
         if device != 'cpu':
@@ -75,7 +75,7 @@ def pyannote_proc_entrypoint(args: dict, q):
 
         with impres.as_file(impres.files("pyannote")) as mypath:
             pipeline = Pipeline.from_pretrained(mypath)
-        waveform, sample_rate = torchaudio.load(audio_file)        
+        waveform, sample_rate = torchaudio.load(audio_file)
         pipeline.to(torch.device(device))
 
         seg_list = []

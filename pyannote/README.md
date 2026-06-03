@@ -18,7 +18,7 @@ extra_gated_fields:
   Company/university: text
   Use case:
      type: select
-     options: 
+     options:
        - label: Meeting note taker (automated meeting transcription, action item extraction, and speaker identification in recordings)
          value: meeting
        - label: Conversation AI (chatbots, voice assistants, multi-turn dialogue systems with speaker awareness)
@@ -62,24 +62,24 @@ The [main improvements brought by `Community-1`](https://www.pyannote.ai/blog/co
 # download the pipeline from Huggingface
 from pyannote.audio import Pipeline
 pipeline = Pipeline.from_pretrained(
-    "pyannote/speaker-diarization-community-1", 
+    "pyannote/speaker-diarization-community-1",
     token="{huggingface-token}")
 
 # run the pipeline locally on your computer
 output = pipeline("audio.wav")
 
-# print the predicted speaker diarization 
+# print the predicted speaker diarization
 for turn, speaker in output.speaker_diarization:
     print(f"{speaker} speaks between t={turn.start:.3f}s and t={turn.end:.3f}s")
 ```
 
 ## Benchmark
 
-Out of the box, `Community-1` is much better than `speaker-diarization-3.1`. 
+Out of the box, `Community-1` is much better than `speaker-diarization-3.1`.
 
 We report [diarization error rates](http://pyannote.github.io/pyannote-metrics/reference.html#diarization) (in %) on large collection of academic benchmarks (fully automatic processing, no forgiveness collar, nor skipping overlapping speech).
 
-| Benchmark (last updated in 2025-09) | <a href="https://hf.co/pyannote/speaker-diarization-3.1">`legacy` (3.1)</a>| <a href="https://www.pyannote.ai/blog/community-1">`community-1`</a> | <a href="https://www.pyannote.ai/blog/precision-2">`precision-2`</a> | 
+| Benchmark (last updated in 2025-09) | <a href="https://hf.co/pyannote/speaker-diarization-3.1">`legacy` (3.1)</a>| <a href="https://www.pyannote.ai/blog/community-1">`community-1`</a> | <a href="https://www.pyannote.ai/blog/precision-2">`precision-2`</a> |
 | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------| ------------------------------------------------ |
 | [AISHELL-4](https://arxiv.org/abs/2104.03603)                                                                               | 12.2 | 11.7 | 11.4 |
 | [AliMeeting](https://www.openslr.org/119/) (channel 1)                                                                      | 24.5 | 20.3 | 15.2 |

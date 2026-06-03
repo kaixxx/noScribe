@@ -1,6 +1,6 @@
 from tkinter import Text, CURRENT
 # Source: https://web.archive.org/web/20200806215420/http://effbot.org/zone/tkinter-text-hyperlink.htm
-# and https://stackoverflow.com/questions/49353034/python-tkinter-have-displayed-text-as-hyperlink 
+# and https://stackoverflow.com/questions/49353034/python-tkinter-have-displayed-text-as-hyperlink
 
 class HyperlinkManager:
     def __init__(self, text):

@@ -2,17 +2,17 @@ it:
   app_header: Trascrizione audio potenziata da AI
   welcome_message: Ciao! noScribe è pronto!
   welcome_credits: >
-    
+
     Versione %{v}, Kai Dröge %{y}
-    
+
     portato su macOS da Philipp Schneider
-    
+
     Potenziato da Whisper (OpenAI), faster-whisper (Guillaume Klein) e pyannote (Hervé Bredin)
   welcome_instructions: >
 
     Usa i pulsanti a sinistra per selezionare un file audio e un nome di file per la tua trascrizione finale.
-    Sii paziente. La trascrizione potrebbe richiedere da 2 a 5 volte più tempo rispetto al file audio. Prova le impostazioni 
-    con una sezione più breve prima di trascrivere l'audio completo. (Inizio = 00.00.00 e Fine = 00.03.00 trascriveranno i primi 3 minuti.)   
+    Sii paziente. La trascrizione potrebbe richiedere da 2 a 5 volte più tempo rispetto al file audio. Prova le impostazioni
+    con una sezione più breve prima di trascrivere l'audio completo. (Inizio = 00.00.00 e Fine = 00.03.00 trascriveranno i primi 3 minuti.)
 
 
     Buon divertimento!
@@ -27,13 +27,13 @@ it:
   label_audio_file: 'File audio:'
   label_audio_file_name: <seleziona file>
   multiple_audio_files: '(più file selezionati)'
-  
+
   label_transcript_file: 'Salva trascrizione come:'
-  label_transcript_file_name: <seleziona nome file> 
+  label_transcript_file_name: <seleziona nome file>
   output_dir_selection: 'Più file audio: seleziona una cartella in cui salvare le trascrizioni. I nomi verranno generati automaticamente.'
 
   label_start: 'Inizio (hh:mm:ss): '
-  label_stop: 'Fine (hh:mm:ss): ' 
+  label_stop: 'Fine (hh:mm:ss): '
 
   label_language: 'Lingua:'
   label_speaker: 'Rilevamento degli speaker:'
@@ -43,12 +43,12 @@ it:
   label_pause: 'Segna le pause:'
   label_timestamps: 'Timestamps:'
   label_disfluencies: 'Disfluenze:'
-  
+
   start_button: Avvia
   start_queue: 'Avvia attività ora'
   stop_button: Annulla
   editor_button: Editor
-  
+
   overall_progress: 'Progresso totale: '
 
   # Stato del lavoro
@@ -114,7 +114,7 @@ it:
   err_converting_audio: 'Errore nella fase 1 - conversione audio.'
   err_identifying_speakers: 'Errore nella fase 2 - identificazione degli speaker.'
   err_loading_prompt: 'Avviso: impossibile caricare il prompt di Whisper.'
-  transcription_canceled: 'Vuoi davvero annullare la trascrizione?'   
+  transcription_canceled: 'Vuoi davvero annullare la trascrizione?'
   queue_cancel_all_confirm: 'Questo annullerà tutte le attività non completate nella coda. Vuoi continuare?'
   err_user_cancelation: 'Processo annullato dall utente.'
   err_whisper_main: 'Whisper terminato con il codice di errore %{e}'
@@ -146,7 +146,7 @@ it:
   doc_header_audio: 'File audio: %{file}'
   pause_minutes: '(%{minutes} minuti pausa)'
   pause_seconds: '(%{seconds} secondi di pausa)'
-  
+
   # Azioni coda
   queue_remove_waiting: 'Rimuovere questa attività dalla coda?'
   queue_remove_entry: 'Rimuovere questa voce dall’elenco?'

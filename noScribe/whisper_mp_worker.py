@@ -53,7 +53,7 @@ def whisper_proc_entrypoint(args: dict, q):
             # Using `t` once here to load the localization files into memory.
             # As there is no `print`, nothing happens really.
             t("app_header")
-        
+
         # determine device
         device = args.get("device", "")
         if device != 'cpu':
@@ -66,7 +66,7 @@ def whisper_proc_entrypoint(args: dict, q):
                     device = 'cpu'
             else:
                 raise Exception('Platform not supported yet.')
-            
+
         # Build model in child using provided options
         model = WhisperModel(
             str(args["whisper_model"].path),
@@ -102,12 +102,12 @@ def whisper_proc_entrypoint(args: dict, q):
         language_code = args.get("language_code")
         multilingual = False
         whisper_lang = None
-        
+
         if not model.model.is_multilingual and language_code != 'en':
             language_name = 'English'
             language_code = 'en'
             log_cb("info", t('language_en_only'))
-        
+
         if language_name == "Multilingual":
             multilingual = True
             whisper_lang = None
@@ -149,9 +149,9 @@ def whisper_proc_entrypoint(args: dict, q):
             vad_filter=args.get("vad_filter", True),
             vad_parameters=vad_parameters,
         )
-        
+
         log_cb('info', t('start_transcription') + '\n')
-        
+
         # Stream segments to parent as they arrive
         for s in segments:
             try:

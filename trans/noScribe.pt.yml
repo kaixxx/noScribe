@@ -2,18 +2,18 @@ pt:
   app_header: Transcrição de Áudio com IA
   welcome_message: Olá, o noScribe está pronto!
   welcome_credits: >
-    
+
     Versão %{v}, Kai Dröge %{y}
-    
+
     adaptado para macOS por Philipp Schneider
-    
+
     Desenvolvido por Whisper (OpenAI), faster-whisper (Guillaume Klein) e pyannote (Hervé Bredin)
   welcome_instructions: >
 
     Use os botões à esquerda para selecionar um arquivo de áudio e um nome de arquivo para sua transcrição concluída.
     Por favor, tenha paciência. A transcrição pode levar de 2 a 5 vezes mais tempo que o arquivo de áudio. Teste suas configurações
     com uma seção mais curta antes de transcrever o áudio completo. (Início = 00.00.00 e Parar = 00.03.00 irão
-    transcrever os primeiros 3 minutos.)   
+    transcrever os primeiros 3 minutos.)
 
 
     Aproveite!
@@ -28,23 +28,23 @@ pt:
   label_audio_file: 'Arquivo de áudio:'
   label_audio_file_name: <selecionar arquivo>
   multiple_audio_files: '(vários arquivos selecionados)'
-  
+
   label_transcript_file: 'Salvar transcrição como:'
-  label_transcript_file_name: <selecionar nome de arquivo> 
+  label_transcript_file_name: <selecionar nome de arquivo>
   output_dir_selection: 'Vários arquivos de áudio: selecione um diretório onde as transcrições serão salvas. Os nomes serão gerados automaticamente.'
 
   label_start: 'Início (hh:mm:ss): '
-  label_stop: 'Parar (hh:mm:ss): ' 
+  label_stop: 'Parar (hh:mm:ss): '
 
   label_language: 'Idioma:'
   label_speaker: 'Detecção de alto-falante:'
   label_whisper_model: 'Modelo:'
-  label_add_custom_models: 'Adicionar modelo de IA...'  
+  label_add_custom_models: 'Adicionar modelo de IA...'
   label_overlapping: 'Sobreposição:'
   label_pause: 'Marcar pausas:'
   label_timestamps: 'Registos temporais:'
   label_disfluencies: 'Disfluências:'
-  
+
   start_button: Iniciar
   start_queue: 'Iniciar tarefa agora'
   stop_button: Cancelar
@@ -115,7 +115,7 @@ pt:
   err_converting_audio: Erro na etapa 1 - convertendo o áudio.
   err_identifying_speakers: Erro na etapa 2 - identificando os alto-falantes.
   err_loading_prompt: 'Aviso: não foi possível carregar o prompt do Whisper.'
-  transcription_canceled: 'Você realmente deseja cancelar a transcrição?'   
+  transcription_canceled: 'Você realmente deseja cancelar a transcrição?'
   queue_cancel_all_confirm: 'Isto cancelará todas as tarefas não concluídas na fila. Deseja continuar?'
   err_user_cancelation: 'O processo foi cancelado pelo usuário.'
   err_whisper_main: Whisper terminou com o código de erro %{e}
@@ -147,7 +147,7 @@ pt:
   doc_header_audio: 'Arquivo de áudio: %{file}'
   pause_minutes: '(%{minutes} minuto[s] pausa)'
   pause_seconds: '(%{seconds} segundos de pausa)'
-  
+
   # Ações da fila
   queue_remove_waiting: 'Remover esta tarefa da fila?'
   queue_remove_entry: 'Remover esta entrada da lista?'

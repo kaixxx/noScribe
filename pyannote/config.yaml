@@ -1,4 +1,4 @@
-dependencies: 
+dependencies:
   pyannote.audio: 4.0.0
 
 pipeline:
@@ -11,7 +11,7 @@ pipeline:
     embedding_batch_size: 32
     embedding_exclude_overlap: true
     plda: $model/plda
-    
+
 params:
   clustering:
     threshold: 0.6

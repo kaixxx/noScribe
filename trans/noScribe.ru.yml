@@ -2,18 +2,18 @@ ru:
   app_header: Транскрибация аудио с помощью искусственного интеллекта
   welcome_message: Привет! noScribe готов к работе!
   welcome_credits: >
-    
+
     Версия %{v}, Kai Dröge %{y}
-    
+
     портирована на macOS компанией Philipp Schneider
-    
+
     Работает на базе Whisper (OpenAI), faster-whisper (Guillaume Klein) и pyannote (Hervé Bredin)
   welcome_instructions: >
 
     Используйте кнопки слева для выбора аудиофайла и имени файла для готовой транскрипции.
     Пожалуйста, будьте терпеливы. Транскрибация может занять в 2-5 раз больше времени, чем длительность аудиофайла. Проверьте настройки
     на коротком фрагменте перед транскрибацией полного аудио. (Начало = 00.00.00 и Окончание = 00.03.00 будут
-    транскрибировать первые 3 минуты.)   
+    транскрибировать первые 3 минуты.)
 
 
     Приятной работы!
@@ -28,28 +28,28 @@ ru:
   label_audio_file: 'Аудиофайл:'
   label_audio_file_name: <выберите файл>
   multiple_audio_files: '(выбрано несколько файлов)'
-  
+
   label_transcript_file: 'Сохранить транскрипцию как:'
-  label_transcript_file_name: <выберите имя файла> 
+  label_transcript_file_name: <выберите имя файла>
   output_dir_selection: 'Несколько аудиофайлов: выберите папку, в которой будут сохранены расшифровки. Имена будут сгенерированы автоматически.'
 
   label_start: 'Начало (чч:мм:сс): '
-  label_stop: 'Окончание (чч:мм:сс): ' 
+  label_stop: 'Окончание (чч:мм:сс): '
 
   label_language: 'Язык:'
   label_speaker: 'Определение диктора:'
   label_whisper_model: 'Модель:'
-  label_add_custom_models: 'Добавить модель искусственного интеллекта...'  
+  label_add_custom_models: 'Добавить модель искусственного интеллекта...'
   label_overlapping: 'Перекрытие речи:'
   label_pause: 'Отметьте паузы:'
   label_timestamps: 'Временные метки:'
   label_disfluencies: 'Паразитные слова:'
-  
+
   start_button: Старт
   start_queue: 'Запустить задание сейчас'
   stop_button: Отмена
   editor_button: Редактор
- 
+
   overall_progress: 'Общий прогресс: '
 
   # Статус задания
@@ -115,7 +115,7 @@ ru:
   err_converting_audio: Ошибка на шаге 1 - преобразование аудио.
   err_identifying_speakers: Ошибка на шаге 2 - определение дикторов.
   err_loading_prompt: 'Предупреждение: не удалось загрузить промпт Whisper.'
-  transcription_canceled: 'Вы действительно хотите отменить транскрипцию?'   
+  transcription_canceled: 'Вы действительно хотите отменить транскрипцию?'
   queue_cancel_all_confirm: 'Это отменит все незавершённые задания в очереди. Продолжить?'
   err_user_cancelation: 'Процесс был отменен пользователем.'
   err_whisper_main: 'Ошибка в Whisper: завершение основной программы с кодом %{e}'
@@ -147,7 +147,7 @@ ru:
   doc_header_audio: 'Аудиофайл: %{file}'
   pause_minutes: '(%{minutes} минуты паузы)'
   pause_seconds: '(%{seconds} секунд паузы)'
-  
+
   # Действия с очередью
   queue_remove_waiting: 'Удалить это задание из очереди?'
   queue_remove_entry: 'Удалить эту запись из списка?'

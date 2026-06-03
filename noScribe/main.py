@@ -95,11 +95,11 @@ default_html = """
 <style type="text/css" >
 p, li { white-space: pre-wrap; }
 </style>
-<style type="text/css" > 
- p { font-size: 0.9em; } 
+<style type="text/css" >
+ p { font-size: 0.9em; }
  .MsoNormal { font-family: "Arial"; font-weight: 400; font-style: normal; font-size: 0.9em; }
  @page WordSection1 {mso-line-numbers-restart: continuous; mso-line-numbers-count-by: 1; mso-line-numbers-start: 1; }
- div.WordSection1 {page:WordSection1;} 
+ div.WordSection1 {page:WordSection1;}
 </style>
 </head>
 <body style="font-family: 'Arial'; font-weight: 400; font-style: normal" >
@@ -181,10 +181,10 @@ try:
     with open(config_file, 'r') as file:
         config = yaml.safe_load(file)
         if not config:
-            raise # config file is empty (None)        
+            raise # config file is empty (None)
 except: # seems we run it for the first time and there is no config file
     config = {}
-    
+
 def get_config(key: str, default) -> str:
     """ Get a config value, set it if it doesn't exist """
     if key not in config:
@@ -216,14 +216,14 @@ def _is_cuda_error_message(message: str) -> bool:
     return any(keyword in lower_message for keyword in _CUDA_ERROR_KEYWORDS)
 
 def version_higher(version1, version2, subversion_level=99) -> int:
-    """Will return 
+    """Will return
     1 if version1 is higher
     2 if version2 is higher
-    0  if both are equal 
-    
-    subversion_level: Adjusts how deep suversions are compared. 
+    0  if both are equal
+
+    subversion_level: Adjusts how deep suversions are compared.
                       If subversion_level = 1, "0.7.3" and "0.7.4" will be equal, because the comparison
-                      stops after the first level of subversions ("0.7").  
+                      stops after the first level of subversions ("0.7").
                       Default: 99
     """
     version1_elems = version1.split('.')
@@ -243,7 +243,7 @@ def version_higher(version1, version2, subversion_level=99) -> int:
             break
     # must be completely equal
     return 0
-    
+
 config['app_version'] = app_version
 
 def save_config():
@@ -299,7 +299,7 @@ class JobStatus(Enum):
 
 class TranscriptionJob:
     """Represents a single transcription job with all its parameters and status"""
-    
+
     def __init__(self):
         # Status tracking
         self.status: JobStatus = JobStatus.WAITING
@@ -308,31 +308,31 @@ class TranscriptionJob:
         self.created_at: datetime.datetime = datetime.datetime.now()
         self.started_at: Optional[datetime.datetime] = None
         self.finished_at: Optional[datetime.datetime] = None
-        
+
         # Progress tracking
         self.progress: float = 0.0  # Progress from 0.0 to 1.0
-        
+
         # File paths
         self.audio_file: str = ''
         self.transcript_file: str = ''
         # Partial transcript tracking
         self.has_partial_transcript: bool = False
-        
+
         # Time range
         self.start: int = 0  # milliseconds
         self.stop: int = 0   # milliseconds (0 means until end)
-        
+
         # Language and model settings
         self.language_name: str = 'Auto'
         self.whisper_model: transcription.WhisperModel = None
-        
+
         # Processing options
         self.speaker_detection: str = 'auto'
         self.overlapping: bool = True
         self.timestamps: bool = False
         self.disfluencies: bool = True
         self.pause: int = 0  # index value (0=none, 1=1sec+, etc.)
-        
+
         # Config-based options
         self.whisper_beam_size: int = 1
         self.whisper_temperature: float = 0.0
@@ -341,22 +341,22 @@ class TranscriptionJob:
         self.timestamp_color: str = '#78909C'
         self.pause_marker: str = '.'
         self.auto_save: bool = True
-        self.whisper_xpu: str = 'cpu' 
+        self.whisper_xpu: str = 'cpu'
         self.vad_threshold: float = 0.5
-        
+
         # Derived properties
         self.file_ext: str = ''
-    
+
     def set_running(self):
         """Mark job as running and record start time"""
         self.status = JobStatus.AUDIO_CONVERSION
         self.started_at = datetime.datetime.now()
-    
+
     def set_finished(self):
         """Mark job as finished and record completion time"""
         self.status = JobStatus.FINISHED
         self.finished_at = datetime.datetime.now()
-    
+
     def set_error(self, error_message: str, error_tb: str = ''):
         """Mark job as failed and store error message"""
         self.status = JobStatus.ERROR
@@ -369,7 +369,7 @@ class TranscriptionJob:
         self.status = JobStatus.CANCELED
         self.error_message = message
         self.finished_at = datetime.datetime.now()
-    
+
     def get_duration(self) -> Optional[datetime.timedelta]:
         """Get processing duration if job is completed"""
         if self.started_at and self.finished_at:
@@ -452,30 +452,30 @@ class TranscriptionJob:
             pass
 
         return "\n".join([ln for ln in lines if ln])
-    
+
 class TranscriptionQueue:
     """Manages a queue of transcription jobs"""
-    
+
     def __init__(self):
         self.jobs: list[TranscriptionJob] = []
         self.current_job: Optional[TranscriptionJob] = None  # Track currently running job
-    
+
     def add_job(self, job: TranscriptionJob):
         """Add a job to the queue"""
         self.jobs.append(job)
-    
+
     def get_waiting_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs with WAITING status"""
         return [job for job in self.jobs if job.status == JobStatus.WAITING]
-    
+
     def get_running_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs currently being processed"""
         return [job for job in self.jobs if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION, JobStatus.CANCELING]]
-    
+
     def get_finished_jobs(self) -> list[TranscriptionJob]:
         """Get all successfully completed jobs"""
         return [job for job in self.jobs if job.status == JobStatus.FINISHED]
-    
+
     def get_failed_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs that encountered errors"""
         return [job for job in self.jobs if job.status == JobStatus.ERROR]
@@ -483,20 +483,20 @@ class TranscriptionQueue:
     def get_canceled_jobs(self) -> list[TranscriptionJob]:
         """Get all jobs that were canceled by the user"""
         return [job for job in self.jobs if job.status == JobStatus.CANCELED]
-    
+
     def has_pending_jobs(self) -> bool:
         """Check if there are jobs waiting to be processed"""
         return len(self.get_waiting_jobs()) > 0
-    
+
     def is_running(self) -> bool:
         """Check if any job are currently beeing processed"""
         return len(self.get_running_jobs()) > 0
-    
+
     def get_next_waiting_job(self) -> Optional[TranscriptionJob]:
         """Get the next job to process"""
         waiting_jobs = self.get_waiting_jobs()
         return waiting_jobs[0] if waiting_jobs else None
-    
+
     def get_queue_summary(self) -> dict:
         """Get summary statistics of the queue"""
         return {
@@ -507,11 +507,11 @@ class TranscriptionQueue:
             'errors': len(self.get_failed_jobs()),
             'canceled': len(self.get_canceled_jobs()),
         }
-    
+
     def is_empty(self) -> bool:
         """Check if queue is empty"""
         return len(self.jobs) == 0
-    
+
     def has_output_conflict(self, transcript_file: str, ignore_job: Optional[TranscriptionJob] = None) -> bool:
         """Check if another queue job uses the same output file.
         Ignores jobs in ERROR, CANCELING, CANCELED and optionally a given job."""
@@ -544,7 +544,7 @@ class TranscriptionQueue:
         except Exception:
             pass
         return True
-    
+
 
 # Command Line Interface
 
@@ -553,12 +553,12 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
                            overlapping=None, timestamps=None, disfluencies=None, pause=None,
                            cli_mode=False) -> TranscriptionJob:
     """Create a TranscriptionJob with all default values
-    
+
     This function handles both CLI and GUI job creation, ensuring all defaults
     are consistent between both modes.
     """
     job = TranscriptionJob()
-    
+
     # File paths
     job.audio_file = audio_file or ''
     job.transcript_file = transcript_file or ''
@@ -566,11 +566,11 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
         job.file_ext = os.path.splitext(job.transcript_file)[1][1:]
         if not job.file_ext in ['html', 'txt', 'vtt']:
             raise Exception(t('err_unsupported_output_format', file_type=job.file_ext))
-    
+
     # Time range
     job.start = start_time if start_time is not None else 0
     job.stop = stop_time if stop_time is not None else 0
-    
+
     # Language - handle both language names and codes
     if language_name:
         if language_name in languages.values():
@@ -583,16 +583,16 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
             raise ValueError(f"Unknown language: {language_name}")
     else:
         job.language_name = 'Auto'
-    
+
     # Model (will be validated later when we have access to the app instance)
     job.whisper_model = whisper_model_name or 'precise'
-    
+
     # Processing options with defaults
     job.speaker_detection = speaker_detection if speaker_detection is not None else 'auto'
     job.overlapping = overlapping if overlapping is not None else True
     job.timestamps = timestamps if timestamps is not None else False
     job.disfluencies = disfluencies if disfluencies is not None else True
-    
+
     # Pause setting
     if pause is not None:
         if isinstance(pause, str):
@@ -605,7 +605,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
             job.pause = pause
     else:
         job.pause = 1  # default to '1sec+'
-    
+
     # Config-based options (use defaults from config)
     job.whisper_beam_size = get_config('whisper_beam_size', 1)
     job.whisper_temperature = get_config('whisper_temperature', 0.0)
@@ -614,11 +614,11 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     job.timestamp_color = get_config('timestamp_color', '#78909C')
     job.pause_marker = get_config('pause_seconds_marker', '.')
     job.auto_save = False if get_config('auto_save', 'True') == 'False' else True
-        
+
     job.vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
-    
+
     # Platform-specific XPU settings
-    """    
+    """
     if platform.system() == "Darwin":  # MAC
         xpu = get_config('pyannote_xpu', 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu')
         job.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
@@ -633,8 +633,8 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
         job.whisper_xpu = 'cuda' if whisper_xpu == 'cuda' else 'cpu'
     else:
         raise Exception('Platform not supported yet.')
-    """    
-    
+    """
+
     # Check for invalid VTT options
     if job.file_ext == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
         if cli_mode:
@@ -642,7 +642,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
         job.pause = 0
         job.overlapping = False
         job.timestamps = False
-    
+
     return job
 
 def create_job_from_cli_args(args) -> TranscriptionJob:
@@ -679,17 +679,17 @@ Examples:
   python -m noScribe --help-models  # Show available models
         """
     )
-    
+
     # Special argument to show available models
     parser.add_argument('--help-models', action='store_true',
                        help='Show available Whisper models and exit')
-    
+
     # Required arguments (when not using --help-models)
     parser.add_argument('audio_file', nargs='?',
                        help='Input audio file path')
-    parser.add_argument('output_file', nargs='?', 
+    parser.add_argument('output_file', nargs='?',
                        help='Output transcript file path (.html, .txt, or .vtt)')
-    
+
     # Optional arguments
     parser.add_argument('--no-gui', action='store_true', default=False,
                        help='Run without showing the GUI (headless mode)')
@@ -703,7 +703,7 @@ Examples:
                        help='Whisper model to use (use --help-models to see available models)')
     parser.add_argument('--speaker-detection', choices=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], default=None,
                        help='Speaker detection/diarization setting')
-    parser.add_argument('--overlapping', action='store_true', default=None, 
+    parser.add_argument('--overlapping', action='store_true', default=None,
                        help='Enable overlapping speech detection')
     parser.add_argument('--no-overlapping', action='store_false', dest='overlapping', default=None,
                        help='Disable overlapping speech detection')
@@ -717,7 +717,7 @@ Examples:
                        help='Exclude disfluencies from transcript')
     parser.add_argument('--pause', choices=['none', '1sec+', '2sec+', '3sec+'], default=None,
                        help='Mark pauses in transcript')
-    
+
     return parser.parse_args()
 
 
@@ -750,75 +750,75 @@ class TimeEntry(ctk.CTkEntry): # special Entry box to enter time in the format h
 
 class JobEntryFrame(ctk.CTkFrame, CTkScalingBaseClass):
     """A custom frame that can display a progress bar as its background with text overlays"""
-    
+
     def __init__(self, master, progress=0.0, progress_color=None, **kwargs):
         ctk.CTkFrame.__init__(self, master, **kwargs)
         CTkScalingBaseClass.__init__(self, scaling_type="widget")
         if not progress_color:
             progress_color = ctk.ThemeManager.theme['CTkProgressBar']['progress_color'][1]
-        
+
         self.progress = progress
         self.progress_color = progress_color
         self.base_color = self._fg_color
         self.show_progress = False  # Only show progress during processing
-        
+
         # Store text content
         self.name_text = ""
         self.status_text = ""
         self.status_color = "lightgray"
-        
+
         # Create a canvas to draw the progress background and text
         self.progress_canvas = tk.Canvas(self, highlightthickness=0)
         self.progress_canvas.place(x=0, y=0, relwidth=1, relheight=1)
-        
+
         # Forward mouse events from canvas to frame for CTkToolTip functionality
         self.progress_canvas.bind("<Enter>", self._on_canvas_enter)
         self.progress_canvas.bind("<Leave>", self._on_canvas_leave)
-        
+
         # Bind to configure event to redraw when size changes
         self.bind('<Configure>', self._on_configure)
-        
+
         # Update the progress display
         self._update_progress_display()
-    
+
     def destroy(self):
         """Override destroy to properly clean up scaling callbacks"""
         CTkScalingBaseClass.destroy(self)
         ctk.CTkFrame.destroy(self)
-    
+
     def set_progress(self, progress, show_progress=True):
         """Set the progress value (0.0 to 1.0) and whether to show progress bar"""
         self.progress = max(0.0, min(1.0, progress))
         self.show_progress = show_progress
         self._update_progress_display()
-    
+
     def set_name_text(self, text):
         """Set the name text to display"""
         self.name_text = text
         self._update_progress_display()
-    
+
     def set_status_text(self, text, color="lightgray"):
         """Set the status text and color to display"""
         self.status_text = text
         self.status_color = color
         self._update_progress_display()
-    
+
     def bind_click(self, callback):
         """Bind click event to the canvas"""
         self.progress_canvas.bind("<Button-1>", callback)
-    
+
     def unbind_click(self):
         """Unbind click event from the canvas"""
         self.progress_canvas.unbind("<Button-1>")
-    
+
     def configure_cursor(self, cursor):
         """Configure cursor for the canvas"""
         self.progress_canvas.configure(cursor=cursor)
-            
+
     def _on_configure(self, event=None):
         """Handle resize events"""
         self._update_progress_display()
-    
+
     def _get_scaled_font_size(self):
         """Calculate font size based on frame height and use CustomTkinter's scaling"""
         try:
@@ -827,42 +827,42 @@ class JobEntryFrame(ctk.CTkFrame, CTkScalingBaseClass):
             return scaled_font[1]
         except:
             return 13  # Fallback
-    
+
     def _on_canvas_enter(self, event):
         """Forward canvas Enter event to frame for CTkToolTip"""
         # Generate a synthetic Enter event for the frame
         self.event_generate("<Enter>")
-    
+
     def _on_canvas_leave(self, event):
         """Forward canvas Leave event to frame for CTkToolTip"""
         # Generate a synthetic Leave event for the frame
         self.event_generate("<Leave>")
-    
+
     def _update_progress_display(self):
         """Update the progress bar display and text"""
         if not self.progress_canvas.winfo_exists():
             return
-            
+
         # Clear the canvas
         self.progress_canvas.delete("all")
-        
+
         # Get canvas dimensions
         width = self.progress_canvas.winfo_width()
         height = self.progress_canvas.winfo_height()
-        
+
         if width <= 1 or height <= 1:
             # Canvas not ready yet
             self.after(10, self._update_progress_display)
             return
-        
+
         # Calculate button area width to avoid overlap (1 button = 30px + padding)
         # Reserve space for up to 3 buttons (X, ⟲/✔, ✔)
         button_area_width = 3 * self._apply_widget_scaling(30 + 5)
-               
+
         # Draw base background
         base_color = self.base_color[1] if isinstance(self.base_color, tuple) else self.base_color
         self.progress_canvas.configure(bg=base_color)
-        
+
         # Draw progress bar only if show_progress is True and there's progress
         if self.show_progress and self.progress > 0:
             progress_width = int((width - button_area_width) * self.progress)
@@ -871,10 +871,10 @@ class JobEntryFrame(ctk.CTkFrame, CTkScalingBaseClass):
                 fill=self.progress_color,
                 outline=""
             )
-        
+
         # Calculate font size based on screen scaling
         font_size = self._get_scaled_font_size()
-                
+
         # Draw text overlays
         if self.name_text:
             self.progress_canvas.create_text(
@@ -884,7 +884,7 @@ class JobEntryFrame(ctk.CTkFrame, CTkScalingBaseClass):
                 fill="lightgray",
                 font=("", font_size)
             )
-        
+
         if self.status_text:
             # Position status text to avoid button overlap
             status_x = width - button_area_width - self._apply_widget_scaling(5)
@@ -982,7 +982,7 @@ class App(ctk.CTk):
         self.scrollable_options = ctk.CTkScrollableFrame(self.sidebar_frame, width=300, corner_radius=0, fg_color='transparent')
         self.scrollable_options.pack(padx=0, pady=0, anchor='w', fill='both', expand=True)
         self.bind('<Configure>', self.on_resize) # Bind the configure event of options_frame to a check_scrollbar requirement function
-        
+
         # input audio file
         self.label_audio_file = ctk.CTkLabel(self.scrollable_options, text=t('label_audio_file'))
         self.label_audio_file.pack(padx=20, pady=[20,0], anchor='w')
@@ -990,9 +990,9 @@ class App(ctk.CTk):
         self.frame_audio_file = ctk.CTkFrame(self.scrollable_options, width=260, height=33, corner_radius=8, border_width=2)
         self.frame_audio_file.pack(padx=20, pady=[0,10], anchor='w')
 
-        self.button_audio_file_name = ctk.CTkButton(self.frame_audio_file, width=200, corner_radius=8, bg_color='transparent', 
-                                                    fg_color='transparent', hover_color=self.frame_audio_file._bg_color, 
-                                                    border_width=0, anchor='w',  
+        self.button_audio_file_name = ctk.CTkButton(self.frame_audio_file, width=200, corner_radius=8, bg_color='transparent',
+                                                    fg_color='transparent', hover_color=self.frame_audio_file._bg_color,
+                                                    border_width=0, anchor='w',
                                                     text=t('label_audio_file_name'), command=self.button_audio_file_event)
         self.button_audio_file_name.place(x=3, y=3)
 
@@ -1006,9 +1006,9 @@ class App(ctk.CTk):
         self.frame_transcript_file = ctk.CTkFrame(self.scrollable_options, width=260, height=33, corner_radius=8, border_width=2)
         self.frame_transcript_file.pack(padx=20, pady=[0,10], anchor='w')
 
-        self.button_transcript_file_name = ctk.CTkButton(self.frame_transcript_file, width=200, corner_radius=8, bg_color='transparent', 
-                                                    fg_color='transparent', hover_color=self.frame_transcript_file._bg_color, 
-                                                    border_width=0, anchor='w',  
+        self.button_transcript_file_name = ctk.CTkButton(self.frame_transcript_file, width=200, corner_radius=8, bg_color='transparent',
+                                                    fg_color='transparent', hover_color=self.frame_transcript_file._bg_color,
+                                                    border_width=0, anchor='w',
                                                     text=t('label_transcript_file_name'), command=self.button_transcript_file_event)
         self.button_transcript_file_name.place(x=3, y=3)
 
@@ -1049,8 +1049,8 @@ class App(ctk.CTk):
             self.option_menu_language.set(last_language)
         else:
             self.option_menu_language.set('Auto')
-        
-        # Whisper Model Selection   
+
+        # Whisper Model Selection
         class CustomCTkOptionMenu(ctk.CTkOptionMenu):
             # Custom version that reads available models on drop down
             def __init__(self, noScribe_parent, master, width = 140, height = 28, corner_radius = None, bg_color = "transparent", fg_color = None, button_color = None, button_hover_color = None, text_color = None, text_color_disabled = None, dropdown_fg_color = None, dropdown_hover_color = None, dropdown_text_color = None, font = None, dropdown_font = None, values = None, variable = None, state = tk.NORMAL, hover = True, command = None, dynamic_resizing = True, anchor = "w", **kwargs):
@@ -1065,7 +1065,7 @@ class App(ctk.CTk):
                 self._values.append(t('label_add_custom_models'))
                 self._dropdown_menu.configure(values=self._values)
                 super()._clicked(event)
-                
+
             def _dropdown_callback(self, value: str):
                 if value == self._values[-2]:  # divider
                     return
@@ -1086,12 +1086,12 @@ class App(ctk.CTk):
                         self.noScribe_parent.logn(f"Failed to open folder: {e}")
                 else:
                     super()._dropdown_callback(value)
-        
+
         self.label_whisper_model = ctk.CTkLabel(self.frame_options, text=t('label_whisper_model'))
         self.label_whisper_model.grid(column=0, row=3, sticky='w', pady=5)
 
-        self.option_menu_whisper_model = CustomCTkOptionMenu(self, 
-                                                       self.frame_options, 
+        self.option_menu_whisper_model = CustomCTkOptionMenu(self,
+                                                       self.frame_options,
                                                        width=100,
                                                        values=list(self.whisper_models.keys()),
                                                        dynamic_resizing=False)
@@ -1129,7 +1129,7 @@ class App(ctk.CTk):
             self.check_box_overlapping.select()
         else:
             self.check_box_overlapping.deselect()
-            
+
         # Disfluencies
         self.label_disfluencies = ctk.CTkLabel(self.frame_options, text=t('label_disfluencies'))
         self.label_disfluencies.grid(column=0, row=7, sticky='w', pady=5)
@@ -1153,7 +1153,7 @@ class App(ctk.CTk):
             self.check_box_timestamps.select()
         else:
             self.check_box_timestamps.deselect()
-        
+
         # Start control: single CTkOptionMenu styled like a button
         # Create a container so we can show/hide as one control
         self.start_button_container = ctk.CTkFrame(self.sidebar_frame, fg_color='transparent')
@@ -1224,15 +1224,15 @@ class App(ctk.CTk):
 
         self.start_action_menu = StartActionOptionMenu(self, self.start_button_container)
         self.start_action_menu.pack(padx=[0,0], fill='x', expand=True)
-        
+
         # create queue view and log textbox
         self.frame_right = ctk.CTkFrame(self.frame_main, corner_radius=0, fg_color='transparent')
         self.frame_right.pack(padx=0, pady=0, fill='both', expand=True, side='top')
-        
+
         self.tabview = ctk.CTkTabview(self.frame_right, anchor="nw", border_width=0, fg_color='transparent', corner_radius=0)
         self.tabview.pack(padx=[10,30], pady=[0,30], fill='both', expand=True, side='top')
-        self.tab_log = self.tabview.add(t("tab_log")) 
-        self.tab_queue = self.tabview.add(t("tab_queue")) 
+        self.tab_log = self.tabview.add(t("tab_log"))
+        self.tab_queue = self.tabview.add(t("tab_queue"))
         self.tabview.set(t("tab_log"))  # set currently visible tab
 
         self.log_frame = ctk.CTkFrame(self.tab_log, fg_color='transparent', border_width=1, corner_radius=0)
@@ -1242,14 +1242,14 @@ class App(ctk.CTk):
         self.log_textbox.tag_config('error', foreground='yellow')
         self.log_textbox.pack(padx=5, pady=5, expand=True, fill='both')
         self.log_len = 0
-        
+
         self.log_progress_frame = ctk.CTkFrame(self.log_frame, fg_color='transparent')
-        self.log_progress_frame.pack(padx=10, pady=10, fill='x', expand=False, anchor='center') 
+        self.log_progress_frame.pack(padx=10, pady=10, fill='x', expand=False, anchor='center')
         self.log_edit_btn = ctk.CTkButton(
             self.log_progress_frame,
             text=t('editor_button'),
             width=100,
-            fg_color=self.log_textbox._scrollbar_button_color,            
+            fg_color=self.log_textbox._scrollbar_button_color,
             command=lambda: self.launch_editor()
         )
         self.log_edit_btn.pack(side='right', padx=(0, 0), pady=0)
@@ -1266,15 +1266,15 @@ class App(ctk.CTk):
 
         self.log_progress_bar = ctk.CTkProgressBar(self.log_progress_frame, mode='determinate', fg_color="gray17")
         self.log_progress_bar.set(0)
-        
+
         self.hyperlink = HyperlinkManager(self.log_textbox._textbox)
 
         # Queue table
         self.queue_frame = ctk.CTkFrame(self.tab_queue, fg_color='transparent', border_width=1, corner_radius=0)
-        self.queue_frame.pack(padx=0, pady=0, expand=True, fill='both')        
+        self.queue_frame.pack(padx=0, pady=0, expand=True, fill='both')
         self.queue_frame = ctk.CTkFrame(self.queue_frame, fg_color='transparent')
         self.queue_frame.pack(padx=5, pady=5, fill='both', expand=True)
-                
+
         # Scrollable frame for queue entries
         self.queue_scrollable = ctk.CTkScrollableFrame(self.queue_frame, bg_color='transparent', fg_color='transparent')
         self.queue_scrollable.pack(fill='both', expand=True, padx=0, pady=(0, 0))
@@ -1287,7 +1287,7 @@ class App(ctk.CTk):
             self.queue_controls_frame,
             text=t('editor_button'),
             width=100,
-            fg_color=self.log_textbox._scrollbar_button_color,            
+            fg_color=self.log_textbox._scrollbar_button_color,
             command=lambda: self.launch_editor()
         )
         self.queue_edit_btn.pack(side='right', padx=(0, 5), pady=5)
@@ -1316,12 +1316,12 @@ class App(ctk.CTk):
         self.update_queue_table()
 
         self.update_scrollbar_visibility()
-        
+
         self.logn(t('welcome_message'), 'highlight')
         self.log(t('welcome_credits', v=app_version, y=app_year))
         self.logn('https://github.com/kaixxx/noScribe', link='https://github.com/kaixxx/noScribe#readme')
         self.logn(t('welcome_instructions'))
-        
+
         # check for new releases
         if get_config('check_for_update', 'True') == 'True':
             try:
@@ -1340,29 +1340,29 @@ class App(ctk.CTk):
                     self.logn()
             except:
                 pass
-            
+
     # Events and Methods
 
     def on_whisper_model_selected(self, value):
         print(self.option_menu_whisper_model.old_value)
         print(value)
-        
+
     def on_resize(self, event):
         self.update_scrollbar_visibility()
 
     def update_scrollbar_visibility(self):
         # Get the size of the scroll region and current canvas size
-        canvas = self.scrollable_options._parent_canvas  
+        canvas = self.scrollable_options._parent_canvas
         scroll_region_height = canvas.bbox("all")[3]
-        canvas_height = canvas.winfo_height()        
-        
+        canvas_height = canvas.winfo_height()
+
         scrollbar = self.scrollable_options._scrollbar
 
         if scroll_region_height > canvas_height:
             scrollbar.grid()
         else:
-            scrollbar.grid_remove()  # Hide the scrollbar if not needed    
-                        
+            scrollbar.grid_remove()  # Hide the scrollbar if not needed
+
     def update_queue_table(self):
         """Update the queue table by diffing: update existing rows, add new ones, remove missing."""
         if getattr(self, '_headless', False):
@@ -1406,7 +1406,7 @@ class App(ctk.CTk):
                 pass
 
             status_text = t(str(job.status.value))
-            
+
             btn_color = ctk.ThemeManager.theme['CTkScrollbar']['button_color']
 
             if hasattr(self, 'queue_row_widgets') and job_key in self.queue_row_widgets:
@@ -1415,7 +1415,7 @@ class App(ctk.CTk):
                 # Update text directly on the JobEntryFrame canvas
                 row['frame'].set_name_text(audio_name)
                 row['frame'].set_status_text(status_text, status_color)
-                
+
                 # Update progress bar visibility based on job status
                 is_processing = job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]
                 if is_processing:
@@ -1438,7 +1438,7 @@ class App(ctk.CTk):
                             )
                             repeat_btn.pack(side='right', padx=(0, 4), pady=5)
                             row['repeat_btn'] = repeat_btn
-                            row['repeat_tt'] = CTkToolTip(repeat_btn, text=t('queue_tt_repeat_job')) 
+                            row['repeat_tt'] = CTkToolTip(repeat_btn, text=t('queue_tt_repeat_job'))
                         else:
                             if not row['repeat_btn'].winfo_ismapped():
                                 row['repeat_btn'].pack(side='right', padx=(0, 4), pady=2)
@@ -1493,7 +1493,7 @@ class App(ctk.CTk):
                             )
                             partial_btn.pack(side='right', padx=(0, 4), pady=5)
                             row['partial_btn'] = partial_btn
-                            row['partial_tt'] = CTkToolTip(partial_btn, text=t('queue_tt_open_partial_job')) 
+                            row['partial_tt'] = CTkToolTip(partial_btn, text=t('queue_tt_open_partial_job'))
                         else:
                             if not row['partial_btn'].winfo_ismapped():
                                 row['partial_btn'].pack(side='right', padx=(0, 4), pady=2)
@@ -1520,7 +1520,7 @@ class App(ctk.CTk):
                             )
                             edit_btn.pack(side='right', padx=(0, 4), pady=5)
                             row['edit_btn'] = edit_btn
-                            row['edit_tt'] = CTkToolTip(edit_btn, text=t('queue_tt_edit_job')) 
+                            row['edit_tt'] = CTkToolTip(edit_btn, text=t('queue_tt_edit_job'))
                         else:
                             if not row['edit_btn'].winfo_ismapped():
                                 row['edit_btn'].pack(side='right', padx=(0, 4), pady=2)
@@ -1544,11 +1544,11 @@ class App(ctk.CTk):
                 fg_color = ctk.ThemeManager.theme['CTkSegmentedButton']['unselected_color'][1]
                 entry_frame = JobEntryFrame(self.queue_scrollable, progress=job.progress, progress_color=None, fg_color=fg_color)
                 entry_frame.pack(fill='x', padx=(0, 5), pady=2)
-                
+
                 # Set the text directly on the JobEntryFrame canvas
                 entry_frame.set_name_text(audio_name)
                 entry_frame.set_status_text(status_text, status_color)
-                
+
                 # Set progress bar visibility based on job status
                 is_processing = job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]
                 if is_processing:
@@ -1567,7 +1567,7 @@ class App(ctk.CTk):
                     hover_color=('darkred'),
                     command=lambda j=job: self._on_queue_row_action(j)
                 )
-                cancel_btn.pack(side='right', padx=(0, 6), pady=5)   
+                cancel_btn.pack(side='right', padx=(0, 6), pady=5)
                 # Tooltip for X button per status
                 if job.status == JobStatus.WAITING:
                     cancel_tt_text = t('queue_tt_remove_waiting')
@@ -1576,8 +1576,8 @@ class App(ctk.CTk):
                 else:
                     cancel_tt_text = t('queue_tt_remove_entry')
                 cancel_tt = CTkToolTip(cancel_btn, text=cancel_tt_text)
-                
-                # Repeat button (job status canceled or error only)                               
+
+                # Repeat button (job status canceled or error only)
                 repeat_btn = None
                 repeat_tt = None
                 if job.status in [JobStatus.ERROR, JobStatus.CANCELED]:
@@ -1623,7 +1623,7 @@ class App(ctk.CTk):
                         command=lambda j=job: self._on_queue_row_edit(j)
                     )
                     edit_btn.pack(side='right', padx=(0, 4), pady=5)
-                    edit_tt = CTkToolTip(edit_btn, text=t('queue_tt_edit_job'))                 
+                    edit_tt = CTkToolTip(edit_btn, text=t('queue_tt_edit_job'))
 
                 # Row tooltip (create once per row)
                 tt_frame = CTkToolTip(entry_frame, text=job_tooltip) #, bg_color='gray')
@@ -1652,7 +1652,7 @@ class App(ctk.CTk):
                 row = self.queue_row_widgets.pop(key)
                 if row['frame'].winfo_exists():
                     row['frame'].destroy()
-                    
+
         # Update queue tab title
         new_name = f'{t("tab_queue")} ({len(self.queue.jobs) - len(self.queue.get_waiting_jobs()) - len(self.queue.get_running_jobs())}/{len(self.queue.jobs)})'
         old_name = self.tabview._name_list[1]
@@ -1707,7 +1707,7 @@ class App(ctk.CTk):
         Returns False if user does not confirm cancelation."""
         try:
             if (ask_before_canceling and
-                   (self.queue.is_running() or self.queue.has_pending_jobs()) and 
+                   (self.queue.is_running() or self.queue.has_pending_jobs()) and
                    not tk.messagebox.askyesno(title='noScribe', message=t('queue_cancel_all_confirm'))):
                 return False
             # Mark waiting jobs as canceled immediately
@@ -1814,7 +1814,7 @@ class App(ctk.CTk):
                 wkr.start()
         except Exception as e:
             self.logn(f'Queue repeat error: {e}', 'error')
-    
+
     def _on_queue_row_edit(self, job: TranscriptionJob):
         self.openLink(f'file://{job.transcript_file}')
 
@@ -1842,15 +1842,15 @@ class App(ctk.CTk):
 
     def launch_editor(self, file=''):
         # Launch the editor in a separate process so that in can stay running even if noScribe quits.
-        # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
+        # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908
         # set system/version dependent "start_new_session" analogs
-  
+
         if file == '':
             # get last finished job (if any)
             jobs = self.queue.get_finished_jobs()
             if len(jobs) > 0:
                 file = jobs[-1].transcript_file
-            
+
         if file == '':
             # no file or finished job to open
             if not tk.messagebox.askyesno(title='noScribe', message=t('err_editor_no_file')):
@@ -1881,8 +1881,8 @@ class App(ctk.CTk):
             # from msdn [1]
             CREATE_NEW_PROCESS_GROUP = 0x00000200  # note: could get it from subprocess
             DETACHED_PROCESS = 0x00000008          # 0x8 | 0x200 == 0x208
-            kwargs.update(creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP)  
-        else:  # should work on all POSIX systems, Linux and macOS 
+            kwargs.update(creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP)
+        else:  # should work on all POSIX systems, Linux and macOS
             kwargs.update(start_new_session=True)
 
         if program is not None and os.path.exists(program):
@@ -1898,33 +1898,33 @@ class App(ctk.CTk):
     def openLink(self, link: str) -> None:
         if link.startswith('file://') and link.endswith('.html'):
             self.launch_editor(link[7:])
-        else: 
+        else:
             webbrowser.open(link)
-    
+
     def log(self, txt: str = '', tags: list = [], where: str = 'both', link: str = '', tb: str = '') -> None:
-        """ Log to main window (where can be 'screen', 'file', or 'both') 
+        """ Log to main window (where can be 'screen', 'file', or 'both')
         tb = formatted traceback of the error, only logged to file
         """
-        
+
         # Handle screen logging if requested and textbox exists
-        if where != 'file': 
+        if where != 'file':
             if txt[:-1] != t('welcome_instructions'):
-                print(txt, end='')            
+                print(txt, end='')
             if not getattr(self, '_headless', False) and hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
                 try:
                     self.log_textbox.configure(state=tk.NORMAL)
                     # To prevent slowing down the UI, limit the content of log_textbox to max 5000 characters
                     if self.log_len > 5000:
                        self.log_textbox.delete("1.0", f"1.0 + {self.log_len - 3000} chars") # keep the last 3000
-                       self.log_len = 3000 
-                       
+                       self.log_len = 3000
+
                     if link:
                         tags = tags + self.hyperlink.add(partial(self.openLink, link))
-                                      
+
                     self.log_textbox.insert(tk.END, txt, tags)
                     self.log_textbox.yview_moveto(1)  # Scroll to last line
                     self.log_len += len(txt)
-                    
+
                     # Schedule disabling the textbox in the main thread
                     self.log_textbox.after(0, lambda: self.log_textbox.configure(state=tk.DISABLED))
                 except Exception as e:
@@ -1938,7 +1938,7 @@ class App(ctk.CTk):
                 if tags == 'error':
                     txt = f'ERROR: {txt}'
                 if tb != '':
-                    txt = f'{txt}\nTraceback:\n{tb}' 
+                    txt = f'{txt}\nTraceback:\n{tb}'
                 self.log_file.write(txt)
                 self.log_file.flush()
             except Exception as e:
@@ -1991,8 +1991,8 @@ class App(ctk.CTk):
         self.logn(log_msg)
 
     def button_audio_file_event(self):
-        fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_files_list[0] if len(self.audio_files_list) > 0 else ''), 
-                                           initialfile=" ".join(f'"{os.path.basename(path)}"' for path in self.audio_files_list),  
+        fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_files_list[0] if len(self.audio_files_list) > 0 else ''),
+                                           initialfile=" ".join(f'"{os.path.basename(path)}"' for path in self.audio_files_list),
                                            multiple=True)
         if fn and len(fn) > 0:
             self.audio_files_list = fn
@@ -2011,17 +2011,17 @@ class App(ctk.CTk):
         if len(self.audio_files_list) == 0:
             # select audio first
             tk.messagebox.showerror(title='noScribe', message=t('err_no_audio_file'))
-            return                    
+            return
         if len(self.transcript_files_list) > 0:
             _initialdir = os.path.dirname(self.transcript_files_list[0])
             _initialfile = os.path.basename(self.transcript_files_list[0])
         else:
             _initialdir = ''
-            _initialfile = ''            
+            _initialfile = ''
         if not ('last_filetype' in config):
             config['last_filetype'] = 'html'
         filetypes = [
-            ('noScribe Transcript','*.html'), 
+            ('noScribe Transcript','*.html'),
             ('Text only','*.txt'),
             ('WebVTT Subtitles (also for EXMARaLDA)', '*.vtt')
         ]
@@ -2029,7 +2029,7 @@ class App(ctk.CTk):
             if ft[1] == f'*.{config["last_filetype"]}':
                 filetypes.insert(0, filetypes.pop(i))
                 break
-        
+
         if len(self.audio_files_list) > 1:
             # multiple audio files, select an output directory
             tk.messagebox.showinfo(title='noScribe', message=t('output_dir_selection'))
@@ -2040,26 +2040,26 @@ class App(ctk.CTk):
                 return
         else:
             # single audio file, select an output file name
-            fn = tk.filedialog.asksaveasfilename(initialdir=_initialdir, initialfile=_initialfile, 
-                                                filetypes=filetypes, 
+            fn = tk.filedialog.asksaveasfilename(initialdir=_initialdir, initialfile=_initialfile,
+                                                filetypes=filetypes,
                                                 defaultextension=config['last_filetype'])
             if fn:
                 file_ext = os.path.splitext(fn)[1][1:].lower()
                 if not file_ext in ['html', 'txt', 'vtt']:
                     tk.messagebox.showerror(title='noScribe', message=t('err_unsupported_output_format', file_type=file_ext))
-                    return                    
+                    return
                 self.transcript_files_list = [fn]
                 self.button_transcript_file_name.configure(text=os.path.basename(fn))
                 config['last_filetype'] = file_ext
             else:
                 return
-        
+
         self.logn()
         log_msg = t('log_transcript_filename')
         for fn in self.transcript_files_list:
             log_msg += f'\n{fn}'
         self.logn(log_msg)
-        
+
     def set_progress(self, step, value, speaker_detection='none'):
         """ Update state of the progress bar """
         if getattr(self, '_headless', False):
@@ -2085,7 +2085,7 @@ class App(ctk.CTk):
             # stop updating progress bars if the change is less than 1% (0.01)
             return
         self.current_progress = progr
-        
+
         # Update log_progress_bar
         if self.current_progress > 0:
             self.log_progress_bar.set(self.current_progress)
@@ -2097,14 +2097,14 @@ class App(ctk.CTk):
             if self.log_progress_bar.winfo_ismapped():
                 self.log_progress_bar.pack_forget()
                 self.log_stop_btn.configure(state=ctk.DISABLED)
-        
+
         # Update progress of currently running job in queue table
         if progr >= 0:
             running_jobs = self.queue.get_running_jobs()
             if running_jobs:
                 current_job = running_jobs[0]  # Get the first running job
                 current_job.progress = progr
-                
+
                 # Update the progress bar background for this job
                 job_key = id(current_job)
                 if hasattr(self, 'queue_row_widgets') and job_key in self.queue_row_widgets:
@@ -2113,26 +2113,26 @@ class App(ctk.CTk):
                         row['frame'].set_progress(progr)
 
     def collect_transcription_options(self) -> TranscriptionQueue:
-        """Collect all transcription options from UI and config and creates a 
+        """Collect all transcription options from UI and config and creates a
         TranscriptionQueue for each audio file"""
         # Validate required inputs
         if len(self.audio_files_list) == 0:
             raise ValueError(t('err_no_audio_file'))
-        
+
         if len(self.transcript_files_list) == 0:
             raise ValueError(t('err_no_transcript_file'))
-        
+
         # Parse time range from UI
         start_time = None
         val = self.entry_start.get()
         if val != '':
             start_time = utils.str_to_ms(val)
-        
+
         stop_time = None
         val = self.entry_stop.get()
         if val != '':
             stop_time = utils.str_to_ms(val)
-        
+
         # Get whisper model path
         sel_whisper_model = self.option_menu_whisper_model.get()
         if sel_whisper_model not in self.whisper_models:
@@ -2140,7 +2140,7 @@ class App(ctk.CTk):
         queue = TranscriptionQueue()
         if len(self.audio_files_list) != len(self.transcript_files_list):
             self.create_default_transcript_names()
-        
+
         for i in range(len(self.audio_files_list)):
             job = create_transcription_job(
                 audio_file=self.audio_files_list[i],
@@ -2160,9 +2160,9 @@ class App(ctk.CTk):
             if job.file_ext == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
                 self.logn()
                 self.logn(t('err_vtt_invalid_options'), 'error')
-            
+
             queue.add_job(job)
-        
+
         return queue
 
     def transcription_worker(self, start_job_index=None):
@@ -2181,7 +2181,7 @@ class App(ctk.CTk):
             if pending > 0:
                 self.logn(t('queue_start_jobs', total=pending))
             else:
-                self.logn(t('queue_none_waiting'))                
+                self.logn(t('queue_none_waiting'))
             # Process each job in the queue
             while self.queue.has_pending_jobs():
                 # If global cancel was requested (via Stop button), cancel all waiting jobs
@@ -2190,7 +2190,7 @@ class App(ctk.CTk):
                         job.set_canceled(t('err_user_cancelation'))
                         self.update_queue_table()
                     break
-                
+
                 # Get next job
                 job = None
                 if start_job_index and start_job_index < len(self.queue.jobs):
@@ -2201,19 +2201,19 @@ class App(ctk.CTk):
                     job = self.queue.get_next_waiting_job()
                 if not job:
                     break
-                
+
                 # Process the job
                 try:
                     self.logn()
                     self.logn(t('start_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
-  
+
                     # Process single job
                     self._process_single_job(job)
-                    
+
                     queue_jobs_processed += 1
                     job.set_finished()
                     self.update_queue_table()
-                    
+
                 except Exception as e:
                     # Distinguish cancellation from real errors
                     error_msg = job.error_message or str(e)
@@ -2231,7 +2231,7 @@ class App(ctk.CTk):
                     if self._cancel_job_only:
                         self.cancel = False
                         self._cancel_job_only = False
-            
+
             # Log final summary
             final_summary = self.queue.get_queue_summary()
             self.logn()
@@ -2240,13 +2240,13 @@ class App(ctk.CTk):
             self.logn(t('completed', finished=final_summary['finished']))
             self.logn(t('failed', errors=final_summary['errors']))
             self.logn(t('canceled_summary', canceled=final_summary['canceled']))
-            
+
             # Log total processing time
             total_time = datetime.datetime.now() - queue_start_time
             total_seconds = "{:02d}".format(int(total_time.total_seconds() % 60))
             total_time_str = f'{int(total_time.total_seconds() // 60)}:{total_seconds}'
             self.logn(t('processing_time', total_time_str=total_time_str))
-            
+
             # open editor if only a single file was processed
             if not getattr(self, '_headless', False) \
                     and queue_jobs_processed == 1 \
@@ -2256,14 +2256,14 @@ class App(ctk.CTk):
                     and get_config('auto_edit_transcript', 'True') == 'True':
                 self.launch_editor(job.transcript_file)
             elif queue_jobs_processed > 1 and not getattr(self, '_headless', False):
-                # if more than one job has been processed, switch to queue tab for an overview 
+                # if more than one job has been processed, switch to queue tab for an overview
                 self.tabview.set(self.tabview._name_list[1])
-            
+
         except Exception as e:
             self.logn(f"Queue processing error: {str(e)}", 'error')
             traceback_str = traceback.format_exc()
             self.logn(f"Queue error details: {traceback_str}", where='file')
-        
+
         finally:
             # Hide progress
             self.set_progress(0, 0)
@@ -2277,7 +2277,7 @@ class App(ctk.CTk):
         proc_start_time = datetime.datetime.now()
         job.set_running()
         self.update_queue_table()
-        
+
         tmpdir = TemporaryDirectory('noScribe')
         tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
         orig_transcript_file = job.transcript_file
@@ -2385,7 +2385,7 @@ class App(ctk.CTk):
                 def overlap_len(ss_start, ss_end, ts_start, ts_end):
                     # ss...: speaker segment start and end in milliseconds (from pyannote)
                     # ts...: transcript segment start and end (from whisper.cpp)
-                    # returns overlap percentage, i.e., "0.8" = 80% of the transcript segment overlaps with the speaker segment from pyannote  
+                    # returns overlap percentage, i.e., "0.8" = 80% of the transcript segment overlaps with the speaker segment from pyannote
                     if ts_end < ss_start: # no overlap, ts is before ss
                         return None
 
@@ -2404,8 +2404,8 @@ class App(ctk.CTk):
                     return ol_len / ts_len
 
                 def find_speaker(diarization, transcript_start, transcript_end) -> str:
-                    # Looks for the shortest segment in diarization that has at least 80% overlap 
-                    # with transcript_start - trancript_end.  
+                    # Looks for the shortest segment in diarization that has at least 80% overlap
+                    # with transcript_start - trancript_end.
                     # Returns the speaker name if found.
                     # If only an overlap < 80% is found, this speaker name ist returned.
                     # If no overlap is found, an empty string is returned.
@@ -2429,11 +2429,11 @@ class App(ctk.CTk):
                                 overlap_found = t
                                 segment_len = current_segment_len
                                 spkr = current_segment_spkr
-                        elif t > overlap_found: # no segment with good overlap yet, take this if the overlap is better then previously found 
+                        elif t > overlap_found: # no segment with good overlap yet, take this if the overlap is better then previously found
                             overlap_found = t
                             segment_len = current_segment_len
                             spkr = current_segment_spkr
-                        
+
                     if job.overlapping and is_overlapping:
                         return f"//{spkr}"
                     else:
@@ -2496,7 +2496,7 @@ class App(ctk.CTk):
 
                     # prepare transcript html
                     d = AdvancedHTMLParser.AdvancedHTMLParser()
-                    d.parseStr(default_html)                
+                    d.parseStr(default_html)
 
                     # add audio file path:
                     tag = d.createElement("meta")
@@ -2517,7 +2517,7 @@ class App(ctk.CTk):
                     main_body.addClass('WordSection1')
                     d.body.appendChild(main_body)
 
-                    # header               
+                    # header
                     p = d.createElement('p')
                     p.setStyle('font-weight', '600')
                     p.appendText(Path(job.audio_file).stem) # use the name of the audio file (without extension) as the title
@@ -2633,7 +2633,7 @@ class App(ctk.CTk):
                             segment.end = original_end
 
                         return segment
-                                    
+
                     # Run Faster-Whisper in a spawned subprocess and stream segments
                     last_segment_end = 0
                     last_timestamp_ms = 0
@@ -2701,8 +2701,8 @@ class App(ctk.CTk):
                                     prev_speaker = speaker
                                     speaker = new_speaker
                                     seg_text = f' {speaker}:{seg_text}'
-                                    seg_html = html.escape(seg_text, quote=False)                                
-                                elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker 
+                                    seg_html = html.escape(seg_text, quote=False)
+                                elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker
                                     speaker = new_speaker
                                     seg_text = f'//{seg_text}'
                                     seg_html = html.escape(seg_text, quote=False)
@@ -2732,7 +2732,7 @@ class App(ctk.CTk):
                                         else:
                                             seg_html = html.escape(seg_text, quote=False).lstrip()
                                             seg_text = f'{speaker}:{seg_text}'
-                                        
+
                             else: # same speaker
                                 if job.timestamps:
                                     if (start - last_timestamp_ms) > job.timestamp_interval:
@@ -2760,7 +2760,7 @@ class App(ctk.CTk):
                         p.appendChild(a)
 
                         self.log(seg_text)
-                        
+
                         first_segment = False
 
                         # auto save periodically
@@ -2776,13 +2776,13 @@ class App(ctk.CTk):
                             self.set_progress(3, progr, job.speaker_detection)
                         except Exception:
                             pass
-                    
+
                     try:
                         info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment)
                         transcription_success = True
                         # if self.cancel:
-                        #    raise Exception(t('err_user_cancelation')) 
-                        
+                        #    raise Exception(t('err_user_cancelation'))
+
                         job.has_partial_transcript = False # transcript is finished
                         self.logn()
                         self.logn()
@@ -2818,8 +2818,8 @@ class App(ctk.CTk):
                 # log duration of the whole process
                 proc_time = datetime.datetime.now() - proc_start_time
                 proc_seconds = "{:02d}".format(int(proc_time.total_seconds() % 60))
-                proc_time_str = f'{int(proc_time.total_seconds() // 60)}:{proc_seconds}' 
-                self.logn(t('trancription_time', duration=proc_time_str)) 
+                proc_time_str = f'{int(proc_time.total_seconds() // 60)}:{proc_seconds}'
+                self.logn(t('trancription_time', duration=proc_time_str))
             finally:
                 self.log_file.close()
                 self.log_file = None
@@ -2827,13 +2827,13 @@ class App(ctk.CTk):
         finally:
             # hide progress
             self.set_progress(0, 0)
-            
+
     def create_job(self, enqueue=False):
         try:
             show_queue_tab = enqueue
             # Collect transcription options from UI
             new_queue = self.collect_transcription_options()
-            
+
             # Confirm override if output file conflicts with jobs in queue
             for job in new_queue.jobs:
                 if self.queue.has_output_conflict(job.transcript_file):
@@ -2844,7 +2844,7 @@ class App(ctk.CTk):
 
             # Add the jobs to the queue
             for job in new_queue.jobs:
-                self.queue.add_job(job)            
+                self.queue.add_job(job)
                 if not enqueue and not self.queue.is_running(): # Start transcription worker with the queue
                     wkr = Thread(target=self.transcription_worker, kwargs={"start_job_index": len(self.queue.jobs) - 1}, daemon=True)
                     self._worker_threads.append(wkr)
@@ -2854,14 +2854,14 @@ class App(ctk.CTk):
                     show_queue_tab = True
                     self.logn()
                     self.logn(t('queue_added_job', audio_file=os.path.basename(job.audio_file)), 'highlight')
-            
+
             self.update_queue_table()
             if show_queue_tab:
                 try:
                     self.tabview.set(self.tabview._name_list[1]) # Switch to queue tab for visual feedback
                 except Exception:
                     pass
-                            
+
         except (ValueError, FileNotFoundError) as e:
             # Handle validation errors from collect_transcription_options
             self.logn(str(e), 'error')
@@ -3122,7 +3122,7 @@ class App(ctk.CTk):
             self._mp_queue = None
 
         return diarization or []
-    
+
     def on_closing(self):
         # (see: https://stackoverflow.com/questions/111155/how-do-i-handle-the-window-close-event-in-tkinter)
         global force_pyannote_cpu
@@ -3286,7 +3286,7 @@ def run_cli_mode(args):
     try:
         # Create a headless app instance (no GUI initialization)
         app = HeadlessApp()
-        
+
         # Validate and set the whisper model
         if args.model:
             if args.model not in app.whisper_models:
@@ -3302,18 +3302,18 @@ def run_cli_mode(args):
             else:
                 print("Error: No Whisper models found.")
                 return 1
-        
+
         # Create job from CLI arguments
         job = create_job_from_cli_args(args)
-        
+
         # Set the whisper model path
         job.whisper_model = app.whisper_models[args.model]
-        
+
         # Validate files
         if not os.path.exists(job.audio_file):
             print(f"Error: Audio file '{job.audio_file}' not found.")
             return 1
-        
+
         # Check output directory exists
         output_dir = os.path.dirname(os.path.abspath(job.transcript_file))
         if not os.path.exists(output_dir):
@@ -3322,20 +3322,20 @@ def run_cli_mode(args):
             except Exception as e:
                 print(f"Error: Cannot create output directory '{output_dir}': {e}")
                 return 1
-        
+
         # Add the job to the queue
         app.queue.add_job(job)
-        
+
         print(f"Starting transcription of '{job.audio_file}'...")
         print(f"Output will be saved to '{job.transcript_file}'")
         print(f"Language: {job.language_name}")
         print(f"Model: {args.model}")
         print(f"Speaker detection: {job.speaker_detection}")
         print()
-        
+
         # Start transcription worker with the queue
         app.transcription_worker()
-        
+
         # Check results
         final_summary = app.queue.get_queue_summary()
         if final_summary['finished'] > 0:
@@ -3351,7 +3351,7 @@ def run_cli_mode(args):
             if failed_jobs:
                 print(f"Error: {failed_jobs[0].error_message}")
             return 1
-            
+
     except Exception as e:
         print(f"Error: {str(e)}")
         return 1
@@ -3366,11 +3366,11 @@ def show_available_models():
         # Create headless app instance to get models
         app = HeadlessApp()
         models = app.whisper_models.keys()
-        
+
         print("Available Whisper models:")
         for model in models:
             print(f"  - {model}")
-        
+
         if not models:
             print("  No models found. Please check your installation.")
     except Exception as e:
