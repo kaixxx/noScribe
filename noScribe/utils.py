@@ -302,7 +302,9 @@ def html_to_webvtt(html_string: str) -> str:
 
                 self.current_segment = {
                     "text": "",
-                    "speaker": tmp[3],
+                    # With overlapping speach, a "//" is added to the speaker
+                    # tag in the html file. This is not desired for vtt.
+                    "speaker": tmp[3].replace("//", ""),
                     "time_start": tmp[1],
                     "time_end": tmp[2],
                 }
@@ -319,7 +321,16 @@ def html_to_webvtt(html_string: str) -> str:
         def _append_text(self, target: dict, text: str):
             if target["text"] and not target["text"][-1].isspace():
                 target["text"] += " "
-            target["text"] += html.unescape(text).strip()
+
+            text = text.strip()
+
+            # With overlapping speach, a "//" is added to the text in the
+            # beginning of the segment. Remove it if present as this is not
+            # desired for vtt.
+            text = re.sub(r"^//\w+?:", "", text)
+            text = text.removeprefix("//")
+
+            target["text"] += html.unescape(text.strip())
 
         def handle_data(self, data):
             # Use data only in body.

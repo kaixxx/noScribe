@@ -235,100 +235,159 @@ def test_vtt_escape():
     assert utils._vtt_escape("hello\n\n<world>") == "hello\n&lt;world&gt;"
 
 
-def test_html_to_webvtt():
+class TestHtmlToWebvtt:
     """
-    Tests for the `html_to_webvtt` function.
+    All tests related to the `html_to_webvtt` function.
     """
 
-    # Test without speaker.
-    html_string = """
-    <body>
-        <p>My Title</p>
-        <p>My Information Header</p>
-        <p><a name="ts_0_12140_">(12 seconds pause)</a></p>
-    </body>
-    """
-    result_string = (
-        "WEBVTT My Title\n\n"
-        "NOTE\n"
-        "My Information Header\n\n"
-        "1\n"
-        "00:00:00.000 --> 00:00:12.140\n"
-        "(12 seconds pause)\n\n"
-    )
-    assert utils.html_to_webvtt(html_string) == result_string
+    def test_missing_speaker(self):
+        """
+        Test webvtt without speaker tags in html input.
+        """
 
-    # Test with speaker.
-    html_string = """
-    <body>
-        <p>My Title</p>
-        <p>My Information Header</p>
-        <p><a name="ts_0_12140_s1">I said something.</a></p>
-    </body>
-    """
-    result_string = (
-        "WEBVTT My Title\n\n"
-        "NOTE\n"
-        "My Information Header\n\n"
-        "1\n"
-        "00:00:00.000 --> 00:00:12.140\n"
-        "<v s1>I said something.\n\n"
-    )
-    assert utils.html_to_webvtt(html_string) == result_string
+        html_string = """
+        <body>
+            <p>My Title</p>
+            <p>My Information Header</p>
+            <p><a name="ts_0_12140_">(12 seconds pause)</a></p>
+        </body>
+        """
+        result_string = (
+            "WEBVTT My Title\n\n"
+            "NOTE\n"
+            "My Information Header\n\n"
+            "1\n"
+            "00:00:00.000 --> 00:00:12.140\n"
+            "(12 seconds pause)\n\n"
+        )
+        assert utils.html_to_webvtt(html_string) == result_string
 
-    # Multiple timestamp anchors in one paragraph must still become separate cues.
-    html_string = """
-    <body>
-        <p>My Title</p>
-        <p>My Information Header</p>
-        <p>
-            <a name="ts_0_1000_">First segment.</a>
-            <a name="ts_1000_2500_">Second segment.</a>
-        </p>
-    </body>
-    """
-    result_string = (
-        "WEBVTT My Title\n\n"
-        "NOTE\n"
-        "My Information Header\n\n"
-        "1\n"
-        "00:00:00.000 --> 00:00:01.000\n"
-        "First segment.\n\n"
-        "2\n"
-        "00:00:01.000 --> 00:00:02.500\n"
-        "Second segment.\n\n"
-    )
-    assert utils.html_to_webvtt(html_string) == result_string
+    def test_speaker_present(self):
+        """
+        Test webvtt with speaker tags in html input.
+        """
 
-    # Test empty paragraphs.
-    html_string = """
-    <body>
-        <p>My Title</p>
-        <p>My Information Header</p>
-        <p></p>
-        <p><a name="ts_0_12140_s1"></a></p>
-        <p><a name="ts_0_12140_s1"> </a></p>
-        <p><a name="ts_0_12140_s1">I said something about Romy's story.</a></p>
-    </body>
-    """
-    result_string = (
-        "WEBVTT My Title\n\n"
-        "NOTE\n"
-        "My Information Header\n\n"
-        "1\n"
-        "00:00:00.000 --> 00:00:12.140\n"
-        "<v s1>I said something about Romy's story.\n\n"
-    )
-    assert utils.html_to_webvtt(html_string) == result_string
+        html_string = """
+        <body>
+            <p>My Title</p>
+            <p>My Information Header</p>
+            <p><a name="ts_0_12140_s1">I said something.</a></p>
+        </body>
+        """
+        result_string = (
+            "WEBVTT My Title\n\n"
+            "NOTE\n"
+            "My Information Header\n\n"
+            "1\n"
+            "00:00:00.000 --> 00:00:12.140\n"
+            "<v s1>I said something.\n\n"
+        )
+        assert utils.html_to_webvtt(html_string) == result_string
 
-    # Use actual interview file.
-    html_file = impres.files("tests") / "data" / "interview.html"
-    html_string = html_file.read_text(encoding="utf-8")
+    def test_multiple_segments_in_paragraph(self):
+        """
+        Multiple timestamp anchors in one paragraph must become separate
+        cues in webvtt output
+        """
 
-    result_file = impres.files("tests") / "data" / "interview.vtt"
-    result_string = result_file.read_text(encoding="utf-8")
+        html_string = """
+        <body>
+            <p>My Title</p>
+            <p>My Information Header</p>
+            <p>
+                <a name="ts_0_1000_">First segment.</a>
+                <a name="ts_1000_2500_">Second segment.</a>
+            </p>
+        </body>
+        """
+        result_string = (
+            "WEBVTT My Title\n\n"
+            "NOTE\n"
+            "My Information Header\n\n"
+            "1\n"
+            "00:00:00.000 --> 00:00:01.000\n"
+            "First segment.\n\n"
+            "2\n"
+            "00:00:01.000 --> 00:00:02.500\n"
+            "Second segment.\n\n"
+        )
+        assert utils.html_to_webvtt(html_string) == result_string
 
-    assert utils.html_to_webvtt(html_string) == result_string
+    def test_overlapping_speach(self):
+        """
+        Multiple timestamp anchors in one paragraph must become separate
+        cues. Additionally, short intermezzo of another speaker should result in
+        correct speaker tags. As of version 7.2, disruptions of a speaker are
+        encoded as shown in the `html_string`. This needs to be cleaned up for
+        the vtt case.
+        
+        TODO: Improve this formatting directly in the html output.
+        """
+
+        html_string = """
+        <body>
+            <p>My Title</p>
+            <p>My Information Header</p>
+            <p>
+                <a name="ts_0_1000_s1">First segment.</a>
+                <a name="ts_1000_1250_//s2">//s2: Short disruption.</a>
+                <a name="ts_1000_2500_s1">// Second segment.</a>
+            </p>
+        </body>
+        """
+        result_string = (
+            "WEBVTT My Title\n\n"
+            "NOTE\n"
+            "My Information Header\n\n"
+            "1\n"
+            "00:00:00.000 --> 00:00:01.000\n"
+            "<v s1>First segment.\n\n"
+            "2\n"
+            "00:00:01.000 --> 00:00:01.250\n"
+            "<v s2>Short disruption.\n\n"
+            "3\n"
+            "00:00:01.000 --> 00:00:02.500\n"
+            "<v s1>Second segment.\n\n"
+        )
+        assert utils.html_to_webvtt(html_string) == result_string
+
+    def test_empty_paragraphs(self):
+        """
+        Empty paragraphs need to be omitted.
+        """
+
+        html_string = """
+        <body>
+            <p>My Title</p>
+            <p>My Information Header</p>
+            <p></p>
+            <p><a name="ts_0_12140_s1"></a></p>
+            <p><a name="ts_0_12140_s1"> </a></p>
+            <p><a name="ts_0_12140_s1">I said something about Romy's story.</a></p>
+        </body>
+        """
+        result_string = (
+            "WEBVTT My Title\n\n"
+            "NOTE\n"
+            "My Information Header\n\n"
+            "1\n"
+            "00:00:00.000 --> 00:00:12.140\n"
+            "<v s1>I said something about Romy's story.\n\n"
+        )
+        assert utils.html_to_webvtt(html_string) == result_string
+
+    def test_whole_interview(self):
+        """
+        Test a whole interview.
+        """
+
+        html_file = impres.files("tests") / "data" / "interview.html"
+        html_string = html_file.read_text(encoding="utf-8")
+
+        result_file = impres.files("tests") / "data" / "interview.vtt"
+        result_string = result_file.read_text(encoding="utf-8")
+
+        assert utils.html_to_webvtt(html_string) == result_string
 
 
 class TestApostropheFix:
