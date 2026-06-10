@@ -81,6 +81,7 @@ ru:
   start_job: 'Запуск задания: %{audio_file}'
   start_audio_conversion: 'Преобразование аудио...'
   audio_conversion_finished: 'Преобразование аудио завершено'
+  audio_conversion_skipped_invalid_packets: 'Пропущено недопустимых аудиопакетов: %{count}.'
   start_identifying_speakers: 'Определение дикторов...'
   loading_pyannote: 'Загрузка pyannote'
   start_canceling: 'Отмена... (пожалуйста, подождите)'

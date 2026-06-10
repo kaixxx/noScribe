@@ -81,6 +81,7 @@ pt:
   start_job: 'Iniciando tarefa: %{audio_file}'
   start_audio_conversion: 'Convertendo áudio...'
   audio_conversion_finished: 'Conversão de áudio concluída'
+  audio_conversion_skipped_invalid_packets: '%{count} pacotes de áudio inválidos foram ignorados.'
   start_identifying_speakers: 'Identificação de alto-falantes...'
   loading_pyannote: 'Carregando pyannote'
   start_canceling: 'Cancelando... (aguarde um segundo)'

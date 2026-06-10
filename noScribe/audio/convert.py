@@ -2,6 +2,7 @@
 All classes and functions related to audio conversion.
 """
 
+from collections import deque
 from pathlib import Path
 import logging
 
@@ -26,8 +27,11 @@ class ToWav:
         self.container_output: av.container.Container = None
         self.stream_input: av.stream.Stream = None
         self.stream_output: av.stream.Stream = None
-        self.input_iterator = None
+        self.packet_iterator = None
+        self.pending_frames = deque()
         self.stop_after_sec: float = None
+        self.decode_error_count: int = 0
+        self._output_flushed = False
 
     def open(self):
         """
@@ -45,7 +49,10 @@ class ToWav:
         self.stream_output = self.container_output.add_stream(
             "pcm_s16le", rate=16000, layout="mono"
         )
-        self.input_iterator = self.container_input.decode(self.stream_input)
+        self.packet_iterator = self.container_input.demux(self.stream_input)
+        self.pending_frames.clear()
+        self.decode_error_count = 0
+        self._output_flushed = False
 
         return self
 
@@ -54,8 +61,26 @@ class ToWav:
         Close the file descriptors for the audio conversion.
         """
 
-        self.container_input.close()
-        self.container_output.close()
+        if not self._output_flushed and self.container_output is not None:
+            try:
+                for packet in self.stream_output.encode(None):
+                    self.container_output.mux(packet)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to flush converted audio stream for %s: %s",
+                    self.file_output,
+                    exc,
+                )
+            finally:
+                self._output_flushed = True
+
+        if self.container_input is not None:
+            self.container_input.close()
+            self.container_input = None
+
+        if self.container_output is not None:
+            self.container_output.close()
+            self.container_output = None
 
     def __enter__(self):
         self.open()
@@ -110,17 +135,31 @@ class ToWav:
         Convert a frame from the input file to wave output.
         """
 
-        try:
-            frame = next(self.input_iterator)
-
-            # Check whether we are already past the stop time.
-            if self.stop_after_sec and self.stop_after_sec < frame.time:
+        while not self.pending_frames:
+            try:
+                packet = next(self.packet_iterator)
+            except StopIteration:
                 return False
 
-            # Otherwise convert frame.
-            for packet in self.stream_output.encode(frame):
-                self.container_output.mux(packet)
-        except StopIteration:
+            try:
+                self.pending_frames.extend(packet.decode())
+            except av.error.InvalidDataError as exc:
+                self.decode_error_count += 1
+                logger.warning(
+                    "Skipping invalid audio packet %s while decoding %s: %s",
+                    self.decode_error_count,
+                    self.file_input,
+                    exc,
+                )
+
+        frame = self.pending_frames.popleft()
+
+        # Check whether we are already past the stop time.
+        if self.stop_after_sec and frame.time is not None and self.stop_after_sec < frame.time:
             return False
+
+        # Otherwise convert frame.
+        for packet in self.stream_output.encode(frame):
+            self.container_output.mux(packet)
 
         return True

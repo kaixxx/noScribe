@@ -2371,10 +2371,19 @@ class App(ctk.CTk):
                         raise Exception(t('err_ffmpeg'), job.error_message) from e
 
                 finally:
-                    self._ffmpeg_proc.close()
-                    self._ffmpeg_proc = None
+                    decode_error_count = getattr(self._ffmpeg_proc, "decode_error_count", 0)
+                    if self._ffmpeg_proc is not None:
+                        self._ffmpeg_proc.close()
+                        self._ffmpeg_proc = None
 
                 self.logn(t('audio_conversion_finished'))
+                if decode_error_count > 0:
+                    self.logn(
+                        t(
+                            'audio_conversion_skipped_invalid_packets',
+                            count=decode_error_count,
+                        )
+                    )
                 self.set_progress(1, 100, job.speaker_detection)
 
                 #-------------------------------------------------------

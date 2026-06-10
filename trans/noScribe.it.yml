@@ -80,6 +80,7 @@ it:
   start_job: 'Avvio attività: %{audio_file}'
   start_audio_conversion: 'Conversione audio in corso...'
   audio_conversion_finished: 'Conversione audio completata'
+  audio_conversion_skipped_invalid_packets: 'Sono stati ignorati %{count} pacchetti audio non validi.'
   start_identifying_speakers: 'Identificazione degli speaker in corso...'
   loading_pyannote: 'Caricamento di pyannote'
   start_canceling: 'Annullamento in corso... (attendere un secondo)'

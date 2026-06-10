@@ -85,6 +85,7 @@ en:
   start_job: 'Starting job: %{audio_file}'
   start_audio_conversion: 'Converting audio...'
   audio_conversion_finished: 'Audio conversion finished'
+  audio_conversion_skipped_invalid_packets: '%{count} invalid audio packets were skipped.'
   start_identifying_speakers: 'Speaker identification...'
   loading_pyannote: 'Loading pyannote'
   start_canceling: 'Canceling... (please wait a second)'

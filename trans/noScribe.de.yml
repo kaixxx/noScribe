@@ -81,6 +81,7 @@ de:
   start_job: 'Starte Auftrag: %{audio_file}'
   start_audio_conversion: 'Audioumwandlung...'
   audio_conversion_finished: 'Umwandlung fertig.'
+  audio_conversion_skipped_invalid_packets: '%{count} fehlerhafte Audiopakete wurden übersprungen.'
   start_identifying_speakers: 'Sprecher:innen identifizieren...'
   loading_pyannote: 'Pyannote laden'
   start_canceling: 'Abbrechen läuft...'
