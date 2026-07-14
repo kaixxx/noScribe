@@ -215,3 +215,148 @@ def test_to_wav_skips_invalid_packets(tmp_path, monkeypatch):
     assert output_container.muxed_packets == ["packet-0.0", "packet-0.5", "flush-packet"]
     assert input_container.closed is True
     assert output_container.closed is True
+
+
+def test_to_wav_applies_speed_filter(tmp_path, monkeypatch):
+    """
+    Test that speed-adjusted conversion configures and flushes an atempo graph.
+    """
+
+    class FakeInvalidDataError(Exception):
+        pass
+
+    class FakeBlockingIOError(Exception):
+        pass
+
+    class FakeFrame:
+        def __init__(self, time):
+            self.time = time
+
+    class FakePacket:
+        def __init__(self, frames=None):
+            self.frames = list(frames or [])
+
+        def decode(self):
+            return list(self.frames)
+
+    class FakeInputContainer:
+        def __init__(self, packets):
+            self._packets = packets
+            self.streams = SimpleNamespace(audio=["audio-stream"])
+            self.closed = False
+
+        def demux(self, stream):
+            assert stream == "audio-stream"
+            return iter(self._packets)
+
+        def close(self):
+            self.closed = True
+
+    class FakeOutputStream:
+        def __init__(self):
+            self.encoded_frames = []
+
+        def encode(self, frame=None):
+            self.encoded_frames.append(frame)
+            if frame is None:
+                return ["flush-packet"]
+            return [f"packet-{frame.time}"]
+
+    class FakeOutputContainer:
+        def __init__(self):
+            self.stream = FakeOutputStream()
+            self.muxed_packets = []
+            self.closed = False
+
+        def add_stream(self, codec, rate, layout):
+            assert codec == "pcm_s16le"
+            assert rate == 16000
+            assert layout == "mono"
+            return self.stream
+
+        def mux(self, packet):
+            self.muxed_packets.append(packet)
+
+        def close(self):
+            self.closed = True
+
+    class FakeFilterNode:
+        def __init__(self, graph, name, args=None, template=None):
+            self.graph = graph
+            self.name = name
+            self.args = args
+            self.template = template
+
+        def link_to(self, other):
+            self.graph.links.append((self.name, other.name))
+
+    class FakeGraph:
+        def __init__(self):
+            self.nodes = []
+            self.links = []
+            self.pushed_frames = []
+            self.ready_frames = []
+            self.configured = False
+
+        def add_abuffer(self, template=None):
+            node = FakeFilterNode(self, "abuffer", template=template)
+            self.nodes.append(node)
+            return node
+
+        def add(self, name, args=None):
+            node = FakeFilterNode(self, name, args=args)
+            self.nodes.append(node)
+            return node
+
+        def configure(self):
+            self.configured = True
+
+        def push(self, frame):
+            self.pushed_frames.append(frame)
+            if frame is not None:
+                self.ready_frames.append(frame)
+
+        def pull(self):
+            if self.ready_frames:
+                return self.ready_frames.pop(0)
+            raise FakeBlockingIOError()
+
+    packets = [FakePacket(frames=[FakeFrame(0.0)])]
+    input_container = FakeInputContainer(packets)
+    output_container = FakeOutputContainer()
+    filter_graph = FakeGraph()
+
+    def fake_open(path, mode=None, format=None):
+        if mode == "w":
+            assert format == "wav"
+            return output_container
+        return input_container
+
+    fake_av = SimpleNamespace(
+        open=fake_open,
+        error=SimpleNamespace(InvalidDataError=FakeInvalidDataError),
+        filter=SimpleNamespace(Graph=lambda: filter_graph),
+        BlockingIOError=FakeBlockingIOError,
+    )
+    monkeypatch.setattr(audio.convert, "av", fake_av)
+
+    path_input = tmp_path / "speed.mp3"
+    path_output = tmp_path / "speed.wav"
+
+    with audio.convert.ToWav(path_input, path_output, speed=2.0) as towav:
+        while towav.convert():
+            pass
+
+    assert filter_graph.configured is True
+    assert [(node.name, node.args) for node in filter_graph.nodes] == [
+        ("abuffer", None),
+        ("atempo", "2"),
+        ("abuffersink", None),
+    ]
+    assert filter_graph.links == [("abuffer", "atempo"), ("atempo", "abuffersink")]
+    assert len(filter_graph.pushed_frames) == 2
+    assert filter_graph.pushed_frames[0] is not None
+    assert filter_graph.pushed_frames[1] is None
+    assert output_container.muxed_packets == ["packet-0.0", "flush-packet"]
+    assert input_container.closed is True
+    assert output_container.closed is True

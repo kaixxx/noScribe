@@ -16,13 +16,22 @@ class ToWav:
     Convert an arbitrary file to wave format.
     """
 
-    def __init__(self, file_input: Path, file_output: Path, force: bool = False):
+    def __init__(
+        self,
+        file_input: Path,
+        file_output: Path,
+        force: bool = False,
+        speed: float = 1.0,
+    ):
         # Check whether output path exists. Only overwrite if `force=True`.
         if file_output.exists() and not force:
             raise FileExistsError(file_output)
+        if speed <= 0:
+            raise ValueError("speed must be greater than zero")
 
         self.file_input: Path = file_input
         self.file_output: Path = file_output
+        self.speed: float = speed
         self.container_input: av.container.Container = None
         self.container_output: av.container.Container = None
         self.stream_input: av.stream.Stream = None
@@ -31,6 +40,8 @@ class ToWav:
         self.pending_frames = deque()
         self.stop_after_sec: float = None
         self.decode_error_count: int = 0
+        self.filter_graph = None
+        self._filter_graph_flushed = False
         self._output_flushed = False
 
     def open(self):
@@ -49,9 +60,20 @@ class ToWav:
         self.stream_output = self.container_output.add_stream(
             "pcm_s16le", rate=16000, layout="mono"
         )
+        self.filter_graph = None
+        if self.speed != 1.0:
+            self.filter_graph = av.filter.Graph()
+            last_node = self.filter_graph.add_abuffer(template=self.stream_input)
+            for tempo_arg in self._build_atempo_filter_args():
+                next_node = self.filter_graph.add("atempo", tempo_arg)
+                last_node.link_to(next_node)
+                last_node = next_node
+            last_node.link_to(self.filter_graph.add("abuffersink"))
+            self.filter_graph.configure()
         self.packet_iterator = self.container_input.demux(self.stream_input)
         self.pending_frames.clear()
         self.decode_error_count = 0
+        self._filter_graph_flushed = False
         self._output_flushed = False
 
         return self
@@ -60,6 +82,19 @@ class ToWav:
         """
         Close the file descriptors for the audio conversion.
         """
+
+        if self.filter_graph is not None and not self._filter_graph_flushed:
+            try:
+                self.filter_graph.push(None)
+                self._encode_filtered_frames()
+            except Exception as exc:
+                logger.warning(
+                    "Failed to flush audio speed filter for %s: %s",
+                    self.file_output,
+                    exc,
+                )
+            finally:
+                self._filter_graph_flushed = True
 
         if not self._output_flushed and self.container_output is not None:
             try:
@@ -130,6 +165,37 @@ class ToWav:
 
         self.stop_after_sec = milliseconds / 1000.0
 
+    def _build_atempo_filter_args(self) -> list[str]:
+        remaining_speed = self.speed
+        tempo_args: list[str] = []
+
+        while remaining_speed > 2.0:
+            tempo_args.append("2.0")
+            remaining_speed /= 2.0
+
+        while remaining_speed < 0.5:
+            tempo_args.append("0.5")
+            remaining_speed /= 0.5
+
+        tempo_args.append(f"{remaining_speed:.10g}")
+        return tempo_args
+
+    @staticmethod
+    def _is_filter_graph_empty(exc: Exception) -> bool:
+        return type(exc).__name__ in {"BlockingIOError", "EOFError"}
+
+    def _encode_filtered_frames(self):
+        while True:
+            try:
+                frame = self.filter_graph.pull()
+            except Exception as exc:
+                if self._is_filter_graph_empty(exc):
+                    return
+                raise
+
+            for packet in self.stream_output.encode(frame):
+                self.container_output.mux(packet)
+
     def convert(self) -> bool:
         """
         Convert a frame from the input file to wave output.
@@ -159,7 +225,11 @@ class ToWav:
             return False
 
         # Otherwise convert frame.
-        for packet in self.stream_output.encode(frame):
-            self.container_output.mux(packet)
+        if self.filter_graph is not None:
+            self.filter_graph.push(frame)
+            self._encode_filtered_frames()
+        else:
+            for packet in self.stream_output.encode(frame):
+                self.container_output.mux(packet)
 
         return True

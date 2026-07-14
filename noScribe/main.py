@@ -2340,7 +2340,8 @@ class App(ctk.CTk):
                     self._ffmpeg_proc = audio.convert.ToWav(
                         Path(job.audio_file),
                         Path(tmp_audio_file),
-                        force=True
+                        force=True,
+                        speed=2.0,
                     )
                     self._ffmpeg_proc.open()
 
