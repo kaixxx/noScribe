@@ -38,7 +38,7 @@ it:
 
   label_language: 'Lingua:'
   label_speaker: 'Rilevamento degli speaker:'
-  label_speaker_names: 'Nomi degli speaker'
+  label_speaker_names: 'Nomi degli speaker:'
   tooltip_speaker_names: 'Nomi delle persone nell''audio, separati da virgole (es. "Mona, Lena"). Vengono assegnati agli speaker nell''ordine di prima apparizione e sostituiscono le etichette S00/S01 nella trascrizione.'
   ask_speaker_names_count: 'Hai inserito %{n_names} nome/i, ma il numero di oratori è impostato su %{n_speakers}. I nomi potrebbero essere assegnati alle persone sbagliate. Avviare comunque?'
   warn_speaker_names_more_speakers: 'Sono stati rilevati più oratori dei nomi inseriti (%{n_names}). Gli oratori in eccesso mantengono le loro etichette originali.'

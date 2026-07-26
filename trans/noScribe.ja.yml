@@ -39,7 +39,7 @@ ja:
 
   label_language: '言語：'
   label_speaker: '話者検出：'
-  label_speaker_names: '話者の名前'
+  label_speaker_names: '話者の名前：'
   tooltip_speaker_names: '音声内の人物の名前をカンマ区切りで入力します（例：「Mona, Lena」）。最初に登場した順に話者へ割り当てられ、文字起こし内のS00/S01ラベルを置き換えます。'
   ask_speaker_names_count: '%{n_names}件の名前が入力されましたが、話者数は%{n_speakers}に設定されています。名前が誤った人物に割り当てられる可能性があります。それでも開始しますか？'
   warn_speaker_names_more_speakers: '入力された名前（%{n_names}件）より多くの話者が検出されました。余分な話者は元のラベルのままになります。'

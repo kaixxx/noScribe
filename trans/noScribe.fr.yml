@@ -38,7 +38,7 @@ fr:
 
   label_language: "Langue :"
   label_speaker: "Détection des locuteurs :"
-  label_speaker_names: "Noms des locuteurs"
+  label_speaker_names: "Noms des locuteurs :"
   tooltip_speaker_names: "Noms des personnes dans l'audio, séparés par des virgules (p. ex. « Mona, Lena »). Ils sont attribués aux locuteurs dans l'ordre de leur première apparition et remplacent les étiquettes S00/S01 dans la transcription."
   ask_speaker_names_count: 'Vous avez saisi %{n_names} nom(s), mais le nombre de locuteurs est réglé sur %{n_speakers}. Les noms risquent d''être attribués aux mauvaises personnes. Démarrer quand même ?'
   warn_speaker_names_more_speakers: 'Plus de locuteurs ont été détectés que de noms saisis (%{n_names}). Les locuteurs en trop conservent leurs étiquettes d''origine.'

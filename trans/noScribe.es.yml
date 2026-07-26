@@ -38,7 +38,7 @@ es:
 
   label_language: 'Idioma:'
   label_speaker: 'Detección de oradores:'
-  label_speaker_names: 'Nombres de oradores'
+  label_speaker_names: 'Nombres de oradores:'
   tooltip_speaker_names: 'Nombres de las personas en el audio, separados por comas (p. ej. "Mona, Lena"). Se asignan a los oradores por orden de primera aparición y sustituyen las etiquetas S00/S01 en la transcripción.'
   ask_speaker_names_count: 'Has introducido %{n_names} nombre(s), pero el número de oradores está en %{n_speakers}. Los nombres podrían asignarse a las personas equivocadas. ¿Iniciar de todos modos?'
   warn_speaker_names_more_speakers: 'Se han detectado más oradores que los nombres introducidos (%{n_names}). Los oradores sobrantes conservan sus etiquetas originales.'

@@ -338,6 +338,10 @@ class TranscriptionJob:
         # Processing options
         self.speaker_detection: str = 'auto'
         self.speaker_names: list = None  # real names, mapped in order of first appearance
+        # Built while this job's segments stream in: diarization label -> name.
+        # Lives on the job, so mappings can never leak between queued jobs.
+        self.speaker_name_map: dict = {}
+        self.speaker_name_overflow_warned: bool = False
         self.overlapping: bool = True
         self.timestamps: bool = False
         self.disfluencies: bool = True
@@ -440,6 +444,13 @@ class TranscriptionJob:
         # Speaker detection
         try:
             lines.append(f"{t('label_speaker')} {self.speaker_detection}")
+        except Exception:
+            pass
+
+        # Speaker names (only when the user set any)
+        try:
+            if self.speaker_names:
+                lines.append(f"{t('label_speaker_names')} {', '.join(self.speaker_names)}")
         except Exception:
             pass
 
@@ -562,12 +573,14 @@ def parse_speaker_names(speaker_names):
     """Turn a "Mona, Lena" string (or a list) into a clean list of names.
 
     The names are later mapped to the diarization speakers in order of their
-    first appearance in the audio. Characters that would corrupt the
-    `ts_{start}_{end}_{speaker}` audio-sync anchors (underscores split the
-    anchor's field separator; quotes/angle brackets break its HTML attribute)
-    are replaced or removed, and a colon is dropped because it is the
-    "Name: text" label separator (a name containing it would defeat the VTT
-    speaker-line stripping in utils.html_to_webvtt).
+    first appearance in the audio, and end up verbatim in the
+    `ts_{start}_{end}_{speaker}` audio-sync anchors. Sanitizing them here is
+    the only defense those anchors get, because their readers parse them
+    differently: an underscore is the anchor's field separator (and
+    noScribeEdit splits on it without a limit, so it would truncate the name),
+    `<`, `>`, `"` and `&` would break the surrounding HTML attribute, and a
+    colon is the "Name: text" label separator that utils.html_to_webvtt strips
+    speaker lines by.
     """
     if not speaker_names:
         return []
@@ -947,11 +960,6 @@ def _init_app_state(app):
                        'See here for more information: https://github.com/kaixxx/noScribe/wiki/Add-custom-Whisper-models-for-transcription')
 
     app.queue = TranscriptionQueue()
-    # Per-job speaker-name mapping state. Reset at the start of each job in
-    # transcription_worker; declared here too so _apply_speaker_name never
-    # depends on that reset having run (avoids a latent AttributeError).
-    app._speaker_name_map = {}
-    app._speaker_name_overflow_warned = False
     app.audio_files_list = []
     app.transcript_files_list = []
     app.log_file = None
@@ -2318,9 +2326,7 @@ class App(ctk.CTk):
         base = speaker[2:] if overlapping else speaker
         if not base:
             return speaker
-        # Reset per job in transcription_worker before segments stream in —
-        # single initialization site, so mappings can never leak across jobs.
-        mapping = self._speaker_name_map
+        mapping = job.speaker_name_map
         if base not in mapping:
             idx = len(mapping)
             if idx < len(names):
@@ -2330,10 +2336,10 @@ class App(ctk.CTk):
                 # "auto" (the count is only known now), so note it in the log
                 # once — non-modal, so it never interrupts an unattended run.
                 mapping[base] = base
-                if not self._speaker_name_overflow_warned:
+                if not job.speaker_name_overflow_warned:
                     self.logn()
                     self.logn(t('warn_speaker_names_more_speakers', n_names=len(names)), 'error')
-                    self._speaker_name_overflow_warned = True
+                    job.speaker_name_overflow_warned = True
         name = mapping[base]
         return f'//{name}' if overlapping else name
 
@@ -2464,7 +2470,7 @@ class App(ctk.CTk):
             option_info += f'{t("label_language")} {job.language_name} ({languages[job.language_name]}) | '
             option_info += f'{t("label_speaker")} {job.speaker_detection} | '
             if job.speaker_names:
-                option_info += f'{t("label_speaker_names")}: {", ".join(job.speaker_names)} | '
+                option_info += f'{t("label_speaker_names")} {", ".join(job.speaker_names)} | '
             option_info += f'{t("label_overlapping")} {job.overlapping} | '
             option_info += f'{t("label_timestamps")} {job.timestamps} | '
             option_info += f'{t("label_disfluencies")} {job.disfluencies} | '
@@ -2822,10 +2828,6 @@ class App(ctk.CTk):
                     last_segment_end = 0
                     last_timestamp_ms = 0
                     first_segment = True
-                    # Reset the label->name map for this job (built in order of
-                    # first appearance as segments stream in).
-                    self._speaker_name_map = {}
-                    self._speaker_name_overflow_warned = False
 
                     def on_segment(seg):
                         nonlocal first_segment, last_segment_end, last_timestamp_ms, p, speaker, speaker_disp, prev_speaker
