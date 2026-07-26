@@ -2815,16 +2815,27 @@ class App(ctk.CTk):
                             else: # same speaker
                                 if job.timestamps:
                                     if (start - last_timestamp_ms) > job.timestamp_interval:
-                                        seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
-                                        seg_text = f' {ts}{seg_text}'
+                                        # Break the line first: a speaker who holds
+                                        # the floor for many minutes stays in one
+                                        # paragraph, so without this the timestamps
+                                        # accumulate into a single unreadable line.
+                                        seg_html = f'<br><span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
+                                        seg_text = f'\n{ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
                                         seg_html = html.escape(seg_text, quote=False)
 
                         else: # no speaker detection
                             if job.timestamps and (first_segment or (start - last_timestamp_ms) > job.timestamp_interval):
-                                seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
-                                seg_text = f' {ts}{seg_text}'
+                                # Same reasoning as above -- and with no speaker
+                                # detection there are no paragraph breaks at all,
+                                # so this is the only thing keeping the transcript
+                                # from being one line. Not before the first
+                                # segment, which would open the text with a blank
+                                # line (the lstrip below only handles spaces).
+                                br, nl = ('', '') if first_segment else ('<br>', '\n')
+                                seg_html = f'{br}<span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
+                                seg_text = f'{nl}{ts}{seg_text}'
                                 last_timestamp_ms = start
                             else:
                                 seg_html = html.escape(seg_text, quote=False)
