@@ -521,14 +521,12 @@ class TranscriptionQueue:
         """Check if queue is empty"""
         return len(self.jobs) == 0
 
-    def clear_inactive(self) -> int:
-        """Remove all jobs that are not currently being processed
-        (waiting, finished, canceled and failed ones). Returns the number of
-        removed jobs."""
-        running = self.get_running_jobs()
-        removed = len(self.jobs) - len(running)
-        self.jobs = [job for job in self.jobs if job in running]
-        return removed
+    def clear_inactive(self) -> None:
+        """Remove all jobs that are not currently being processed (waiting,
+        finished, canceled and failed ones). A running job keeps its place."""
+        # get_running_jobs() filters self.jobs, so it is already exactly the
+        # list to keep, in queue order.
+        self.jobs = self.get_running_jobs()
     
     def has_output_conflict(self, transcript_file: str, ignore_job: Optional[TranscriptionJob] = None) -> bool:
         """Check if another queue job uses the same output file.
@@ -1306,7 +1304,7 @@ class App(ctk.CTk):
             height=20,
             fg_color=ctk.ThemeManager.theme['CTkScrollbar']['button_color'],
             hover_color='darkred',
-            command=lambda: self.on_queue_clear()
+            command=self.on_queue_clear
         )
         self.queue_clear_btn.pack(side='right', padx=(0, 26), pady=(4, 0))
         CTkToolTip(self.queue_clear_btn, text=t('queue_clear_tt'))
@@ -1772,6 +1770,8 @@ class App(ctk.CTk):
         """Remove all jobs from the queue list except running ones,
         after confirmation. A running job keeps processing."""
         try:
+            # The button is disabled when there is nothing to clear, but the
+            # last waiting job can start running between redraw and click.
             if len(self.queue.jobs) <= len(self.queue.get_running_jobs()):
                 return
             if not tk.messagebox.askyesno(title='noScribe',
