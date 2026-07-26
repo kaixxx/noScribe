@@ -339,7 +339,8 @@ class TranscriptionJob:
         self.speaker_detection: str = 'auto'
         self.speaker_names: list = []  # real names, mapped in order of first appearance
         # Built while this job's segments stream in: diarization label -> name.
-        # Lives on the job, so mappings can never leak between queued jobs.
+        # Lives on the job, so mappings can never leak between queued jobs, and
+        # is rebuilt by set_running() so a repeated job starts from scratch too.
         self.speaker_name_map: dict = {}
         self.overlapping: bool = True
         self.timestamps: bool = False
@@ -364,6 +365,12 @@ class TranscriptionJob:
         """Mark job as running and record start time"""
         self.status = JobStatus.AUDIO_CONVERSION
         self.started_at = datetime.datetime.now()
+        # Names are assigned in order of first appearance, so the mapping has
+        # to be built from this run's diarization. A repeated job (the queue's
+        # repeat button) keeps its object, and pyannote may hand out different
+        # labels the second time -- carrying the old mapping over would shift
+        # every name that is first seen on the retry.
+        self.speaker_name_map = {}
     
     def set_finished(self):
         """Mark job as finished and record completion time"""

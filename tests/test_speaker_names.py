@@ -61,6 +61,25 @@ def test_real_job_carries_the_mapping_state():
     assert job_b.speaker_name_map == {}
 
 
+def test_a_repeated_job_rebuilds_the_mapping():
+    """The queue's repeat button re-runs the same job object. Diarization runs
+    again from scratch and may hand out different labels, so the mapping must
+    not survive into the second run -- otherwise the next label first seen gets
+    names[len(old_map)] instead of names[0]."""
+    app = _stub_app()
+    job = m.create_transcription_job(speaker_names="Mona, Markus")
+
+    job.set_running()
+    assert m.App._apply_speaker_name(app, "S02", job) == "Mona"
+
+    job.set_canceled("stopped")   # the state the repeat button acts on
+    job.set_running()             # ... and what restarting it does
+    assert job.speaker_name_map == {}
+    # the first speaker heard on the second run gets the first name again
+    assert m.App._apply_speaker_name(app, "S00", job) == "Mona"
+    assert m.App._apply_speaker_name(app, "S01", job) == "Markus"
+
+
 def test_maps_in_first_appearance_order():
     app, job = _stub_app(), _job("Mona, Markus")
     # first label heard gets the first name, regardless of S00/S01 numbering
