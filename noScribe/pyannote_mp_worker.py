@@ -20,11 +20,19 @@ def load_waveform(audio_file):
     backends needed. Passing the waveform in memory also keeps pyannote's
     own decoder out of play."""
     import torch  # deferred like in the entrypoint: module import stays cheap
+    # soundfile reports a missing file as LibsndfileError too, so rule that out
+    # first -- otherwise a converted WAV that vanished (temp dir cleaned up
+    # early, disk full) would be reported as a wrong-format problem and send
+    # the reader after a conversion bug that isn't there.
+    if not os.path.isfile(audio_file):
+        raise FileNotFoundError(
+            f"The converted audio to diarize is missing: {audio_file!r}"
+        )
     try:
         data, sample_rate = soundfile.read(audio_file, dtype="float32", always_2d=True)
     except soundfile.LibsndfileError as e:
         raise RuntimeError(
-            f"Could not read {audio_file!r} -- the diarization worker expects "
+            f"Could not decode {audio_file!r} -- the diarization worker expects "
             f"noScribe's own converted WAV (see noScribe/audio/convert.py): {e}"
         ) from e
     # .contiguous() is a no-op for mono (the (frames, 1) transpose is already

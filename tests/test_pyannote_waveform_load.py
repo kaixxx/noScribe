@@ -48,6 +48,14 @@ def test_load_waveform_rejects_unconverted_input_with_context(tmp_path):
         load_waveform(str(bogus))
 
 
+def test_load_waveform_reports_a_missing_file_as_missing(tmp_path):
+    # soundfile raises LibsndfileError for a missing path just as it does for a
+    # corrupt one, so without the explicit check a WAV that vanished would be
+    # blamed on the conversion step.
+    with pytest.raises(FileNotFoundError):
+        load_waveform(str(tmp_path / "never_written.wav"))
+
+
 def test_load_waveform_bit_identical_to_torchaudio(converted_wav):
     # Migration-time proof: runs only while torchaudio is still installed and
     # may be deleted once torchaudio leaves the tested stacks. The test above
