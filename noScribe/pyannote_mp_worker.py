@@ -19,7 +19,7 @@ def load_waveform(audio_file):
     so plain soundfile can read it -- no torchaudio/torchcodec decoding
     backends needed. Passing the waveform in memory also keeps pyannote's
     own decoder out of play."""
-    import torch
+    import torch  # deferred like in the entrypoint: module import stays cheap
     try:
         data, sample_rate = soundfile.read(audio_file, dtype="float32", always_2d=True)
     except soundfile.LibsndfileError as e:
