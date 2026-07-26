@@ -3737,6 +3737,12 @@ def noScribeMain():
             app.option_menu_pause.set(args.pause)
         if getattr(args, 'speaker_detection', None):
             app.option_menu_speaker.set(args.speaker_detection)
+        if getattr(args, 'speaker_names', None) is not None:
+            app.entry_speaker_names.delete(0, 'end')
+            app.entry_speaker_names.insert(0, args.speaker_names)
+        # .set() above does not fire the dropdown's command, so sync the
+        # names field's visibility to whatever the options now say.
+        app._on_speaker_detection_changed()
         if getattr(args, 'overlapping', None) is not None:
             if args.overlapping:
                 app.check_box_overlapping.select()
