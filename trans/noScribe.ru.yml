@@ -45,6 +45,9 @@ ru:
   label_pause: 'Отметьте паузы:'
   label_timestamps: 'Временные метки:'
   label_disfluencies: 'Паразитные слова:'
+  opt_yes: 'Да'
+  opt_no: 'Нет'
+  pause_none: 'нет'
   
   start_button: Старт
   start_queue: 'Запустить задание сейчас'

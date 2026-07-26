@@ -207,6 +207,17 @@ _CUDA_ERROR_KEYWORDS = (
     'hip error',
 )
 
+def pause_label(pause) -> str:
+    """Map the pause-threshold option index back to its display label.
+
+    Called at display time, not at import time, so the label follows the
+    UI language.
+    """
+    opts = [t('pause_none'), '1sec+', '2sec+', '3sec+']
+    if isinstance(pause, int) and 0 <= pause < len(opts):
+        return opts[pause]
+    return str(pause)
+
 def _is_cuda_error_message(message: str) -> bool:
     if not message:
         return False
@@ -430,9 +441,7 @@ class TranscriptionJob:
 
         # Pause threshold (map int index back to label)
         try:
-            pause_opts = ['none', '1sec+', '2sec+', '3sec+']
-            pause_disp = pause_opts[self.pause] if isinstance(self.pause, int) and 0 <= self.pause < len(pause_opts) else str(self.pause)
-            lines.append(f"{t('label_pause')} {pause_disp}")
+            lines.append(f"{t('label_pause')} {pause_label(self.pause)}")
         except Exception:
             pass
 
@@ -2361,10 +2370,15 @@ class App(ctk.CTk):
                 option_info += f'{t("label_stop")} {utils.ms_to_str(job.stop)} | '.replace(':', '꞉')
             option_info += f'{t("label_language")} {job.language_name} ({languages[job.language_name]}) | '
             option_info += f'{t("label_speaker")} {job.speaker_detection} | '
-            option_info += f'{t("label_overlapping")} {job.overlapping} | '
-            option_info += f'{t("label_timestamps")} {job.timestamps} | '
-            option_info += f'{t("label_disfluencies")} {job.disfluencies} | '
-            option_info += f'{t("label_pause")} {job.pause}'
+            # Render the on/off options as localized yes/no and the pause
+            # threshold as its label, so this header -- which ends up in the
+            # transcript itself -- never mixes True/False with a raw 0. The job
+            # tooltip shows the same values, but as ✓/✗ where space is tight.
+            yes, no = t('opt_yes'), t('opt_no')
+            option_info += f'{t("label_overlapping")} {yes if job.overlapping else no} | '
+            option_info += f'{t("label_timestamps")} {yes if job.timestamps else no} | '
+            option_info += f'{t("label_disfluencies")} {yes if job.disfluencies else no} | '
+            option_info += f'{t("label_pause")} {pause_label(job.pause)}'
 
             # Create log file
             if not os.path.exists(f'{config_dir}/log'):

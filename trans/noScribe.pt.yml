@@ -45,6 +45,9 @@ pt:
   label_pause: 'Marcar pausas:'
   label_timestamps: 'Registos temporais:'
   label_disfluencies: 'Disfluências:'
+  opt_yes: 'Sim'
+  opt_no: 'Não'
+  pause_none: 'nenhuma'
   
   start_button: Iniciar
   start_queue: 'Iniciar tarefa agora'
