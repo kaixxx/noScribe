@@ -337,11 +337,10 @@ class TranscriptionJob:
         
         # Processing options
         self.speaker_detection: str = 'auto'
-        self.speaker_names: list = None  # real names, mapped in order of first appearance
+        self.speaker_names: list = []  # real names, mapped in order of first appearance
         # Built while this job's segments stream in: diarization label -> name.
         # Lives on the job, so mappings can never leak between queued jobs.
         self.speaker_name_map: dict = {}
-        self.speaker_name_overflow_warned: bool = False
         self.overlapping: bool = True
         self.timestamps: bool = False
         self.disfluencies: bool = True
@@ -1167,9 +1166,23 @@ class App(ctk.CTk):
         self.label_speaker = ctk.CTkLabel(self.frame_options, text=t('label_speaker'))
         self.label_speaker.grid(column=0, row=5, sticky='w', pady=5)
 
-        self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], command=self._on_speaker_detection_changed)
+        self.option_menu_speaker = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
         self.option_menu_speaker.grid(column=1, row=5, sticky='e', pady=5)
         self.option_menu_speaker.set(get_config('last_speaker', 'auto'))
+
+        # Speaker names: map the diarization labels (S00, S01, ...) to real
+        # names, assigned in order of first appearance in the audio.
+        self.label_speaker_names = ctk.CTkLabel(self.frame_options, text=t('label_speaker_names'))
+        self.label_speaker_names.grid(column=0, row=6, sticky='w', pady=5)
+
+        self.entry_speaker_names = ctk.CTkEntry(self.frame_options, width=100)
+        self.entry_speaker_names.grid(column=1, row=6, sticky='e', pady=5)
+        self.entry_speaker_names.insert(0, get_config('last_speaker_names', ''))
+        CTkToolTip(self.entry_speaker_names, text=t('tooltip_speaker_names'))
+        # Wire the dropdown only now that the widgets it toggles exist, and run
+        # it once to hide the names field if detection is off.
+        self.option_menu_speaker.configure(command=self._on_speaker_detection_changed)
+        self._on_speaker_detection_changed()
 
         # Overlapping Speech (Diarization)
         self.label_overlapping = ctk.CTkLabel(self.frame_options, text=t('label_overlapping'))
@@ -1206,18 +1219,6 @@ class App(ctk.CTk):
             self.check_box_timestamps.select()
         else:
             self.check_box_timestamps.deselect()
-
-        # Speaker names: map the diarization labels (S00, S01, ...) to real
-        # names, assigned in order of first appearance in the audio.
-        self.label_speaker_names = ctk.CTkLabel(self.frame_options, text=t('label_speaker_names'))
-        self.label_speaker_names.grid(column=0, row=6, sticky='w', pady=5)
-
-        self.entry_speaker_names = ctk.CTkEntry(self.frame_options, width=100)
-        self.entry_speaker_names.grid(column=1, row=6, sticky='e', pady=5)
-        self.entry_speaker_names.insert(0, get_config('last_speaker_names', ''))
-        CTkToolTip(self.entry_speaker_names, text=t('tooltip_speaker_names'))
-        # Hide the names field when speaker detection is off (nothing to map to).
-        self._on_speaker_detection_changed()
 
         # Start control: single CTkOptionMenu styled like a button
         # Create a container so we can show/hide as one control
@@ -2241,17 +2242,26 @@ class App(ctk.CTk):
     def _on_speaker_detection_changed(self, value=None):
         """Show the speaker-names field only when speaker detection is active.
         With detection off ('none') there are no speakers to map names to."""
-        # Wired as the option-menu `command`, which is set before the names
-        # widgets are created; guard against an early callback (a customtkinter
-        # version that fires `command` on `.set()`) rather than AttributeError.
-        if not hasattr(self, 'entry_speaker_names'):
-            return
         if self.option_menu_speaker.get() == 'none':
             self.label_speaker_names.grid_remove()
             self.entry_speaker_names.grid_remove()
         else:
             self.label_speaker_names.grid()
             self.entry_speaker_names.grid()
+
+    def save_ui_state(self):
+        """Remember the current option settings for the next run."""
+        config['last_language'] = self.option_menu_language.get()
+        config['last_speaker'] = self.option_menu_speaker.get()
+        config['last_speaker_names'] = self.entry_speaker_names.get()
+        config['last_whisper_model'] = self.option_menu_whisper_model.get()
+        config['last_pause'] = self.option_menu_pause.get()
+        config['last_overlapping'] = self.check_box_overlapping.get()
+        config['last_timestamps'] = self.check_box_timestamps.get()
+        config['last_disfluencies'] = self.check_box_disfluencies.get()
+        config['force_pyannote_cpu'] = str(force_pyannote_cpu)
+        config['force_whisper_cpu'] = str(force_whisper_cpu)
+        save_config()
 
     def collect_transcription_options(self) -> TranscriptionQueue:
         """Collect all transcription options from UI and config and creates a
@@ -2278,11 +2288,10 @@ class App(ctk.CTk):
         sel_whisper_model = self.option_menu_whisper_model.get()
         if sel_whisper_model not in self.whisper_models:
             raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
-        # Persist the speaker names the moment they are actually used. Saving
-        # only in on_closing loses the change -- including a cleared field --
+        # Persist the options the moment they are actually used. Saving only in
+        # on_closing loses the last change -- including a cleared names field --
         # whenever the shutdown path bails early or is bypassed (Cmd+Q).
-        config['last_speaker_names'] = self.entry_speaker_names.get()
-        save_config()
+        self.save_ui_state()
 
         queue = TranscriptionQueue()
         if len(self.audio_files_list) != len(self.transcript_files_list):
@@ -2333,13 +2342,13 @@ class App(ctk.CTk):
                 mapping[base] = names[idx]
             else:
                 # More speakers than names. This can't be caught up front with
-                # "auto" (the count is only known now), so note it in the log
-                # once — non-modal, so it never interrupts an unattended run.
+                # "auto" (the count is only known now), so note it in the log —
+                # non-modal, so it never interrupts an unattended run. idx grows
+                # by one per new speaker, so this is the first overflow.
                 mapping[base] = base
-                if not job.speaker_name_overflow_warned:
+                if idx == len(names):
                     self.logn()
                     self.logn(t('warn_speaker_names_more_speakers', n_names=len(names)), 'error')
-                    job.speaker_name_overflow_warned = True
         name = mapping[base]
         return f'//{name}' if overlapping else name
 
@@ -3404,18 +3413,7 @@ class App(ctk.CTk):
 
         # remember some settings for the next run
         try:
-            config['last_language'] = self.option_menu_language.get()
-            config['last_speaker'] = self.option_menu_speaker.get()
-            config['last_speaker_names'] = self.entry_speaker_names.get()
-            config['last_whisper_model'] = self.option_menu_whisper_model.get()
-            config['last_pause'] = self.option_menu_pause.get()
-            config['last_overlapping'] = self.check_box_overlapping.get()
-            config['last_timestamps'] = self.check_box_timestamps.get()
-            config['last_disfluencies'] = self.check_box_disfluencies.get()
-            config['force_pyannote_cpu'] = str(force_pyannote_cpu)
-            config['force_whisper_cpu'] = str(force_whisper_cpu)
-
-            save_config()
+            self.save_ui_state()
         finally:
             try:
                 self.quit()

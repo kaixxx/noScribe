@@ -47,7 +47,6 @@ def _job(names):
     return SimpleNamespace(
         speaker_names=parse_speaker_names(names),
         speaker_name_map={},
-        speaker_name_overflow_warned=False,
     )
 
 
@@ -58,7 +57,6 @@ def test_real_job_carries_the_mapping_state():
     job_a = m.create_transcription_job(speaker_names="Mona, Lena")
     job_b = m.create_transcription_job()
     assert job_a.speaker_name_map == {} and job_b.speaker_name_map == {}
-    assert job_a.speaker_name_overflow_warned is False
     m.App._apply_speaker_name(_stub_app(), "S01", job_a)
     assert job_b.speaker_name_map == {}
 
@@ -85,7 +83,6 @@ def test_overflow_keeps_base_label_and_warns_once():
     # more speakers than names -> extra speaker keeps its raw label, not a name
     assert m.App._apply_speaker_name(app, "S02", job) == "S02"
     assert m.App._apply_speaker_name(app, "S03", job) == "S03"
-    assert job.speaker_name_overflow_warned is True
     # warned exactly once across all overflow speakers
     assert sum(1 for a in app._logs if a) == 1
 
