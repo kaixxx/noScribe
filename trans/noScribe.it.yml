@@ -152,8 +152,8 @@ it:
   # Azioni coda
   queue_remove_waiting: 'Rimuovere questa attività dalla coda?'
   queue_remove_entry: 'Rimuovere questa voce dall’elenco?'
-  queue_clear_tt: 'Rimuovere dall''elenco tutti i lavori in attesa e completati'
-  queue_clear_confirm: 'Rimuovere dall''elenco tutti i lavori in attesa e completati? Un lavoro in corso continua l''esecuzione.'
+  queue_clear_tt: 'Rimuovere dall''elenco tutti i lavori tranne quello in corso'
+  queue_clear_confirm: 'Rimuovere dall''elenco tutti i lavori tranne quello in corso? Il lavoro in corso continua l''esecuzione.'
   queue_tt_cancel_running: 'Annulla questa attività'
   queue_tt_remove_waiting: 'Rimuovi dalla coda'
   queue_tt_remove_entry: 'Rimuovi dall’elenco'

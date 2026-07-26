@@ -152,8 +152,8 @@ ja:
   # キュー操作
   queue_remove_waiting: 'このジョブをキューから削除しますか？'
   queue_remove_entry: 'この項目をリストから削除しますか？'
-  queue_clear_tt: '待機中および完了済みのジョブをすべてリストから削除'
-  queue_clear_confirm: '待機中および完了済みのジョブをすべてリストから削除しますか？実行中のジョブは継続されます。'
+  queue_clear_tt: '実行中のジョブ以外をすべてリストから削除'
+  queue_clear_confirm: '実行中のジョブ以外をすべてリストから削除しますか？実行中のジョブは継続されます。'
   queue_tt_cancel_running: 'このジョブをキャンセル'
   queue_tt_remove_waiting: 'キューから削除'
   queue_tt_remove_entry: 'リストから削除'

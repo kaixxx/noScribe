@@ -153,8 +153,8 @@ zh-CN: &defaults
   # 队列操作
   queue_remove_waiting: '从队列中移除此任务？'
   queue_remove_entry: '从列表中移除此条目？'
-  queue_clear_tt: '从列表中删除所有等待中和已完成的任务'
-  queue_clear_confirm: '要从列表中删除所有等待中和已完成的任务吗？正在运行的任务将继续执行。'
+  queue_clear_tt: '从列表中删除除正在运行的任务外的所有任务'
+  queue_clear_confirm: '要从列表中删除除正在运行的任务外的所有任务吗？正在运行的任务将继续执行。'
   queue_tt_cancel_running: '取消此任务'
   queue_tt_remove_waiting: '从队列中移除'
   queue_tt_remove_entry: '从列表中移除'
