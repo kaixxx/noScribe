@@ -36,3 +36,15 @@ def test_canceling_job_survives():
     q = _queue(JobStatus.CANCELING, JobStatus.WAITING)
     q.clear_inactive()
     assert [j.status for j in q.jobs] == [JobStatus.CANCELING]
+
+
+def test_has_inactive_jobs_matches_what_clearing_does():
+    # Drives both the button state and the click-time guard, so it must agree
+    # with clear_inactive() rather than approximate it.
+    for statuses in ([], [JobStatus.TRANSCRIPTION], [JobStatus.WAITING],
+                     [JobStatus.TRANSCRIPTION, JobStatus.FINISHED]):
+        q = _queue(*statuses)
+        before = len(q.jobs)
+        expected = q.has_inactive_jobs()
+        q.clear_inactive()
+        assert (len(q.jobs) < before) is expected
