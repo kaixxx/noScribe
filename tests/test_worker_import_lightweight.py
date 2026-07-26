@@ -41,6 +41,16 @@ def test_lazy_main_attribute_still_works():
     assert res.returncode == 0, res.stdout + res.stderr
 
 
+def test_every_spec_declares_the_lazy_main_import():
+    # PyInstaller's static analysis cannot follow importlib.import_module, so
+    # a spec that does not name noScribe.main produces a build that dies at
+    # startup with ModuleNotFoundError -- which no other test would catch.
+    specs = sorted((Path(REPO) / "pyinstaller").glob("noScribe_*.spec"))
+    assert specs, "no noScribe pyinstaller specs found"
+    missing = [s.name for s in specs if "noScribe.main" not in s.read_text()]
+    assert not missing, f"specs missing the noScribe.main hidden import: {missing}"
+
+
 def test_main_stays_discoverable_without_importing_it():
     # A lazy attribute is invisible to dir() unless __dir__ says otherwise --
     # and looking it up there must not trigger the import it avoids.

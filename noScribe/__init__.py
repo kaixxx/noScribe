@@ -8,6 +8,10 @@ worker child -- and on macOS, PyAV's FFmpeg loaded next to torchcodec's system
 FFmpeg triggers objc duplicate-class warnings. ``noScribe.main`` is therefore
 loaded lazily (PEP 562); ``__main__.py``'s ``noScribe.main.noScribeMain()``
 keeps working unchanged.
+
+PyInstaller cannot follow this import, so every spec in pyinstaller/ lists
+``noScribe.main`` in its hiddenimports -- without that the frozen app dies at
+startup with ModuleNotFoundError.
 """
 import importlib
 
