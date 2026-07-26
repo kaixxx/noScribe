@@ -48,7 +48,6 @@ en:
   label_disfluencies: 'Disfluencies:'
   opt_yes: 'Yes'
   opt_no: 'No'
-  pause_none: 'none'
   
   start_button: Start 
   start_queue: 'Start job now'

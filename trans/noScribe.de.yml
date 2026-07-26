@@ -47,7 +47,6 @@ de:
   label_disfluencies: 'Füllworte:'
   opt_yes: 'Ja'
   opt_no: 'Nein'
-  pause_none: 'keine'
 
   start_button: Start
   start_queue: 'Auftrag jetzt starten'

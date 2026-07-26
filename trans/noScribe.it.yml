@@ -46,7 +46,6 @@ it:
   label_disfluencies: 'Disfluenze:'
   opt_yes: 'Sì'
   opt_no: 'No'
-  pause_none: 'nessuna'
   
   start_button: Avvia
   start_queue: 'Avvia attività ora'

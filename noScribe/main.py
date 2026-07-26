@@ -207,15 +207,24 @@ _CUDA_ERROR_KEYWORDS = (
     'hip error',
 )
 
+PAUSE_OPTIONS = ['none', '1sec+', '2sec+', '3sec+']
+
+
 def pause_label(pause) -> str:
     """Map the pause-threshold option index back to its display label.
 
-    Called at display time, not at import time, so the label follows the
-    UI language.
+    Deliberately not translated. These are the identifiers the user picks in
+    the dropdown and passes to --pause, and they are what gets stored in the
+    config; a transcript naming the setting something the app never showed
+    would be worse than an English word in a German header. The yes/no values
+    next to it are translated because they render a boolean, which has no
+    user-facing token at all.
     """
-    opts = [t('pause_none'), '1sec+', '2sec+', '3sec+']
-    if isinstance(pause, int) and 0 <= pause < len(opts):
-        return opts[pause]
+    # bool is a subclass of int, so it would index the list instead of taking
+    # the fallback below.
+    if isinstance(pause, int) and not isinstance(pause, bool) \
+            and 0 <= pause < len(PAUSE_OPTIONS):
+        return PAUSE_OPTIONS[pause]
     return str(pause)
 
 def _is_cuda_error_message(message: str) -> bool:
@@ -430,11 +439,11 @@ class TranscriptionJob:
         except Exception:
             pass
 
-        # Model (display basename if a path)
+        # Model. whisper_model is a transcription.WhisperModel, so os.path
+        # functions raise TypeError on it -- which the except below swallowed,
+        # dropping this line from every tooltip.
         try:
-            model_disp = os.path.basename(self.whisper_model) if self.whisper_model else ''
-            if not model_disp:
-                model_disp = str(self.whisper_model)
+            model_disp = getattr(self.whisper_model, 'name', None) or str(self.whisper_model or '')
             lines.append(f"{t('label_whisper_model')} {model_disp}")
         except Exception:
             pass
@@ -614,9 +623,8 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     # Pause setting
     if pause is not None:
         if isinstance(pause, str):
-            pause_options = ['none', '1sec+', '2sec+', '3sec+']
-            if pause in pause_options:
-                job.pause = pause_options.index(pause)
+            if pause in PAUSE_OPTIONS:
+                job.pause = PAUSE_OPTIONS.index(pause)
             else:
                 job.pause = 1  # default to '1sec+'
         else:
@@ -733,7 +741,7 @@ Examples:
                        help='Include disfluencies (uh, um, etc.) in transcript')
     parser.add_argument('--no-disfluencies', action='store_false', dest='disfluencies', default=None,
                        help='Exclude disfluencies from transcript')
-    parser.add_argument('--pause', choices=['none', '1sec+', '2sec+', '3sec+'], default=None,
+    parser.add_argument('--pause', choices=PAUSE_OPTIONS, default=None,
                        help='Mark pauses in transcript')
     
     return parser.parse_args()
@@ -1124,7 +1132,7 @@ class App(ctk.CTk):
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
         self.label_pause.grid(column=0, row=4, sticky='w', pady=5)
 
-        self.option_menu_pause = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', '1sec+', '2sec+', '3sec+'])
+        self.option_menu_pause = ctk.CTkOptionMenu(self.frame_options, width=100, values=PAUSE_OPTIONS)
         self.option_menu_pause.grid(column=1, row=4, sticky='e', pady=5)
         self.option_menu_pause.set(get_config('last_pause', '1sec+'))
 

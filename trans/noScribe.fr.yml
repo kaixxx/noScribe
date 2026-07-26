@@ -46,7 +46,6 @@ fr:
   label_disfluencies: 'Mots de remplissage :'
   opt_yes: 'Oui'
   opt_no: 'Non'
-  pause_none: 'aucune'
   
   start_button: "Démarrer"
   start_queue: 'Démarrer la tâche maintenant'
