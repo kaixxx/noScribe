@@ -3,8 +3,6 @@ import os
 import platform
 import traceback
 
-import soundfile
-
 if platform.system() == "Darwin" and platform.machine() == "x86_64":
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     os.environ.setdefault("MKL_NUM_THREADS", "1")
@@ -15,26 +13,37 @@ def load_waveform(audio_file):
     """Load audio as the in-memory ``(channels, frames)`` float32 tensor +
     sample rate that pyannote's waveform input expects.
 
-    The file is always noScribe's own converted WAV (16 kHz mono pcm_s16le),
-    so plain soundfile can read it -- no torchaudio/torchcodec decoding
-    backends needed. Passing the waveform in memory also keeps pyannote's
-    own decoder out of play."""
-    import torch  # deferred like in the entrypoint: module import stays cheap
-    # soundfile reports a missing file as LibsndfileError too, so rule that out
-    # first -- otherwise a converted WAV that vanished (temp dir cleaned up
-    # early, disk full) would be reported as a wrong-format problem and send
-    # the reader after a conversion bug that isn't there.
-    if not os.path.isfile(audio_file):
-        raise FileNotFoundError(
-            f"The converted audio to diarize is missing: {audio_file!r}"
-        )
+    The input is the WAV written by ``noScribe.audio.convert.ToWav``, which
+    owns the format, so plain soundfile can read it -- no torchaudio/torchcodec
+    decoding backends needed. Passing the waveform in memory also keeps
+    pyannote's own decoder out of play.
+    """
+    # Both imports are deferred so this module stays stdlib-only at import
+    # time, as whisper_mp_worker does. For torch that is load-bearing beyond
+    # tidiness: the OMP/MKL environment above must be set before torch pulls in
+    # OpenMP, and main.py imports this module in the GUI process just to reach
+    # the entrypoint.
+    import soundfile
+    import torch
     try:
         data, sample_rate = soundfile.read(audio_file, dtype="float32", always_2d=True)
-    except soundfile.LibsndfileError as e:
+    except RuntimeError as e:
+        # libsndfile funnels every open failure through one exception type and
+        # only the code tells them apart, so a locked or unreadable file must
+        # not be reported as a format problem. (RuntimeError rather than
+        # soundfile.LibsndfileError: the latter only exists from soundfile
+        # 0.11, and it derives from RuntimeError anyway.)
+        if getattr(e, "code", None) == 1:      # SF_ERR_UNRECOGNISED_FORMAT
+            raise RuntimeError(
+                f"Could not decode {audio_file}: not a WAV the diarization "
+                f"worker can read. {e}") from e
+        raise RuntimeError(f"Could not read {audio_file}: {e}") from e
+    if data.shape[0] == 0:
+        # A header with no frames: soundfile accepts it and would hand pyannote
+        # a (1, 0) tensor, which its own validator rejects with a message about
+        # tensor layout that names nothing the user can act on.
         raise RuntimeError(
-            f"Could not decode {audio_file!r} -- the diarization worker expects "
-            f"noScribe's own converted WAV (see noScribe/audio/convert.py): {e}"
-        ) from e
+            f"{audio_file} contains no audio. Check the start and stop times.")
     # .contiguous() is a no-op for mono (the (frames, 1) transpose is already
     # contiguous); it only copies in the hypothetical multichannel case.
     return torch.from_numpy(data.T).contiguous(), sample_rate  # (ch, frames)
