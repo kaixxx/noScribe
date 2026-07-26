@@ -16,3 +16,9 @@ def __getattr__(name):
     if name == "main":
         return importlib.import_module("noScribe.main")
     raise AttributeError(f"module 'noScribe' has no attribute {name!r}")
+
+
+def __dir__():
+    # Keep `main` discoverable (dir(), tab completion, `from noScribe import *`)
+    # even though it is no longer a real module attribute until first access.
+    return sorted([*globals(), "main"])

@@ -39,3 +39,14 @@ def test_lazy_main_attribute_still_works():
         "assert callable(noScribe.main.noScribeMain), 'noScribeMain missing'"
     )
     assert res.returncode == 0, res.stdout + res.stderr
+
+
+def test_main_stays_discoverable_without_importing_it():
+    # A lazy attribute is invisible to dir() unless __dir__ says otherwise --
+    # and looking it up there must not trigger the import it avoids.
+    res = _run(
+        "import sys, noScribe; "
+        "assert 'main' in dir(noScribe), 'main missing from dir()'; "
+        "assert 'noScribe.main' not in sys.modules, 'dir() triggered the import'"
+    )
+    assert res.returncode == 0, res.stdout + res.stderr
