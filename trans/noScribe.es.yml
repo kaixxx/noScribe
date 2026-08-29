@@ -152,6 +152,8 @@ es:
   # Acciones de la cola
   queue_remove_waiting: '¿Eliminar este trabajo de la cola?'
   queue_remove_entry: '¿Eliminar esta entrada de la lista?'
+  queue_clear_tt: 'Quitar de la lista todos los trabajos excepto el que está en curso'
+  queue_clear_confirm: '¿Quitar de la lista todos los trabajos excepto el que está en curso? El trabajo en curso sigue ejecutándose.'
   queue_tt_cancel_running: 'Cancelar este trabajo'
   queue_tt_remove_waiting: 'Eliminar de la cola'
   queue_tt_remove_entry: 'Eliminar de la lista'

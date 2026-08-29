@@ -152,6 +152,8 @@ fr:
   # Actions de file d'attente
   queue_remove_waiting: 'Retirer cette tâche de la file d’attente ?'
   queue_remove_entry: 'Retirer cette entrée de la liste ?'
+  queue_clear_tt: 'Retirer de la liste toutes les tâches sauf celle en cours'
+  queue_clear_confirm: 'Retirer de la liste toutes les tâches sauf celle en cours ? La tâche en cours continue de s''exécuter.'
   queue_tt_cancel_running: 'Annuler cette tâche'
   queue_tt_remove_waiting: 'Retirer de la file'
   queue_tt_remove_entry: 'Retirer de la liste'

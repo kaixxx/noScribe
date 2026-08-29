@@ -154,6 +154,8 @@ de:
   # Queue actions
   queue_remove_waiting: 'Diesen Auftrag aus der Warteschlange entfernen?'
   queue_remove_entry: 'Diesen Eintrag aus der Liste entfernen?'
+  queue_clear_tt: 'Alle Aufträge außer dem laufenden aus der Liste entfernen'
+  queue_clear_confirm: 'Alle Aufträge außer dem laufenden aus der Liste entfernen? Der laufende Auftrag wird fortgesetzt.'
   queue_tt_cancel_running: 'Diesen Auftrag abbrechen'
   queue_tt_remove_waiting: 'Aus der Warteschlange entfernen'
   queue_tt_remove_entry: 'Aus der Liste entfernen'
