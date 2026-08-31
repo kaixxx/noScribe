@@ -2288,14 +2288,18 @@ class App(ctk.CTk):
                     # Distinguish cancellation from real errors
                     error_msg = job.error_message or str(e)
                     if str(e) == t('err_user_cancelation') or self.cancel:
+                        # A user cancel is not an error: log the plain message,
+                        # not a traceback that makes it look like a crash.
                         job.set_canceled(t('err_user_cancelation'))
+                        self.update_queue_table()
+                        self.logn(t('err_user_cancelation'), 'error')
                     else:
                         job.set_error(error_msg)
-                    self.update_queue_table()
-                    self.logn(error_msg, 'error')
-                    traceback_str = job.error_tb or traceback.format_exc()
-                    self.logn(f"Job error details: {traceback_str}", where='file')
-                    print(f"Job error details: {traceback_str}")
+                        self.update_queue_table()
+                        self.logn(error_msg, 'error')
+                        traceback_str = job.error_tb or traceback.format_exc()
+                        self.logn(f"Job error details: {traceback_str}", where='file')
+                        print(f"Job error details: {traceback_str}")
                 finally:
                     # If we were canceling only the current job, reset flags after it stops
                     if self._cancel_job_only:
