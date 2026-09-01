@@ -554,6 +554,151 @@ class TranscriptionQueue:
             pass
         return True
     
+# Word endings that close a sentence, ignoring trailing quotes and brackets.
+# Deliberately no colon: a cut here claims "the speaker may change here", and a
+# colon lands mid-utterance ("Und dann sagte er: ich komme").
+_SEGMENT_SENTENCE_END = ('.', '!', '?', '…')
+_SEGMENT_SENTENCE_TRAIL = '"\'»)] '
+
+
+# A label that never holds the floor is worth a second look: on automatic
+# speaker counting the diarization sometimes spends one on speech it could not
+# place, and the transcript then carries a speaker column nobody spoke in.
+#
+# Scored against ground truth on VoxConverse v0.3 (216 dev + 232 test
+# recordings, 1 to 21 speakers each, RTTM reference), asking per label "is this
+# one surplus, i.e. does a longer label already cover the same reference
+# speaker?":
+#
+#   share < 0.05, turn < 2000 ms   dev 71% correct   test 67%
+#   share < 0.02, turn < 2000 ms   dev 83%           test 69%   <- shipped
+#   share < 0.01, turn < 2000 ms   dev 100%          test 67%
+#
+# So roughly two in three reports are right, and no threshold does better: 0.01
+# looked perfect on dev and lost on test, which is what tuning 32 positives
+# does. 0.02 is the only value better than the original on *both* splits.
+#
+# Two limits this cannot argue away, and the wording of the message respects
+# both. Recall is low -- about one in eight surplus labels (9 of 77 on test) --
+# so silence means nothing. And automatic counting errs the *other* way far more
+# often: too few speakers in 62 of 216 dev and 93 of 232 test recordings against
+# too many in 16 and 30. Several of the false reports are on recordings that are
+# short of speakers, where "one too many" would be exactly backwards. Hence a
+# report that describes what it sees and asks, rather than diagnosing.
+#
+# Both conditions are needed. Share alone flags real speakers wholesale: on a
+# 25-minute round with 14 of them, 13 hold less than 5% of the speech time --
+# but every one speaks in sentences, and only 2 of 860 real speakers across
+# VoxConverse dev ever stay under a 2 s turn.
+#
+# This only reports. Reassigning the turns was measured and rejected: on the
+# recording that prompted this, the label held material from *both* real
+# speakers (24 turns of one, 32 of the other), so there is no single speaker to
+# merge it into, and folding each turn into its nearest neighbour placed 10 of
+# 56 wrong -- trading a visible phantom speaker for invisible misattributions.
+GHOST_SPEAKER_MAX_SHARE = 0.02
+GHOST_SPEAKER_MAX_TURN_MS = 2000
+
+
+def find_ghost_speakers(diarization,
+                        max_share=GHOST_SPEAKER_MAX_SHARE,
+                        max_turn_ms=GHOST_SPEAKER_MAX_TURN_MS):
+    """Labels that look like a spurious speaker rather than a person.
+
+    Returns a list of (label, share_of_speech, longest_turn_ms), smallest share
+    first, or [] when every label looks like a real speaker. Needs at least
+    three labels: with two, "one of them is spurious" is not a conclusion this
+    can draw -- the remaining one would have to be everybody.
+    """
+    totals, longest = {}, {}
+    for segment in diarization or ():
+        label = segment['label']
+        length = max(0, segment['end'] - segment['start'])
+        totals[label] = totals.get(label, 0) + length
+        longest[label] = max(longest.get(label, 0), length)
+    if len(totals) < 3:
+        return []
+    speech = sum(totals.values())
+    if speech <= 0:
+        return []
+    ghosts = [(label, totals[label] / speech, longest[label])
+              for label in totals
+              if totals[label] / speech < max_share
+              and longest[label] < max_turn_ms]
+    # Never call *every* label spurious, however lopsided the file: that says the
+    # recording has no speaker at all, which is never the useful reading.
+    if len(ghosts) >= len(totals):
+        return []
+    return sorted(ghosts, key=lambda g: g[1])
+
+
+def _join_words(words):
+    """Rebuild a segment's text from its words.
+
+    faster-whisper's words carry their own leading space; another engine's
+    word list may be bare tokens, so the separator has to follow the source
+    rather than be assumed.
+    """
+    tokens = [w.get('word') or '' for w in words]
+    separator = '' if any(t.startswith((' ', '\u00a0')) for t in tokens) else ' '
+    return ' ' + separator.join(tokens).strip()
+
+
+def split_at_speaker_change(segment, speaker_of):
+    """Cut a segment at sentence boundaries where the diarization speaker changes.
+
+    A segment is the unit a speaker is assigned to, so one that straddles a
+    turn silently loses the shorter half: the whole thing goes to whoever
+    overlaps it most. That is not hypothetical: a segment builder that merges
+    a short trailing cue into the one before it (so subtitles get no one-word
+    fragments) put a turn-final "Ja, unbedingt." into the question before it,
+    and the merged segment went to the questioner on 40.4% overlap against
+    39.3% -- the answer ended up in the question's paragraph.
+
+    Speakers change between sentences, not inside them, so cutting at sentence
+    ends undoes it. The pieces still go through the unchanged assignment in the
+    caller, which stays the single place a speaker is decided; `speaker_of`
+    (start_ms, end_ms) is only consulted to find where to cut.
+
+    Returns a list of segment dicts -- `[segment]` when there is nothing to cut.
+    """
+    words = segment.get('words')
+    if not words:
+        return [segment]
+
+    runs, current = [], []
+    for word in words:
+        if word.get('start') is None or word.get('end') is None:
+            return [segment]  # incomplete stamps: no basis to cut on
+        current.append(word)
+        token = (word.get('word') or '').rstrip(_SEGMENT_SENTENCE_TRAIL)
+        if token.endswith(_SEGMENT_SENTENCE_END):
+            runs.append(current)
+            current = []
+    if current:
+        runs.append(current)
+    if len(runs) < 2:
+        return [segment]
+
+    pieces = []
+    for run in runs:
+        spkr = speaker_of(round(run[0]['start'] * 1000.0),
+                          round(run[-1]['end'] * 1000.0))
+        # No overlap at all ('') is not a speaker change -- cutting there would
+        # only add a segment that the caller hands to the current speaker anyway.
+        if pieces and (spkr == pieces[-1][0] or spkr == ''):
+            pieces[-1][1].extend(run)
+        else:
+            pieces.append((spkr, list(run)))
+    if len(pieces) < 2:
+        return [segment]
+
+    return [{'start': ws[0]['start'], 'end': ws[-1]['end'],
+             'text': _join_words(ws), 'words': ws} for _spkr, ws in pieces]
+
+
+# Command Line Interface
+
 
 # Command Line Interface
 
@@ -2545,6 +2690,16 @@ class App(ctk.CTk):
                             line = f'{utils.ms_to_str(job.start + segment["start"], include_ms=True)} - {utils.ms_to_str(job.start + segment["end"], include_ms=True)} {segment["label"]}'
                             self.logn(line, where='file')
 
+                        # Say so when a label looks like a spurious speaker
+                        # rather than a person -- only on automatic counting,
+                        # since a count the user gave is not ours to doubt.
+                        if not str(job.speaker_detection).isdigit():
+                            for label, share, longest in find_ghost_speakers(diarization):
+                                self.logn(t('warn_ghost_speaker',
+                                            speaker=f'S{label[8:]}',
+                                            share=f'{100 * share:.1f}',
+                                            longest=f'{longest / 1000:.1f}'), 'error')
+
                         self.logn()
 
                     except Exception as e:
@@ -2856,8 +3011,19 @@ class App(ctk.CTk):
                         except Exception:
                             pass
                     
+                    def on_segment_split(seg):
+                        # Cut the segment where the diarization speaker changes,
+                        # then hand each piece to the unchanged assignment above.
+                        if job.speaker_detection == 'none' or not diarization:
+                            pieces = [seg]
+                        else:
+                            pieces = split_at_speaker_change(
+                                seg, lambda s, e: find_speaker(diarization, s, e))
+                        for piece in pieces:
+                            on_segment(piece)
+
                     try:
-                        info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment)
+                        info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment_split)
                         transcription_success = True
                         # if self.cancel:
                         #    raise Exception(t('err_user_cancelation')) 
