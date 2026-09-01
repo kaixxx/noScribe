@@ -10,6 +10,8 @@ PyAV and carries a different header, and a file written and read by the same
 library would hide any quirk specific to the other one.
 """
 import importlib.resources as impres
+import os
+import sys
 
 import numpy as np
 import pytest
@@ -61,6 +63,10 @@ def test_undecodable_input_names_the_format(tmp_path):
         load_waveform(str(bogus))
 
 
+@pytest.mark.skipif(sys.platform == "win32" or os.geteuid() == 0,
+                    reason="chmod 000 does not make a file unreadable here: "
+                           "Windows only toggles the read-only flag, and root "
+                           "reads regardless of mode bits")
 def test_unreadable_file_is_not_blamed_on_the_format(tmp_path):
     """libsndfile reports a locked file through the same exception as a bad
     format; only the code tells them apart. Confusing the two sends the user
