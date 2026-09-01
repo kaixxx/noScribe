@@ -67,7 +67,7 @@ def test_a_repeated_job_rebuilds_the_mapping():
     not survive into the second run -- otherwise the next label first seen gets
     names[len(old_map)] instead of names[0]."""
     app = _stub_app()
-    job = m.create_transcription_job(speaker_names="Mona, Markus")
+    job = m.create_transcription_job(speaker_names="Mona, Lena")
 
     job.set_running()
     assert m.App._apply_speaker_name(app, "S02", job) == "Mona"
@@ -77,20 +77,20 @@ def test_a_repeated_job_rebuilds_the_mapping():
     assert job.speaker_name_map == {}
     # the first speaker heard on the second run gets the first name again
     assert m.App._apply_speaker_name(app, "S00", job) == "Mona"
-    assert m.App._apply_speaker_name(app, "S01", job) == "Markus"
+    assert m.App._apply_speaker_name(app, "S01", job) == "Lena"
 
 
 def test_maps_in_first_appearance_order():
-    app, job = _stub_app(), _job("Mona, Markus")
+    app, job = _stub_app(), _job("Mona, Lena")
     # first label heard gets the first name, regardless of S00/S01 numbering
     assert m.App._apply_speaker_name(app, "S01", job) == "Mona"
-    assert m.App._apply_speaker_name(app, "S02", job) == "Markus"
+    assert m.App._apply_speaker_name(app, "S02", job) == "Lena"
     # stable on repeat
     assert m.App._apply_speaker_name(app, "S01", job) == "Mona"
 
 
 def test_overlap_prefix_preserved():
-    app, job = _stub_app(), _job("Mona, Markus")
+    app, job = _stub_app(), _job("Mona, Lena")
     assert m.App._apply_speaker_name(app, "S01", job) == "Mona"
     # an overlapping turn keeps the // marker on the mapped name
     assert m.App._apply_speaker_name(app, "//S01", job) == "//Mona"
