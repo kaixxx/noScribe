@@ -89,6 +89,7 @@ en:
   audio_conversion_skipped_invalid_packets: '%{count} invalid audio packets were skipped.'
   start_identifying_speakers: 'Speaker identification...'
   loading_pyannote: 'Loading pyannote'
+  warn_ghost_speaker: 'Worth a check: %{speaker} never holds the floor – only %{share}% of the speech time and no turn longer than %{longest} s. Is this a real speaker? If not, re-running with a fixed number of speakers usually removes the label. Note that automatic counting more often finds too few speakers than too many, so listening to the recording settles it faster than a second run.'
   start_canceling: 'Canceling... (please wait a second)'
   start_transcription: 'Transcription...'
   loading_whisper: 'Loading whisper'
