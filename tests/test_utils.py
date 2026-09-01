@@ -389,3 +389,24 @@ class TestApostropheFix:
         d = self._build_doc_with_text("a < b & c > d")
         txt_out = utils.html_to_text(d.asHTML(), use_only_body=True)
         assert txt_out == "a < b & c > d"
+
+
+def test_timestamp_line_break_survives_the_exports():
+    """A speaker holding the floor stays in one paragraph, so the transcript
+    puts a <br> before each in-paragraph timestamp to keep the line readable.
+    Both export paths have to cope with that break sitting inside the anchor:
+    the text export turns it into a newline, and it must not leak into a VTT
+    cue, where a line break would split the caption.
+    """
+    seg = ('<a name="ts_1000_2000_S01" >S01: Erster Teil der Rede.</a>'
+           '<a name="ts_61000_62000_S01" ><br>'
+           '<span style="color: #78909C" >[00:01:01]</span>Zweiter Teil.</a>')
+    doc = f'<html><body><p>Titel</p><p>Info</p><p>{seg}</p></body></html>'
+
+    text = utils.html_to_text(doc)
+    assert "Rede.\n[00:01:01] Zweiter Teil." in text
+
+    vtt = utils.html_to_webvtt(doc)
+    assert "<v S01>Zweiter Teil." in vtt      # timestamp and break both stripped
+    assert "<br>" not in vtt
+    assert "[00:01:01]" not in vtt
