@@ -85,6 +85,7 @@ de:
   audio_conversion_skipped_invalid_packets: '%{count} fehlerhafte Audiopakete wurden übersprungen.'
   start_identifying_speakers: 'Sprecher:innen identifizieren...'
   loading_pyannote: 'Pyannote laden'
+  warn_ghost_speaker: 'Prüfen: %{speaker} hält nie das Wort – nur %{share} % der Sprechzeit und kein Redebeitrag länger als %{longest} s. Ist das eine echte Sprecherin oder ein echter Sprecher? Wenn nicht, entfernt ein neuer Lauf mit fest eingestellter Sprecheranzahl das Label meist. Umgekehrt findet die automatische Zählung öfter zu wenige als zu viele Sprecher – ein Blick in die Aufnahme entscheidet das schneller als ein zweiter Lauf.'
   start_canceling: 'Abbrechen läuft...'
   start_transcription: 'Transkription...'
   loading_whisper: 'Whisper laden'

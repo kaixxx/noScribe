@@ -554,6 +554,79 @@ class TranscriptionQueue:
             pass
         return True
     
+# A label that never holds the floor is worth a second look: on automatic
+# speaker counting the diarization sometimes spends one on speech it could not
+# place, and the transcript then carries a speaker column nobody spoke in.
+#
+# Scored against ground truth on VoxConverse v0.3 (216 dev + 232 test
+# recordings, 1 to 21 speakers each, RTTM reference), asking per label "is this
+# one surplus, i.e. does a longer label already cover the same reference
+# speaker?":
+#
+#   share < 0.05, turn < 2000 ms   dev 71% correct   test 67%
+#   share < 0.02, turn < 2000 ms   dev 83%           test 69%   <- shipped
+#   share < 0.01, turn < 2000 ms   dev 100%          test 67%
+#
+# So roughly two in three reports are right, and no threshold does better: 0.01
+# looked perfect on dev and lost on test, which is what tuning 32 positives
+# does. 0.02 is the only value better than the original on *both* splits.
+#
+# Two limits this cannot argue away, and the wording of the message respects
+# both. Recall is low -- about one in eight surplus labels (9 of 77 on test) --
+# so silence means nothing. And automatic counting errs the *other* way far more
+# often: too few speakers in 62 of 216 dev and 93 of 232 test recordings against
+# too many in 16 and 30. Several of the false reports are on recordings that are
+# short of speakers, where "one too many" would be exactly backwards. Hence a
+# report that describes what it sees and asks, rather than diagnosing.
+#
+# Both conditions are needed. Share alone flags real speakers wholesale: on a
+# 25-minute round with 14 of them, 13 hold less than 5% of the speech time --
+# but every one speaks in sentences, and only 2 of 860 real speakers across
+# VoxConverse dev ever stay under a 2 s turn.
+#
+# This only reports. Reassigning the turns was measured and rejected: on the
+# recording that prompted this, the label held material from *both* real
+# speakers (24 turns of one, 32 of the other), so there is no single speaker to
+# merge it into, and folding each turn into its nearest neighbour placed 10 of
+# 56 wrong -- trading a visible phantom speaker for invisible misattributions.
+GHOST_SPEAKER_MAX_SHARE = 0.02
+GHOST_SPEAKER_MAX_TURN_MS = 2000
+
+
+def find_ghost_speakers(diarization,
+                        max_share=GHOST_SPEAKER_MAX_SHARE,
+                        max_turn_ms=GHOST_SPEAKER_MAX_TURN_MS):
+    """Labels that look like a spurious speaker rather than a person.
+
+    Returns a list of (label, share_of_speech, longest_turn_ms), smallest share
+    first, or [] when every label looks like a real speaker. Needs at least
+    three labels: with two, "one of them is spurious" is not a conclusion this
+    can draw -- the remaining one would have to be everybody.
+    """
+    totals, longest = {}, {}
+    for segment in diarization or ():
+        label = segment['label']
+        length = max(0, segment['end'] - segment['start'])
+        totals[label] = totals.get(label, 0) + length
+        longest[label] = max(longest.get(label, 0), length)
+    if len(totals) < 3:
+        return []
+    speech = sum(totals.values())
+    if speech <= 0:
+        return []
+    ghosts = [(label, totals[label] / speech, longest[label])
+              for label in totals
+              if totals[label] / speech < max_share
+              and longest[label] < max_turn_ms]
+    # Never call *every* label spurious, however lopsided the file: that says the
+    # recording has no speaker at all, which is never the useful reading.
+    if len(ghosts) >= len(totals):
+        return []
+    return sorted(ghosts, key=lambda g: g[1])
+
+
+# Command Line Interface
+
 
 # Command Line Interface
 
@@ -2544,6 +2617,16 @@ class App(ctk.CTk):
                         for segment in diarization:
                             line = f'{utils.ms_to_str(job.start + segment["start"], include_ms=True)} - {utils.ms_to_str(job.start + segment["end"], include_ms=True)} {segment["label"]}'
                             self.logn(line, where='file')
+
+                        # Say so when a label looks like a spurious speaker
+                        # rather than a person -- only on automatic counting,
+                        # since a count the user gave is not ours to doubt.
+                        if not str(job.speaker_detection).isdigit():
+                            for label, share, longest in find_ghost_speakers(diarization):
+                                self.logn(t('warn_ghost_speaker',
+                                            speaker=f'S{label[8:]}',
+                                            share=f'{100 * share:.1f}',
+                                            longest=f'{longest / 1000:.1f}'), 'error')
 
                         self.logn()
 
