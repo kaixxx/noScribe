@@ -1,7 +1,10 @@
 # Install with `pip install -r requirements_macOS_arm64.txt`
-# torch==2.8 # pyannote 4 is currently not compatible with torch 2.9; torch version is set by torchaudio
-torchaudio==2.8
-torchcodec==0.7.0
+# Tested stack (2026-07, macOS arm64): torch 2.13 / torchaudio 2.11 / torchcodec 0.15
+# run pyannote 4 diarization with identical output and speed as torch 2.8, and
+# torchcodec 0.15 loads against Homebrew FFmpeg 8 (0.7 supported FFmpeg 4-7 only).
+torch==2.13
+torchaudio==2.11
+torchcodec==0.15.0
 av
 AdvancedHTMLParser
 appdirs
