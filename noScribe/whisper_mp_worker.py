@@ -23,7 +23,7 @@ def whisper_proc_entrypoint(args: dict, q):
         # Import heavy libs only in the child
         from faster_whisper import WhisperModel
         from faster_whisper.audio import decode_audio
-        from faster_whisper.vad import VadOptions, get_speech_timestamps
+        from faster_whisper.vad import VadOptions
         import torch
         import yaml
         import i18n
@@ -85,9 +85,6 @@ def whisper_proc_entrypoint(args: dict, q):
         if not audio_path or not os.path.exists(audio_path):
             raise FileNotFoundError(f"Audio path does not exist: {audio_path}")
 
-        sampling_rate = model.feature_extractor.sampling_rate
-        audio = decode_audio(audio_path, sampling_rate=sampling_rate)
-        duration = audio.shape[0] / sampling_rate
         log_cb("info", t('vad'))
 
         # VAD options
@@ -118,9 +115,16 @@ def whisper_proc_entrypoint(args: dict, q):
 
         # Detect language if requested (Auto)
         if language_name == "Auto":
-            whisper_lang, language_probability, _ = model.detect_language(
-                audio, vad_filter=True, vad_parameters=vad_parameters
+            audio = decode_audio(
+                audio_path, sampling_rate=model.feature_extractor.sampling_rate
             )
+            try:
+                whisper_lang, language_probability, _ = model.detect_language(
+                    audio, vad_filter=True, vad_parameters=vad_parameters
+                )
+            finally:
+                del audio
+                gc.collect()
             log_cb("info", t('language_detect', lang=whisper_lang, prob=f'{language_probability:.2f}'))
 
         # Build prompt/hotwords if disfluencies suppression is requested
@@ -136,7 +140,8 @@ def whisper_proc_entrypoint(args: dict, q):
             logger.exception(e)
             log_cb('error', t('err_loading_prompt') + '\n')
 
-        # Perform transcription (streaming)
+        # Pass the path so faster-whisper can release its original waveform
+        # after VAD, before allocating the full spectrogram (see 28650f2e).
         segments, info = model.transcribe(
             audio_path,
             language=whisper_lang,
@@ -184,8 +189,6 @@ def whisper_proc_entrypoint(args: dict, q):
             for k in ("language", "language_probability", "duration", "sample_rate"):
                 if hasattr(info, k):
                     info_dict[k] = getattr(info, k)
-        # Ensure duration is available
-        info_dict.setdefault("duration", duration)
 
         try:
             q.put({"type": "result", "ok": True, "info": info_dict})

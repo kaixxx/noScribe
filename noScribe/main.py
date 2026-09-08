@@ -2832,6 +2832,8 @@ class App(ctk.CTk):
                                                     onset=job.vad_threshold,
                                                     speech_pad_ms=0)
                     speech_chunks = get_speech_timestamps(audio_array, vad_parameters)
+                    # Pause adjustment only needs timestamps and duration from here on.
+                    del audio_array
 
                     def adjust_for_pause(segment):
                         """Adjusts start and end of segment if it falls into a pause
