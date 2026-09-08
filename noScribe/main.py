@@ -1185,7 +1185,6 @@ class App(ctk.CTk):
 
         self.entry_speaker_names = ctk.CTkEntry(self.frame_options, width=100)
         self.entry_speaker_names.grid(column=1, row=6, sticky='e', pady=5)
-        self.entry_speaker_names.insert(0, get_config('last_speaker_names', ''))
         CTkToolTip(self.entry_speaker_names, text=t('tooltip_speaker_names'))
         # Wire the dropdown only now that the widgets it toggles exist, and run
         # it once to hide the names field if detection is off.
@@ -2129,6 +2128,8 @@ class App(ctk.CTk):
                                            initialfile=" ".join(f'"{os.path.basename(path)}"' for path in self.audio_files_list),  
                                            multiple=True)
         if fn and len(fn) > 0:
+            if tuple(fn) != tuple(self.audio_files_list):
+                self.entry_speaker_names.delete(0, 'end')
             self.audio_files_list = fn
             msg = t('log_audio_file_selected')
             for f in fn:
@@ -2261,7 +2262,8 @@ class App(ctk.CTk):
         """Remember the current option settings for the next run."""
         config['last_language'] = self.option_menu_language.get()
         config['last_speaker'] = self.option_menu_speaker.get()
-        config['last_speaker_names'] = self.entry_speaker_names.get()
+        # Names belong to the selected recording, not to future sessions.
+        config.pop('last_speaker_names', None)
         config['last_whisper_model'] = self.option_menu_whisper_model.get()
         config['last_pause'] = self.option_menu_pause.get()
         config['last_overlapping'] = self.check_box_overlapping.get()
@@ -2297,7 +2299,7 @@ class App(ctk.CTk):
         if sel_whisper_model not in self.whisper_models:
             raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
         # Persist the options the moment they are actually used. Saving only in
-        # on_closing loses the last change -- including a cleared names field --
+        # on_closing loses the last change
         # whenever the shutdown path bails early or is bypassed (Cmd+Q).
         self.save_ui_state()
 
