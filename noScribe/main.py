@@ -207,6 +207,26 @@ _CUDA_ERROR_KEYWORDS = (
     'hip error',
 )
 
+PAUSE_OPTIONS = ['none', '1sec+', '2sec+', '3sec+']
+
+
+def pause_label(pause) -> str:
+    """Map the pause-threshold option index back to its display label.
+
+    Deliberately not translated. These are the identifiers the user picks in
+    the dropdown and passes to --pause, and they are what gets stored in the
+    config; a transcript naming the setting something the app never showed
+    would be worse than an English word in a German header. The yes/no values
+    next to it are translated because they render a boolean, which has no
+    user-facing token at all.
+    """
+    # bool is a subclass of int, so it would index the list instead of taking
+    # the fallback below.
+    if isinstance(pause, int) and not isinstance(pause, bool) \
+            and 0 <= pause < len(PAUSE_OPTIONS):
+        return PAUSE_OPTIONS[pause]
+    return str(pause)
+
 def _is_cuda_error_message(message: str) -> bool:
     if not message:
         return False
@@ -430,20 +450,18 @@ class TranscriptionJob:
         except Exception:
             pass
 
-        # Model (display basename if a path)
+        # Model. whisper_model is a transcription.WhisperModel, so os.path
+        # functions raise TypeError on it -- which the except below swallowed,
+        # dropping this line from every tooltip.
         try:
-            model_disp = os.path.basename(self.whisper_model) if self.whisper_model else ''
-            if not model_disp:
-                model_disp = str(self.whisper_model)
+            model_disp = getattr(self.whisper_model, 'name', None) or str(self.whisper_model or '')
             lines.append(f"{t('label_whisper_model')} {model_disp}")
         except Exception:
             pass
 
         # Pause threshold (map int index back to label)
         try:
-            pause_opts = ['none', '1sec+', '2sec+', '3sec+']
-            pause_disp = pause_opts[self.pause] if isinstance(self.pause, int) and 0 <= self.pause < len(pause_opts) else str(self.pause)
-            lines.append(f"{t('label_pause')} {pause_disp}")
+            lines.append(f"{t('label_pause')} {pause_label(self.pause)}")
         except Exception:
             pass
 
@@ -653,9 +671,8 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     # Pause setting
     if pause is not None:
         if isinstance(pause, str):
-            pause_options = ['none', '1sec+', '2sec+', '3sec+']
-            if pause in pause_options:
-                job.pause = pause_options.index(pause)
+            if pause in PAUSE_OPTIONS:
+                job.pause = PAUSE_OPTIONS.index(pause)
             else:
                 job.pause = 1  # default to '1sec+'
         else:
@@ -775,7 +792,7 @@ Examples:
                        help='Include disfluencies (uh, um, etc.) in transcript')
     parser.add_argument('--no-disfluencies', action='store_false', dest='disfluencies', default=None,
                        help='Exclude disfluencies from transcript')
-    parser.add_argument('--pause', choices=['none', '1sec+', '2sec+', '3sec+'], default=None,
+    parser.add_argument('--pause', choices=PAUSE_OPTIONS, default=None,
                        help='Mark pauses in transcript')
     
     return parser.parse_args()
@@ -1166,7 +1183,7 @@ class App(ctk.CTk):
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
         self.label_pause.grid(column=0, row=4, sticky='w', pady=5)
 
-        self.option_menu_pause = ctk.CTkOptionMenu(self.frame_options, width=100, values=['none', '1sec+', '2sec+', '3sec+'])
+        self.option_menu_pause = ctk.CTkOptionMenu(self.frame_options, width=100, values=PAUSE_OPTIONS)
         self.option_menu_pause.grid(column=1, row=4, sticky='e', pady=5)
         self.option_menu_pause.set(get_config('last_pause', '1sec+'))
 
@@ -2490,10 +2507,15 @@ class App(ctk.CTk):
             option_info += f'{t("label_speaker")} {job.speaker_detection} | '
             if job.speaker_names:
                 option_info += f'{t("label_speaker_names")} {", ".join(job.speaker_names)} | '
-            option_info += f'{t("label_overlapping")} {job.overlapping} | '
-            option_info += f'{t("label_timestamps")} {job.timestamps} | '
-            option_info += f'{t("label_disfluencies")} {job.disfluencies} | '
-            option_info += f'{t("label_pause")} {job.pause}'
+            # Render the on/off options as localized yes/no and the pause
+            # threshold as its label, so this header -- which ends up in the
+            # transcript itself -- never mixes True/False with a raw 0. The job
+            # tooltip shows the same values, but as ✓/✗ where space is tight.
+            yes, no = t('opt_yes'), t('opt_no')
+            option_info += f'{t("label_overlapping")} {yes if job.overlapping else no} | '
+            option_info += f'{t("label_timestamps")} {yes if job.timestamps else no} | '
+            option_info += f'{t("label_disfluencies")} {yes if job.disfluencies else no} | '
+            option_info += f'{t("label_pause")} {pause_label(job.pause)}'
 
             # Create log file
             if not os.path.exists(f'{config_dir}/log'):

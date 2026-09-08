@@ -51,6 +51,8 @@ it:
   label_pause: 'Segna le pause:'
   label_timestamps: 'Timestamps:'
   label_disfluencies: 'Disfluenze:'
+  opt_yes: 'Sì'
+  opt_no: 'No'
   
   start_button: Avvia
   start_queue: 'Avvia attività ora'

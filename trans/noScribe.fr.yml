@@ -51,6 +51,8 @@ fr:
   label_pause: 'Marquer les pauses :'
   label_timestamps: 'Horodatage :'
   label_disfluencies: 'Mots de remplissage :'
+  opt_yes: 'Oui'
+  opt_no: 'Non'
   
   start_button: "Démarrer"
   start_queue: 'Démarrer la tâche maintenant'

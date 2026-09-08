@@ -51,6 +51,8 @@ zh-CN: &defaults
   label_pause: '标记停顿：'
   label_timestamps: '时间戳：'
   label_disfluencies: '语言停顿：'
+  opt_yes: '是'
+  opt_no: '否'
   
   start_button: 开始 
   start_queue: '立即开始任务'
