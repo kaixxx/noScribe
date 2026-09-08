@@ -6,6 +6,7 @@ from PyInstaller.utils.hooks import collect_dynamic_libs
 from PyInstaller.utils.hooks import collect_submodules
 from PyInstaller.utils.hooks import collect_all
 from PyInstaller.utils.hooks import copy_metadata
+from PyInstaller.utils.hooks import get_package_paths
 
 block_cipher = None
 project_root = os.path.abspath(os.path.join(SPECPATH, '..'))
@@ -36,7 +37,6 @@ noScribe_datas += [('../pyannote/', './pyannote/')]
 noScribe_datas += collect_data_files('lightning')
 noScribe_datas += collect_data_files('gradio')
 noScribe_datas += collect_data_files('lightning_fabric')
-noScribe_datas += collect_data_files('librosa')
 noScribe_datas += collect_data_files('pyannote')
 noScribe_datas += copy_metadata('filelock')
 noScribe_datas += copy_metadata('tqdm')
@@ -52,6 +52,11 @@ noScribe_datas += copy_metadata('pyannote.database')
 noScribe_datas += copy_metadata('pyannote.metrics')
 noScribe_datas += copy_metadata('pyannote.pipeline')
 noScribe_binaries += collect_dynamic_libs('pyannote')
+noScribe_binaries += collect_dynamic_libs('torchvision')
+_, torchvision_path = get_package_paths('torchvision')
+torchvision_stable_extension = os.path.join(torchvision_path, '_C_stable.pyd')
+if os.path.exists(torchvision_stable_extension):
+    noScribe_binaries.append((torchvision_stable_extension, 'torchvision'))
 noScribe_hiddenimports += collect_submodules('pyannote')
 noScribe_hiddenimports += collect_submodules('scipy')
 # noScribe_hiddenimports += ['scipy._lib.array_api_compat.numpy.fft']
