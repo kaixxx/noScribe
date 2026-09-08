@@ -337,6 +337,11 @@ class TranscriptionJob:
         
         # Processing options
         self.speaker_detection: str = 'auto'
+        self.speaker_names: list = []  # real names, mapped in order of first appearance
+        # Built while this job's segments stream in: diarization label -> name.
+        # Lives on the job, so mappings can never leak between queued jobs, and
+        # is rebuilt by set_running() so a repeated job starts from scratch too.
+        self.speaker_name_map: dict = {}
         self.overlapping: bool = True
         self.timestamps: bool = False
         self.disfluencies: bool = True
@@ -360,6 +365,12 @@ class TranscriptionJob:
         """Mark job as running and record start time"""
         self.status = JobStatus.AUDIO_CONVERSION
         self.started_at = datetime.datetime.now()
+        # Names are assigned in order of first appearance, so the mapping has
+        # to be built from this run's diarization. A repeated job (the queue's
+        # repeat button) keeps its object, and pyannote may hand out different
+        # labels the second time -- carrying the old mapping over would shift
+        # every name that is first seen on the retry.
+        self.speaker_name_map = {}
     
     def set_finished(self):
         """Mark job as finished and record completion time"""
@@ -439,6 +450,13 @@ class TranscriptionJob:
         # Speaker detection
         try:
             lines.append(f"{t('label_speaker')} {self.speaker_detection}")
+        except Exception:
+            pass
+
+        # Speaker names (only when the user set any)
+        try:
+            if self.speaker_names:
+                lines.append(f"{t('label_speaker_names')} {', '.join(self.speaker_names)}")
         except Exception:
             pass
 
@@ -557,8 +575,36 @@ class TranscriptionQueue:
 
 # Command Line Interface
 
+def parse_speaker_names(speaker_names):
+    """Turn a "Mona, Lena" string (or a list) into a clean list of names.
+
+    The names are later mapped to the diarization speakers in order of their
+    first appearance in the audio, and end up verbatim in the
+    `ts_{start}_{end}_{speaker}` audio-sync anchors. Sanitizing them here is
+    the only defense those anchors get, because their readers parse them
+    differently: an underscore is the anchor's field separator (and
+    noScribeEdit splits on it without a limit, so it would truncate the name),
+    `<`, `>`, `"` and `&` would break the surrounding HTML attribute, and a
+    colon is the "Name: text" label separator that utils.html_to_webvtt strips
+    speaker lines by.
+    """
+    if not speaker_names:
+        return []
+    if isinstance(speaker_names, str):
+        speaker_names = re.split(r'[,;]', speaker_names)
+    names = []
+    for n in speaker_names:
+        n = (n or '').replace('_', ' ')
+        n = re.sub(r'[<>"&:]', '', n)
+        n = re.sub(r'\s+', ' ', n).strip()
+        if n:
+            names.append(n)
+    return names
+
+
 def create_transcription_job(audio_file=None, transcript_file=None, start_time=None, stop_time=None,
                            language_name=None, whisper_model_name=None, speaker_detection=None,
+                           speaker_names=None,
                            overlapping=None, timestamps=None, disfluencies=None, pause=None,
                            cli_mode=False) -> TranscriptionJob:
     """Create a TranscriptionJob with all default values
@@ -598,6 +644,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     
     # Processing options with defaults
     job.speaker_detection = speaker_detection if speaker_detection is not None else 'auto'
+    job.speaker_names = parse_speaker_names(speaker_names)
     job.overlapping = overlapping if overlapping is not None else True
     job.timestamps = timestamps if timestamps is not None else False
     job.disfluencies = disfluencies if disfluencies is not None else True
@@ -668,6 +715,7 @@ def create_job_from_cli_args(args) -> TranscriptionJob:
         language_name=args.language,
         whisper_model_name=args.model,
         speaker_detection=args.speaker_detection,
+        speaker_names=args.speaker_names,
         overlapping=args.overlapping,
         timestamps=args.timestamps,
         disfluencies=args.disfluencies,
@@ -712,6 +760,8 @@ Examples:
                        help='Whisper model to use (use --help-models to see available models)')
     parser.add_argument('--speaker-detection', choices=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], default=None,
                        help='Speaker detection/diarization setting')
+    parser.add_argument('--speaker-names', default=None,
+                       help='Comma-separated names mapped to speakers in order of first appearance, e.g. "Mona, Lena"')
     parser.add_argument('--overlapping', action='store_true', default=None, 
                        help='Enable overlapping speech detection')
     parser.add_argument('--no-overlapping', action='store_false', dest='overlapping', default=None,
@@ -946,9 +996,9 @@ class App(ctk.CTk):
         # configure window
         self.title('noScribe - ' + t('app_header'))
         if platform.system() in ("Darwin", "Linux"):
-            self.geometry(f"{1100}x{765}")
+            self.geometry(f"{1100}x{810}")
         else:
-            self.geometry(f"{1100}x{690}")
+            self.geometry(f"{1100}x{735}")
 
         if platform.system() in ("Darwin", "Windows"):
             self.iconbitmap(impres.files("img") / "noScribeLogo.ico")
@@ -1127,12 +1177,26 @@ class App(ctk.CTk):
         self.option_menu_speaker.grid(column=1, row=5, sticky='e', pady=5)
         self.option_menu_speaker.set(get_config('last_speaker', 'auto'))
 
+        # Speaker names: map the diarization labels (S00, S01, ...) to real
+        # names, assigned in order of first appearance in the audio.
+        self.label_speaker_names = ctk.CTkLabel(self.frame_options, text=t('label_speaker_names'))
+        self.label_speaker_names.grid(column=0, row=6, sticky='w', pady=5)
+
+        self.entry_speaker_names = ctk.CTkEntry(self.frame_options, width=100)
+        self.entry_speaker_names.grid(column=1, row=6, sticky='e', pady=5)
+        self.entry_speaker_names.insert(0, get_config('last_speaker_names', ''))
+        CTkToolTip(self.entry_speaker_names, text=t('tooltip_speaker_names'))
+        # Wire the dropdown only now that the widgets it toggles exist, and run
+        # it once to hide the names field if detection is off.
+        self.option_menu_speaker.configure(command=self._on_speaker_detection_changed)
+        self._on_speaker_detection_changed()
+
         # Overlapping Speech (Diarization)
         self.label_overlapping = ctk.CTkLabel(self.frame_options, text=t('label_overlapping'))
-        self.label_overlapping.grid(column=0, row=6, sticky='w', pady=5)
+        self.label_overlapping.grid(column=0, row=7, sticky='w', pady=5)
 
         self.check_box_overlapping = ctk.CTkCheckBox(self.frame_options, text = '')
-        self.check_box_overlapping.grid(column=1, row=6, sticky='e', pady=5)
+        self.check_box_overlapping.grid(column=1, row=7, sticky='e', pady=5)
         overlapping = config.get('last_overlapping', True)
         if overlapping:
             self.check_box_overlapping.select()
@@ -1141,10 +1205,10 @@ class App(ctk.CTk):
             
         # Disfluencies
         self.label_disfluencies = ctk.CTkLabel(self.frame_options, text=t('label_disfluencies'))
-        self.label_disfluencies.grid(column=0, row=7, sticky='w', pady=5)
+        self.label_disfluencies.grid(column=0, row=8, sticky='w', pady=5)
 
         self.check_box_disfluencies = ctk.CTkCheckBox(self.frame_options, text = '')
-        self.check_box_disfluencies.grid(column=1, row=7, sticky='e', pady=5)
+        self.check_box_disfluencies.grid(column=1, row=8, sticky='e', pady=5)
         check_box_disfluencies = config.get('last_disfluencies', True)
         if check_box_disfluencies:
             self.check_box_disfluencies.select()
@@ -1153,16 +1217,16 @@ class App(ctk.CTk):
 
         # Timestamps in text
         self.label_timestamps = ctk.CTkLabel(self.frame_options, text=t('label_timestamps'))
-        self.label_timestamps.grid(column=0, row=8, sticky='w', pady=5)
+        self.label_timestamps.grid(column=0, row=9, sticky='w', pady=5)
 
         self.check_box_timestamps = ctk.CTkCheckBox(self.frame_options, text = '')
-        self.check_box_timestamps.grid(column=1, row=8, sticky='e', pady=5)
+        self.check_box_timestamps.grid(column=1, row=9, sticky='e', pady=5)
         check_box_timestamps = config.get('last_timestamps', False)
         if check_box_timestamps:
             self.check_box_timestamps.select()
         else:
             self.check_box_timestamps.deselect()
-        
+
         # Start control: single CTkOptionMenu styled like a button
         # Create a container so we can show/hide as one control
         self.start_button_container = ctk.CTkFrame(self.sidebar_frame, fg_color='transparent')
@@ -2182,8 +2246,32 @@ class App(ctk.CTk):
                     if hasattr(row['frame'], 'set_progress'):
                         row['frame'].set_progress(progr)
 
+    def _on_speaker_detection_changed(self, value=None):
+        """Show the speaker-names field only when speaker detection is active.
+        With detection off ('none') there are no speakers to map names to."""
+        if self.option_menu_speaker.get() == 'none':
+            self.label_speaker_names.grid_remove()
+            self.entry_speaker_names.grid_remove()
+        else:
+            self.label_speaker_names.grid()
+            self.entry_speaker_names.grid()
+
+    def save_ui_state(self):
+        """Remember the current option settings for the next run."""
+        config['last_language'] = self.option_menu_language.get()
+        config['last_speaker'] = self.option_menu_speaker.get()
+        config['last_speaker_names'] = self.entry_speaker_names.get()
+        config['last_whisper_model'] = self.option_menu_whisper_model.get()
+        config['last_pause'] = self.option_menu_pause.get()
+        config['last_overlapping'] = self.check_box_overlapping.get()
+        config['last_timestamps'] = self.check_box_timestamps.get()
+        config['last_disfluencies'] = self.check_box_disfluencies.get()
+        config['force_pyannote_cpu'] = str(force_pyannote_cpu)
+        config['force_whisper_cpu'] = str(force_whisper_cpu)
+        save_config()
+
     def collect_transcription_options(self) -> TranscriptionQueue:
-        """Collect all transcription options from UI and config and creates a 
+        """Collect all transcription options from UI and config and creates a
         TranscriptionQueue for each audio file"""
         # Validate required inputs
         if len(self.audio_files_list) == 0:
@@ -2207,10 +2295,15 @@ class App(ctk.CTk):
         sel_whisper_model = self.option_menu_whisper_model.get()
         if sel_whisper_model not in self.whisper_models:
             raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
+        # Persist the options the moment they are actually used. Saving only in
+        # on_closing loses the last change -- including a cleared names field --
+        # whenever the shutdown path bails early or is bypassed (Cmd+Q).
+        self.save_ui_state()
+
         queue = TranscriptionQueue()
         if len(self.audio_files_list) != len(self.transcript_files_list):
             self.create_default_transcript_names()
-        
+
         for i in range(len(self.audio_files_list)):
             job = create_transcription_job(
                 audio_file=self.audio_files_list[i],
@@ -2220,6 +2313,7 @@ class App(ctk.CTk):
                 language_name=self.option_menu_language.get(),
                 whisper_model_name=self.whisper_models[sel_whisper_model],  # Pass the full model object
                 speaker_detection=self.option_menu_speaker.get(),
+                speaker_names=self.entry_speaker_names.get(),
                 overlapping=self.check_box_overlapping.get(),
                 timestamps=self.check_box_timestamps.get(),
                 disfluencies=self.check_box_disfluencies.get(),
@@ -2234,6 +2328,36 @@ class App(ctk.CTk):
             queue.add_job(job)
         
         return queue
+
+    def _apply_speaker_name(self, speaker, job):
+        """Map a diarization speaker label (e.g. "S01" or "//S01") to a
+        user-provided name. Names are assigned in the order speakers first
+        appear, so the first person heard gets the first name — regardless of
+        whether the diarization starts numbering at S00 or S01.
+        """
+        names = job.speaker_names
+        if not speaker or not names:
+            return speaker
+        overlapping = speaker.startswith('//')
+        base = speaker[2:] if overlapping else speaker
+        if not base:
+            return speaker
+        mapping = job.speaker_name_map
+        if base not in mapping:
+            idx = len(mapping)
+            if idx < len(names):
+                mapping[base] = names[idx]
+            else:
+                # More speakers than names. This can't be caught up front with
+                # "auto" (the count is only known now), so note it in the log —
+                # non-modal, so it never interrupts an unattended run. idx grows
+                # by one per new speaker, so this is the first overflow.
+                mapping[base] = base
+                if idx == len(names):
+                    self.logn()
+                    self.logn(t('warn_speaker_names_more_speakers', n_names=len(names)), 'error')
+        name = mapping[base]
+        return f'//{name}' if overlapping else name
 
     def transcription_worker(self, start_job_index=None):
         """Process transcription jobs from the queue"""
@@ -2361,6 +2485,8 @@ class App(ctk.CTk):
                 option_info += f'{t("label_stop")} {utils.ms_to_str(job.stop)} | '.replace(':', '꞉')
             option_info += f'{t("label_language")} {job.language_name} ({languages[job.language_name]}) | '
             option_info += f'{t("label_speaker")} {job.speaker_detection} | '
+            if job.speaker_names:
+                option_info += f'{t("label_speaker_names")} {", ".join(job.speaker_names)} | '
             option_info += f'{t("label_overlapping")} {job.overlapping} | '
             option_info += f'{t("label_timestamps")} {job.timestamps} | '
             option_info += f'{t("label_disfluencies")} {job.disfluencies} | '
@@ -2623,7 +2749,8 @@ class App(ctk.CTk):
                     p = d.createElement('p')
                     main_body.appendChild(p)
 
-                    speaker = ''
+                    speaker = ''          # raw diarization label (identity)
+                    speaker_disp = ''     # mapped user name (display / anchor)
                     prev_speaker = ''
                     last_auto_save = datetime.datetime.now()
 
@@ -2719,7 +2846,7 @@ class App(ctk.CTk):
                     first_segment = True
 
                     def on_segment(seg):
-                        nonlocal first_segment, last_segment_end, last_timestamp_ms, p, speaker, prev_speaker
+                        nonlocal first_segment, last_segment_end, last_timestamp_ms, p, speaker, speaker_disp, prev_speaker
                         # Map dict to simple object-like for existing code
                         class _Seg:
                             __slots__ = ("start", "end", "text", "words")
@@ -2759,7 +2886,7 @@ class App(ctk.CTk):
                             orig_audio_start_pause = job.start + last_segment_end
                             orig_audio_end_pause = job.start + start
                             a = d.createElement('a')
-                            a.name = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}_{speaker}'
+                            a.name = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}_{speaker_disp}'
                             a.appendText(pause_str)
                             p.appendChild(a)
                             self.log(pause_str)
@@ -2774,15 +2901,24 @@ class App(ctk.CTk):
                         seg_html = html.escape(seg_text, quote=False)
 
                         if job.speaker_detection != 'none':
+                            # Speaker *identity* (change detection, overlap marker)
+                            # is decided on the raw diarization label; the mapped
+                            # user name is only for display. Keeping them apart
+                            # means two speakers who were given the same name still
+                            # start separate paragraphs, and a name that happens to
+                            # begin with "//" is not mistaken for the overlap marker.
                             new_speaker = find_speaker(diarization, start, end)
+                            new_speaker_disp = self._apply_speaker_name(new_speaker, job)
                             if (speaker != new_speaker) and (new_speaker != ''): # speaker change
                                 if new_speaker[:2] == '//': # is overlapping speech, create no new paragraph
                                     prev_speaker = speaker
                                     speaker = new_speaker
-                                    seg_text = f' {speaker}:{seg_text}'
-                                    seg_html = html.escape(seg_text, quote=False)                                
-                                elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker 
+                                    speaker_disp = new_speaker_disp
+                                    seg_text = f' {speaker_disp}:{seg_text}'
+                                    seg_html = html.escape(seg_text, quote=False)
+                                elif (speaker[:2] == '//') and (new_speaker == prev_speaker): # was overlapping speech and we are returning to the previous speaker
                                     speaker = new_speaker
+                                    speaker_disp = new_speaker_disp
                                     seg_text = f'//{seg_text}'
                                     seg_html = html.escape(seg_text, quote=False)
                                 else: # new speaker, not overlapping
@@ -2799,18 +2935,19 @@ class App(ctk.CTk):
                                         self.logn()
                                         self.logn()
                                     speaker = new_speaker
+                                    speaker_disp = new_speaker_disp
                                     # add timestamp
                                     if job.timestamps:
-                                        seg_html = f'{speaker}: <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text, quote=False)}'
-                                        seg_text = f'{speaker}: {ts}{seg_text}'
+                                        seg_html = f'{speaker_disp}: <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text, quote=False)}'
+                                        seg_text = f'{speaker_disp}: {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
                                         if job.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
-                                            seg_text = f'{speaker}:{seg_text}'
+                                            seg_text = f'{speaker_disp}:{seg_text}'
                                             seg_html = html.escape(seg_text, quote=False)
                                         else:
                                             seg_html = html.escape(seg_text, quote=False).lstrip()
-                                            seg_text = f'{speaker}:{seg_text}'
+                                            seg_text = f'{speaker_disp}:{seg_text}'
                                         
                             else: # same speaker
                                 if job.timestamps:
@@ -2834,7 +2971,7 @@ class App(ctk.CTk):
                                 seg_html = seg_html.lstrip()
 
                         # Create bookmark with audio timestamps start to end and add the current segment.
-                        a_html = f'<a name=\"ts_{orig_audio_start}_{orig_audio_end}_{speaker}\" >{seg_html}</a>'
+                        a_html = f'<a name=\"ts_{orig_audio_start}_{orig_audio_end}_{speaker_disp}\" >{seg_html}</a>'
                         a = d.createElementFromHTML(a_html)
                         p.appendChild(a)
 
@@ -2909,6 +3046,21 @@ class App(ctk.CTk):
             
     def create_job(self, enqueue=False):
         try:
+            # A fixed speaker count is known up front and the user is present at
+            # Start / Add-to-queue. Entering names is optional (leaving the field
+            # empty just keeps the S01/S02 labels), but IF names are given their
+            # count must match the speaker count, else they would be mis-assigned
+            # — so ask only when names were entered and the count disagrees. With
+            # "auto" the count is not known yet, so that case is only noted in the
+            # log at runtime (see _apply_speaker_name).
+            speaker_sel = self.option_menu_speaker.get()
+            speaker_names = parse_speaker_names(self.entry_speaker_names.get())
+            if speaker_names and speaker_sel.isdigit() and len(speaker_names) != int(speaker_sel):
+                if not tk.messagebox.askyesno(title='noScribe', message=t(
+                        'ask_speaker_names_count',
+                        n_names=len(speaker_names), n_speakers=speaker_sel)):
+                    return
+
             show_queue_tab = enqueue
             # Collect transcription options from UI
             new_queue = self.collect_transcription_options()
@@ -3268,17 +3420,7 @@ class App(ctk.CTk):
 
         # remember some settings for the next run
         try:
-            config['last_language'] = self.option_menu_language.get()
-            config['last_speaker'] = self.option_menu_speaker.get()
-            config['last_whisper_model'] = self.option_menu_whisper_model.get()
-            config['last_pause'] = self.option_menu_pause.get()
-            config['last_overlapping'] = self.check_box_overlapping.get()
-            config['last_timestamps'] = self.check_box_timestamps.get()
-            config['last_disfluencies'] = self.check_box_disfluencies.get()
-            config['force_pyannote_cpu'] = str(force_pyannote_cpu)
-            config['force_whisper_cpu'] = str(force_whisper_cpu)
-
-            save_config()
+            self.save_ui_state()
         finally:
             try:
                 self.quit()
@@ -3602,6 +3744,12 @@ def noScribeMain():
             app.option_menu_pause.set(args.pause)
         if getattr(args, 'speaker_detection', None):
             app.option_menu_speaker.set(args.speaker_detection)
+        if getattr(args, 'speaker_names', None) is not None:
+            app.entry_speaker_names.delete(0, 'end')
+            app.entry_speaker_names.insert(0, args.speaker_names)
+        # .set() above does not fire the dropdown's command, so sync the
+        # names field's visibility to whatever the options now say.
+        app._on_speaker_detection_changed()
         if getattr(args, 'overlapping', None) is not None:
             if args.overlapping:
                 app.check_box_overlapping.select()

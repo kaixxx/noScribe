@@ -39,6 +39,10 @@ de:
 
   label_language: 'Sprache:'
   label_speaker: 'Sprecher:in erkennen:'
+  label_speaker_names: 'Sprechernamen:'
+  tooltip_speaker_names: 'Namen der Personen im Audio, kommagetrennt (z. B. "Mona, Lena"). Sie werden den Sprechern in der Reihenfolge ihres ersten Auftretens zugeordnet und ersetzen die Labels S00/S01 im Transkript.'
+  ask_speaker_names_count: 'Du hast %{n_names} Name(n) eingegeben, aber die Sprecherzahl ist auf %{n_speakers} gesetzt. Die Namen werden dadurch womöglich den falschen Personen zugeordnet. Trotzdem starten?'
+  warn_speaker_names_more_speakers: 'Es wurden mehr Sprecher erkannt als Namen eingegeben (%{n_names}). Die überzähligen behalten ihre ursprünglichen Labels.'
   label_whisper_model: 'Modell:'
   label_add_custom_models: 'KI-Modelle hinzufügen...'
   label_overlapping: 'Überlappende Sprache:'
