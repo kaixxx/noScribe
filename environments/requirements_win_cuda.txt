@@ -16,3 +16,4 @@ pyinstaller==6.14.1
 # by anti virus software, so, it's safer to use a version that has been released a few months ago. 
 python-i18n
 PyYAML
+soundfile
