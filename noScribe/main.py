@@ -644,7 +644,8 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     
     # Processing options with defaults
     job.speaker_detection = speaker_detection if speaker_detection is not None else 'auto'
-    job.speaker_names = parse_speaker_names(speaker_names)
+    # Hidden GUI names must not appear in job metadata when detection is off.
+    job.speaker_names = parse_speaker_names(speaker_names) if job.speaker_detection != 'none' else []
     job.overlapping = overlapping if overlapping is not None else True
     job.timestamps = timestamps if timestamps is not None else False
     job.disfluencies = disfluencies if disfluencies is not None else True
