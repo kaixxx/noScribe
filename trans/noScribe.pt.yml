@@ -39,8 +39,11 @@ pt:
 
   label_language: 'Idioma:'
   label_speaker: 'Detecção de alto-falante:'
-  label_speaker_names: 'Nomes dos falantes:'
-  tooltip_speaker_names: 'Nomes das pessoas no áudio, separados por vírgulas (p. ex. "Mona, Lena"). São atribuídos aos falantes pela ordem da primeira aparição e substituem as etiquetas S00/S01 na transcrição.'
+  label_speaker_names: 'Nomes:'
+  tooltip_speaker_names: |-
+    Nomes das pessoas no áudio, separados por vírgulas (p. ex. "Mona, Lena").
+    São atribuídos aos falantes pela ordem da primeira aparição
+    e substituem as etiquetas S00/S01 na transcrição.
   ask_speaker_names_count: 'Introduziu %{n_names} nome(s), mas o número de oradores está definido como %{n_speakers}. Os nomes podem ser atribuídos às pessoas erradas. Iniciar mesmo assim?'
   warn_speaker_names_more_speakers: 'Foram detetados mais oradores do que os nomes inseridos (%{n_names}). Os oradores excedentes mantêm as suas etiquetas originais.'
   label_whisper_model: 'Modelo:'

@@ -40,8 +40,11 @@ en:
 
   label_language: 'Language:'
   label_speaker: 'Speaker detection:'
-  label_speaker_names: 'Speaker names:'
-  tooltip_speaker_names: 'Names of the people in the audio, comma-separated (e.g. "Mona, Lena"). They are mapped to the speakers in order of first appearance, replacing the S00/S01 labels in the transcript.'
+  label_speaker_names: 'Names:'
+  tooltip_speaker_names: |-
+    Names of the people in the audio, comma-separated (e.g. "Mona, Lena").
+    They are mapped to the speakers in order of first appearance,
+    replacing the S00/S01 labels in the transcript.
   ask_speaker_names_count: 'You entered %{n_names} name(s), but the number of speakers is set to %{n_speakers}. The names may be assigned to the wrong people. Start anyway?'
   warn_speaker_names_more_speakers: 'More speakers were detected than names were entered (%{n_names}). The extra speakers keep their original labels.'
   label_whisper_model: 'Model:'
