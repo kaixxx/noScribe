@@ -138,6 +138,16 @@ continueInstallation:
 ${INSTALL_TYPE}
 SetOverwrite ifnewer
 
+; Avoid mixing files from different PyInstaller bundles when the user installs
+; over an existing directory without running the previous uninstaller.
+IfFileExists "$INSTDIR\_internal\*.*" 0 internalCleanupDone
+ClearErrors
+RMDir /r "$INSTDIR\_internal"
+IfErrors 0 internalCleanupDone
+MessageBox MB_OK|MB_ICONSTOP "Could not replace the existing noScribe files. Please close noScribe and run the installer again."
+Abort
+internalCleanupDone:
+
 ###################### FILE LIST INSTALL ################################
 
 #*install_entries*#

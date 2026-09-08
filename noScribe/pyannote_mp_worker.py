@@ -1,6 +1,7 @@
 import importlib.resources as impres
 import os
 import platform
+import sys
 import traceback
 
 if platform.system() == "Darwin" and platform.machine() == "x86_64":
@@ -62,7 +63,20 @@ def pyannote_proc_entrypoint(args: dict, q):
         import torch
         if platform.system() == "Darwin" and platform.machine() == "x86_64":
            torch.set_num_threads(1)        
-        from pyannote.audio import Pipeline
+        # SpeechBrain is an optional pyannote embedding backend that noScribe's
+        # bundled pipeline does not use.  Older source installations may still
+        # have an incompatible SpeechBrain version installed, and pyannote's
+        # optional import would then fail before our pipeline is loaded.  Hide
+        # it for this import so pyannote records the backend as unavailable.
+        previous_speechbrain = sys.modules.get("speechbrain")
+        sys.modules["speechbrain"] = None
+        try:
+            from pyannote.audio import Pipeline
+        finally:
+            if previous_speechbrain is None:
+                sys.modules.pop("speechbrain", None)
+            else:
+                sys.modules["speechbrain"] = previous_speechbrain
 
         def plog(level, msg):
             try:

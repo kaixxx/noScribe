@@ -11,8 +11,6 @@ datas += collect_data_files('faster_whisper')
 datas += collect_data_files('lightning_fabric')
 tmp_ret = collect_all('pyannote')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-tmp_ret = collect_all('speechbrain')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 # Add model files to `datas` if available. This way, it is possible to test the
 # pyinstaller in the CI without downloading the big models all the time.
@@ -35,7 +33,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['speechbrain'],
     noarchive=False,
     optimize=0,
 )

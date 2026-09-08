@@ -55,8 +55,6 @@ noScribe_binaries += collect_dynamic_libs('pyannote')
 noScribe_hiddenimports += collect_submodules('pyannote')
 noScribe_hiddenimports += collect_submodules('scipy')
 # noScribe_hiddenimports += ['scipy._lib.array_api_compat.numpy.fft']
-tmp_ret = collect_all('speechbrain')
-noScribe_datas += tmp_ret[0]; noScribe_binaries += tmp_ret[1]; noScribe_hiddenimports += tmp_ret[2]
 
 noScribe_a = Analysis(
     ['../noScribe/__main__.py'],
@@ -67,7 +65,7 @@ noScribe_a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['speechbrain'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
