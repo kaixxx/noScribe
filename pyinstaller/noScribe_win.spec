@@ -15,7 +15,9 @@ project_root = os.path.abspath(os.path.join(SPECPATH, '..'))
 
 noScribe_datas = [] 
 noScribe_binaries = []
-noScribe_hiddenimports = []
+# noScribe.main is reached through the package's lazy __getattr__, which
+# PyInstaller's static analysis cannot follow -- declare it explicitly.
+noScribe_hiddenimports = ['noScribe.main']
 
 noScribe_datas += [
 ('../models/precise/', './models/precise/'), 
