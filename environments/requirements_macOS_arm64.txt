@@ -12,6 +12,7 @@ appdirs
 customtkinter
 CTkToolTip
 faster-whisper
+importlib-resources>=5.10; python_version < "3.12"
 Pillow
 pyannote.audio>=4
 pyinstaller

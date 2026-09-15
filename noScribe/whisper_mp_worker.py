@@ -1,10 +1,16 @@
-import importlib.resources as impres
-import logging
 import gc
+import logging
 import os
 import platform
+import sys
 import traceback
 from dataclasses import asdict, is_dataclass
+
+if sys.version_info >= (3, 12):
+    import importlib.resources as impres
+else:
+    import importlib_resources as impres
+
 from i18n import t
 
 logger = logging.getLogger(__name__)

@@ -18,7 +18,6 @@
 import argparse
 import datetime
 import html
-import importlib.resources as impres
 import json
 import locale
 import logging
@@ -39,6 +38,11 @@ from subprocess import Popen, run
 from tempfile import TemporaryDirectory
 from threading import Thread
 from typing import Optional
+
+if sys.version_info >= (3, 12):
+    import importlib.resources as impres
+else:
+    import importlib_resources as impres
 
 import AdvancedHTMLParser
 import appdirs
