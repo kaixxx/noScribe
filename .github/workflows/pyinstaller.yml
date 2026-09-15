@@ -1,12 +1,13 @@
 name: pyinstaller
 
 # Running on push events as well as on pull requests to ensure that merge
-# requests lead to a working pyinstaller build as well. However, only after the
-# pytest workflow succeeded.
-on:
-  workflow_run:
-    workflows: [pytest]
-    types: [completed]
+# requests lead to a working pyinstaller build as well.
+#
+# This has to be a direct trigger, not `workflow_run: [pytest]`. A workflow_run
+# job checks out the default branch, not the commit that triggered it, so the
+# build kept passing while it re-built main over and over -- a pull request
+# that breaks the build never got one of these runs against its own code.
+on: [push, pull_request]
 # TODO: change this in something like that after publishing the pyinstaller
 # builds from the CI directly to github releases.
 #on:
