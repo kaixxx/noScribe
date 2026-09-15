@@ -4,7 +4,9 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [('../img/graphic_sw.png', 'img'), ('../LICENSE.txt', '.'), ('../models/precise', 'models/precise/'), ('../models/fast', 'models/fast/'), ('../prompts/prompt.yml', 'prompts'), ('../prompts/prompt_nd.yml', 'prompts/'), ('../pyannote', 'pyannote/'), ('../README.md', '.'), ('../trans', 'trans/')]
 binaries = []
-hiddenimports = []
+# noScribe.main is reached through the package's lazy __getattr__, which
+# PyInstaller's static analysis cannot follow -- declare it explicitly.
+hiddenimports = ['noScribe.main']
 datas += collect_data_files('faster_whisper')
 datas += collect_data_files('lightning_fabric')
 tmp_ret = collect_all('pyannote')
