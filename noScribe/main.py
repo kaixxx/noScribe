@@ -2195,8 +2195,15 @@ class App(ctk.CTk):
         return chosen.get('file_ext')
 
     def button_audio_file_event(self):
+        initialfile = " ".join(f'"{os.path.basename(path)}"' for path in self.audio_files_list)
+        if self.tk.call('tk', 'windowingsystem') != 'win32':
+            # Only the Windows dialog pre-selects from this list. Tk's own
+            # dialog (X11: Linux, BSD) appends every confirmed file to it, so
+            # the selection grew with each reopening (#340), and the macOS
+            # panel reads it as a path and then ignores initialdir.
+            initialfile = ''
         fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_files_list[0] if len(self.audio_files_list) > 0 else ''), 
-                                           initialfile=" ".join(f'"{os.path.basename(path)}"' for path in self.audio_files_list),  
+                                           initialfile=initialfile,
                                            multiple=True)
         if fn and len(fn) > 0:
             if tuple(fn) != tuple(self.audio_files_list):
