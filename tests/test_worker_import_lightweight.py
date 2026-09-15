@@ -3,8 +3,7 @@
 The diarization/whisper subprocesses (multiprocessing "spawn") re-import the
 noScribe package to reach their entrypoint. If the package __init__ eagerly
 imported noScribe.main, every worker child would load tkinter/customtkinter
-and PyAV -- and PyAV's bundled FFmpeg next to torchcodec's system FFmpeg
-triggers objc duplicate-class warnings on macOS. These tests run in a clean
+and PyAV even when that worker does not use them. These tests run in a clean
 interpreter so the parent process's own imports can't mask a regression.
 """
 import os

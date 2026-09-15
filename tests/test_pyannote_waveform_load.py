@@ -11,6 +11,7 @@ library would hide any quirk specific to the other one.
 """
 import importlib.resources as impres
 import os
+import subprocess
 import sys
 
 import numpy as np
@@ -91,18 +92,20 @@ def test_empty_audio_is_reported_as_empty(tmp_path):
         load_waveform(str(path))
 
 
-def test_load_waveform_bit_identical_to_torchaudio(converted_wav):
-    # Migration-time proof: runs only while torchaudio is still installed and
-    # may be deleted once torchaudio leaves the tested stacks. The tests above
-    # keep covering the loader on its own.
-    torchaudio = pytest.importorskip("torchaudio")
-    try:
-        expected, expected_rate = torchaudio.load(str(converted_wav))
-    except ImportError as e:
-        # torchaudio >= 2.9 decodes through torchcodec, which needs system
-        # FFmpeg libraries noScribe deliberately does not depend on. A missing
-        # comparison baseline is not a failure of the loader.
-        pytest.skip(f"torchaudio cannot decode here: {e}")
-    actual, actual_rate = load_waveform(str(converted_wav))
-    assert actual_rate == expected_rate
-    assert torch.equal(actual, expected)  # bit-for-bit, not just allclose
+def test_load_waveform_does_not_import_torchaudio_or_torchcodec(converted_wav):
+    """The prepared WAV must not activate TorchCodec's optional FFmpeg path."""
+    code = (
+        "import sys; "
+        "from noScribe.pyannote_mp_worker import load_waveform; "
+        "waveform, rate = load_waveform(sys.argv[1]); "
+        "assert waveform.shape[0] == 1 and rate == 16000; "
+        "unexpected = [name for name in ('torchaudio', 'torchcodec', 'av') "
+        "if name in sys.modules]; "
+        "assert not unexpected, f'unexpected media backends: {unexpected}'"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code, str(converted_wav)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

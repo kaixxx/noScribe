@@ -2864,7 +2864,8 @@ class App(ctk.CTk):
                             self.logn(t('rescue_saving', file=job.transcript_file), 'error', link=f'file://{job.transcript_file}')
                             last_auto_save = datetime.datetime.now()
 
-                    # Prepare VAD data locally for pause adjustment (audio is 16kHz mono after ffmpeg conversion)
+                    # Prepare VAD data locally for pause adjustment (audio is
+                    # 16 kHz mono after conversion by PyAV).
                     try:
                         job.vad_threshold = float(config['voice_activity_detection_threshold'])
                     except Exception:

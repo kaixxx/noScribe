@@ -3,11 +3,9 @@
 Importing this package must stay lightweight: the diarization/whisper worker
 subprocesses (multiprocessing "spawn") re-import it just to reach their
 entrypoint module. An eager ``from noScribe import main`` would drag the whole
-GUI stack (tkinter, customtkinter, PyAV with its bundled FFmpeg) into every
-worker child -- and on macOS, PyAV's FFmpeg loaded next to torchcodec's system
-FFmpeg triggers objc duplicate-class warnings. The submodules are therefore
-loaded lazily (PEP 562); ``__main__.py``'s ``noScribe.main.noScribeMain()``
-keeps working unchanged.
+GUI stack (tkinter, customtkinter, and PyAV with its bundled media libraries)
+into every worker child. The submodules are therefore loaded lazily (PEP 562);
+``__main__.py``'s ``noScribe.main.noScribeMain()`` keeps working unchanged.
 
 PyInstaller cannot follow these imports, so every spec in pyinstaller/ lists
 ``noScribe.main`` in its hiddenimports -- without that the frozen app dies at

@@ -1,7 +1,8 @@
 # Install with `pip install -r requirements_macOS_arm64.txt`
-# Tested stack (2026-07, macOS arm64): torch 2.13 / torchaudio 2.11 / torchcodec 0.15
-# run pyannote 4 diarization with identical output and speed as torch 2.8, and
-# torchcodec 0.15 loads against Homebrew FFmpeg 8 (0.7 supported FFmpeg 4-7 only).
+# Tested stack (2026-07, macOS arm64): torch 2.13 / torchaudio 2.11 /
+# torchcodec 0.15 runs pyannote 4 diarization with identical output and speed
+# as torch 2.8. noScribe supplies pyannote with an in-memory waveform, so its
+# audio path does not require TorchCodec's optional system FFmpeg backend.
 torch==2.13
 torchaudio==2.11
 torchcodec==0.15.0
