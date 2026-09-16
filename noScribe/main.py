@@ -30,6 +30,7 @@ import sys
 import tkinter as tk
 import traceback
 import urllib
+import urllib.parse
 import webbrowser
 from enum import Enum
 from functools import partial
@@ -2195,12 +2196,24 @@ class App(ctk.CTk):
         return chosen.get('file_ext')
 
     def button_audio_file_event(self):
-        initialfile = " ".join(f'"{os.path.basename(path)}"' for path in self.audio_files_list)
-        if self.tk.call('tk', 'windowingsystem') != 'win32':
-            # Only the Windows dialog pre-selects from this list. Tk's own
-            # dialog (X11: Linux, BSD) appends every confirmed file to it, so
-            # the selection grew with each reopening (#340), and the macOS
-            # panel reads it as a path and then ignores initialdir.
+        windowing_system = self.tk.call('tk', 'windowingsystem')
+        if windowing_system == 'win32':
+            # The Windows dialog takes the quoted list, unchanged.
+            initialfile = " ".join(f'"{os.path.basename(path)}"' for path in self.audio_files_list)
+        elif (windowing_system == 'aqua' and len(self.audio_files_list) == 1
+              and os.path.isfile(self.audio_files_list[0])):
+            # The macOS panel has no name field and opens at initialdir plus
+            # initialfile, which Tk joins as a URL: one percent-encoded name
+            # selects that file. Anything naming no file (a quoted list, a raw
+            # "#" or "?", a file since moved) sent the panel to the last-used
+            # folder, and selecting only the first file of a batch would
+            # shrink the batch on a plain Open.
+            initialfile = urllib.parse.quote(os.fsencode(os.path.basename(self.audio_files_list[0])))
+        else:
+            # Tk's own dialog (X11: Linux, BSD) appends every confirmed file to
+            # the initial selection, so a file once picked could never be
+            # deselected and the list grew with each reopening (#340). Fixed in
+            # Tk by ticket 56eec524d7 (check-ins 995f3494 on trunk, c95ac18f on 8.6).
             initialfile = ''
         fn = tk.filedialog.askopenfilename(initialdir=os.path.dirname(self.audio_files_list[0] if len(self.audio_files_list) > 0 else ''), 
                                            initialfile=initialfile,
