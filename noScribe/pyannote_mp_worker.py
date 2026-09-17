@@ -63,6 +63,24 @@ def pyannote_proc_entrypoint(args: dict, q):
         import torch
         if platform.system() == "Darwin" and platform.machine() == "x86_64":
            torch.set_num_threads(1)        
+        # pyannote's stack (torchmetrics, pyannote's own plotting helpers)
+        # imports matplotlib, and matplotlib builds its font cache on first
+        # import by asking the OS for every installed font.  noScribe never
+        # draws a plot, so the scan is pure cost: 28 s on a cold cache on an
+        # M1 against 4 s without it, and on macOS it crashes with
+        # KeyError: '_items' when `system_profiler SPFontsDataType` returns
+        # an incomplete record (matplotlib#32328, fixed only from matplotlib
+        # 3.12).  MPL_IGNORE_SYSTEM_FONTS (honoured from matplotlib 3.11)
+        # limits the cache to matplotlib's bundled fonts.  That cache is keyed
+        # by version alone, so it must not land in the user-wide ~/.matplotlib,
+        # where every other matplotlib would take the fonts-less list as
+        # authoritative; noScribe's own cache directory keeps it private, and
+        # an inherited MPLCONFIGDIR is overridden for the same reason.  The
+        # font setting uses setdefault so a deliberate override is respected.
+        import appdirs
+        os.environ.setdefault("MPL_IGNORE_SYSTEM_FONTS", "1")
+        os.environ["MPLCONFIGDIR"] = os.path.join(
+            appdirs.user_cache_dir("noScribe"), "matplotlib")
         # SpeechBrain is an optional pyannote embedding backend that noScribe's
         # bundled pipeline does not use.  Older source installations may still
         # have an incompatible SpeechBrain version installed, and pyannote's
