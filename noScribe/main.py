@@ -2103,15 +2103,15 @@ class App(ctk.CTk):
             # Multiple audio files: only the output directory is chosen here.
             # The format was already asked when the batch was selected, so it
             # is kept; picking the audio files again is the way to change it.
-            # The hint about auto-generated names goes into the folder panel
-            # itself on macOS (Tk's `-message` exists only there) and into the
-            # log elsewhere, instead of a modal box before the dialog.
+            # The hint that a folder is asked for and the names are generated
+            # goes into the folder panel itself on macOS, where Tk's `-message`
+            # exists, so the modal box before it would only repeat it. The other
+            # platforms have no such option and keep the modal box.
             dir_opts = {'title': 'noScribe', 'initialdir': _initialdir}
             if sys.platform == 'darwin':
                 dir_opts['message'] = t('output_dir_selection')
             else:
-                self.logn()
-                self.logn(t('output_dir_selection'))
+                tk.messagebox.showinfo(title='noScribe', message=t('output_dir_selection'))
             dir = tk.filedialog.askdirectory(**dir_opts)
             if not dir:
                 return
