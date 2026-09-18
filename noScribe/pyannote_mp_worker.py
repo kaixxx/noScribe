@@ -1,9 +1,13 @@
 import contextlib
-import importlib.resources as impres
 import os
 import platform
 import sys
 import traceback
+
+if sys.version_info >= (3, 12):
+    import importlib.resources as impres
+else:
+    import importlib_resources as impres
 
 if platform.system() == "Darwin" and platform.machine() == "x86_64":
     os.environ.setdefault("OMP_NUM_THREADS", "1")
