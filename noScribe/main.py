@@ -37,7 +37,7 @@ from functools import partial
 from pathlib import Path
 from subprocess import Popen, run
 from tempfile import TemporaryDirectory
-from threading import Thread
+from threading import Thread, get_ident
 from typing import Optional
 
 if sys.version_info >= (3, 12):
@@ -1013,6 +1013,8 @@ def _init_app_state(app):
     app._mp_queue = None
     app._ffmpeg_proc = None
     app._shutting_down = False
+    app._ui_thread_id = get_ident()
+    app._ui_tasks = pyqueue.Queue()
 
     # Get a list of available Whisper models.
     tmp = transcription.WhisperModelManager(app.user_models_dir)
@@ -1026,6 +1028,7 @@ class App(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         _init_app_state(self)
+        self.after(20, self._drain_ui_tasks)
 
         # configure window
         self.title('noScribe - ' + t('app_header'))
@@ -1466,6 +1469,27 @@ class App(ctk.CTk):
             
     # Events and Methods
 
+    def _dispatch_ui(self, callback):
+        """Run Tk work on the thread that created the application."""
+        if getattr(self, '_headless', False) or get_ident() == self._ui_thread_id:
+            callback()
+        elif not self._shutting_down:
+            self._ui_tasks.put(callback)
+
+    def _drain_ui_tasks(self):
+        if self._shutting_down:
+            return
+        while True:
+            try:
+                callback = self._ui_tasks.get_nowait()
+            except pyqueue.Empty:
+                break
+            try:
+                callback()
+            except Exception:
+                logger.exception("Error handling a UI task")
+        self.after(20, self._drain_ui_tasks)
+
     def on_whisper_model_selected(self, value):
         print(self.option_menu_whisper_model.old_value)
         print(value)
@@ -1489,6 +1513,9 @@ class App(ctk.CTk):
     def update_queue_table(self):
         """Update the queue table by diffing: update existing rows, add new ones, remove missing."""
         if getattr(self, '_headless', False):
+            return
+        if get_ident() != self._ui_thread_id:
+            self._dispatch_ui(self.update_queue_table)
             return
         current_keys = []
         for i in range(len(self.queue.jobs)):
@@ -1990,6 +2017,10 @@ class App(ctk.CTk):
         # Source: https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908 
         # set system/version dependent "start_new_session" analogs
   
+        if not getattr(self, '_headless', False) and get_ident() != self._ui_thread_id:
+            self._dispatch_ui(lambda: self.launch_editor(file))
+            return
+
         if file == '':
             # get last finished job (if any)
             jobs = self.queue.get_finished_jobs()
@@ -2055,27 +2086,10 @@ class App(ctk.CTk):
         if where != 'file': 
             if txt[:-1] != t('welcome_instructions'):
                 print(txt, end='')            
-            if not getattr(self, '_headless', False) and hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
-                try:
-                    self.log_textbox.configure(state=tk.NORMAL)
-                    # To prevent slowing down the UI, limit the content of log_textbox to max 5000 characters
-                    if self.log_len > 5000:
-                       self.log_textbox.delete("1.0", f"1.0 + {self.log_len - 3000} chars") # keep the last 3000
-                       self.log_len = 3000 
-                       
-                    if link:
-                        tags = tags + self.hyperlink.add(partial(self.openLink, link))
-                                      
-                    self.log_textbox.insert(tk.END, txt, tags)
-                    self.log_textbox.yview_moveto(1)  # Scroll to last line
-                    self.log_len += len(txt)
-                    
-                    # Schedule disabling the textbox in the main thread
-                    self.log_textbox.after(0, lambda: self.log_textbox.configure(state=tk.DISABLED))
-                except Exception as e:
-                    # Log screen errors only to file to prevent recursion
-                    if where == 'both':
-                        self.log(f"Error updating log_textbox: {str(e)}\nOriginal error: {txt}", tags='error', where='file', tb=tb)
+            if not getattr(self, '_headless', False):
+                self._dispatch_ui(
+                    lambda: self._append_log_text(txt, tags, link, tb, where)
+                )
 
         # Handle file logging if requested
         if where != 'screen' and self.log_file and not self.log_file.closed:
@@ -2091,6 +2105,28 @@ class App(ctk.CTk):
                 # As a last resort, print to stderr to not lose the error
                 import sys
                 print(f"Critical error - both screen and file logging failed: {str(e)}\nOriginal error: {txt}\nOriginal traceback:\n{tb}", file=sys.stderr)
+
+    def _append_log_text(self, txt, tags, link, tb, where):
+        if not hasattr(self, 'log_textbox') or not self.log_textbox.winfo_exists():
+            return
+        try:
+            self.log_textbox.configure(state=tk.NORMAL)
+            # Limit the live log to keep long transcriptions responsive.
+            if self.log_len > 5000:
+                self.log_textbox.delete("1.0", f"1.0 + {self.log_len - 3000} chars")
+                self.log_len = 3000
+            if link:
+                tags = tags + self.hyperlink.add(partial(self.openLink, link))
+            self.log_textbox.insert(tk.END, txt, tags)
+            self.log_textbox.yview_moveto(1)
+            self.log_len += len(txt)
+            self.log_textbox.configure(state=tk.DISABLED)
+        except Exception as e:
+            if where == 'both':
+                self.log(
+                    f"Error updating log_textbox: {str(e)}\nOriginal error: {txt}",
+                    tags='error', where='file', tb=tb
+                )
 
     def logn(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '', tb: str = '') -> None:
         """ Log with a newline appended """
@@ -2293,6 +2329,9 @@ class App(ctk.CTk):
     def set_progress(self, step, value, speaker_detection='none'):
         """ Update state of the progress bar """
         if getattr(self, '_headless', False):
+            return
+        if get_ident() != self._ui_thread_id:
+            self._dispatch_ui(lambda: self.set_progress(step, value, speaker_detection))
             return
         progr = -1
         if step == 1:
@@ -2552,7 +2591,7 @@ class App(ctk.CTk):
                 self.launch_editor(job.transcript_file)
             elif queue_jobs_processed > 1 and not getattr(self, '_headless', False):
                 # if more than one job has been processed, switch to queue tab for an overview 
-                self.tabview.set(self.tabview._name_list[1])
+                self._dispatch_ui(lambda: self.tabview.set(self.tabview._name_list[1]))
             
         except Exception as e:
             self.logn(f"Queue processing error: {str(e)}", 'error')
