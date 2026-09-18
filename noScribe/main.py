@@ -3181,6 +3181,8 @@ class App(ctk.CTk):
                         passages, moves = voice_check.relabel(
                             voice_segments, turns, centroids,
                             lambda spans: self._run_voice_embeddings(tmp_audio_file, job, spans))
+                        if moves:
+                            self.logn(where='file')  # the progress line above has no line end
                         for passage, before, after in moves:
                             self.logn(f"voice check: {utils.ms_to_str(job.start + round(passage['start'] * 1000))} "
                                       f"{before} -> {after}:{passage['text'][:60]}", where='file')
