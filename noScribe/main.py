@@ -2257,35 +2257,38 @@ class App(ctk.CTk):
                 break
         
         if len(self.audio_files_list) > 1:
-            # multiple audio files, select an output directory ...
-            tk.messagebox.showinfo(title='noScribe', message=t('output_dir_selection'))
-            dir = tk.filedialog.askdirectory(title="noScribe", initialdir=_initialdir)
+            # Multiple audio files: only the output directory is chosen here.
+            # The format was already asked when the batch was selected, so it
+            # is kept; picking the audio files again is the way to change it.
+            # The hint that a folder is asked for and the names are generated
+            # goes into the folder panel itself on macOS, where Tk's `-message`
+            # exists, so the modal box before it would only repeat it. The other
+            # platforms have no such option and keep the modal box.
+            dir_opts = {'title': 'noScribe', 'initialdir': _initialdir}
+            if sys.platform == 'darwin':
+                dir_opts['message'] = t('output_dir_selection')
+            else:
+                tk.messagebox.showinfo(title='noScribe', message=t('output_dir_selection'))
+            dir = tk.filedialog.askdirectory(**dir_opts)
             if not dir:
                 return
-            # ... and the output format as a second step (a folder picker has no
-            # file type list). Cancelling keeps the current format.
-            self.set_output_filetype(self.ask_output_format())
+            # logs the generated names itself
             self.create_default_transcript_names(dir)
         else:
             # single audio file, select an output file name
             fn = tk.filedialog.asksaveasfilename(initialdir=_initialdir, initialfile=_initialfile, 
                                                 filetypes=filetypes, 
                                                 defaultextension=config['last_filetype'])
-            if fn:
-                file_ext = os.path.splitext(fn)[1][1:].lower()
-                if not self.set_output_filetype(file_ext):
-                    tk.messagebox.showerror(title='noScribe', message=t('err_unsupported_output_format', file_type=file_ext))
-                    return                    
-                self.transcript_files_list = [fn]
-                self.button_transcript_file_name.configure(text=os.path.basename(fn))
-            else:
+            if not fn:
                 return
-        
-        self.logn()
-        log_msg = t('log_transcript_filename')
-        for fn in self.transcript_files_list:
-            log_msg += f'\n{fn}'
-        self.logn(log_msg)
+            file_ext = os.path.splitext(fn)[1][1:].lower()
+            if not self.set_output_filetype(file_ext):
+                tk.messagebox.showerror(title='noScribe', message=t('err_unsupported_output_format', file_type=file_ext))
+                return
+            self.transcript_files_list = [fn]
+            self.button_transcript_file_name.configure(text=os.path.basename(fn))
+            self.logn()
+            self.logn(t('log_transcript_filename') + f'\n{fn}')
         
     def set_progress(self, step, value, speaker_detection='none'):
         """ Update state of the progress bar """
