@@ -22,14 +22,14 @@ two spliced conversations, then frozen and checked on material never looked at
 before -- 7 more AMI meetings, CallHome calls and 24 VoxConverse recordings:
 
                                          wrong words   repaired / broken
-    faster-whisper   152 000 words       8036 -> 4774     3408 / 146   (96 % right)
-    a second engine  125 000 words       6701 -> 3699     3198 / 196   (94 % right)
+    faster-whisper   152 000 words       8036 -> 4387     3836 / 187   (95 % right)
+    a second engine  125 000 words       6701 -> 3246     3672 / 217   (94 % right)
 
 faster-whisper ran on 61 calls in German, English, Spanish, Japanese and
 Mandarin; the second engine (Voxtral, which is not part of this repository and
 knows neither Japanese nor Mandarin) on 45. Every language and every corpus is
-a net gain, between 91 % and 99.6 % right per corpus with faster-whisper and
-between 92 % and 97 % with the other. What the rule breaks sits in a few
+a net gain, between 88 % and 99.6 % right per corpus with faster-whisper and
+between 92 % and 98 % with the other. What the rule breaks sits in a few
 recordings whose diarization is badly off to begin with, and those still come
 out ahead. Overlapping speech gains too: in passages that are mostly overlapped,
 833 / 37 with faster-whisper on the 50 recordings this was counted on.
@@ -52,8 +52,8 @@ wider crop agrees lowers both; centroids rebuilt once from the confidently
 scored units repair about 4 % more words -- real, and not worth a second pass.
 
 The units themselves are not the limit: with perfect labels per unit 0.6 % of
-faster-whisper's words would still be wrong, against 5.3 % today and 3.1 % with
-this rule (0.8 %, 5.4 % and 3.0 % for the other engine). Finding the changes
+faster-whisper's words would still be wrong, against 5.3 % today and 2.9 % with
+this rule (0.8 %, 5.4 % and 2.6 % for the other engine). Finding the changes
 *inside* a unit could therefore remove 300 more wrong words at the very most
 (444 for the other engine), with a perfect detector, and was not built.
 """
@@ -74,6 +74,22 @@ UNIT_PAUSE_S = 0.5
 # to be worth it everywhere; the same pair is near the best for both engines.
 MARGIN_AGREE = 0.1
 MARGIN_OVERRULE = 0.3
+
+# Every recording has its own scale of margins. Two similar voices on one channel
+# squeeze them: in a studio podcast of two women the centroids had a cosine of
+# 0.63, clean passages reached only +-0.3, and three plainly misattributed ones
+# sat at 0.19 to 0.25 -- under a margin that recording could hardly ever reach.
+# So both margins shrink with the recording's typical margin (the median by which
+# passages of UNIT_SCALE_MIN_S or more favour their own speaker), relative to
+# MARGIN_SCALE_REF, and never below MARGIN_SCALE_FLOOR of their value. Across the
+# test recordings that typical margin runs from 0.24 to 0.86, median 0.5. The
+# reference was chosen on the tuning pool (0.45 to 0.7 tried) and checked on the
+# unseen one: faster-whisper 4774 -> 4387 wrong words left (3836 repaired, 187
+# broken), the second engine 3699 -> 3246 (3672 / 217), precision unchanged --
+# where lowering the margins for every recording alike cost two points of it.
+MARGIN_SCALE_REF = 0.5
+MARGIN_SCALE_FLOOR = 0.5
+UNIT_SCALE_MIN_S = 1.5
 
 
 def split_units(words):
@@ -102,7 +118,36 @@ def _cosine(a, b):
     return dot / (na * nb) if na > 0 and nb > 0 else None
 
 
-def decide(current, turns_ms, embedding, centroids):
+def _scores(embedding, centroids):
+    """{label: cosine between the voice and that speaker's centroid}."""
+    scores = {}
+    for label, centroid in centroids.items():
+        score = _cosine(embedding, centroid) if embedding else None
+        if score is not None:
+            scores[label] = score
+    return scores
+
+
+def margin_scale(units, centroids):
+    """By how much the margins of this recording are to shrink (see MARGIN_SCALE_REF).
+
+    units is [(label, embedding, seconds)]. Without a long enough passage that
+    favours its own speaker there is nothing to go by, and the margins stay.
+    """
+    own = []
+    for label, embedding, seconds in units:
+        scores = _scores(embedding, centroids)
+        if seconds >= UNIT_SCALE_MIN_S and label in scores and len(scores) > 1:
+            own.append(scores[label] - max(v for k, v in scores.items() if k != label))
+    own = sorted(m for m in own if m > 0)
+    if not own:
+        return 1.0
+    middle = len(own) // 2
+    typical = own[middle] if len(own) % 2 else (own[middle - 1] + own[middle]) / 2
+    return max(MARGIN_SCALE_FLOOR, min(1.0, typical / MARGIN_SCALE_REF))
+
+
+def decide(current, turns_ms, embedding, centroids, scale=1.0):
     """The speaker label a unit should carry.
 
     current      label the unit has now (its segment's speaker)
@@ -110,23 +155,18 @@ def decide(current, turns_ms, embedding, centroids):
                  empty when the diarization has nothing to add
     embedding    the unit's voice, or None when it could not be computed
     centroids    {label: centroid}
+    scale        what margin_scale() found for this recording
     """
-    if not embedding:
-        return current
-    scores = {}
-    for label, centroid in centroids.items():
-        score = _cosine(embedding, centroid)
-        if score is not None:
-            scores[label] = score
+    scores = _scores(embedding, centroids)
     if current not in scores:
         return current
     label = current
     if turns_ms:
         named = max(turns_ms, key=turns_ms.get)
-        if named != label and named in scores and scores[named] - scores[label] > MARGIN_AGREE:
+        if named != label and named in scores and scores[named] - scores[label] > MARGIN_AGREE * scale:
             label = named
     best = max(scores, key=scores.get)
-    if best != label and scores[best] - scores[label] > MARGIN_OVERRULE:
+    if best != label and scores[best] - scores[label] > MARGIN_OVERRULE * scale:
         label = best
     return label
 
@@ -193,7 +233,11 @@ def relabel(segments, diarization, centroids, embed):
         units = split_units(segment.get('words')) if current in centroids else []
         plan.append((segment, written, inherited, current, units))
         spans += [[unit[0]['start'], unit[-1]['end']] for unit in units]
-    embeddings = iter(embed(spans) if spans else [])
+    voices = embed(spans) if spans else []
+    voices = list(voices) + [None] * (len(spans) - len(voices))
+    scale = margin_scale([(current, voice, end - start) for (start, end), voice, current in zip(
+        spans, voices, (current for _, _, _, current, units in plan for _ in units))], centroids)
+    embeddings = iter(voices)
 
     passages, moves = [], []
     # Who speaks without the overlap marker -- the turn others talk into -- as the
@@ -210,7 +254,7 @@ def relabel(segments, diarization, centroids, embed):
             # on exactly this span; only the voice alone can move it.
             turns_ms = turns_inside(diarization, round(unit[0]['start'] * 1000),
                                     round(unit[-1]['end'] * 1000)) if len(units) > 1 else {}
-            labels.append(decide(base, turns_ms, next(embeddings, None), centroids))
+            labels.append(decide(base, turns_ms, next(embeddings, None), centroids, scale))
         runs = []
         for unit, label in zip(units, labels):
             if runs and runs[-1][0] == label:

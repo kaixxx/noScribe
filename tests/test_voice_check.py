@@ -233,3 +233,29 @@ def test_writing_the_passages_again_changes_nothing_where_nothing_moved():
 def test_the_environment_switch(monkeypatch, value, expected):
     monkeypatch.setenv('NOSCRIBE_VOICE_CHECK', value)
     assert vc.enabled() is expected
+
+
+def test_a_recording_of_similar_voices_gets_smaller_margins():
+    """Long passages favour their own speaker by only 0.3 here (two similar voices
+    on one channel), so 0.3 for the voice alone would be out of reach: both margins
+    shrink to 0.3 / MARGIN_SCALE_REF of their value."""
+    long_ones = [(said(f'Long passage {i}.', 10.0 * i, 10.0 * i + 3.0), 'S00', False) for i in range(3)]
+    aside = (said('Exactly.', 40.0, 40.6), 'S00', False)
+    voices = [voice(-0.3)] * 3 + [voice(0.2)]
+    passages, moves = vc.relabel(long_ones + [aside], [], CENTROIDS, lambda spans: voices)
+    assert vc.margin_scale([('S00', voice(-0.3), 3.0)] * 3, CENTROIDS) == pytest.approx(0.3 / vc.MARGIN_SCALE_REF)
+    assert speakers(passages)[-1] == 'S01' and len(moves) == 1
+    # ... while the same aside stays put in a recording whose voices are far apart
+    voices = [voice(-0.8)] * 3 + [voice(0.2)]
+    assert vc.relabel(long_ones + [aside], [], CENTROIDS, lambda spans: voices)[1] == []
+
+
+@pytest.mark.parametrize('units, expected', [
+    ([('S00', voice(-0.1), 3.0)], vc.MARGIN_SCALE_FLOOR),       # never below the floor
+    ([('S00', voice(-0.9), 3.0)], 1.0),                          # never above the measured margins
+    ([('S00', voice(-0.3), 1.0)], 1.0),                          # short passages say nothing about the scale
+    ([('S00', voice(0.4), 3.0)], 1.0),                           # nor do passages that favour someone else
+    ([], 1.0),
+])
+def test_the_margin_scale_has_bounds_and_needs_evidence(units, expected):
+    assert vc.margin_scale(units, CENTROIDS) == pytest.approx(expected)
