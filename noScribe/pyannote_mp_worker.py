@@ -84,6 +84,18 @@ def hide_speechbrain():
 EMBED_MIN_S = 0.5
 
 
+# The embed call uses the GPU on Apple hardware only from this much memory on.
+EMBED_MPS_MIN_RAM_GB = 16
+
+
+def _ram_gb():
+    """Installed memory in GB, 0 when the platform will not say."""
+    try:
+        return os.sysconf('SC_PHYS_PAGES') * os.sysconf('SC_PAGE_SIZE') / 2 ** 30
+    except (AttributeError, OSError, ValueError):
+        return 0
+
+
 def _centroids(diarization):
     """The pipeline's own speaker centroids as {label: [float]}, or {}.
 
@@ -230,14 +242,14 @@ def pyannote_proc_entrypoint(args: dict, q):
                 raise Exception('Platform not supported yet.')
 
         # Every unit is embedded at its own length, and MPS compiles and keeps one
-        # graph per distinct input length. On a 44-minute meeting (996 units, 214
-        # lengths) the embed call peaked at 3.1 GB on MPS against 1.6 GB on the
-        # CPU and was no faster (35 s against 33 s); at 15 000 units MPS levels off
-        # at 4.8 GB against a flat 1.5 GB and is ahead by then (4.3 against 7.7
-        # min), which does not pay for 3 GB on a small machine.
-        # torch.mps.empty_cache() holds the memory down but makes every call
-        # slower than the CPU. The embeddings are the same either way.
-        if args.get("embed_spans") is not None and device == 'mps':
+        # graph per distinct input length, so its memory grows with the recording.
+        # Measured on 4.7 h of meetings (7044 units, 390 lengths) on an M1 Max: MPS
+        # 132 s and 5.1 GB, CPU 225 s and 2.0 GB; on 50 minutes 38 s and 3.3 GB
+        # against 45 s and 1.3 GB. About 20 s saved per hour of audio is welcome
+        # where 3 GB are to spare and not worth swapping for where they are not.
+        # (torch.mps.empty_cache() holds the memory down but makes every call slower
+        # than the CPU; the embeddings are the same either way.)
+        if args.get("embed_spans") is not None and device == 'mps' and _ram_gb() < EMBED_MPS_MIN_RAM_GB:
             device = 'cpu'
 
         with impres.as_file(impres.files("pyannote")) as mypath, hide_speechbrain():
