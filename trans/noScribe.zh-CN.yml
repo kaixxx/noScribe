@@ -44,7 +44,7 @@ zh-CN: &defaults
     按首次出现的顺序分配给说话人，
     并替换转录中的S00/S01标签。
   ask_speaker_names_count: '您输入了 %{n_names} 个名字，但说话人数量设置为 %{n_speakers}。名字可能会分配给错误的人。仍要开始吗？'
-  warn_speaker_names_more_speakers: '检测到的说话人数量超过输入的名字数量（%{n_names}）。多余的说话人保留其原始标签。'
+  warn_speaker_names_more_speakers: '检测到的说话人数量超过输入的名字数量（%{n_names}）。多余的说话人将改为按出现顺序编号（S01、S02、...）。'
   label_whisper_model: '人工智能模型：'
   label_add_custom_models: '添加人工智能模型...'  
   label_overlapping: '重叠发言：'

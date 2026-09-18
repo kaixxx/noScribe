@@ -44,7 +44,7 @@ fr:
     Ils sont attribués aux locuteurs dans l'ordre de leur première apparition
     et remplacent les étiquettes S00/S01 dans la transcription.
   ask_speaker_names_count: 'Vous avez saisi %{n_names} nom(s), mais le nombre de locuteurs est réglé sur %{n_speakers}. Les noms risquent d''être attribués aux mauvaises personnes. Démarrer quand même ?'
-  warn_speaker_names_more_speakers: 'Plus de locuteurs ont été détectés que de noms saisis (%{n_names}). Les locuteurs en trop conservent leurs étiquettes d''origine.'
+  warn_speaker_names_more_speakers: 'Plus de locuteurs ont été détectés que de noms saisis (%{n_names}). Les locuteurs en trop sont numérotés à la place (S01, S02, ... dans l''ordre d''apparition).'
   label_whisper_model: "Modèle :"
   label_add_custom_models: "Ajouter un modèle d'IA..."
   label_overlapping: 'Chevauchements de parole'
