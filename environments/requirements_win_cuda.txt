@@ -10,6 +10,9 @@ customtkinter
 CTkToolTip
 faster-whisper
 importlib-resources>=5.10; python_version < "3.12"
+# >=3.11 honours MPL_IGNORE_SYSTEM_FONTS, which the diarization worker sets;
+# see the comment in noScribe/pyannote_mp_worker.py.
+matplotlib>=3.11
 Pillow
 pyannote.audio>=4.0
 pyinstaller==6.14.1 

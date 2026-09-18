@@ -59,7 +59,7 @@ def _run(tmp_path, **env_overrides):
     return proc.stdout.strip()
 
 
-def test_system_font_scan_is_off_when_pyannote_is_imported(tmp_path):
+def test_system_font_scan_is_requested_off_when_pyannote_is_imported(tmp_path):
     error = _run(tmp_path)
     assert "fonts='1'" in error, error
 

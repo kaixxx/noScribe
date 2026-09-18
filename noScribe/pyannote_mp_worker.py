@@ -72,11 +72,12 @@ def pyannote_proc_entrypoint(args: dict, q):
         # an incomplete record (matplotlib#32328, fixed only from matplotlib
         # 3.12).  MPL_IGNORE_SYSTEM_FONTS (honoured from matplotlib 3.11)
         # limits the cache to matplotlib's bundled fonts.  That cache is keyed
-        # by version alone, so it must not land in the user-wide ~/.matplotlib,
-        # where every other matplotlib would take the fonts-less list as
-        # authoritative; noScribe's own cache directory keeps it private, and
-        # an inherited MPLCONFIGDIR is overridden for the same reason.  The
-        # font setting uses setdefault so a deliberate override is respected.
+        # by font-cache schema version rather than its contents, so it must not
+        # land in the user-wide ~/.matplotlib, where another matplotlib process
+        # could take the fonts-less list as authoritative; noScribe's own cache
+        # directory keeps it private, and an inherited MPLCONFIGDIR is
+        # overridden for the same reason.  The font setting uses setdefault so
+        # a deliberate override is respected.
         import appdirs
         os.environ.setdefault("MPL_IGNORE_SYSTEM_FONTS", "1")
         os.environ["MPLCONFIGDIR"] = os.path.join(
