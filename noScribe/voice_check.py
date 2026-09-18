@@ -22,8 +22,8 @@ two spliced conversations, then frozen and checked on material never looked at
 before -- 7 more AMI meetings, CallHome calls and 24 VoxConverse recordings:
 
                                          wrong words   repaired / broken
-    faster-whisper   152 000 words       8036 -> 4387     3836 / 187   (95 % right)
-    a second engine  125 000 words       6701 -> 3246     3672 / 217   (94 % right)
+    faster-whisper   152 000 words       8036 -> 4358     3867 / 189   (95 % right)
+    a second engine  125 000 words       6701 -> 3164     3762 / 225   (94 % right)
 
 faster-whisper ran on 61 calls in German, English, Spanish, Japanese and
 Mandarin; the second engine (Voxtral, which is not part of this repository and
@@ -91,6 +91,18 @@ MARGIN_SCALE_REF = 0.5
 MARGIN_SCALE_FLOOR = 0.5
 UNIT_SCALE_MIN_S = 1.5
 
+# A unit that lies wholly inside ONE other speaker's turn (TURN_COVERS of it, and
+# no other turn touching it) is as clear a case as the diarization has -- and
+# often too short to have much of a voice: a "Perfekt." of 0.3 s between two
+# speakers scored +0.03, sat inside the right speaker's turn, and stayed with the
+# wrong one because the voice had not confirmed the move. There the voice only
+# has to not object. On the unseen pool that repairs 31 more words and breaks 2
+# with faster-whisper, 90 more and 8 with the second engine, precision unchanged;
+# letting the voice merely not object for EVERY short unit broke as many as it
+# repaired.
+MARGIN_OBJECT = -0.05
+TURN_COVERS = 0.9
+
 
 def split_units(words):
     """Group a segment's words into units. Returns a list of word lists.
@@ -147,7 +159,7 @@ def margin_scale(units, centroids):
     return max(MARGIN_SCALE_FLOOR, min(1.0, typical / MARGIN_SCALE_REF))
 
 
-def decide(current, turns_ms, embedding, centroids, scale=1.0):
+def decide(current, turns_ms, embedding, centroids, scale=1.0, unit_ms=None):
     """The speaker label a unit should carry.
 
     current      label the unit has now (its segment's speaker)
@@ -156,6 +168,7 @@ def decide(current, turns_ms, embedding, centroids, scale=1.0):
     embedding    the unit's voice, or None when it could not be computed
     centroids    {label: centroid}
     scale        what margin_scale() found for this recording
+    unit_ms      the unit's length, to tell whether one turn covers it (TURN_COVERS)
     """
     scores = _scores(embedding, centroids)
     if current not in scores:
@@ -163,7 +176,9 @@ def decide(current, turns_ms, embedding, centroids, scale=1.0):
     label = current
     if turns_ms:
         named = max(turns_ms, key=turns_ms.get)
-        if named != label and named in scores and scores[named] - scores[label] > MARGIN_AGREE * scale:
+        covered = unit_ms and len(turns_ms) == 1 and turns_ms[named] >= TURN_COVERS * unit_ms
+        needed = MARGIN_OBJECT if covered else MARGIN_AGREE * scale
+        if named != label and named in scores and scores[named] - scores[label] > needed:
             label = named
     best = max(scores, key=scores.get)
     if best != label and scores[best] - scores[label] > MARGIN_OVERRULE * scale:
@@ -252,9 +267,9 @@ def relabel(segments, diarization, centroids, embed):
         for unit in units:
             # A unit that is its whole segment already had the diarization's say
             # on exactly this span; only the voice alone can move it.
-            turns_ms = turns_inside(diarization, round(unit[0]['start'] * 1000),
-                                    round(unit[-1]['end'] * 1000)) if len(units) > 1 else {}
-            labels.append(decide(base, turns_ms, next(embeddings, None), centroids, scale))
+            start_ms, end_ms = round(unit[0]['start'] * 1000), round(unit[-1]['end'] * 1000)
+            turns_ms = turns_inside(diarization, start_ms, end_ms) if len(units) > 1 else {}
+            labels.append(decide(base, turns_ms, next(embeddings, None), centroids, scale, end_ms - start_ms))
         runs = []
         for unit, label in zip(units, labels):
             if runs and runs[-1][0] == label:
