@@ -85,6 +85,9 @@ EMBED_MIN_S = 0.5
 
 
 # The embed call uses the GPU on Apple hardware only from this much memory on.
+# Apple's GPU memory *is* the system memory, so installed RAM is the right thing
+# to ask about. CUDA is left alone: its memory is the card's own, free again by
+# the time this runs, and its allocator keeps no graph per input length.
 EMBED_MPS_MIN_RAM_GB = 16
 
 
