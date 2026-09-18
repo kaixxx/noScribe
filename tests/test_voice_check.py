@@ -259,3 +259,24 @@ def test_a_recording_of_similar_voices_gets_smaller_margins():
 ])
 def test_the_margin_scale_has_bounds_and_needs_evidence(units, expected):
     assert vc.margin_scale(units, CENTROIDS) == pytest.approx(expected)
+
+
+def test_inside_one_other_turn_the_voice_only_has_to_not_object():
+    """'Perfekt.', 0.3 s, wholly inside the other speaker's turn, glued to the
+    'Ja.' before it by the segment builder. 0.3 s of audio has no voice to speak
+    of (+0.03), and demanding that it confirm the move kept a word with the wrong
+    speaker that the diarization had right."""
+    ws = words(('Ja.', 0.0, 0.5), ('Perfekt.', 1.0, 1.3))
+    seg = {'start': 0.0, 'end': 1.3, 'text': ' Ja. Perfekt.', 'words': ws}
+    turns = [{'start': 0, 'end': 600, 'label': 'S00'}, {'start': 900, 'end': 5000, 'label': 'S01'}]
+    passages, moves = vc.relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(-0.5), voice(0.03)])
+    assert speakers(passages) == ['S00', 'S01'] and len(moves) == 1
+    # ... but a voice that objects keeps it where it is
+    assert vc.relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(-0.5), voice(-0.2)])[1] == []
+    # ... and so does a unit the turn covers only in part, or shares with another turn
+    partly = [{'start': 0, 'end': 600, 'label': 'S00'}, {'start': 1150, 'end': 5000, 'label': 'S01'}]
+    assert vc.relabel([(seg, 'S00', False)], partly, CENTROIDS, lambda spans: [voice(-0.5), voice(0.03)])[1] == []
+    shared = turns + [{'start': 950, 'end': 1100, 'label': 'S00'}]
+    assert vc.relabel([(seg, 'S00', False)], sorted(shared, key=lambda t: t['start']), CENTROIDS,
+                      lambda spans: [voice(-0.5), voice(0.03)])[1] == []
+
