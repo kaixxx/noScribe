@@ -3072,7 +3072,7 @@ class App(ctk.CTk):
                             # means two speakers who were given the same name still
                             # start separate paragraphs, and a name that happens to
                             # begin with "//" is not mistaken for the overlap marker.
-                            new_speaker = speaker_override or find_speaker(diarization, start, end)
+                            new_speaker = find_speaker(diarization, start, end) if speaker_override is None else speaker_override
                             new_speaker_disp = self._apply_speaker_name(new_speaker, job, warn=not quiet)
                             if (speaker != new_speaker) and (new_speaker != ''): # speaker change
                                 if new_speaker[:2] == '//': # is overlapping speech, create no new paragraph
@@ -3227,6 +3227,7 @@ class App(ctk.CTk):
                                 if self.cancel:
                                     raise
                                 self.logn(f'Voice check skipped: {err}', where='file')
+                                self.logn(t('voice_check_skipped'))
                         transcription_success = True
                         # if self.cancel:
                         #    raise Exception(t('err_user_cancelation')) 

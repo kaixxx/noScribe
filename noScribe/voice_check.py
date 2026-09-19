@@ -20,19 +20,20 @@ Measured against ground truth at word level: how many words carry the wrong
 speaker afterwards -- whichever side put them there, since a word the diarization
 happened to get wrong is no better than one this check got wrong. Margins chosen
 on 16 AMI meetings, 16 CallHome German calls and two spliced conversations, and
-read off on material that took no part in it -- 7 more AMI meetings, CallHome
-calls and 24 VoxConverse recordings:
+read off on material that took no part in it -- 7 more AMI meetings, 61 more
+CallHome calls and 24 VoxConverse recordings:
 
                                          wrong words
     faster-whisper   152 000 words       8036 -> 3585    (5.3 % -> 2.4 %)
     a second engine  125 000 words       6701 -> 2596    (5.4 % -> 2.1 %)
 
-faster-whisper ran on 61 calls in German, English, Spanish, Japanese and
-Mandarin; the second engine (Voxtral, which is not part of this repository and
-knows neither Japanese nor Mandarin) on 45. Every language and every corpus is
+The 61 calls are German, English, Spanish, Japanese and Mandarin; the second
+engine (Voxtral, which is not part of this repository and knows neither Japanese
+nor Mandarin) ran on 45 of them. Every language and every corpus is
 a net gain for both engines. Overlapping speech gains too: in passages that are
 mostly overlapped the check repairs 1215 words and breaks 151 with
-faster-whisper (991 / 153 with the other engine), counted on 42 recordings.
+faster-whisper (991 / 153 with the other engine), counted on 42 of these
+recordings.
 
 What was measured and left out, because it added nothing worth its weight:
 cutting at speaker changes *without* the voice (on the same pool it repairs
@@ -55,7 +56,7 @@ The units themselves are not the limit: with perfect labels per unit 0.6 % of
 faster-whisper's words would still be wrong, against 5.3 % today and 2.4 % with
 this rule (0.8 %, 5.4 % and 2.1 % for the other engine). Finding the changes
 *inside* a unit could remove 300 more wrong words at the very most (444 for
-the other engine; counted with the first, more cautious margins), with a
+the other engine; counted with an earlier, more cautious pair of margins), with a
 perfect detector, and was not built.
 """
 
@@ -259,7 +260,14 @@ def relabel(segments, diarization, centroids, embed):
             # on exactly this span; only the voice alone can move it.
             start_ms, end_ms = round(unit[0]['start'] * 1000), round(unit[-1]['end'] * 1000)
             turns_ms = turns_inside(diarization, start_ms, end_ms) if len(units) > 1 else {}
-            labels.append(decide(base, turns_ms, next(embeddings, None), centroids, scale))
+            voice = next(embeddings, None)
+            # A word without length has no audio of its own (its embedding would be
+            # its neighbours'), and on its own it would be a passage from t to t:
+            # it goes with the unit before it, or the one after.
+            labels.append(None if end_ms <= start_ms else decide(base, turns_ms, voice, centroids, scale))
+        for i, label in enumerate(labels):
+            if label is None:
+                labels[i] = labels[i - 1] if i else next((l for l in labels if l is not None), base)
         runs = []
         for unit, label in zip(units, labels):
             if runs and runs[-1][0] == label:

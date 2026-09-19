@@ -110,6 +110,7 @@ en:
   transcription_finished: 'Transcription finished.' 
   voice_check_start: 'Checking speakers against their voices...'
   voice_check_done: '%{count} passage(s) reassigned.'
+  voice_check_skipped: 'The voice check could not be completed; the speakers are as the diarization had them.'
   transcription_saved: 'Saved to: %{file}'
   trancription_time: 'Duration: %{duration} minutes'
   

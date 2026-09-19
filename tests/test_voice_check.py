@@ -275,3 +275,21 @@ def test_a_voice_too_short_to_say_much_still_follows_the_diarization():
     # ... but a voice that leans the other way keeps it where it is
     assert vc.relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(-0.5), voice(-0.03)])[1] == []
 
+
+
+def test_a_word_without_length_goes_with_its_neighbour():
+    """faster-whisper emits words whose start equals their end. The crop for one
+    is widened into its neighbours, so its "voice" is theirs, and moved on its own
+    it would become a subtitle cue from t to t, which WebVTT forbids."""
+    ws = words(('So.', 0.0, 1.0), ('Hm.', 1.6, 1.6), ('Right.', 2.2, 3.0))
+    seg = {'start': 0.0, 'end': 3.0, 'text': ' So. Hm. Right.', 'words': ws}
+    turns = [{'start': 0, 'end': 3000, 'label': 'S00'}]
+    passages, moves = vc.relabel([(seg, 'S00', False)], turns, CENTROIDS,
+                                 lambda spans: [voice(-0.9), voice(0.9), voice(0.9)])
+    assert [(p['text'], s) for p, s in passages] == [(' So. Hm.', 'S00'), (' Right.', 'S01')]
+    # ... and at the head of a segment, with the unit after it
+    ws = words(('Hm.', 0.0, 0.0), ('Right.', 0.6, 1.5), ('So.', 2.1, 3.0))
+    seg = {'start': 0.0, 'end': 3.0, 'text': ' Hm. Right. So.', 'words': ws}
+    passages, _ = vc.relabel([(seg, 'S00', False)], turns, CENTROIDS,
+                             lambda spans: [voice(-0.9), voice(0.9), voice(-0.9)])
+    assert [(p['text'], s) for p, s in passages] == [(' Hm. Right.', 'S01'), (' So.', 'S00')]

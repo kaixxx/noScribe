@@ -79,8 +79,8 @@ def hide_speechbrain():
 
 
 # The shortest stretch of audio an embedding is taken from: a shorter span is
-# widened evenly to this. 1.0 s reaches into the neighbour: on the unseen pool it
-# broke 237 words instead of 146 (faster-whisper, 93.6 % right instead of 95.9 %).
+# widened evenly to this. 1.0 s reaches into the neighbour: on the tuning pool it
+# left 3546 words with the wrong speaker instead of 3505 (faster-whisper).
 EMBED_MIN_S = 0.5
 
 
@@ -261,8 +261,12 @@ def pyannote_proc_entrypoint(args: dict, q):
         pipeline.to(torch.device(device))
 
         if args.get("embed_spans") is not None:
-            q.put({"type": "result", "ok": True, "embeddings": _embed_spans(
-                pipeline, waveform, sample_rate, args["embed_spans"], q)})
+            embeddings = _embed_spans(pipeline, waveform, sample_rate, args["embed_spans"], q)
+            if embeddings and not any(embeddings):
+                # Otherwise indistinguishable from a check that found nothing to move.
+                plog("warn", "Voice check: no embedding could be computed (model missing, "
+                             "another sample rate, or every span rejected).")
+            q.put({"type": "result", "ok": True, "embeddings": embeddings})
             return
 
         seg_list = []

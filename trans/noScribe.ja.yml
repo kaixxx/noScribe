@@ -46,6 +46,9 @@ ja:
     文字起こし内のS00/S01ラベルを置き換えます。
   ask_speaker_names_count: '%{n_names}件の名前が入力されましたが、話者数は%{n_speakers}に設定されています。名前が誤った人物に割り当てられる可能性があります。それでも開始しますか？'
   warn_speaker_names_more_speakers: '入力された名前（%{n_names}件）より多くの話者が検出されました。余分な話者は元のラベルのままになります。'
+  voice_check_start: '声で話者を確認しています...'
+  voice_check_done: '%{count} 件の発話を割り当て直しました。'
+  voice_check_skipped: '声による確認を完了できませんでした。話者は話者分離の結果のままです。'
   label_whisper_model: 'モデル：'
   label_add_custom_models: 'AIモデルを追加...'
   label_overlapping: 'オーバーラッピング・スピーチ：'

@@ -46,6 +46,9 @@ pt:
     e substituem as etiquetas S00/S01 na transcrição.
   ask_speaker_names_count: 'Introduziu %{n_names} nome(s), mas o número de oradores está definido como %{n_speakers}. Os nomes podem ser atribuídos às pessoas erradas. Iniciar mesmo assim?'
   warn_speaker_names_more_speakers: 'Foram detetados mais oradores do que os nomes inseridos (%{n_names}). Os oradores excedentes mantêm as suas etiquetas originais.'
+  voice_check_start: 'Verificando os oradores pela voz...'
+  voice_check_done: '%{count} trecho(s) reatribuído(s).'
+  voice_check_skipped: 'Não foi possível concluir a verificação por voz; os oradores ficam como a diarização os atribuiu.'
   label_whisper_model: 'Modelo:'
   label_add_custom_models: 'Adicionar modelo de IA...'  
   label_overlapping: 'Sobreposição:'
