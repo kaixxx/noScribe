@@ -49,6 +49,9 @@ fr:
   label_add_custom_models: "Ajouter un modèle d'IA..."
   label_overlapping: 'Chevauchements de parole'
   label_pause: 'Marquer les pauses :'
+  voice_check_start: 'Vérification des locuteurs d''après leur voix...'
+  voice_check_done: '%{count} passage(s) réattribué(s).'
+  voice_check_skipped: 'La vérification par la voix n''a pas pu être terminée ; les locuteurs restent tels que la diarisation les a attribués.'
   label_timestamps: 'Horodatage :'
   label_disfluencies: 'Mots de remplissage :'
   opt_yes: 'Oui'
