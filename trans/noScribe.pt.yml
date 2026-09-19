@@ -45,7 +45,7 @@ pt:
     São atribuídos aos falantes pela ordem da primeira aparição
     e substituem as etiquetas S00/S01 na transcrição.
   ask_speaker_names_count: 'Introduziu %{n_names} nome(s), mas o número de oradores está definido como %{n_speakers}. Os nomes podem ser atribuídos às pessoas erradas. Iniciar mesmo assim?'
-  warn_speaker_names_more_speakers: 'Foram detetados mais oradores do que os nomes inseridos (%{n_names}). Os oradores excedentes mantêm as suas etiquetas originais.'
+  warn_speaker_names_more_speakers: 'Foram detetados mais oradores do que os nomes inseridos (%{n_names}). Os oradores excedentes são numerados em vez disso (S01, S02, ... por ordem de aparecimento).'
   label_whisper_model: 'Modelo:'
   label_add_custom_models: 'Adicionar modelo de IA...'  
   label_overlapping: 'Sobreposição:'
