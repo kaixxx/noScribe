@@ -1,3 +1,4 @@
+import contextlib
 import importlib.resources as impres
 import os
 import platform
@@ -50,6 +51,33 @@ def load_waveform(audio_file):
     return torch.from_numpy(data.T).contiguous(), sample_rate  # (ch, frames)
 
 
+@contextlib.contextmanager
+def hide_speechbrain():
+    """Keep SpeechBrain out of reach while the diarization pipeline is loaded.
+
+    SpeechBrain is an optional pyannote embedding backend that noScribe's
+    bundled pipeline does not use. Older source installations may still have an
+    incompatible SpeechBrain version installed, and pyannote's optional import
+    would then fail before our pipeline is loaded. Hiding it turns any failure
+    into the ImportError pyannote expects, so it records the backend as
+    unavailable.
+
+    It has to cover ``Pipeline.from_pretrained``: importing ``Pipeline`` does not
+    reach SpeechBrain, because pyannote's package init is lazy and the module
+    with the optional import is only loaded when ``from_pretrained`` resolves
+    the pipeline class named in config.yaml.
+    """
+    previous_speechbrain = sys.modules.get("speechbrain")
+    sys.modules["speechbrain"] = None
+    try:
+        yield
+    finally:
+        if previous_speechbrain is None:
+            sys.modules.pop("speechbrain", None)
+        else:
+            sys.modules["speechbrain"] = previous_speechbrain
+
+
 def pyannote_proc_entrypoint(args: dict, q):
     """Runs diarization in a child process and streams progress/logs.
     Messages:
@@ -82,20 +110,7 @@ def pyannote_proc_entrypoint(args: dict, q):
         os.environ.setdefault("MPL_IGNORE_SYSTEM_FONTS", "1")
         os.environ["MPLCONFIGDIR"] = os.path.join(
             appdirs.user_cache_dir("noScribe"), "matplotlib")
-        # SpeechBrain is an optional pyannote embedding backend that noScribe's
-        # bundled pipeline does not use.  Older source installations may still
-        # have an incompatible SpeechBrain version installed, and pyannote's
-        # optional import would then fail before our pipeline is loaded.  Hide
-        # it for this import so pyannote records the backend as unavailable.
-        previous_speechbrain = sys.modules.get("speechbrain")
-        sys.modules["speechbrain"] = None
-        try:
-            from pyannote.audio import Pipeline
-        finally:
-            if previous_speechbrain is None:
-                sys.modules.pop("speechbrain", None)
-            else:
-                sys.modules["speechbrain"] = previous_speechbrain
+        from pyannote.audio import Pipeline
 
         def plog(level, msg):
             try:
@@ -144,7 +159,7 @@ def pyannote_proc_entrypoint(args: dict, q):
             else:
                 raise Exception('Platform not supported yet.')
 
-        with impres.as_file(impres.files("pyannote")) as mypath:
+        with impres.as_file(impres.files("pyannote")) as mypath, hide_speechbrain():
             pipeline = Pipeline.from_pretrained(mypath)
         waveform, sample_rate = load_waveform(audio_file)
         pipeline.to(torch.device(device))
