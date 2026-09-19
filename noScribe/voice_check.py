@@ -12,27 +12,27 @@ diarization's own speaker centroids.
     voice      one embedding per unit, from pyannote's own model (a second,
                short call to pyannote_mp_worker once the transcript exists)
     decision   a unit moves to another speaker when its voice is closer to that
-               speaker's centroid than to the current one: by MARGIN_AGREE when
-               the diarization's turns inside the unit name that speaker too, by
-               MARGIN_OVERRULE when the voice stands alone
+               speaker's centroid than to the current one: at all (MARGIN_AGREE)
+               when the diarization's turns inside the unit name that speaker
+               too, by MARGIN_OVERRULE when the voice stands alone
 
-Measured against ground truth at word level (does each word carry the right
-speaker?), thresholds chosen on 16 AMI meetings, 16 CallHome German calls and
-two spliced conversations, then frozen and checked on material never looked at
-before -- 7 more AMI meetings, CallHome calls and 24 VoxConverse recordings:
+Measured against ground truth at word level: how many words carry the wrong
+speaker afterwards -- whichever side put them there, since a word the diarization
+happened to get wrong is no better than one this check got wrong. Margins chosen
+on 16 AMI meetings, 16 CallHome German calls and two spliced conversations, and
+read off on material that took no part in it -- 7 more AMI meetings, CallHome
+calls and 24 VoxConverse recordings:
 
-                                         wrong words   repaired / broken
-    faster-whisper   152 000 words       8036 -> 4358     3867 / 189   (95 % right)
-    a second engine  125 000 words       6701 -> 3164     3762 / 225   (94 % right)
+                                         wrong words
+    faster-whisper   152 000 words       8036 -> 3585    (5.3 % -> 2.4 %)
+    a second engine  125 000 words       6701 -> 2596    (5.4 % -> 2.1 %)
 
 faster-whisper ran on 61 calls in German, English, Spanish, Japanese and
 Mandarin; the second engine (Voxtral, which is not part of this repository and
 knows neither Japanese nor Mandarin) on 45. Every language and every corpus is
-a net gain, between 88 % and 99.6 % right per corpus with faster-whisper and
-between 92 % and 98 % with the other. What the rule breaks sits in a few
-recordings whose diarization is badly off to begin with, and those still come
-out ahead. Overlapping speech gains too: in passages that are mostly overlapped,
-833 / 37 with faster-whisper on the 50 recordings this was counted on.
+a net gain for both engines. Overlapping speech gains too: in passages that are
+mostly overlapped the check repairs 1215 words and breaks 151 with
+faster-whisper (991 / 153 with the other engine), counted on 42 recordings.
 
 What was measured and left out, because it added nothing worth its weight:
 cutting at speaker changes *without* the voice (on the same pool it repairs
@@ -52,10 +52,11 @@ wider crop agrees lowers both; centroids rebuilt once from the confidently
 scored units repair about 4 % more words -- real, and not worth a second pass.
 
 The units themselves are not the limit: with perfect labels per unit 0.6 % of
-faster-whisper's words would still be wrong, against 5.3 % today and 2.9 % with
-this rule (0.8 %, 5.4 % and 2.6 % for the other engine). Finding the changes
-*inside* a unit could therefore remove 300 more wrong words at the very most
-(444 for the other engine), with a perfect detector, and was not built.
+faster-whisper's words would still be wrong, against 5.3 % today and 2.4 % with
+this rule (0.8 %, 5.4 % and 2.1 % for the other engine). Finding the changes
+*inside* a unit could remove 300 more wrong words at the very most (444 for
+the other engine; counted with the first, more cautious margins), with a
+perfect detector, and was not built.
 """
 
 # Word endings that close a sentence, ignoring trailing quotes and brackets.
@@ -67,13 +68,18 @@ _SENTENCE_TRAIL = '"\'»)] '
 # 0.8 s score within a point of this; 0.25 s cut inside phrases on real speech.
 UNIT_PAUSE_S = 0.5
 
-# Cosine margins, a trade of repairs against precision without a sharp optimum.
-# On the unseen pool with faster-whisper: 0.0 / 0.25 repairs 3959 and breaks 260
-# (94 % right), 0.1 / 0.3 repairs 3408 and breaks 146 (96 %), 0.2 / 0.4 repairs
-# 2349 and breaks 63 (97 %). The middle pair keeps the broken words rare enough
-# to be worth it everywhere; the same pair is near the best for both engines.
-MARGIN_AGREE = 0.1
-MARGIN_OVERRULE = 0.3
+# Cosine margins, chosen for the fewest wrong words afterwards. Wrong words left
+# on the tuning pool / the unseen pool, faster-whisper, by MARGIN_OVERRULE with
+# MARGIN_AGREE at 0: 0.06 2866 / 3664, 0.10 2793 / 3595, 0.12 2804 / 3585,
+# 0.16 2889 / 3661, 0.20 2984 / 3780, 0.30 3364 / 4309 (no check: 5600 / 8036).
+# The second engine has its minimum at the same place (3076 / 2596 at 0.12), and
+# so has every corpus on its own between 0.06 and 0.18, German and English
+# included (Mandarin alone at 0.25, and flat). MARGIN_AGREE at 0.05 or 0.1 leaves
+# up to 2 % more words wrong. An earlier pair, 0.1 / 0.3, was picked so that at
+# least 95 of 100 moved words were moved rightly; it left a fifth more words
+# wrong, and on a hand-checked studio podcast 32 of 2027 where this pair leaves 6.
+MARGIN_AGREE = 0.0
+MARGIN_OVERRULE = 0.12
 
 # Every recording has its own scale of margins. Two similar voices on one channel
 # squeeze them: in a studio podcast of two women the centroids had a cosine of
@@ -83,25 +89,12 @@ MARGIN_OVERRULE = 0.3
 # passages of UNIT_SCALE_MIN_S or more favour their own speaker), relative to
 # MARGIN_SCALE_REF, and never below MARGIN_SCALE_FLOOR of their value. Across the
 # test recordings that typical margin runs from 0.24 to 0.86, median 0.5. The
-# reference was chosen on the tuning pool (0.45 to 0.7 tried) and checked on the
-# unseen one: faster-whisper 4774 -> 4387 wrong words left (3836 repaired, 187
-# broken), the second engine 3699 -> 3246 (3672 / 217), precision unchanged --
-# where lowering the margins for every recording alike cost two points of it.
+# reference was chosen on the tuning pool (0.4 to 0.7 tried) and checked on the
+# unseen one: without the scaling faster-whisper leaves 3636 words wrong instead
+# of 3585, and the second engine loses a similar share.
 MARGIN_SCALE_REF = 0.5
 MARGIN_SCALE_FLOOR = 0.5
 UNIT_SCALE_MIN_S = 1.5
-
-# A unit that lies wholly inside ONE other speaker's turn (TURN_COVERS of it, and
-# no other turn touching it) is as clear a case as the diarization has -- and
-# often too short to have much of a voice: a "Perfekt." of 0.3 s between two
-# speakers scored +0.03, sat inside the right speaker's turn, and stayed with the
-# wrong one because the voice had not confirmed the move. There the voice only
-# has to not object. On the unseen pool that repairs 31 more words and breaks 2
-# with faster-whisper, 90 more and 8 with the second engine, precision unchanged;
-# letting the voice merely not object for EVERY short unit broke as many as it
-# repaired.
-MARGIN_OBJECT = -0.05
-TURN_COVERS = 0.9
 
 
 def split_units(words):
@@ -159,7 +152,7 @@ def margin_scale(units, centroids):
     return max(MARGIN_SCALE_FLOOR, min(1.0, typical / MARGIN_SCALE_REF))
 
 
-def decide(current, turns_ms, embedding, centroids, scale=1.0, unit_ms=None):
+def decide(current, turns_ms, embedding, centroids, scale=1.0):
     """The speaker label a unit should carry.
 
     current      label the unit has now (its segment's speaker)
@@ -168,7 +161,6 @@ def decide(current, turns_ms, embedding, centroids, scale=1.0, unit_ms=None):
     embedding    the unit's voice, or None when it could not be computed
     centroids    {label: centroid}
     scale        what margin_scale() found for this recording
-    unit_ms      the unit's length, to tell whether one turn covers it (TURN_COVERS)
     """
     scores = _scores(embedding, centroids)
     if current not in scores:
@@ -176,9 +168,7 @@ def decide(current, turns_ms, embedding, centroids, scale=1.0, unit_ms=None):
     label = current
     if turns_ms:
         named = max(turns_ms, key=turns_ms.get)
-        covered = unit_ms and len(turns_ms) == 1 and turns_ms[named] >= TURN_COVERS * unit_ms
-        needed = MARGIN_OBJECT if covered else MARGIN_AGREE * scale
-        if named != label and named in scores and scores[named] - scores[label] > needed:
+        if named != label and named in scores and scores[named] - scores[label] > MARGIN_AGREE * scale:
             label = named
     best = max(scores, key=scores.get)
     if best != label and scores[best] - scores[label] > MARGIN_OVERRULE * scale:
@@ -269,7 +259,7 @@ def relabel(segments, diarization, centroids, embed):
             # on exactly this span; only the voice alone can move it.
             start_ms, end_ms = round(unit[0]['start'] * 1000), round(unit[-1]['end'] * 1000)
             turns_ms = turns_inside(diarization, start_ms, end_ms) if len(units) > 1 else {}
-            labels.append(decide(base, turns_ms, next(embeddings, None), centroids, scale, end_ms - start_ms))
+            labels.append(decide(base, turns_ms, next(embeddings, None), centroids, scale))
         runs = []
         for unit, label in zip(units, labels):
             if runs and runs[-1][0] == label:
