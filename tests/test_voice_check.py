@@ -73,7 +73,7 @@ def test_words_without_stamps_leave_the_segment_alone():
     assert vc.relabel([(seg, 'S00', False)], [], CENTROIDS, embed) == ([(seg, 'S00')], [])
 
 
-def test_the_diarization_agreeing_needs_the_small_margin_only():
+def test_the_diarization_agreeing_needs_the_voice_to_lean_its_way_only():
     turns = {'S01': 400}
     assert vc.decide('S00', turns, voice(vc.MARGIN_AGREE + 0.05), CENTROIDS) == 'S01'
     assert vc.decide('S00', turns, voice(vc.MARGIN_AGREE - 0.05), CENTROIDS) == 'S00'
@@ -237,16 +237,17 @@ def test_the_environment_switch(monkeypatch, value, expected):
 
 def test_a_recording_of_similar_voices_gets_smaller_margins():
     """Long passages favour their own speaker by only 0.3 here (two similar voices
-    on one channel), so 0.3 for the voice alone would be out of reach: both margins
-    shrink to 0.3 / MARGIN_SCALE_REF of their value."""
+    on one channel), where a margin measured on voices far apart asks too much:
+    both margins shrink to 0.3 / MARGIN_SCALE_REF of their value."""
     long_ones = [(said(f'Long passage {i}.', 10.0 * i, 10.0 * i + 3.0), 'S00', False) for i in range(3)]
     aside = (said('Exactly.', 40.0, 40.6), 'S00', False)
-    voices = [voice(-0.3)] * 3 + [voice(0.2)]
+    lean = vc.MARGIN_OVERRULE * 0.8
+    voices = [voice(-0.3)] * 3 + [voice(lean)]
     passages, moves = vc.relabel(long_ones + [aside], [], CENTROIDS, lambda spans: voices)
     assert vc.margin_scale([('S00', voice(-0.3), 3.0)] * 3, CENTROIDS) == pytest.approx(0.3 / vc.MARGIN_SCALE_REF)
     assert speakers(passages)[-1] == 'S01' and len(moves) == 1
     # ... while the same aside stays put in a recording whose voices are far apart
-    voices = [voice(-0.8)] * 3 + [voice(0.2)]
+    voices = [voice(-0.8)] * 3 + [voice(lean)]
     assert vc.relabel(long_ones + [aside], [], CENTROIDS, lambda spans: voices)[1] == []
 
 
@@ -261,22 +262,16 @@ def test_the_margin_scale_has_bounds_and_needs_evidence(units, expected):
     assert vc.margin_scale(units, CENTROIDS) == pytest.approx(expected)
 
 
-def test_inside_one_other_turn_the_voice_only_has_to_not_object():
+def test_a_voice_too_short_to_say_much_still_follows_the_diarization():
     """'Perfekt.', 0.3 s, wholly inside the other speaker's turn, glued to the
     'Ja.' before it by the segment builder. 0.3 s of audio has no voice to speak
-    of (+0.03), and demanding that it confirm the move kept a word with the wrong
-    speaker that the diarization had right."""
+    of (+0.03), and demanding a margin before it may follow the diarization kept
+    a word with the wrong speaker that the diarization had right."""
     ws = words(('Ja.', 0.0, 0.5), ('Perfekt.', 1.0, 1.3))
     seg = {'start': 0.0, 'end': 1.3, 'text': ' Ja. Perfekt.', 'words': ws}
     turns = [{'start': 0, 'end': 600, 'label': 'S00'}, {'start': 900, 'end': 5000, 'label': 'S01'}]
     passages, moves = vc.relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(-0.5), voice(0.03)])
     assert speakers(passages) == ['S00', 'S01'] and len(moves) == 1
-    # ... but a voice that objects keeps it where it is
-    assert vc.relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(-0.5), voice(-0.2)])[1] == []
-    # ... and so does a unit the turn covers only in part, or shares with another turn
-    partly = [{'start': 0, 'end': 600, 'label': 'S00'}, {'start': 1150, 'end': 5000, 'label': 'S01'}]
-    assert vc.relabel([(seg, 'S00', False)], partly, CENTROIDS, lambda spans: [voice(-0.5), voice(0.03)])[1] == []
-    shared = turns + [{'start': 950, 'end': 1100, 'label': 'S00'}]
-    assert vc.relabel([(seg, 'S00', False)], sorted(shared, key=lambda t: t['start']), CENTROIDS,
-                      lambda spans: [voice(-0.5), voice(0.03)])[1] == []
+    # ... but a voice that leans the other way keeps it where it is
+    assert vc.relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(-0.5), voice(-0.03)])[1] == []
 
