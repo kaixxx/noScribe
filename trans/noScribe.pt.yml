@@ -53,6 +53,7 @@ pt:
   voice_check_start: 'Verificando os oradores pela voz...'
   voice_check_done: '%{count} trecho(s) reatribuído(s).'
   voice_check_skipped: 'Não foi possível concluir a verificação por voz; os oradores ficam como a diarização os atribuiu.'
+  voice_check_canceled: 'Verificação por voz interrompida. A transcrição está completa, com os oradores como a diarização os atribuiu.'
   label_timestamps: 'Registos temporais:'
   label_disfluencies: 'Disfluências:'
   opt_yes: 'Sim'

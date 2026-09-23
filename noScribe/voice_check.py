@@ -60,6 +60,9 @@ the other engine; counted with an earlier, more cautious pair of margins), with 
 perfect detector, and was not built.
 """
 
+from bisect import bisect_left
+from itertools import accumulate
+
 # Word endings that close a sentence, ignoring trailing quotes and brackets.
 # Deliberately no colon: a colon lands mid-utterance ("And then he said: ...").
 _SENTENCE_END = ('.', '!', '?', '…', '。', '！', '？')
@@ -177,10 +180,20 @@ def decide(current, turns_ms, embedding, centroids, scale=1.0):
     return label
 
 
-def turns_inside(diarization, start_ms, end_ms):
-    """Milliseconds of each label's turns inside [start_ms, end_ms]."""
+def turns_inside(diarization, start_ms, end_ms, ends=None):
+    """Milliseconds of each label's turns inside [start_ms, end_ms].
+
+    Scanning from the first turn for every unit took seconds on a recording of a
+    few hours. Turns are sorted by start but may nest, so the scan starts at the
+    first turn whose running maximum of ends reaches start_ms: no turn before it
+    can overlap the unit. `ends` is that running maximum, which relabel builds
+    once for the whole recording.
+    """
+    if ends is None:
+        ends = list(accumulate((turn['end'] for turn in diarization), max))
     totals = {}
-    for turn in diarization:
+    for i in range(bisect_left(ends, start_ms), len(diarization)):
+        turn = diarization[i]
         if turn['start'] > end_ms:
             break
         inside = min(turn['end'], end_ms) - max(turn['start'], start_ms)
@@ -189,12 +202,13 @@ def turns_inside(diarization, start_ms, end_ms):
     return totals
 
 
-def enabled():
-    """NOSCRIBE_VOICE_CHECK=0 restores the plain overlap assignment. (main.py
-    also honours `voice_check: 'False'` in config.yml, for an app that was not
-    started from a shell.)"""
+def enabled(setting=True):
+    """NOSCRIBE_VOICE_CHECK=0 restores the plain overlap assignment, and so does
+    `voice_check: false` in config.yml (passed in as `setting`), for an app that
+    was not started from a shell. Both take 0, false, no and off."""
     import os
-    return os.environ.get('NOSCRIBE_VOICE_CHECK', '1').strip().lower() not in ('0', 'false', 'no', 'off')
+    values = (os.environ.get('NOSCRIBE_VOICE_CHECK', '1'), setting)
+    return all(str(value).strip().lower() not in ('0', 'false', 'no', 'off') for value in values)
 
 
 def _passage(segment, words):
@@ -244,6 +258,7 @@ def relabel(segments, diarization, centroids, embed):
     scale = margin_scale([(current, voice, end - start) for (start, end), voice, current in zip(
         spans, voices, (current for _, _, _, current, units in plan for _ in units))], centroids)
     embeddings = iter(voices)
+    ends = list(accumulate((turn['end'] for turn in diarization), max))  # for turns_inside
 
     passages, moves = [], []
     # Who speaks without the overlap marker -- the turn others talk into -- as the
@@ -259,7 +274,7 @@ def relabel(segments, diarization, centroids, embed):
             # A unit that is its whole segment already had the diarization's say
             # on exactly this span; only the voice alone can move it.
             start_ms, end_ms = round(unit[0]['start'] * 1000), round(unit[-1]['end'] * 1000)
-            turns_ms = turns_inside(diarization, start_ms, end_ms) if len(units) > 1 else {}
+            turns_ms = turns_inside(diarization, start_ms, end_ms, ends) if len(units) > 1 else {}
             voice = next(embeddings, None)
             # A word without length has no audio of its own (its embedding would be
             # its neighbours'), and on its own it would be a passage from t to t:

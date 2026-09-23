@@ -106,6 +106,7 @@ de:
   voice_check_start: 'Sprecher:innen anhand der Stimme prüfen...'
   voice_check_done: '%{count} Passage(n) neu zugeordnet.'
   voice_check_skipped: 'Die Stimmprüfung konnte nicht abgeschlossen werden; die Sprecher:innen bleiben wie von der Diarisierung zugeordnet.'
+  voice_check_canceled: 'Stimmprüfung abgebrochen. Das Transkript ist vollständig, die Sprecher:innen bleiben wie von der Diarisierung zugeordnet.'
   transcription_saved: 'Gespeichert unter: %{file}'
   trancription_time: 'Dauer: %{duration} Minuten'
   queue_complete: '=== Warteschlangenverarbeitung abgeschlossen ==='

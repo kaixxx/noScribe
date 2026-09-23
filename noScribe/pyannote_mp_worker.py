@@ -124,18 +124,25 @@ def _centroids(diarization):
 
 
 def _embed_spans(pipeline, waveform, sample_rate, spans, q):
-    """One embedding per [start_s, end_s] span, None where it cannot be had."""
+    """One embedding per [start_s, end_s] span, None where it cannot be had.
+
+    Raises when not one span could be embedded: that is a check that did not
+    run, and returned as a list of None it read like a check that found every
+    speaker right ("0 passage(s) reassigned")."""
     import numpy as np
-    # pyannote has no public accessor; without the attribute the check has
-    # nothing to go on and leaves every passage where it is.
+    # pyannote has no public accessor, so the attribute may be gone one day.
     model = getattr(pipeline, "_embedding", None)
+    if model is None:
+        raise RuntimeError("the diarization pipeline has no embedding model (_embedding)")
     # The crops below bypass the pipeline's own resampling, so they are only
     # valid at the model's rate -- which is what audio.convert.ToWav writes.
-    if model is None or getattr(model, "sample_rate", sample_rate) != sample_rate:
-        return [None] * len(spans)
+    if getattr(model, "sample_rate", sample_rate) != sample_rate:
+        raise RuntimeError(f"the embedding model runs at {model.sample_rate} Hz, "
+                           f"the audio at {sample_rate} Hz")
     frames = waveform.shape[1]
     shortest = int(EMBED_MIN_S * sample_rate)
     out, last_pct = [], -1
+    failed, first_failure = 0, None
     for i, (start_s, end_s) in enumerate(spans):
         a, b = int(start_s * sample_rate), int(end_s * sample_rate)
         missing = shortest - (b - a)
@@ -147,9 +154,17 @@ def _embed_spans(pipeline, waveform, sample_rate, spans, q):
         if b - a >= shortest // 2:  # less is left only at the very edge of the file
             try:
                 vector = np.asarray(model(waveform[:1, a:b][None]))[0]
-                vector = vector.tolist() if np.all(np.isfinite(vector)) else None
-            except Exception:
+                # NaN, or all zeros, is no voice either: a zero vector has no
+                # direction, so every cosine with it is undefined and the
+                # check would keep each passage as if it had been confirmed
+                # (the centroids leave such rows out for the same reason).
+                if not (np.all(np.isfinite(vector)) and np.any(vector)):
+                    raise ValueError("the model returned no usable vector (NaN or zeros)")
+                vector = vector.tolist()
+            except Exception as e:
                 vector = None  # one span the model rejects must not cost all the others
+                failed += 1
+                first_failure = first_failure or f"{type(e).__name__}: {e}"
         out.append(vector)
         pct = int((i + 1) / len(spans) * 100)
         if pct != last_pct:
@@ -158,6 +173,16 @@ def _embed_spans(pipeline, waveform, sample_rate, spans, q):
                 q.put({"type": "progress", "step": "voice_check", "pct": pct})
             except Exception:
                 pass
+    if spans and not any(out):
+        raise RuntimeError(f"no span could be embedded"
+                           + (f", the first failed with {first_failure}" if first_failure else ""))
+    if failed:  # one line, not one per span: the same failure tends to repeat
+        try:
+            q.put({"type": "log", "level": "warn",
+                   "msg": f"Voice check: {failed} of {len(spans)} span(s) could not be embedded, "
+                          f"the first with {first_failure}"})
+        except Exception:
+            pass
     return out
 
 
@@ -270,10 +295,6 @@ def pyannote_proc_entrypoint(args: dict, q):
 
         if args.get("embed_spans") is not None:
             embeddings = _embed_spans(pipeline, waveform, sample_rate, args["embed_spans"], q)
-            if embeddings and not any(embeddings):
-                # Otherwise indistinguishable from a check that found nothing to move.
-                plog("warn", "Voice check: no embedding could be computed (model missing, "
-                             "another sample rate, or every span rejected).")
             q.put({"type": "result", "ok": True, "embeddings": embeddings})
             return
 

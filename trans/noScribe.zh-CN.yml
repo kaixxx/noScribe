@@ -52,6 +52,7 @@ zh-CN: &defaults
   voice_check_start: '正在根据声音核对说话人...'
   voice_check_done: '已重新分配 %{count} 段。'
   voice_check_skipped: '未能完成声音核对；说话人保持说话人分离的结果。'
+  voice_check_canceled: '已停止声音核对。转录已完成，说话人保持说话人分离的结果。'
   label_timestamps: '时间戳：'
   label_disfluencies: '语言停顿：'
   opt_yes: '是'

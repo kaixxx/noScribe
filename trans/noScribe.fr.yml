@@ -52,6 +52,7 @@ fr:
   voice_check_start: 'Vérification des locuteurs d''après leur voix...'
   voice_check_done: '%{count} passage(s) réattribué(s).'
   voice_check_skipped: 'La vérification par la voix n''a pas pu être terminée ; les locuteurs restent tels que la diarisation les a attribués.'
+  voice_check_canceled: 'Vérification par la voix interrompue. La transcription est complète, avec les locuteurs tels que la diarisation les a attribués.'
   label_timestamps: 'Horodatage :'
   label_disfluencies: 'Mots de remplissage :'
   opt_yes: 'Oui'

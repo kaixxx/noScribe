@@ -52,6 +52,7 @@ it:
   voice_check_start: 'Verifica dei parlanti in base alla voce...'
   voice_check_done: '%{count} passaggio/i riassegnato/i.'
   voice_check_skipped: 'Impossibile completare la verifica vocale; i parlanti restano come assegnati dalla diarizzazione.'
+  voice_check_canceled: 'Verifica vocale interrotta. La trascrizione è completa, con i parlanti come assegnati dalla diarizzazione.'
   label_timestamps: 'Timestamps:'
   label_disfluencies: 'Disfluenze:'
   opt_yes: 'Sì'

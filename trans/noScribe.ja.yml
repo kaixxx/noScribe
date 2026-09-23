@@ -53,6 +53,7 @@ ja:
   voice_check_start: '声で話者を確認しています...'
   voice_check_done: '%{count} 件の発話を割り当て直しました。'
   voice_check_skipped: '声による確認を完了できませんでした。話者は話者分離の結果のままです。'
+  voice_check_canceled: '声による確認を中止しました。文字起こしは完了しており、話者は話者分離の結果のままです。'
   label_timestamps: 'タイムスタンプ：'
   label_disfluencies: 'フィラー：'
   opt_yes: 'はい'

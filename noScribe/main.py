@@ -2546,6 +2546,7 @@ class App(ctk.CTk):
         queue_start_time = datetime.datetime.now()
         queue_jobs_processed = 0
         job = None
+        stopped_by_user = False  # Stop pressed while the job ran, which still finished
         self.cancel = False
 
         try:
@@ -2587,6 +2588,10 @@ class App(ctk.CTk):
                     self._process_single_job(job)
                     
                     queue_jobs_processed += 1
+                    # Both Stop buttons mark the running job CANCELING; a job
+                    # that finishes anyway (Stop during the voice check, whose
+                    # transcript is complete) is FINISHED from here on.
+                    stopped_by_user = job.status == JobStatus.CANCELING
                     job.set_finished()
                     self.update_queue_table()
                     
@@ -2633,7 +2638,10 @@ class App(ctk.CTk):
                     and job \
                     and job.file_ext == 'html' \
                     and job.status == JobStatus.FINISHED \
+                    and not stopped_by_user \
                     and get_config_flag('auto_edit_transcript', True):
+                # (Whoever pressed Stop wants no editor, even for a transcript
+                # that was complete when the voice check was stopped.)
                 self.launch_editor(job.transcript_file)
             elif queue_jobs_processed > 1 and not getattr(self, '_headless', False):
                 # if more than one job has been processed, switch to queue tab for an overview 
@@ -2871,7 +2879,7 @@ class App(ctk.CTk):
                             line = f'{utils.ms_to_str(transcript_start + segment["start"], include_ms=True)} - {utils.ms_to_str(transcript_start + segment["end"], include_ms=True)} {segment["label"]}'
                             self.logn(line, where='file')
 
-                        self.logn()
+                        self.logn(where='file')  # the pump ended the progress line
 
                     except Exception as e:
                         traceback_str = traceback.format_exc()
@@ -3131,7 +3139,7 @@ class App(ctk.CTk):
                             # start separate paragraphs, and a name that happens to
                             # begin with "//" is not mistaken for the overlap marker.
                             new_speaker = find_speaker(diarization, start, end) if speaker_override is None else speaker_override
-                            new_speaker_disp = self._apply_speaker_name(new_speaker, job, warn=not quiet)
+                            new_speaker_disp = self._apply_speaker_name(new_speaker, job)
                             if (speaker != new_speaker) and (new_speaker != ''): # speaker change
                                 if new_speaker[:2] == '//': # is overlapping speech, create no new paragraph
                                     prev_speaker = speaker
@@ -3240,6 +3248,8 @@ class App(ctk.CTk):
                         centroids = {short_label(k): v for k, v in (job.speaker_centroids or {}).items()}
                         if len(centroids) < 2 or not voice_segments:
                             return
+                        if self.cancel:  # Stop came just before: start nothing
+                            raise Exception(t('err_user_cancelation'))
                         save_doc()  # the transcript as it stands, before anything is touched
                         self.logn()
                         self.logn()
@@ -3248,8 +3258,6 @@ class App(ctk.CTk):
                         passages, moves = voice_check.relabel(
                             voice_segments, turns, centroids,
                             lambda spans: self._run_voice_embeddings(tmp_audio_file, job, spans))
-                        if moves:
-                            self.logn(where='file')  # the progress line above has no line end
                         for passage, before, after in moves:
                             self.logn(f"voice check: {utils.ms_to_str(transcript_start + round(passage['start'] * 1000))} "
                                       f"{before} -> {after}:{passage['text'][:60]}", where='file')
@@ -3263,10 +3271,28 @@ class App(ctk.CTk):
                             speaker = speaker_disp = prev_speaker = ''
                             last_segment_end = last_timestamp_ms = 0
                             first_segment = True
-                            # Names go to the speakers in the order they first appear,
-                            # and the voice may have changed who that is.
-                            names_given, job.speaker_name_map = job.speaker_name_map, {}
+                            # Names go to the voices in the order they are first
+                            # heard, as everywhere (the user enters them in that
+                            # order), and the check may have changed who that is.
+                            # But a voice the check brings in beyond the names given
+                            # must not take one from a voice that had it: with two
+                            # names for S00 and S01, a passage moved to a third label
+                            # would take the second name and leave the speaker the
+                            # user saw under it unnamed. So the voices that had a
+                            # name, and as many newcomers as names are left over,
+                            # share the names in the order heard; the other
+                            # newcomers are numbered after them.
+                            names_given = job.speaker_name_map
+                            names = job.speaker_names or []
                             try:
+                                heard = list(dict.fromkeys(s.lstrip('/') for _, s in passages if s.lstrip('/')))
+                                named = {label for label, name in names_given.items() if name in names}
+                                newcomers = [label for label in heard if label not in named]
+                                free = max(0, len(names) - (len(heard) - len(newcomers)))
+                                lead = named | set(newcomers[:free])
+                                job.speaker_name_map = {}
+                                for label in [l for l in heard if l in lead] + newcomers[free:]:
+                                    self._apply_speaker_name(label, job, warn=False)
                                 for passage, written_under in passages:
                                     if self.cancel:
                                         raise Exception(t('err_user_cancelation'))
@@ -3282,21 +3308,36 @@ class App(ctk.CTk):
                                 for node in written:
                                     main_body.appendChild(node)
                                 raise
-                        self.logn()
+                            if len(names_given) <= len(names) < len(job.speaker_name_map):
+                                # More voices than names, and news: the rewrite
+                                # brought one in. Said only now that it stands.
+                                self.logn(t('warn_speaker_names_more_speakers', n_names=len(names)), 'error')
                         self.logn(t('voice_check_done', count=len(moves)))
+
+                    def run_voice_check():
+                        """check_voices(), where a failure costs only the check.
+
+                        The transcript is complete by now, so Stop -- pressed
+                        during the check, which can take minutes, or just before
+                        it -- ends the check (its worker is already terminated)
+                        and the job finishes with the speakers as diarized."""
+                        if not (diarization and voice_check.enabled(get_config('voice_check', 'True'))):
+                            return
+                        try:
+                            check_voices()
+                        except Exception as err:
+                            self.logn(f'Voice check skipped: {err}', where='file')
+                            if self.cancel:
+                                self.logn(t('voice_check_canceled'))
+                            else:
+                                self.logn(traceback.format_exc(), where='file')
+                                self.logn(t('voice_check_skipped'))
 
                     try:
                         info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment)
                         if first_segment:
                             raise ValueError(t('err_empty_transcript'))
-                        if diarization and voice_check.enabled() and str(get_config('voice_check', 'True')).lower() != 'false':
-                            try:
-                                check_voices()
-                            except Exception as err:
-                                if self.cancel:
-                                    raise
-                                self.logn(f'Voice check skipped: {err}', where='file')
-                                self.logn(t('voice_check_skipped'))
+                        run_voice_check()
                         transcription_success = True
                         # if self.cancel:
                         #    raise Exception(t('err_user_cancelation')) 
@@ -3616,6 +3657,14 @@ class App(ctk.CTk):
         self._mp_queue = q
 
         result = None
+        progress_open = False  # logr leaves its progress line without a line end
+
+        def close_progress():
+            nonlocal progress_open
+            if progress_open:
+                self.logn()
+                progress_open = False
+
         try:
             while True:
                 try:
@@ -3626,9 +3675,11 @@ class App(ctk.CTk):
                             proc.terminate()
                         except Exception:
                             pass
+                        close_progress()
                         raise Exception(t('err_user_cancelation'))
                     if not proc.is_alive():
                         exitcode = proc.exitcode
+                        close_progress()
                         self.logn(f"Diarization worker exited unexpectedly (code {exitcode}). UI remains responsive.", 'error', where=errors_to)
                         raise Exception('Subprocess terminated unexpectedly')
                     continue
@@ -3636,16 +3687,19 @@ class App(ctk.CTk):
                 mtype = msg.get("type") if isinstance(msg, dict) else None
                 if mtype == "log":
                     txt = msg.get("msg", "")
+                    close_progress()
                     self.logn('PyAnnote ' + txt, where='file')
                 elif mtype == "progress":
                     step_name = str(msg.get("step", ""))
                     progress_percent = int(msg.get("pct", 0))
                     self.logr(f'{step_name}: {progress_percent}%')
+                    progress_open = True
                     if step_name == 'segmentation':
                         self.set_progress(2, progress_percent * 0.3, job.speaker_detection)
                     elif step_name == 'embeddings':
                         self.set_progress(2, 30 + (progress_percent * 0.7), job.speaker_detection)
                 elif mtype == "result":
+                    close_progress()
                     if msg.get("ok"):
                         result = msg
                     else:

@@ -235,6 +235,49 @@ def test_the_environment_switch(monkeypatch, value, expected):
     assert vc.enabled() is expected
 
 
+@pytest.mark.parametrize('setting, expected', [
+    (False, False), ('False', False), (0, False), ('0', False), ('no', False), (' Off ', False),
+    (True, True), ('True', True), ('1', True), (None, True)])
+def test_the_config_switch_takes_what_the_environment_takes(monkeypatch, setting, expected):
+    """config.yml's `voice_check` used to be off only for a literal false, while
+    the environment switch also took 0, no and off: `voice_check: 0` or `off`
+    left the check running."""
+    monkeypatch.delenv('NOSCRIBE_VOICE_CHECK', raising=False)
+    assert vc.enabled(setting) is expected
+    monkeypatch.setenv('NOSCRIBE_VOICE_CHECK', 'no')
+    assert vc.enabled(setting) is False
+
+
+def test_turns_inside_finds_what_a_scan_from_the_start_finds():
+    """turns_inside skips the turns that end before the unit, by bisection;
+    turns that nest inside a long one are what could make such a skip miss one.
+    Held against the plain scan from the first turn it replaced."""
+    import random
+
+    def scan(diarization, start_ms, end_ms):
+        totals = {}
+        for turn in diarization:
+            if turn['start'] > end_ms:
+                break
+            inside = min(turn['end'], end_ms) - max(turn['start'], start_ms)
+            if inside > 0:
+                totals[turn['label']] = totals.get(turn['label'], 0) + inside
+        return totals
+
+    for seed in range(300):
+        rnd = random.Random(seed)
+        turns = []
+        for _ in range(rnd.randint(0, 40)):
+            start = rnd.randint(0, 60000)
+            turns.append({'start': start, 'end': start + rnd.choice((0, rnd.randint(1, 800), rnd.randint(1, 20000))),
+                          'label': f'S0{rnd.randint(0, 3)}'})
+        turns.sort(key=lambda turn: turn['start'])
+        for _ in range(30):
+            a = rnd.randint(-1000, 62000)
+            b = a + rnd.choice((0, rnd.randint(1, 3000)))
+            assert vc.turns_inside(turns, a, b) == scan(turns, a, b), (seed, a, b)
+
+
 def test_a_recording_of_similar_voices_gets_smaller_margins():
     """Long passages favour their own speaker by only 0.3 here (two similar voices
     on one channel), where a margin measured on voices far apart asks too much:

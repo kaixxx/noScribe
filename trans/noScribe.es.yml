@@ -52,6 +52,7 @@ es:
   voice_check_start: 'Comprobando los oradores por su voz...'
   voice_check_done: '%{count} pasaje(s) reasignado(s).'
   voice_check_skipped: 'No se pudo completar la comprobación por voz; los oradores quedan como los asignó la diarización.'
+  voice_check_canceled: 'Comprobación por voz detenida. La transcripción está completa, con los oradores como los asignó la diarización.'
   label_timestamps: 'Timestamps:'
   label_disfluencies: 'Disfluencias:'
   opt_yes: 'Sí'
