@@ -148,7 +148,7 @@ def _scores(embedding, centroids):
 def margin_scale(units):
     """By how much the margins of this recording are to shrink (see MARGIN_SCALE_REF).
 
-    units is [(label, scores, seconds)], scores as Voice.score() gives them.
+    units is [(label, {label: cosine}, seconds)].
     Without a long enough passage that favours its own speaker there is nothing
     to go by, and the margins stay.
     """
@@ -178,13 +178,9 @@ class Voice:
         self.centroids, self.embed = centroids, embed
         self.labels = set(centroids)
 
-    def score(self, embedding):
-        """{label: cosine between the voice and that speaker's centroid}."""
-        return _scores(embedding, self.centroids)
-
     def scores(self, spans):
         voices = list(self.embed(spans))
-        return [self.score(voice) for voice in voices + [None] * (len(spans) - len(voices))]
+        return [_scores(voice, self.centroids) for voice in voices + [None] * (len(spans) - len(voices))]
 
     def margins(self, units):
         """(agree, overrule) for this recording; units as margin_scale() takes them."""
@@ -291,15 +287,16 @@ def relabel(segments, diarization, evidence):
     """
     if len(evidence.labels) < 2:
         return [(segment, '' if inherited else written) for segment, written, inherited in segments], []
-    plan, spans = [], []
+    plan, spans, currents = [], [], []
     for segment, written, inherited in segments:
         current = written.lstrip('/')
         units = split_units(segment.get('words')) if current in evidence.labels else []
         plan.append((segment, written, inherited, current, units))
         spans += [[unit[0]['start'], unit[-1]['end']] for unit in units]
+        currents += [current] * len(units)
     scores = evidence.scores(spans) if spans else []
-    agree, overrule = evidence.margins([(current, unit_scores, end - start) for (start, end), unit_scores, current in zip(
-        spans, scores, (current for _, _, _, current, units in plan for _ in units))])
+    agree, overrule = evidence.margins([(current, unit_scores, end - start)
+                                        for current, unit_scores, (start, end) in zip(currents, scores, spans)])
     unit_scores = iter(scores)
     ends = list(accumulate((turn['end'] for turn in diarization), max))  # for turns_inside
 

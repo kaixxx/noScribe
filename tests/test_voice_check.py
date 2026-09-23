@@ -41,7 +41,7 @@ def relabel(segments, turns, centroids, embed):
 
 
 def scores(embedding, centroids=CENTROIDS):
-    return vc.Voice(centroids, None).score(embedding)
+    return vc._scores(embedding, centroids)
 
 
 def speakers(passages):
