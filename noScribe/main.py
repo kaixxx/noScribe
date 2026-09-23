@@ -2087,8 +2087,10 @@ class App(ctk.CTk):
             if txt[:-1] != t('welcome_instructions'):
                 print(txt, end='')            
             if not getattr(self, '_headless', False):
+                # partial binds the text now: the file part below rewrites txt,
+                # and from a worker thread this runs later, on the UI thread.
                 self._dispatch_ui(
-                    lambda: self._append_log_text(txt, tags, link, tb, where)
+                    partial(self._append_log_text, txt, tags, link, tb, where)
                 )
 
         # Handle file logging if requested
@@ -2134,12 +2136,20 @@ class App(ctk.CTk):
 
     def logr(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '', tb: str = '') -> None:
         """ Replace the last line of the log """
-        if where != 'file' and not getattr(self, '_headless', False) and hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
-            self.log_textbox.configure(state=ctk.NORMAL)
-            tmp_txt = self.log_textbox.get("end-1c linestart", "end-1c")
-            self.log_textbox.delete("end-1c linestart", "end-1c")
-            self.log_len -= len(tmp_txt)
+        if where != 'file' and not getattr(self, '_headless', False):
+            # Queued like the insert that log() queues next, so it removes the
+            # line written before it -- not whatever the window shows now.
+            self._dispatch_ui(self._remove_last_log_line)
         self.log(txt, tags, where, link, tb)
+
+    def _remove_last_log_line(self):
+        if not hasattr(self, 'log_textbox') or not self.log_textbox.winfo_exists():
+            return
+        self.log_textbox.configure(state=ctk.NORMAL)
+        tmp_txt = self.log_textbox.get("end-1c linestart", "end-1c")
+        self.log_textbox.delete("end-1c linestart", "end-1c")
+        self.log_len -= len(tmp_txt)
+        self.log_textbox.configure(state=ctk.DISABLED)
 
     def create_default_transcript_names(self, dir=None):
         self.transcript_files_list = []
