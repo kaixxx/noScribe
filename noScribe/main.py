@@ -196,8 +196,19 @@ def get_config(key: str, default) -> str:
         config[key] = default
     return config[key]
 
-force_pyannote_cpu = get_config('force_pyannote_cpu', '').lower() == 'true'
-force_whisper_cpu = get_config('force_whisper_cpu', '').lower() == 'true'
+def get_config_flag(key: str, default: bool) -> bool:
+    """ Get an on/off config value. noScribe writes the strings 'True' and 'False',
+    but a hand-edited config.yml may hold a YAML boolean (true, False, yes, off)
+    or 1 and 0. Anything else keeps the default. """
+    value = str(get_config(key, str(default))).strip().lower()
+    if value in ('true', 'yes', 'on', '1'):
+        return True
+    if value in ('false', 'no', 'off', '0'):
+        return False
+    return default
+
+force_pyannote_cpu = get_config_flag('force_pyannote_cpu', False)
+force_whisper_cpu = get_config_flag('force_whisper_cpu', False)
 
 _CUDA_ERROR_KEYWORDS = (
     'cuda',
@@ -703,7 +714,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     job.timestamp_interval = get_config('timestamp_interval', 60_000)
     job.timestamp_color = get_config('timestamp_color', '#78909C')
     job.pause_marker = get_config('pause_seconds_marker', '.')
-    job.auto_save = False if get_config('auto_save', 'True') == 'False' else True
+    job.auto_save = get_config_flag('auto_save', True)
         
     job.vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
     
@@ -1449,7 +1460,7 @@ class App(ctk.CTk):
         self.logn(t('welcome_instructions'))
         
         # check for new releases
-        if get_config('check_for_update', 'True') == 'True':
+        if get_config_flag('check_for_update', True):
             try:
                 latest_release = json.loads(urllib.request.urlopen(
                     urllib.request.Request('https://api.github.com/repos/kaixxx/noScribe/releases/latest',
@@ -2587,7 +2598,7 @@ class App(ctk.CTk):
                     and job \
                     and job.file_ext == 'html' \
                     and job.status == JobStatus.FINISHED \
-                    and get_config('auto_edit_transcript', 'True') == 'True':
+                    and get_config_flag('auto_edit_transcript', True):
                 self.launch_editor(job.transcript_file)
             elif queue_jobs_processed > 1 and not getattr(self, '_headless', False):
                 # if more than one job has been processed, switch to queue tab for an overview 
