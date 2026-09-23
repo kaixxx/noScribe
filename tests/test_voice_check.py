@@ -35,6 +35,15 @@ def voice(towards_b):
     return [math.cos(x), math.sin(x), 0.0]
 
 
+def relabel(segments, turns, centroids, embed):
+    """The check as measured: the voice as its evidence."""
+    return vc.relabel(segments, turns, vc.Voice(centroids, embed))
+
+
+def scores(embedding, centroids=CENTROIDS):
+    return vc.Voice(centroids, None).score(embedding)
+
+
 def speakers(passages):
     return [speaker for _, speaker in passages]
 
@@ -56,7 +65,7 @@ def test_an_abbreviation_only_offers_a_cut_the_voice_still_has_to_take_it():
     both units keep the segment's speaker and are written as one passage."""
     ws = words(('Frau', 0.0, 0.3), ('Dr.', 0.3, 0.6), ('Muster', 0.6, 1.0), ('kommt.', 1.0, 1.4))
     seg = {'start': 0.0, 'end': 1.4, 'text': ' Frau Dr. Muster kommt.', 'words': ws}
-    passages, moves = vc.relabel([(seg, 'S00', False)], [], CENTROIDS, lambda spans: [voice(-0.9)] * len(spans))
+    passages, moves = relabel([(seg, 'S00', False)], [], CENTROIDS, lambda spans: [voice(-0.9)] * len(spans))
     assert moves == [] and passages == [(seg, 'S00')]
 
 
@@ -70,19 +79,19 @@ def test_words_without_stamps_leave_the_segment_alone():
     def embed(spans):
         raise AssertionError(f'nothing to embed, got {spans}')
 
-    assert vc.relabel([(seg, 'S00', False)], [], CENTROIDS, embed) == ([(seg, 'S00')], [])
+    assert relabel([(seg, 'S00', False)], [], CENTROIDS, embed) == ([(seg, 'S00')], [])
 
 
 def test_the_diarization_agreeing_needs_the_voice_to_lean_its_way_only():
     turns = {'S01': 400}
-    assert vc.decide('S00', turns, voice(vc.MARGIN_AGREE + 0.05), CENTROIDS) == 'S01'
-    assert vc.decide('S00', turns, voice(vc.MARGIN_AGREE - 0.05), CENTROIDS) == 'S00'
+    assert vc.decide('S00', turns, scores(voice(vc.MARGIN_AGREE + 0.05))) == 'S01'
+    assert vc.decide('S00', turns, scores(voice(vc.MARGIN_AGREE - 0.05))) == 'S00'
 
 
 def test_the_voice_alone_needs_the_large_margin():
     turns = {'S00': 400}
-    assert vc.decide('S00', turns, voice(vc.MARGIN_OVERRULE + 0.05), CENTROIDS) == 'S01'
-    assert vc.decide('S00', turns, voice(vc.MARGIN_OVERRULE - 0.05), CENTROIDS) == 'S00'
+    assert vc.decide('S00', turns, scores(voice(vc.MARGIN_OVERRULE + 0.05))) == 'S01'
+    assert vc.decide('S00', turns, scores(voice(vc.MARGIN_OVERRULE - 0.05))) == 'S00'
 
 
 def test_a_whole_segment_is_never_moved_on_the_small_margin():
@@ -91,12 +100,12 @@ def test_a_whole_segment_is_never_moved_on_the_small_margin():
     seg = said('Exactly.', 0.0, 0.6)
     turns = [{'start': 0, 'end': 600, 'label': 'S01'}]
     between = (vc.MARGIN_AGREE + vc.MARGIN_OVERRULE) / 2
-    assert vc.relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(between)]) == ([(seg, 'S00')], [])
+    assert relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(between)]) == ([(seg, 'S00')], [])
     # ... while the same voice does move a unit that is only part of its segment
     ws = words(('Exactly.', 0.0, 0.6), ('Right.', 0.7, 1.2))
     two = {'start': 0.0, 'end': 1.2, 'text': ' Exactly. Right.', 'words': ws}
     turns = [{'start': 0, 'end': 600, 'label': 'S01'}, {'start': 700, 'end': 1200, 'label': 'S00'}]
-    passages, moves = vc.relabel([(two, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(between), voice(-0.9)])
+    passages, moves = relabel([(two, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(between), voice(-0.9)])
     assert speakers(passages) == ['S01', 'S00'] and [m[1:] for m in moves] == [('S00', 'S01')]
 
 
@@ -106,7 +115,7 @@ def test_a_whole_segment_is_never_moved_on_the_small_margin():
     (voice(0.9), {'S00': A, 'S01': [0.0, 0.0, 0.0]}),  # a padded, empty centroid
 ])
 def test_without_something_to_compare_nothing_moves(embedding, centroids):
-    assert vc.decide('S00', {'S01': 400}, embedding, centroids) == 'S00'
+    assert vc.decide('S00', {'S01': 400}, scores(embedding, centroids)) == 'S00'
 
 
 def test_a_turn_final_answer_becomes_its_own_passage():
@@ -119,7 +128,7 @@ def test_a_turn_final_answer_becomes_its_own_passage():
         asked.extend(spans)
         return [voice(-0.9), voice(0.5)]
 
-    passages, moves = vc.relabel([(seg, 'S00', False)], turns, CENTROIDS, embed)
+    passages, moves = relabel([(seg, 'S00', False)], turns, CENTROIDS, embed)
     assert asked == [[0.0, 0.8], [0.9, 1.5]]
     assert [(p['text'], speaker) for p, speaker in passages] == [(' Does it help?', 'S00'), (' Yes, sure.', 'S01')]
     assert passages[1][0]['start'] == 0.9 and passages[1][0]['words'] == ws[3:]
@@ -128,7 +137,7 @@ def test_a_turn_final_answer_becomes_its_own_passage():
 
 def test_a_segment_moved_as_a_whole_keeps_its_dict():
     seg = said('Exactly.', 0.0, 0.6)
-    passages, moves = vc.relabel([(seg, 'S00', False)], [], CENTROIDS, lambda spans: [voice(0.9)])
+    passages, moves = relabel([(seg, 'S00', False)], [], CENTROIDS, lambda spans: [voice(0.9)])
     assert passages == [(seg, 'S01')] and moves == [(seg, 'S00', 'S01')]
 
 
@@ -140,7 +149,7 @@ def test_a_segment_moved_as_a_whole_keeps_its_dict():
 def test_a_passage_is_joined_the_way_its_segment_is(tokens, text, pieces):
     ws = [{'word': token, 'start': i * 0.5, 'end': i * 0.5 + 0.4} for i, token in enumerate(tokens)]
     seg = {'start': 0.0, 'end': 1.4, 'text': text, 'words': ws}
-    passages, _ = vc.relabel([(seg, 'S00', False)], [], CENTROIDS, lambda spans: [voice(-0.9), voice(0.9)])
+    passages, _ = relabel([(seg, 'S00', False)], [], CENTROIDS, lambda spans: [voice(-0.9), voice(0.9)])
     assert [p['text'] for p, _ in passages] == pieces
 
 
@@ -150,7 +159,7 @@ def test_one_speaker_means_no_embedding_call_at_all():
     def embed(spans):
         raise AssertionError('the worker must not be started for nothing')
 
-    assert vc.relabel([(seg, 'S00', False)], [], {'S00': A}, embed) == ([(seg, 'S00')], [])
+    assert relabel([(seg, 'S00', False)], [], {'S00': A}, embed) == ([(seg, 'S00')], [])
 
 
 def test_an_untouched_segment_keeps_its_overlap_marker():
@@ -158,7 +167,7 @@ def test_an_untouched_segment_keeps_its_overlap_marker():
     under the plain label, and the segment is handed back as it was written."""
     seg = said('Exactly.', 0.0, 0.6)
     asked = []
-    passages, moves = vc.relabel([(seg, '//S01', False)], [], CENTROIDS,
+    passages, moves = relabel([(seg, '//S01', False)], [], CENTROIDS,
                                  lambda spans: asked.extend(spans) or [voice(0.9)])
     assert asked and moves == [] and passages == [(seg, '//S01')]
 
@@ -168,13 +177,13 @@ def test_an_interjection_that_moves_to_a_third_voice_stays_an_interjection():
     S02: still someone talking into S00's turn, so the marker stays."""
     centroids = dict(CENTROIDS, S02=[0.0, 0.0, 1.0])
     voices = [[1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]
-    passages, moves = vc.relabel([(said('So we went on.', 0.0, 2.0), 'S00', False), (said('Really?', 2.1, 2.6), '//S01', False)],
+    passages, moves = relabel([(said('So we went on.', 0.0, 2.0), 'S00', False), (said('Really?', 2.1, 2.6), '//S01', False)],
                                  [], centroids, lambda spans: voices)
     assert speakers(passages) == ['S00', '//S02'] and [m[1:] for m in moves] == [('//S01', '//S02')]
 
 
 def test_an_interjection_that_is_the_floor_holders_own_voice_just_continues():
-    passages, moves = vc.relabel([(said('So we went on.', 0.0, 2.0), 'S00', False), (said('And on.', 2.1, 2.6), '//S01', False)],
+    passages, moves = relabel([(said('So we went on.', 0.0, 2.0), 'S00', False), (said('And on.', 2.1, 2.6), '//S01', False)],
                                  [], CENTROIDS, lambda spans: [voice(-0.9), voice(-0.9)])
     assert speakers(passages) == ['S00', 'S00'] and len(moves) == 1
 
@@ -182,7 +191,7 @@ def test_an_interjection_that_is_the_floor_holders_own_voice_just_continues():
 def test_nobody_talks_into_their_own_turn_after_a_move():
     """The floor holder moves to S01; the aside the diarization gave S01 did not
     move, and is now simply S01 going on."""
-    passages, moves = vc.relabel([(said('I disagree.', 0.0, 2.0), 'S00', False), (said('Completely.', 2.1, 2.9), '//S01', False)],
+    passages, moves = relabel([(said('I disagree.', 0.0, 2.0), 'S00', False), (said('Completely.', 2.1, 2.9), '//S01', False)],
                                  [], CENTROIDS, lambda spans: [voice(0.9), voice(0.9)])
     assert speakers(passages) == ['S01', 'S01'] and len(moves) == 1
 
@@ -192,7 +201,7 @@ def test_a_segment_the_diarization_was_silent_on_follows_its_predecessor():
     with '' keeps it that way in the rewrite -- also when the predecessor moves,
     and the move is on record."""
     first, gap = said('And on again.', 0.0, 2.0), said('Mhm right', 2.1, 2.9)
-    passages, moves = vc.relabel([(first, 'S01', False), (gap, 'S01', True)], [], CENTROIDS,
+    passages, moves = relabel([(first, 'S01', False), (gap, 'S01', True)], [], CENTROIDS,
                                  lambda spans: [voice(-0.9), voice(0.0)])
     assert speakers(passages) == ['S00', ''] and [m[1:] for m in moves] == [('S01', 'S00'), ('S01', 'S00')]
 
@@ -201,7 +210,7 @@ def test_an_inherited_segment_with_a_voice_of_its_own_keeps_it():
     """Held against the speaker it would inherit NOW: the predecessor went to S00,
     this one is clearly S01, so it says so instead of tagging along."""
     first, gap = said('And on again.', 0.0, 2.0), said('Mhm right', 2.1, 2.9)
-    passages, moves = vc.relabel([(first, 'S01', False), (gap, 'S01', True)], [], CENTROIDS,
+    passages, moves = relabel([(first, 'S01', False), (gap, 'S01', True)], [], CENTROIDS,
                                  lambda spans: [voice(-0.9), voice(0.9)])
     assert speakers(passages) == ['S00', 'S01'] and len(moves) == 1
 
@@ -211,7 +220,7 @@ def test_only_the_start_of_an_inherited_segment_may_follow():
     the segment's own speaker has to say so."""
     ws = words(('One.', 0.0, 0.5), ('Two.', 0.6, 1.1), ('Three.', 1.2, 1.7))
     seg = {'start': 0.0, 'end': 1.7, 'text': ' One. Two. Three.', 'words': ws}
-    passages, moves = vc.relabel([(said('Go on.', -1.0, -0.2), 'S00', False), (seg, 'S00', True)], [], CENTROIDS,
+    passages, moves = relabel([(said('Go on.', -1.0, -0.2), 'S00', False), (seg, 'S00', True)], [], CENTROIDS,
                                  lambda spans: [voice(-0.9), voice(-0.9), voice(0.9), voice(-0.9)])
     assert speakers(passages) == ['S00', '', 'S01', 'S00'] and [m[2] for m in moves] == ['S01']
 
@@ -223,7 +232,7 @@ def test_writing_the_passages_again_changes_nothing_where_nothing_moved():
             (said('Yes.', 1.1, 1.5), '//S01', True), (said('Well.', 1.6, 2.0), 'S00', False),
             (said('So.', 2.1, 2.5), 'S00', True), (said('Hm.', 2.6, 3.0), '//S01', False)]
     own = {'S00': voice(-0.9), 'S01': voice(0.9)}
-    passages, moves = vc.relabel(segs, [], CENTROIDS,
+    passages, moves = relabel(segs, [], CENTROIDS,
                                  lambda spans: [own[w.lstrip('/')] for _, w, _ in segs if w])
     assert moves == []
     assert passages == [(seg, '' if inherited else written) for seg, written, inherited in segs]
@@ -286,12 +295,12 @@ def test_a_recording_of_similar_voices_gets_smaller_margins():
     aside = (said('Exactly.', 40.0, 40.6), 'S00', False)
     lean = vc.MARGIN_OVERRULE * 0.8
     voices = [voice(-0.3)] * 3 + [voice(lean)]
-    passages, moves = vc.relabel(long_ones + [aside], [], CENTROIDS, lambda spans: voices)
-    assert vc.margin_scale([('S00', voice(-0.3), 3.0)] * 3, CENTROIDS) == pytest.approx(0.3 / vc.MARGIN_SCALE_REF)
+    passages, moves = relabel(long_ones + [aside], [], CENTROIDS, lambda spans: voices)
+    assert vc.margin_scale([('S00', scores(voice(-0.3)), 3.0)] * 3) == pytest.approx(0.3 / vc.MARGIN_SCALE_REF)
     assert speakers(passages)[-1] == 'S01' and len(moves) == 1
     # ... while the same aside stays put in a recording whose voices are far apart
     voices = [voice(-0.8)] * 3 + [voice(lean)]
-    assert vc.relabel(long_ones + [aside], [], CENTROIDS, lambda spans: voices)[1] == []
+    assert relabel(long_ones + [aside], [], CENTROIDS, lambda spans: voices)[1] == []
 
 
 @pytest.mark.parametrize('units, expected', [
@@ -302,7 +311,7 @@ def test_a_recording_of_similar_voices_gets_smaller_margins():
     ([], 1.0),
 ])
 def test_the_margin_scale_has_bounds_and_needs_evidence(units, expected):
-    assert vc.margin_scale(units, CENTROIDS) == pytest.approx(expected)
+    assert vc.margin_scale([(label, scores(voice_), seconds) for label, voice_, seconds in units]) == pytest.approx(expected)
 
 
 def test_a_voice_too_short_to_say_much_still_follows_the_diarization():
@@ -313,10 +322,10 @@ def test_a_voice_too_short_to_say_much_still_follows_the_diarization():
     ws = words(('Ja.', 0.0, 0.5), ('Perfekt.', 1.0, 1.3))
     seg = {'start': 0.0, 'end': 1.3, 'text': ' Ja. Perfekt.', 'words': ws}
     turns = [{'start': 0, 'end': 600, 'label': 'S00'}, {'start': 900, 'end': 5000, 'label': 'S01'}]
-    passages, moves = vc.relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(-0.5), voice(0.03)])
+    passages, moves = relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(-0.5), voice(0.03)])
     assert speakers(passages) == ['S00', 'S01'] and len(moves) == 1
     # ... but a voice that leans the other way keeps it where it is
-    assert vc.relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(-0.5), voice(-0.03)])[1] == []
+    assert relabel([(seg, 'S00', False)], turns, CENTROIDS, lambda spans: [voice(-0.5), voice(-0.03)])[1] == []
 
 
 
@@ -327,12 +336,12 @@ def test_a_word_without_length_goes_with_its_neighbour():
     ws = words(('So.', 0.0, 1.0), ('Hm.', 1.6, 1.6), ('Right.', 2.2, 3.0))
     seg = {'start': 0.0, 'end': 3.0, 'text': ' So. Hm. Right.', 'words': ws}
     turns = [{'start': 0, 'end': 3000, 'label': 'S00'}]
-    passages, moves = vc.relabel([(seg, 'S00', False)], turns, CENTROIDS,
+    passages, moves = relabel([(seg, 'S00', False)], turns, CENTROIDS,
                                  lambda spans: [voice(-0.9), voice(0.9), voice(0.9)])
     assert [(p['text'], s) for p, s in passages] == [(' So. Hm.', 'S00'), (' Right.', 'S01')]
     # ... and at the head of a segment, with the unit after it
     ws = words(('Hm.', 0.0, 0.0), ('Right.', 0.6, 1.5), ('So.', 2.1, 3.0))
     seg = {'start': 0.0, 'end': 3.0, 'text': ' Hm. Right. So.', 'words': ws}
-    passages, _ = vc.relabel([(seg, 'S00', False)], turns, CENTROIDS,
+    passages, _ = relabel([(seg, 'S00', False)], turns, CENTROIDS,
                              lambda spans: [voice(-0.9), voice(0.9), voice(-0.9)])
     assert [(p['text'], s) for p, s in passages] == [(' Hm. Right.', 'S01'), (' So.', 'S00')]

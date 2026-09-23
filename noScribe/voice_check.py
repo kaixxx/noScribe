@@ -58,6 +58,14 @@ this rule (0.8 %, 5.4 % and 2.1 % for the other engine). Finding the changes
 *inside* a unit could remove 300 more wrong words at the very most (444 for
 the other engine; counted with an earlier, more cautious pair of margins), with a
 perfect detector, and was not built.
+
+Where the second opinion comes from is the caller's choice: relabel() takes an
+*evidence* -- anything with `labels`, `scores(spans)` and `margins(units)`, as
+`Voice` below has them. `Voice` is the one described and measured above. A
+diarization model that reports its own speaker probabilities frame by frame can
+stand in for it (a unit's score per speaker being its mean probability there),
+which needs neither centroids nor a second model; its margins are its own and
+have to be measured for it, not taken from here.
 """
 
 from bisect import bisect_left
@@ -137,15 +145,16 @@ def _scores(embedding, centroids):
     return scores
 
 
-def margin_scale(units, centroids):
+def margin_scale(units):
     """By how much the margins of this recording are to shrink (see MARGIN_SCALE_REF).
 
-    units is [(label, embedding, seconds)]. Without a long enough passage that
-    favours its own speaker there is nothing to go by, and the margins stay.
+    units is [(label, scores, seconds)], scores as Voice.score() gives them.
+    Without a long enough passage that favours its own speaker there is nothing
+    to go by, and the margins stay.
     """
     own = []
-    for label, embedding, seconds in units:
-        scores = _scores(embedding, centroids)
+    for label, scores, seconds in units:
+        scores = scores or {}
         if seconds >= UNIT_SCALE_MIN_S and label in scores and len(scores) > 1:
             own.append(scores[label] - max(v for k, v in scores.items() if k != label))
     own = sorted(m for m in own if m > 0)
@@ -156,26 +165,58 @@ def margin_scale(units, centroids):
     return max(MARGIN_SCALE_FLOOR, min(1.0, typical / MARGIN_SCALE_REF))
 
 
-def decide(current, turns_ms, embedding, centroids, scale=1.0):
+class Voice:
+    """The evidence this module was measured with: one speaker embedding per
+    unit, compared by cosine with each speaker's centroid, under MARGIN_AGREE and
+    MARGIN_OVERRULE shrunk by margin_scale().
+
+    centroids    {label: centroid}
+    embed        callable: [[start_s, end_s]] -> [embedding or None]
+    """
+
+    def __init__(self, centroids, embed):
+        self.centroids, self.embed = centroids, embed
+        self.labels = set(centroids)
+
+    def score(self, embedding):
+        """{label: cosine between the voice and that speaker's centroid}."""
+        return _scores(embedding, self.centroids)
+
+    def scores(self, spans):
+        voices = list(self.embed(spans))
+        return [self.score(voice) for voice in voices + [None] * (len(spans) - len(voices))]
+
+    def margins(self, units):
+        """(agree, overrule) for this recording; units as margin_scale() takes them."""
+        scale = margin_scale(units)
+        return MARGIN_AGREE * scale, MARGIN_OVERRULE * scale
+
+
+def decide(current, turns_ms, scores, agree=None, overrule=None):
     """The speaker label a unit should carry.
 
     current      label the unit has now (its segment's speaker)
     turns_ms     {label: milliseconds of that label's turns inside the unit};
                  empty when the diarization has nothing to add
-    embedding    the unit's voice, or None when it could not be computed
-    centroids    {label: centroid}
-    scale        what margin_scale() found for this recording
+    scores       {label: how much the unit sounds like that speaker}, or None
+                 when there is nothing to go by
+    agree        margin by which the unit must favour the speaker the turns name
+                 (MARGIN_AGREE when not given)
+    overrule     margin by which it must favour a speaker nobody named
+                 (MARGIN_OVERRULE when not given)
     """
-    scores = _scores(embedding, centroids)
+    agree = MARGIN_AGREE if agree is None else agree
+    overrule = MARGIN_OVERRULE if overrule is None else overrule
+    scores = scores or {}
     if current not in scores:
         return current
     label = current
     if turns_ms:
         named = max(turns_ms, key=turns_ms.get)
-        if named != label and named in scores and scores[named] - scores[label] > MARGIN_AGREE * scale:
+        if named != label and named in scores and scores[named] - scores[label] > agree:
             label = named
     best = max(scores, key=scores.get)
-    if best != label and scores[best] - scores[label] > MARGIN_OVERRULE * scale:
+    if best != label and scores[best] - scores[label] > overrule:
         label = best
     return label
 
@@ -228,7 +269,7 @@ def _passage(segment, words):
             'text': lead + separator.join(w.get('word') or '' for w in words).strip()}
 
 
-def relabel(segments, diarization, centroids, embed):
+def relabel(segments, diarization, evidence):
     """Decide every segment's passages. Returns (passages, moves).
 
     segments     [(segment dict, speaker it was written under, inherited)] in
@@ -236,8 +277,11 @@ def relabel(segments, diarization, centroids, embed):
                  marker; inherited says the diarization was silent there and the
                  segment simply went on under its predecessor's speaker
     diarization  [{'start': ms, 'end': ms, 'label': str}], sorted by start
-    centroids    {label: centroid}, labels spelled as in `segments`
-    embed        callable: [[start_s, end_s]] -> [embedding or None]
+    evidence     the second opinion, such as Voice: `labels` it can compare
+                 (spelled as in `segments`), `scores(spans)` -> [{label: score}
+                 or None] per [start_s, end_s], and `margins(units)` -> (agree,
+                 overrule) for this recording, units being [(label, scores,
+                 seconds)]
 
     passages is [(segment dict, speaker to write it under)], and writing them
     again reproduces the transcript wherever nothing moved: an untouched segment
@@ -245,19 +289,18 @@ def relabel(segments, diarization, centroids, embed):
     '' so that it goes on following its predecessor. moves lists every passage
     that ends up under another speaker, as [(passage, speaker before, after)].
     """
-    if len(centroids) < 2:
+    if len(evidence.labels) < 2:
         return [(segment, '' if inherited else written) for segment, written, inherited in segments], []
     plan, spans = [], []
     for segment, written, inherited in segments:
         current = written.lstrip('/')
-        units = split_units(segment.get('words')) if current in centroids else []
+        units = split_units(segment.get('words')) if current in evidence.labels else []
         plan.append((segment, written, inherited, current, units))
         spans += [[unit[0]['start'], unit[-1]['end']] for unit in units]
-    voices = embed(spans) if spans else []
-    voices = list(voices) + [None] * (len(spans) - len(voices))
-    scale = margin_scale([(current, voice, end - start) for (start, end), voice, current in zip(
-        spans, voices, (current for _, _, _, current, units in plan for _ in units))], centroids)
-    embeddings = iter(voices)
+    scores = evidence.scores(spans) if spans else []
+    agree, overrule = evidence.margins([(current, unit_scores, end - start) for (start, end), unit_scores, current in zip(
+        spans, scores, (current for _, _, _, current, units in plan for _ in units))])
+    unit_scores = iter(scores)
     ends = list(accumulate((turn['end'] for turn in diarization), max))  # for turns_inside
 
     passages, moves = [], []
@@ -268,18 +311,18 @@ def relabel(segments, diarization, centroids, embed):
     for segment, written, inherited, current, units in plan:
         marked = written.startswith('//')
         # An inherited segment is held against the speaker it would inherit now.
-        base = state.lstrip('/') if inherited and state.lstrip('/') in centroids else current
+        base = state.lstrip('/') if inherited and state.lstrip('/') in evidence.labels else current
         labels = []
         for unit in units:
             # A unit that is its whole segment already had the diarization's say
             # on exactly this span; only the voice alone can move it.
             start_ms, end_ms = round(unit[0]['start'] * 1000), round(unit[-1]['end'] * 1000)
             turns_ms = turns_inside(diarization, start_ms, end_ms, ends) if len(units) > 1 else {}
-            voice = next(embeddings, None)
+            scored = next(unit_scores, None)
             # A word without length has no audio of its own (its embedding would be
             # its neighbours'), and on its own it would be a passage from t to t:
             # it goes with the unit before it, or the one after.
-            labels.append(None if end_ms <= start_ms else decide(base, turns_ms, voice, centroids, scale))
+            labels.append(None if end_ms <= start_ms else decide(base, turns_ms, scored, agree, overrule))
         for i, label in enumerate(labels):
             if label is None:
                 labels[i] = labels[i - 1] if i else next((l for l in labels if l is not None), base)
