@@ -3161,6 +3161,10 @@ class App(ctk.CTk):
                             save_doc()
                             job.has_partial_transcript = job.status != JobStatus.FINISHED
                         else:
+                            if transcription_success:
+                                # Nothing was said: save the header all the same, so
+                                # the transcript that is reported (and opened) exists.
+                                save_doc()
                             job.has_partial_transcript = False
                         if transcription_success:
                             if job.transcript_file != orig_transcript_file: # used alternative filename because saving under the initial name failed
