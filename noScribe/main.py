@@ -2116,7 +2116,8 @@ class App(ctk.CTk):
                 self.log_textbox.delete("1.0", f"1.0 + {self.log_len - 3000} chars")
                 self.log_len = 3000
             if link:
-                tags = tags + self.hyperlink.add(partial(self.openLink, link))
+                # A single tag comes as a string ('error'), several as a list.
+                tags = ([tags] if isinstance(tags, str) else tags) + self.hyperlink.add(partial(self.openLink, link))
             self.log_textbox.insert(tk.END, txt, tags)
             self.log_textbox.yview_moveto(1)
             self.log_len += len(txt)
