@@ -96,19 +96,30 @@ def test_overlap_prefix_preserved():
     assert m.App._apply_speaker_name(app, "//S01", job) == "//Mona"
 
 
-def test_overflow_keeps_base_label_and_warns_once():
+def test_overflow_is_numbered_by_appearance_and_warns_once():
     app, job = _stub_app(), _job("OnlyOne")
     assert m.App._apply_speaker_name(app, "S01", job) == "OnlyOne"
-    # more speakers than names -> extra speaker keeps its raw label, not a name
-    assert m.App._apply_speaker_name(app, "S02", job) == "S02"
-    assert m.App._apply_speaker_name(app, "S03", job) == "S03"
+    # more speakers than names -> the extra speakers get their place in the order
+    # of appearance, not pyannote's cluster number
+    assert m.App._apply_speaker_name(app, "S03", job) == "S01"
+    assert m.App._apply_speaker_name(app, "S00", job) == "S02"
     # warned exactly once across all overflow speakers
     assert sum(1 for a in app._logs if a) == 1
 
 
-def test_empty_names_returns_label_unchanged():
+def test_without_names_speakers_are_numbered_in_the_order_they_appear():
+    """pyannote's labels are cluster numbers: whoever opens the recording is as
+    likely S01 as S00. Someone who transcribes interviews knows who speaks first
+    and renames the speakers afterwards -- and had to look up, every time, which
+    of them S01 happened to be this time. Now the first voice is always S00."""
     app, job = _stub_app(), _job("")
-    assert m.App._apply_speaker_name(app, "S01", job) == "S01"
+    assert m.App._apply_speaker_name(app, "S01", job) == "S00"
+    assert m.App._apply_speaker_name(app, "S02", job) == "S01"
+    assert m.App._apply_speaker_name(app, "S00", job) == "S02"
+    # stable from then on, overlap marker kept, and nothing for the user to read
+    assert m.App._apply_speaker_name(app, "S01", job) == "S00"
+    assert m.App._apply_speaker_name(app, "//S02", job) == "//S01"
+    assert app._logs == []
 
 
 def test_duplicate_names_map_to_distinct_keys():
@@ -119,3 +130,62 @@ def test_duplicate_names_map_to_distinct_keys():
     assert m.App._apply_speaker_name(app, "S01", job) == "Anna"
     assert m.App._apply_speaker_name(app, "S02", job) == "Anna"
     assert set(job.speaker_name_map) == {"S01", "S02"}
+
+
+def test_a_speaker_first_heard_talking_over_someone_is_numbered_too():
+    app, job = _stub_app(), _job("")
+    assert m.App._apply_speaker_name(app, "S01", job) == "S00"
+    assert m.App._apply_speaker_name(app, "//S00", job) == "//S01"
+    assert m.App._apply_speaker_name(app, "S00", job) == "S01"
+
+
+def test_no_speaker_stays_no_speaker():
+    """find_speaker returns '' where no diarization turn overlaps; that is not a
+    speaker and must not use up a number."""
+    app, job = _stub_app(), _job("")
+    assert m.App._apply_speaker_name(app, "", job) == ""
+    assert m.App._apply_speaker_name(app, "S01", job) == "S00"
+
+
+def test_the_log_file_says_which_of_pyannotes_labels_a_number_stands_for():
+    """The diarization turns in the log file carry pyannote's labels; a transcript
+    "S01" looks like "SPEAKER_01" without being it, so the log says which is which."""
+    app, job = _stub_app(), _job("Mona")
+    m.App._apply_speaker_name(app, "S01", job)
+    m.App._apply_speaker_name(app, "S00", job)
+    m.App._apply_speaker_name(app, "//S01", job)
+    assert m.App._speaker_key(job) == "Mona = SPEAKER_01, S01 = SPEAKER_00"
+
+
+def test_a_number_somebody_was_given_as_a_name_is_stepped_over():
+    app, job = _stub_app(), _job("S01")
+    assert m.App._apply_speaker_name(app, "S02", job) == "S01"   # the name
+    assert m.App._apply_speaker_name(app, "S00", job) == "S02"   # not a second "S01"
+
+
+def test_a_job_without_a_list_of_names_is_numbered_too():
+    app, job = _stub_app(), _job("")
+    job.speaker_names = None
+    assert m.App._apply_speaker_name(app, "S01", job) == "S00"
+
+
+def test_the_key_is_logged_wherever_the_transcript_is_saved():
+    """The key used to be logged only on success, while a canceled or failed job
+    still saves its partial transcript under the same numbers. It belongs where
+    the transcript is saved -- the `finally` of the transcription step -- and
+    only there, so a finished job does not log it twice. (That step is inline in
+    the job routine, out of reach of a call; the source is what can be checked.)"""
+    import ast
+    from pathlib import Path
+
+    tree = ast.parse(Path(m.__file__).read_text(encoding='utf-8'))
+
+    def calls(node, name):
+        return [n for n in ast.walk(node) if isinstance(n, ast.Call)
+                and (getattr(n.func, 'attr', None) == name or getattr(n.func, 'id', None) == name)]
+
+    key_calls = calls(tree, '_speaker_key')
+    assert len(key_calls) == 1
+    saving = [stmt for node in ast.walk(tree) if isinstance(node, ast.Try)
+              for stmt in node.finalbody if calls(stmt, 'save_doc')]
+    assert saving and any(key_calls[0] in calls(stmt, '_speaker_key') for stmt in saving)
