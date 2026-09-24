@@ -32,13 +32,11 @@ import traceback
 import urllib
 import urllib.parse
 import webbrowser
-from enum import Enum
 from functools import partial
 from pathlib import Path
 from subprocess import Popen, run
 from tempfile import TemporaryDirectory
 from threading import Thread, get_ident
-from typing import Optional
 
 if sys.version_info >= (3, 12):
     import importlib.resources as impres
@@ -58,6 +56,7 @@ from PIL import Image
 
 from . import audio, exception, transcription, utils
 from .CTkToolTips import CTkToolTip
+from .jobs import JobStatus, TranscriptionJob, TranscriptionQueue
 from .tkHyperlinkManager import HyperlinkManager
 
 if platform.system() == "Darwin": # = MAC
@@ -319,293 +318,44 @@ else:
 timestamp_re = re.compile(r'\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]')
 
 
-# Transcription Job Management Classes
+# GUI presentation for the UI-independent job model.
+def format_job_summary(job: TranscriptionJob) -> str:
+    """Build a localized, multi-line summary for GUI tooltips."""
+    lines = []
 
-class JobStatus(Enum):
-    WAITING = "waiting"
-    AUDIO_CONVERSION = "audio_conversion"
-    SPEAKER_IDENTIFICATION = "speaker_identification"
-    TRANSCRIPTION = "transcription"
-    CANCELING = "canceling"
-    CANCELED = "canceled"
-    FINISHED = "finished"
-    ERROR = "error"
+    def yn(value: bool) -> str:
+        return '✓' if bool(value) else '✗'
 
-class TranscriptionJob:
-    """Represents a single transcription job with all its parameters and status"""
-    
-    def __init__(self):
-        # Status tracking
-        self.status: JobStatus = JobStatus.WAITING
-        self.error_message: Optional[str] = None
-        self.error_tb: Optional[str] = None
-        self.created_at: datetime.datetime = datetime.datetime.now()
-        self.started_at: Optional[datetime.datetime] = None
-        self.finished_at: Optional[datetime.datetime] = None
-        
-        # Progress tracking
-        self.progress: float = 0.0  # Progress from 0.0 to 1.0
-        
-        # File paths
-        self.audio_file: str = ''
-        self.transcript_file: str = ''
-        # Partial transcript tracking
-        self.has_partial_transcript: bool = False
-        
-        # Time range
-        self.start: int = 0  # milliseconds
-        self.stop: int = 0   # milliseconds (0 means until end)
-        
-        # Language and model settings
-        self.language_name: str = 'Auto'
-        self.whisper_model: transcription.WhisperModel = None
-        
-        # Processing options
-        self.speaker_detection: str = 'auto'
-        self.speaker_names: list = []  # real names, mapped in order of first appearance
-        # Built while this job's segments stream in: diarization label -> name.
-        # Lives on the job, so mappings can never leak between queued jobs, and
-        # is rebuilt by set_running() so a repeated job starts from scratch too.
-        self.speaker_name_map: dict = {}
-        self.overlapping: bool = True
-        self.timestamps: bool = False
-        self.disfluencies: bool = True
-        self.pause: int = 0  # index value (0=none, 1=1sec+, etc.)
-        
-        # Config-based options
-        self.whisper_beam_size: int = 1
-        self.whisper_temperature: float = 0.0
-        self.whisper_compute_type: str = 'default'
-        self.timestamp_interval: int = 60_000
-        self.timestamp_color: str = '#78909C'
-        self.pause_marker: str = '.'
-        self.auto_save: bool = True
-        self.whisper_xpu: str = 'cpu' 
-        self.vad_threshold: float = 0.5
-        
-        # Derived properties
-        self.file_ext: str = ''
-    
-    def set_running(self):
-        """Mark job as running and record start time"""
-        self.status = JobStatus.AUDIO_CONVERSION
-        self.started_at = datetime.datetime.now()
-        # Names are assigned in order of first appearance, so the mapping has
-        # to be built from this run's diarization. A repeated job (the queue's
-        # repeat button) keeps its object, and pyannote may hand out different
-        # labels the second time -- carrying the old mapping over would shift
-        # every name that is first seen on the retry.
-        self.speaker_name_map = {}
-    
-    def set_finished(self):
-        """Mark job as finished and record completion time"""
-        self.status = JobStatus.FINISHED
-        self.finished_at = datetime.datetime.now()
-    
-    def set_error(self, error_message: str, error_tb: str = ''):
-        """Mark job as failed and store error message"""
-        self.status = JobStatus.ERROR
-        self.error_message = error_message
-        self.error_tb = error_tb
-        self.finished_at = datetime.datetime.now()
+    out_name = os.path.basename(job.transcript_file) if job.transcript_file else ''
+    lines.append(f"{t('job_tt_transcript_file')} {out_name}")
 
-    def set_canceled(self, message: Optional[str] = None):
-        """Mark job as canceled by the user"""
-        self.status = JobStatus.CANCELED
-        self.error_message = message
-        self.finished_at = datetime.datetime.now()
-    
-    def get_duration(self) -> Optional[datetime.timedelta]:
-        """Get processing duration if job is completed"""
-        if self.started_at and self.finished_at:
-            return self.finished_at - self.started_at
-        return None
+    start_txt = utils.ms_to_str(job.start) if job.start > 0 else '00:00:00'
+    stop_txt = utils.ms_to_str(job.stop) if job.stop > 0 else 'end'
+    lines.append(f"{t('label_start')} {start_txt}")
+    lines.append(f"{t('label_stop')} {stop_txt}")
+    lines.append(f"{t('label_language')} {job.language_name}")
 
-    def format_summary(self) -> str:
-        """Build a concise, multi-line summary for tooltips.
+    model_disp = getattr(job.whisper_model, 'name', None) or str(job.whisper_model or '')
+    lines.append(f"{t('label_whisper_model')} {model_disp}")
+    lines.append(f"{t('label_pause')} {pause_label(job.pause)}")
+    lines.append(f"{t('label_speaker')} {job.speaker_detection}")
+    if job.speaker_names:
+        lines.append(f"{t('label_speaker_names')} {', '.join(job.speaker_names)}")
+    lines.append(f"{t('label_overlapping')} {yn(job.overlapping)}")
+    lines.append(f"{t('label_disfluencies')} {yn(job.disfluencies)}")
+    lines.append(f"{t('label_timestamps')} {yn(job.timestamps)}")
+    return "\n".join(line for line in lines if line)
 
-        Uses localized UI labels where available and simple symbols for booleans.
-        """
-        lines = []
 
-        def yn(v: bool) -> str:
-            return '✓' if bool(v) else '✗'
+def confirm_output_override(
+        queue: TranscriptionQueue,
+        transcript_file: str,
+        ignore_job: TranscriptionJob | None = None) -> bool:
+    """Ask before reusing an output path already present in the queue."""
+    if queue.has_output_conflict(transcript_file, ignore_job=ignore_job):
+        return tk.messagebox.askyesno(title='noScribe', message=t('output_override'))
+    return True
 
-        # Output file (show basename and format)
-        try:
-            out_name = os.path.basename(self.transcript_file) if self.transcript_file else ''
-            lines.append(f"{t('job_tt_transcript_file')} {out_name}")
-        except Exception:
-            pass
-
-        # Time range
-        try:
-            start_ms = getattr(self, 'start', 0) or 0
-            stop_ms = getattr(self, 'stop', 0) or 0
-            start_txt = utils.ms_to_str(start_ms) if start_ms > 0 else '00:00:00'
-            stop_txt = utils.ms_to_str(stop_ms) if stop_ms > 0 else 'end'
-            lines.append(f"{t('label_start')} {start_txt}")
-            lines.append(f"{t('label_stop')} {stop_txt}")
-        except Exception:
-            pass
-
-        # Language
-        try:
-            lines.append(f"{t('label_language')} {self.language_name}")
-        except Exception:
-            pass
-
-        # Model. whisper_model is a transcription.WhisperModel, so os.path
-        # functions raise TypeError on it -- which the except below swallowed,
-        # dropping this line from every tooltip.
-        try:
-            model_disp = getattr(self.whisper_model, 'name', None) or str(self.whisper_model or '')
-            lines.append(f"{t('label_whisper_model')} {model_disp}")
-        except Exception:
-            pass
-
-        # Pause threshold (map int index back to label)
-        try:
-            lines.append(f"{t('label_pause')} {pause_label(self.pause)}")
-        except Exception:
-            pass
-
-        # Speaker detection
-        try:
-            lines.append(f"{t('label_speaker')} {self.speaker_detection}")
-        except Exception:
-            pass
-
-        # Speaker names (only when the user set any)
-        try:
-            if self.speaker_names:
-                lines.append(f"{t('label_speaker_names')} {', '.join(self.speaker_names)}")
-        except Exception:
-            pass
-
-        # Overlapping speech
-        try:
-            lines.append(f"{t('label_overlapping')} {yn(self.overlapping)}")
-        except Exception:
-            pass
-
-        # Disfluencies
-        try:
-            lines.append(f"{t('label_disfluencies')} {yn(self.disfluencies)}")
-        except Exception:
-            pass
-
-        # Timestamps
-        try:
-            lines.append(f"{t('label_timestamps')} {yn(self.timestamps)}")
-        except Exception:
-            pass
-
-        return "\n".join([ln for ln in lines if ln])
-    
-class TranscriptionQueue:
-    """Manages a queue of transcription jobs"""
-    
-    def __init__(self):
-        self.jobs: list[TranscriptionJob] = []
-        self.current_job: Optional[TranscriptionJob] = None  # Track currently running job
-    
-    def add_job(self, job: TranscriptionJob):
-        """Add a job to the queue"""
-        self.jobs.append(job)
-    
-    def get_waiting_jobs(self) -> list[TranscriptionJob]:
-        """Get all jobs with WAITING status"""
-        return [job for job in self.jobs if job.status == JobStatus.WAITING]
-    
-    def get_running_jobs(self) -> list[TranscriptionJob]:
-        """Get all jobs currently being processed"""
-        return [job for job in self.jobs if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION, JobStatus.CANCELING]]
-    
-    def get_finished_jobs(self) -> list[TranscriptionJob]:
-        """Get all successfully completed jobs"""
-        return [job for job in self.jobs if job.status == JobStatus.FINISHED]
-    
-    def get_failed_jobs(self) -> list[TranscriptionJob]:
-        """Get all jobs that encountered errors"""
-        return [job for job in self.jobs if job.status == JobStatus.ERROR]
-
-    def get_canceled_jobs(self) -> list[TranscriptionJob]:
-        """Get all jobs that were canceled by the user"""
-        return [job for job in self.jobs if job.status == JobStatus.CANCELED]
-    
-    def has_pending_jobs(self) -> bool:
-        """Check if there are jobs waiting to be processed"""
-        return len(self.get_waiting_jobs()) > 0
-    
-    def is_running(self) -> bool:
-        """Check if any job are currently beeing processed"""
-        return len(self.get_running_jobs()) > 0
-    
-    def get_next_waiting_job(self) -> Optional[TranscriptionJob]:
-        """Get the next job to process"""
-        waiting_jobs = self.get_waiting_jobs()
-        return waiting_jobs[0] if waiting_jobs else None
-    
-    def get_queue_summary(self) -> dict:
-        """Get summary statistics of the queue"""
-        return {
-            'total': len(self.jobs),
-            'waiting': len(self.get_waiting_jobs()),
-            'running': len(self.get_running_jobs()),
-            'finished': len(self.get_finished_jobs()),
-            'errors': len(self.get_failed_jobs()),
-            'canceled': len(self.get_canceled_jobs()),
-        }
-    
-    def is_empty(self) -> bool:
-        """Check if queue is empty"""
-        return len(self.jobs) == 0
-
-    def has_inactive_jobs(self) -> bool:
-        """Whether clear_inactive() would remove anything."""
-        return len(self.jobs) > len(self.get_running_jobs())
-
-    def clear_inactive(self) -> None:
-        """Remove all jobs that are not currently being processed (waiting,
-        finished, canceled and failed ones). A running job keeps its place."""
-        # get_running_jobs() filters self.jobs, so it is already exactly the
-        # list to keep, in queue order.
-        self.jobs = self.get_running_jobs()
-    
-    def has_output_conflict(self, transcript_file: str, ignore_job: Optional[TranscriptionJob] = None) -> bool:
-        """Check if another queue job uses the same output file.
-        Ignores jobs in ERROR, CANCELING, CANCELED and optionally a given job."""
-        try:
-            target = os.path.abspath(transcript_file)
-        except Exception:
-            return False
-        try:
-            for j in self.jobs:
-                try:
-                    if not j or j is ignore_job:
-                        continue
-                    tf = getattr(j, 'transcript_file', None)
-                    if not tf:
-                        continue
-                    if os.path.abspath(tf) == target and j.status not in [JobStatus.ERROR, JobStatus.CANCELING, JobStatus.CANCELED]:
-                        return True
-                except Exception:
-                    continue
-        except Exception:
-            return False
-        return False
-
-    def confirm_output_override(self, transcript_file: str, ignore_job: Optional[TranscriptionJob] = None) -> bool:
-        """Prompt the user if a conflicting output file is found. Returns True to proceed."""
-        try:
-            if self.has_output_conflict(transcript_file, ignore_job=ignore_job):
-                msg = t('output_override')
-                return tk.messagebox.askyesno(title='noScribe', message=msg)
-        except Exception:
-            pass
-        return True
-    
 
 # Command Line Interface
 
@@ -1551,7 +1301,7 @@ class App(ctk.CTk):
 
             # Append a real, concise summary of the job's options
             try:
-                job_tooltip += '\n\n' + job.format_summary()
+                job_tooltip += '\n\n' + format_job_summary(job)
             except Exception:
                 pass
 
@@ -1961,7 +1711,7 @@ class App(ctk.CTk):
             if job.status not in [JobStatus.ERROR, JobStatus.CANCELED]:
                 return
             # Confirm override if output file conflicts with other jobs (ignore this job itself)
-            if not self.queue.confirm_output_override(job.transcript_file, ignore_job=job):
+            if not confirm_output_override(self.queue, job.transcript_file, ignore_job=job):
                 return
             # reset job timing and messages
             job.error_message = None
@@ -3216,7 +2966,7 @@ class App(ctk.CTk):
             # Confirm override if output file conflicts with jobs in queue
             for job in new_queue.jobs:
                 if self.queue.has_output_conflict(job.transcript_file):
-                    if not self.queue.confirm_output_override(job.transcript_file):
+                    if not confirm_output_override(self.queue, job.transcript_file):
                         return
                     else:
                         break

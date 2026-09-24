@@ -1,11 +1,7 @@
 """The clear-all button must never touch the job that is being processed --
 removing it from the list would orphan the running worker.
 """
-import pytest
-
-pytest.importorskip("tkinter")  # noScribe.main pulls in the GUI stack
-
-from noScribe.main import JobStatus, TranscriptionJob, TranscriptionQueue
+from noScribe.jobs import JobStatus, TranscriptionJob, TranscriptionQueue
 
 
 def _queue(*statuses):
@@ -48,3 +44,25 @@ def test_has_inactive_jobs_matches_what_clearing_does():
         expected = q.has_inactive_jobs()
         q.clear_inactive()
         assert (len(q.jobs) < before) is expected
+
+
+def test_output_conflict_is_a_model_rule_without_gui(tmp_path):
+    q = TranscriptionQueue()
+    existing = TranscriptionJob()
+    existing.transcript_file = str(tmp_path / 'transcript.html')
+    q.add_job(existing)
+
+    assert q.has_output_conflict(str(tmp_path / 'transcript.html'))
+    assert not q.has_output_conflict(
+        str(tmp_path / 'transcript.html'), ignore_job=existing)
+
+
+def test_restarting_job_resets_speaker_mapping():
+    job = TranscriptionJob()
+    job.speaker_name_map = {'SPEAKER_00': 'Alice'}
+
+    job.set_running()
+
+    assert job.status == JobStatus.AUDIO_CONVERSION
+    assert job.speaker_name_map == {}
+    assert job.started_at is not None
