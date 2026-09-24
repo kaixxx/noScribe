@@ -4,6 +4,8 @@
 # as torch 2.8. noScribe supplies pyannote with an in-memory waveform, so its
 # audio path does not require TorchCodec's optional system FFmpeg backend.
 torch==2.13
+# pyannote.audio's dependency (torch-audiomentations too); noScribe's own
+# forced alignment (noScribe/ctc_align.py) is numpy and does not use it.
 torchaudio==2.11
 torchcodec==0.15.0
 av

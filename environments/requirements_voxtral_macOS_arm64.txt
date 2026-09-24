@@ -1,0 +1,47 @@
+# Optional Voxtral transcription engine (Apple Silicon only).
+# Install on top of requirements_macOS_arm64.txt to enable the
+# "voxtral-mini-8bit" and "voxtral-small-4bit" models in the backend:
+#
+#   pip install -r environments/requirements_voxtral_macOS_arm64.txt
+#
+# Transcription runs on the Apple Silicon GPU via MLX. When a timestamped
+# output is requested, word timestamps are recovered with CTC forced alignment
+# against a wav2vec2 model: emissions via transformers, the Viterbi DP in
+# numpy (noScribe/ctc_align.py). torchaudio is no longer needed for this;
+# the base requirements keep it because pyannote.audio depends on it.
+#
+# mlx-voxtral is pinned because the engine was validated against one version,
+# not because upstream is dead: it went a year without a release, then in
+# 2026-08 relicensed to MIT and shipped two releases in one day. mlx and
+# mlx-lm are pinned too because voxtral_engine drives decoding through mlx_lm
+# internals (generate_step + a small model adapter); a newer mlx-lm could change
+# that API or break the frozen mlx-voxtral. These are the versions the engine
+# and its byte-identity tests were validated against -- bump them deliberately,
+# together.
+mlx==0.32.1
+mlx-lm==0.31.3
+# 0.0.6 is the first release that carries every fix this engine works around:
+# the stop-token one from 0.0.5 (32000 is the text token " Capital", not a pad
+# token) plus the log-Mel and embedding-merge ones. The log-Mel is now computed
+# over the whole audio and split afterwards, as Voxtral specifies, which changes
+# the encoder input on most frames -- measured to cost nothing at the
+# transcript (dWER +0.02 [-0.19, +0.24]), see docs/voxtral-mel-clamp-floor.md
+# section 8. mlx>=0.32.1 is its own floor, not ours.
+mlx-voxtral==0.0.6
+# transformers 5 is what the engine was validated against, and mlx-lm 0.31.3
+# already requires it -- a lower floor here only allowed an untested 4.x to
+# satisfy this file while pip installed 5 anyway. No upper bound: validated on
+# 5.16.1 (411 tests green, 2026-09-02).
+#
+# If you meet the "incorrect regex pattern / set fix_mistral_regex=True" warning,
+# it is not about this build. That check is a config.json heuristic (mistral-family
+# model_type plus transformers_version < 5.0.0; ours says 4.54.0.dev0) and never
+# reads the actual pattern. Our tekken.json carries the CORRECT pattern verbatim,
+# and the reference case from the upstream discussion encodes as
+# [1039, 1784, 1039] -- the correct 3-token "'"/"The"/"'" split, not the broken
+# 4-token one -- on 5.15 and 5.16.1 alike, both of which resolve this build to
+# MistralCommonBackend. Do NOT set fix_mistral_regex: it patches a fast-tokenizer
+# pre-tokenizer this path does not have. The warning appears only via
+# AutoProcessor, which resolves a different backend (see docs/migration-mlx-audio.md).
+transformers>=5
+soundfile

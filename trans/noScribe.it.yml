@@ -46,6 +46,9 @@ it:
   ask_speaker_names_count: 'Hai inserito %{n_names} nome/i, ma il numero di oratori è impostato su %{n_speakers}. I nomi potrebbero essere assegnati alle persone sbagliate. Avviare comunque?'
   warn_speaker_names_more_speakers: 'Sono stati rilevati più oratori dei nomi inseriti (%{n_names}). Gli oratori in eccesso mantengono le loro etichette originali.'
   label_whisper_model: 'Modello:'
+  voxtral_path_long: 'Motore Voxtral: trascrizione con marche temporali per parola (allineamento forzato).'
+  voxtral_path_short: 'Motore Voxtral: trascrizione rapida senza marche temporali.'
+  voxtral_no_disfluencies: 'Nota: il motore Voxtral non supporta l''opzione disfluenze; gli intercalari vengono trascritti come il modello li sente.'
   label_add_custom_models: 'Aggiungi modello AI...'
   label_overlapping: 'Discorso sovrapposto:'
   label_pause: 'Segna le pause:'
@@ -96,6 +99,7 @@ it:
   start_canceling: 'Annullamento in corso... (attendere un secondo)'
   start_transcription: 'Trascrizione in corso...'
   loading_whisper: 'Caricamento di whisper'
+  loading_voxtral: 'Caricamento di Voxtral'
   pyannote_cuda_retry: 'Rilevato errore CUDA di PyAnnote. Riprovo sulla CPU.'
   whisper_cuda_retry: 'Rilevato errore CUDA di Whisper. Riprovo sulla CPU.'
   vad: "Rilevamento dell'attività vocale..."
