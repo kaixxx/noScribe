@@ -31,7 +31,9 @@ import tkinter as tk
 import traceback
 import urllib
 import urllib.parse
+import wave
 import webbrowser
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from functools import partial
 from pathlib import Path
@@ -2934,16 +2936,16 @@ class App(ctk.CTk):
                             self.logn(t('rescue_saving', file=job.transcript_file), 'error', link=f'file://{job.transcript_file}')
                             last_auto_save = datetime.datetime.now()
 
-                    # Prepare VAD data locally for pause adjustment (audio is
-                    # 16 kHz mono after conversion by PyAV).
+                    # VAD data for pause adjustment (audio is 16 kHz mono PCM
+                    # after conversion by PyAV, so the header gives its length).
                     try:
                         job.vad_threshold = float(config['voice_activity_detection_threshold'])
                     except Exception:
                         config['voice_activity_detection_threshold'] = '0.5'
                         job.vad_threshold = 0.5
                     sampling_rate = 16000
-                    audio_array = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
-                    duration = audio_array.shape[0] / sampling_rate
+                    with wave.open(tmp_audio_file) as wav:
+                        duration = wav.getnframes() / wav.getframerate()
                     try:
                         vad_parameters = VadOptions(min_silence_duration_ms=500,
                                                     threshold=job.vad_threshold,
@@ -2952,13 +2954,19 @@ class App(ctk.CTk):
                         vad_parameters = VadOptions(min_silence_duration_ms=500,
                                                     onset=job.vad_threshold,
                                                     speech_pad_ms=0)
-                    speech_chunks = get_speech_timestamps(audio_array, vad_parameters)
-                    # Pause adjustment only needs timestamps and duration from here on.
-                    del audio_array
+
+                    # Silero runs beside the engine worker: nothing needs its
+                    # pauses before the first segment, and ahead of the worker
+                    # it held up every job by ~10 s per audio hour (M1 Max).
+                    def detect_speech():
+                        return get_speech_timestamps(
+                            decode_audio(tmp_audio_file, sampling_rate=sampling_rate), vad_parameters)
+                    vad_future = ThreadPoolExecutor(max_workers=1).submit(detect_speech)
 
                     def adjust_for_pause(segment):
                         """Adjusts start and end of segment if it falls into a pause
                         identified by the VAD"""
+                        speech_chunks = vad_future.result()
                         pause_extend = 0.2  # extend the pauses by 200ms to make the detection more robust
 
                         original_start = segment.start
