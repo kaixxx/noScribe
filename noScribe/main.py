@@ -2791,6 +2791,7 @@ class App(ctk.CTk):
 
                 # Start Diarization:
 
+                diarization = None
                 if job.speaker_detection != 'none':
                     try:
                         job.status = JobStatus.SPEAKER_IDENTIFICATION
@@ -3142,7 +3143,7 @@ class App(ctk.CTk):
                             pass
                     
                     try:
-                        info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment)
+                        info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment, diarization)
                         transcription_success = True
                         # if self.cancel:
                         #    raise Exception(t('err_user_cancelation')) 
@@ -3281,10 +3282,12 @@ class App(ctk.CTk):
 
         return False
 
-    def _run_whisper_subprocess_stream(self, tmp_audio_file: str, job, on_segment):
+    def _run_whisper_subprocess_stream(self, tmp_audio_file: str, job, on_segment, diarization=None):
         """Spawn a subprocess to run Faster-Whisper and stream segments.
         Calls on_segment(dict) for each segment streamed by the child.
-        Returns a simple info object (duration at least).
+        Returns a simple info object (duration at least). With a diarization,
+        its turns are the speech map in place of Silero's
+        (the measurement is above whisper_mp_worker._speech_map_from).
         """
         global force_whisper_cpu
         # Language code for non-auto/multilingual
@@ -3316,6 +3319,9 @@ class App(ctk.CTk):
             "vad_filter": True,
             "vad_threshold": vad_threshold,
             "locale": config.get("locale", "en"),
+            # Same converted-WAV timeline the worker reads, in seconds.
+            "speech_turns": ([[seg["start"] / 1000.0, seg["end"] / 1000.0] for seg in diarization]
+                             if diarization else None),
         }
 
         # Spawn child process using spawn start method
