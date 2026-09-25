@@ -19,5 +19,5 @@ vad_threshold: 0.5
 whisper_models_dir: models
 
 # On Linux production systems this should point to a size-limited tmpfs.
-runtime_dir: /dev/shm/noscribe-server
+runtime_dir: /run/noscribe-server
 require_tmpfs: true

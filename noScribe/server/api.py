@@ -90,6 +90,12 @@ class InferenceService:
         snapshot: JobSnapshot,
         token: str,
     ) -> Path:
+        if request.headers.get("content-type", "").split(";", 1)[0] not in {
+            "audio/ogg",
+            "audio/opus",
+            "application/octet-stream",
+        }:
+            raise HTTPException(415, "Expected an Opus audio request body.")
         content_length = request.headers.get("content-length")
         if content_length is not None:
             try:
@@ -334,18 +340,91 @@ def create_app(
         x_noscribe_job_token: str = Header(alias="X-noScribe-Job-Token"),
     ):
         snapshot = scheduler.get(job_id, x_noscribe_job_token, renew=False)
-        if request.headers.get("content-type", "").split(";", 1)[0] not in {
-            "audio/ogg",
-            "audio/opus",
-            "application/octet-stream",
-        }:
-            raise HTTPException(415, "Expected an Opus audio request body.")
         if snapshot.audio_size > config.max_upload_bytes:
             raise HTTPException(413, "Reserved audio is too large.")
         path = await service.receive_audio(
             request, snapshot, x_noscribe_job_token
         )
         return service.stream_processing(snapshot, x_noscribe_job_token, path)
+
+    async def direct_audio_request(
+        request: Request,
+        task: JobTask,
+    ):
+        content_length = request.headers.get("content-length")
+        if content_length is None:
+            raise HTTPException(411, "Content-Length is required.")
+        try:
+            audio_size = int(content_length)
+        except ValueError as error:
+            raise HTTPException(400, "Invalid Content-Length header.") from error
+        if audio_size <= 0:
+            raise HTTPException(400, "Audio upload is empty.")
+        if audio_size > config.max_upload_bytes:
+            raise HTTPException(413, "Audio upload is too large.")
+        try:
+            processor.validate_tasks((task,))
+            admission = scheduler.submit(
+                (task,),
+                audio_filename="audio.opus",
+                audio_size=audio_size,
+                allow_queue=False,
+            )
+        except QueueFull as error:
+            raise HTTPException(
+                429,
+                "The inference slot is busy; reserve a queued workflow instead.",
+                headers={"Retry-After": "5"},
+            ) from error
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        snapshot = scheduler.get(admission.job_id, admission.token, renew=False)
+        path = await service.receive_audio(request, snapshot, admission.token)
+        response = service.stream_processing(snapshot, admission.token, path)
+        response.headers["X-noScribe-Job-ID"] = admission.job_id
+        response.headers["X-noScribe-Job-Token"] = admission.token
+        return response
+
+    @app.post("/v1/audio/transcriptions")
+    async def direct_transcription(
+        request: Request,
+        model: str,
+        language: str | None = None,
+        multilingual: bool = False,
+        include_disfluencies: bool = True,
+        response_format: str = "noscribe_jsonl",
+    ):
+        if response_format != "noscribe_jsonl":
+            raise HTTPException(400, "Only response_format=noscribe_jsonl is supported.")
+        options = {
+            "multilingual": multilingual,
+            "include_disfluencies": include_disfluencies,
+        }
+        if language:
+            options["language"] = language
+        try:
+            task = JobTask("transcription", model, options)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        return await direct_audio_request(request, task)
+
+    @app.post("/v1/audio/diarizations")
+    async def direct_diarization(
+        request: Request,
+        model: str,
+        num_speakers: int | None = None,
+        response_format: str = "noscribe_jsonl",
+    ):
+        if response_format != "noscribe_jsonl":
+            raise HTTPException(400, "Only response_format=noscribe_jsonl is supported.")
+        options = {}
+        if num_speakers is not None:
+            options["num_speakers"] = num_speakers
+        try:
+            task = JobTask("diarization", model, options)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        return await direct_audio_request(request, task)
 
     return app
 

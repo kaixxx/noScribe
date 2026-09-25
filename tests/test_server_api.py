@@ -138,3 +138,36 @@ def test_queue_limit_returns_429(tmp_path):
         "audio": {"filename": "three.opus", "size": 5},
     })
     assert response.status_code == 429
+
+
+def test_direct_transcription_endpoint_runs_only_when_slot_is_free(tmp_path):
+    client, processor = _client(tmp_path)
+    payload = b"OggS-direct"
+
+    response = client.post(
+        "/v1/audio/transcriptions",
+        params={"model": "precise", "language": "de"},
+        content=payload,
+        headers={"Content-Type": "audio/ogg"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["X-noScribe-Job-ID"].startswith("job-")
+    assert response.headers["X-noScribe-Job-Token"]
+    assert processor.calls[0][0].tasks[0].operation == "transcription"
+    assert processor.calls[0][0].tasks[0].options["language"] == "de"
+
+
+def test_direct_endpoint_rejects_upload_instead_of_queueing_it(tmp_path):
+    client, _processor = _client(tmp_path)
+    _reserve(client, b"active")
+
+    response = client.post(
+        "/v1/audio/transcriptions",
+        params={"model": "precise"},
+        content=b"OggS-direct",
+        headers={"Content-Type": "audio/ogg"},
+    )
+
+    assert response.status_code == 429
+    assert response.headers["Retry-After"] == "5"

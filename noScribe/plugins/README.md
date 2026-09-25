@@ -127,12 +127,19 @@ The response identifies the protocol and advertises model capabilities:
 }
 ```
 
-Inference uses multipart requests to `POST /v1/audio/transcriptions` and
-`POST /v1/audio/diarizations`. The client sets `response_format` to
-`noscribe_jsonl`; the response is an `application/x-ndjson` stream using the
-common events from `protocol.py`. A final `result` event is mandatory. The
-server may return `X-noScribe-Job-ID`; cancellation then uses
-`DELETE /v1/jobs/{job_id}` in addition to closing the response stream.
+Servers that advertise the `queued_workflows` feature use a two-phase job
+protocol. `POST /v1/audio/jobs` reserves an atomic list of transcription and/or
+diarization tasks without uploading audio. The client polls the returned job
+with its short-lived capability token. Only after the state changes to
+`ready_for_upload` does it send the raw Opus body to the job's `/audio`
+endpoint. One workflow therefore uploads its recording exactly once.
+
+The response is an `application/x-ndjson` stream. Worker events include a
+`task_index` and `operation`; every task ends with `task_result`, and the whole
+workflow ends with one `result` event. Closing the response and sending
+`DELETE /v1/audio/jobs/{job_id}` cancels a job. Servers without the feature
+continue to use the legacy multipart `/v1/audio/transcriptions` and
+`/v1/audio/diarizations` endpoints.
 
 Before any remote request, the desktop pipeline extracts and converts the
 selected recording range to mono Opus at 32 kbit/s. The driver refuses other
@@ -143,8 +150,8 @@ model; otherwise it falls back to local Pyannote.
 
 ### Development dummy server
 
-The repository includes a dependency-free dummy server for testing the whole
-desktop flow without inference models or a GPU:
+The repository includes a dependency-free dummy server for testing queued
+workflows without inference models or a GPU:
 
 ```powershell
 conda run -n noScribe_0_6_non_cuda python tools/noscribe_dummy_server.py

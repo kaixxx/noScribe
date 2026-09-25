@@ -132,6 +132,7 @@ class JobScheduler:
         *,
         audio_filename: str,
         audio_size: int,
+        allow_queue: bool = True,
     ) -> JobAdmission:
         workflow = tuple(tasks)
         if not workflow:
@@ -143,6 +144,8 @@ class JobScheduler:
 
         with self._changed:
             self._reap_expired_locked()
+            if self._active_id is not None and not allow_queue:
+                raise QueueFull("The inference slot is busy.")
             if self._active_id is not None and len(self._waiting) >= self.max_queued:
                 raise QueueFull("The inference queue is full.")
 

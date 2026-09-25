@@ -1,3 +1,9 @@
 [project]
 name = "noScribe"
 requires-python = ">= 3.11"
+
+[project.optional-dependencies]
+server = [
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
+]

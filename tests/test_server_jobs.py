@@ -60,6 +60,21 @@ def test_scheduler_rejects_more_than_configured_waiting_jobs():
         scheduler.submit([_task()], audio_filename="rejected.opus", audio_size=1)
 
 
+def test_non_queueing_submission_is_rejected_while_slot_is_active():
+    scheduler = JobScheduler()
+    scheduler.submit([_task()], audio_filename="active.opus", audio_size=1)
+
+    with pytest.raises(QueueFull, match="busy"):
+        scheduler.submit(
+            [_task()],
+            audio_filename="direct.opus",
+            audio_size=1,
+            allow_queue=False,
+        )
+
+    assert scheduler.queued_count == 0
+
+
 def test_ready_job_expires_and_releases_the_single_slot():
     clock = Clock()
     scheduler = JobScheduler(upload_ready_ttl=30, clock=clock)

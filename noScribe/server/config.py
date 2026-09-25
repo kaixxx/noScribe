@@ -31,6 +31,33 @@ class ServerConfig:
     require_tmpfs: bool = False
 
     def __post_init__(self) -> None:
+        if not isinstance(self.host, str) or not self.host:
+            raise ValueError("Server host must be a non-empty string.")
+        for name in ("force_cpu", "require_tmpfs"):
+            if not isinstance(getattr(self, name), bool):
+                raise ValueError(f"{name} must be a boolean.")
+        for name in (
+            "port",
+            "max_queued_jobs",
+            "max_upload_bytes",
+            "cpu_threads",
+        ):
+            if isinstance(getattr(self, name), bool) or not isinstance(
+                getattr(self, name), int
+            ):
+                raise ValueError(f"{name} must be an integer.")
+        for name in (
+            "max_audio_hours",
+            "reservation_ttl_seconds",
+            "upload_ready_ttl_seconds",
+            "terminal_job_ttl_seconds",
+            "upload_timeout_seconds",
+            "job_timeout_seconds",
+            "vad_threshold",
+        ):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"{name} must be a number.")
         try:
             is_loopback = ipaddress.ip_address(self.host).is_loopback
         except ValueError:

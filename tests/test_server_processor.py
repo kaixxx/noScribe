@@ -13,9 +13,11 @@ from noScribe.models import ModelDescriptor, ModelRef
 from noScribe.server.jobs import JobSnapshot, JobState, JobTask
 from noScribe.server.processor import (
     RegistryWorkflowProcessor,
+    create_server_registry,
     discover_whisper_models,
     validate_opus_audio,
 )
+from noScribe.server.config import ServerConfig
 from noScribe.audio.convert import ToOpus
 
 
@@ -169,3 +171,20 @@ def test_opus_validator_checks_codec_and_duration(tmp_path):
     assert validate_opus_audio(opus, 2.0) == pytest.approx(1.0, abs=0.1)
     with pytest.raises(ValueError, match="duration limit"):
         validate_opus_audio(opus, 0.5)
+
+
+def test_force_cpu_configures_both_builtin_workers(tmp_path):
+    model = tmp_path / "precise"
+    model.mkdir()
+    (model / "model.bin").write_bytes(b"model")
+    registry = create_server_registry(ServerConfig(
+        whisper_models_dir=tmp_path,
+        runtime_dir=tmp_path / "runtime",
+        force_cpu=True,
+    ))
+
+    whisper_host = registry.get("local-whisper")._host
+    pyannote_host = registry.get("local-pyannote")._host
+    assert whisper_host is pyannote_host
+    assert whisper_host.settings.force_whisper_cpu is True
+    assert whisper_host.settings.force_diarization_cpu is True

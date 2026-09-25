@@ -24,7 +24,7 @@ class DummyInferenceServer(ThreadingHTTPServer):
         super().__init__(address, DummyInferenceHandler)
         self.token = token
         self.delay = delay
-        self.jobs: dict[str, threading.Event] = {}
+        self.jobs: dict[str, dict[str, Any]] = {}
         self.jobs_lock = threading.Lock()
 
 
@@ -39,6 +39,7 @@ class DummyInferenceHandler(BaseHTTPRequestHandler):
             self._send_json(200, {
                 "protocol_version": 1,
                 "server_version": "dummy-1",
+                "features": ["queued_workflows"],
                 "data": [
                     {
                         "id": "dummy-transcription",
@@ -55,6 +56,20 @@ class DummyInferenceHandler(BaseHTTPRequestHandler):
                 ],
             })
             return
+        prefix = "/v1/audio/jobs/"
+        if self.path.startswith(prefix):
+            job_id = self.path[len(prefix):]
+            with self.server.jobs_lock:
+                job = self.server.jobs.get(job_id)
+            if job is None or not self._job_token_matches(job):
+                self._send_json(404, {"error": "Unknown job"})
+                return
+            self._send_json(200, {
+                "job_id": job_id,
+                "state": "ready_for_upload",
+                "position": 0,
+            })
+            return
         if self.path == "/health":
             self._send_json(200, {"ok": True})
             return
@@ -62,6 +77,14 @@ class DummyInferenceHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         if not self._authenticate():
+            return
+        if self.path == "/v1/audio/jobs":
+            self._reserve_workflow()
+            return
+        workflow_prefix = "/v1/audio/jobs/"
+        if self.path.startswith(workflow_prefix) and self.path.endswith("/audio"):
+            job_id = self.path[len(workflow_prefix):-len("/audio")]
+            self._run_workflow(job_id)
             return
         if self.path not in {
             "/v1/audio/transcriptions",
@@ -99,20 +122,126 @@ class DummyInferenceHandler(BaseHTTPRequestHandler):
     def do_DELETE(self) -> None:
         if not self._authenticate():
             return
-        prefix = "/v1/jobs/"
+        prefix = (
+            "/v1/audio/jobs/"
+            if self.path.startswith("/v1/audio/jobs/")
+            else "/v1/jobs/"
+        )
         if not self.path.startswith(prefix):
             self._send_json(404, {"error": "Not found"})
             return
         job_id = self.path[len(prefix):]
         with self.server.jobs_lock:
-            cancel_event = self.server.jobs.get(job_id)
-        if cancel_event is None:
+            job = self.server.jobs.get(job_id)
+        if job is None:
             self._send_json(404, {"error": "Unknown job"})
             return
+        if prefix == "/v1/audio/jobs/" and not self._job_token_matches(job):
+            self._send_json(404, {"error": "Unknown job"})
+            return
+        cancel_event = job["cancel"] if isinstance(job, dict) else job
         cancel_event.set()
         self.send_response(204)
         self.send_header("Content-Length", "0")
         self.end_headers()
+
+    def _reserve_workflow(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", ""))
+            if length <= 0 or length > 64 * 1024:
+                raise ValueError("Invalid reservation size")
+            value = json.loads(self.rfile.read(length))
+            tasks = value["tasks"]
+            audio = value["audio"]
+            if not isinstance(tasks, list) or not tasks:
+                raise ValueError("A workflow requires tasks")
+            if any(
+                not isinstance(task, dict)
+                or task.get("type") not in {"transcription", "diarization"}
+                for task in tasks
+            ):
+                raise ValueError("Unsupported workflow task")
+            size = int(audio["size"])
+            if size <= 0 or size > MAX_UPLOAD_BYTES:
+                raise ValueError("Invalid audio size")
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            self._send_json(400, {"error": str(error)})
+            return
+        job_id = f"job-{uuid.uuid4().hex}"
+        job_token = uuid.uuid4().hex + uuid.uuid4().hex
+        with self.server.jobs_lock:
+            self.server.jobs[job_id] = {
+                "token": job_token,
+                "tasks": tasks,
+                "size": size,
+                "cancel": threading.Event(),
+            }
+        self._send_json(202, {
+            "job_id": job_id,
+            "job_token": job_token,
+            "state": "ready_for_upload",
+            "position": 0,
+        })
+
+    def _run_workflow(self, job_id: str) -> None:
+        with self.server.jobs_lock:
+            job = self.server.jobs.get(job_id)
+        if job is None or not self._job_token_matches(job):
+            self._send_json(404, {"error": "Unknown job"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", ""))
+        except ValueError:
+            length = -1
+        if length != job["size"]:
+            self._send_json(400, {"error": "Upload size mismatch"})
+            return
+        uploaded = self.rfile.read(length)
+        if len(uploaded) != length:
+            self._send_json(400, {"error": "Incomplete upload"})
+            return
+
+        events = []
+        for index, task in enumerate(job["tasks"]):
+            operation = task.get("type")
+            options = task.get("options") or {}
+            events.append({
+                "type": "task_started",
+                "task_index": index,
+                "operation": operation,
+            })
+            if operation == "transcription":
+                for event in self._transcription_events(options):
+                    if event["type"] == "result":
+                        event = {
+                            "type": "task_result",
+                            "ok": event["ok"],
+                            "info": event.get("info") or {},
+                        }
+                    event.update(task_index=index, operation=operation)
+                    events.append(event)
+            elif operation == "diarization":
+                for event in self._diarization_events(options):
+                    if event["type"] == "result":
+                        event = {
+                            "type": "task_result",
+                            "ok": event["ok"],
+                            "segments": event.get("segments") or [],
+                        }
+                    event.update(task_index=index, operation=operation)
+                    events.append(event)
+            else:
+                self._send_json(400, {"error": "Unsupported task"})
+                return
+        events.append({"type": "result", "ok": True})
+        try:
+            self._send_event_stream(job_id, job["cancel"], events)
+        finally:
+            with self.server.jobs_lock:
+                self.server.jobs.pop(job_id, None)
+
+    def _job_token_matches(self, job: dict[str, Any]) -> bool:
+        return self.headers.get("X-noScribe-Job-Token") == job["token"]
 
     def _authenticate(self) -> bool:
         expected = f"Bearer {self.server.token}"
