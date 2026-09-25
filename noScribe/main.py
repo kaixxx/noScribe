@@ -484,9 +484,9 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     job.num_speakers = int(speaker_setting) if str(speaker_setting).isdigit() else None
     # Hidden GUI names must not appear in job metadata when detection is off.
     job.speaker_names = parse_speaker_names(speaker_names) if job.diarization_enabled else []
-    job.overlapping = overlapping if overlapping is not None else True
-    job.timestamps = timestamps if timestamps is not None else False
-    job.disfluencies = disfluencies if disfluencies is not None else True
+    job.overlapping = bool(overlapping) if overlapping is not None else True
+    job.timestamps = bool(timestamps) if timestamps is not None else False
+    job.disfluencies = bool(disfluencies) if disfluencies is not None else True
     
     # Pause setting
     if pause is not None:

@@ -343,6 +343,8 @@ def test_remote_http_plugin_queues_combined_workflow_and_uploads_once(tmp_path):
                     str(audio_path),
                     ModelRef("ifs-server", "local-whisper/precise"),
                     language="en",
+                    multilingual=0,
+                    include_disfluencies=1,
                 ),
                 diarization=DiarizationRequest(
                     str(audio_path),
@@ -367,6 +369,8 @@ def test_remote_http_plugin_queues_combined_workflow_and_uploads_once(tmp_path):
     assert [task["type"] for task in reservation["tasks"]] == [
         "diarization", "transcription"
     ]
+    assert reservation["tasks"][1]["options"]["multilingual"] is False
+    assert reservation["tasks"][1]["options"]["include_disfluencies"] is True
     assert uploads[0][3] == audio_path.read_bytes()
     assert uploads[0][2]["X-noScribe-Job-Token"] == "job-secret"
     assert result.transcription_info.language == "en"

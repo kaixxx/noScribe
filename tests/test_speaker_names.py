@@ -84,6 +84,18 @@ def test_auto_language_code_is_normalized():
     assert not job.multilingual
 
 
+def test_job_normalizes_checkbox_integers_to_booleans():
+    job = m.create_transcription_job(
+        overlapping=1,
+        timestamps=0,
+        disfluencies=1,
+    )
+
+    assert job.overlapping is True
+    assert job.timestamps is False
+    assert job.disfluencies is True
+
+
 def test_a_repeated_job_rebuilds_the_mapping():
     """The queue's repeat button re-runs the same job object. Diarization runs
     again from scratch and may hand out different labels, so the mapping must

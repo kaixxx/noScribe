@@ -247,8 +247,10 @@ class RemoteHttpPlugin:
             })
         if request.transcription is not None:
             options = {
-                "multilingual": request.transcription.multilingual,
-                "include_disfluencies": request.transcription.include_disfluencies,
+                "multilingual": bool(request.transcription.multilingual),
+                "include_disfluencies": bool(
+                    request.transcription.include_disfluencies
+                ),
             }
             if request.transcription.language:
                 options["language"] = request.transcription.language
