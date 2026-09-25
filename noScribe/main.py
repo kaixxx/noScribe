@@ -56,6 +56,14 @@ from PIL import Image
 
 from . import audio, exception, transcription, utils
 from .CTkToolTips import CTkToolTip
+from .inference import (
+    DiarizationRequest,
+    DiarizationSegment,
+    InferenceWorkerError,
+    LocalInferenceBackend,
+    TranscriptionRequest,
+    TranscriptionSegment,
+)
 from .jobs import JobStatus, TranscriptionJob, TranscriptionQueue
 from .tkHyperlinkManager import HyperlinkManager
 
@@ -759,8 +767,7 @@ def _init_app_state(app):
     app.current_progress = -1
     # Track background activity for robust shutdown
     app._worker_threads = []
-    app._mp_proc = None
-    app._mp_queue = None
+    app.inference_backend = LocalInferenceBackend()
     app._ffmpeg_proc = None
     app._shutting_down = False
     app._ui_thread_id = get_ident()
@@ -1675,24 +1682,7 @@ class App(ctk.CTk):
                     # Only cancel the current job, not the entire queue
                     self._cancel_job_only = True
                     self.cancel = True
-                    # Try to terminate active whisper subprocess if present
-                    try:
-                        if getattr(self, "_mp_proc", None) is not None and self._mp_proc.is_alive():
-                            try:
-                                self._mp_proc.terminate()
-                            except Exception:
-                                pass
-                            try:
-                                self._mp_proc.join(timeout=0.3)
-                            except Exception:
-                                pass
-                            try:
-                                self._mp_proc.close()
-                            except Exception:
-                                pass
-                    finally:
-                        self._mp_proc = None
-                        self._mp_queue = None
+                    self.inference_backend.cancel()
             else:
                 # Finished, canceling or error -> remove from list after confirmation
                 if tk.messagebox.askyesno(title='noScribe', message=t('queue_remove_entry')):
@@ -2503,7 +2493,11 @@ class App(ctk.CTk):
                     ol_len = overlap_end - overlap_start + 1
                     return ol_len / ts_len
 
-                def find_speaker(diarization, transcript_start, transcript_end) -> str:
+                def find_speaker(
+                    diarization: list[DiarizationSegment],
+                    transcript_start,
+                    transcript_end,
+                ) -> str:
                     # Looks for the shortest segment in diarization that has at least 80% overlap 
                     # with transcript_start - trancript_end.  
                     # Returns the speaker name if found.
@@ -2516,12 +2510,12 @@ class App(ctk.CTk):
                     is_overlapping = False
 
                     for segment in diarization:
-                        t = overlap_len(segment["start"], segment["end"], transcript_start, transcript_end)
+                        t = overlap_len(segment.start_ms, segment.end_ms, transcript_start, transcript_end)
                         if t is None: # we are already after transcript_end
                             break
 
-                        current_segment_len = segment["end"] - segment["start"] # Length of the current segment
-                        current_segment_spkr = f'S{segment["label"][8:]}' # shorten the label: "SPEAKER_01" > "S01"
+                        current_segment_len = segment.end_ms - segment.start_ms # Length of the current segment
+                        current_segment_spkr = f'S{segment.label[8:]}' # shorten the label: "SPEAKER_01" > "S01"
 
                         if overlap_found >= overlap_threshold: # we already found a fitting segment, compare length now
                             if (t >= overlap_threshold) and (current_segment_len < segment_len): # found a shorter (= better fitting) segment that also overlaps well
@@ -2563,7 +2557,7 @@ class App(ctk.CTk):
 
                         # write segments to log file
                         for segment in diarization:
-                            line = f'{utils.ms_to_str(job.start + segment["start"], include_ms=True)} - {utils.ms_to_str(job.start + segment["end"], include_ms=True)} {segment["label"]}'
+                            line = f'{utils.ms_to_str(job.start + segment.start_ms, include_ms=True)} - {utils.ms_to_str(job.start + segment.end_ms, include_ms=True)} {segment.label}'
                             self.logn(line, where='file')
 
                         self.logn()
@@ -2743,18 +2737,8 @@ class App(ctk.CTk):
                     last_timestamp_ms = 0
                     first_segment = True
 
-                    def on_segment(seg):
+                    def on_segment(segment: TranscriptionSegment):
                         nonlocal first_segment, last_segment_end, last_timestamp_ms, p, speaker, speaker_disp, prev_speaker
-                        # Map dict to simple object-like for existing code
-                        class _Seg:
-                            __slots__ = ("start", "end", "text", "words")
-                            def __init__(self, d):
-                                self.start = d.get('start')
-                                self.end = d.get('end')
-                                self.text = d.get('text')
-                                self.words = d.get('words')
-                        segment = _Seg(seg)
-
                         segment = adjust_for_pause(segment)
 
                         # get time of the segment in milliseconds
@@ -3032,226 +3016,91 @@ class App(ctk.CTk):
         return False
 
     def _run_whisper_subprocess_stream(self, tmp_audio_file: str, job, on_segment):
-        """Spawn a subprocess to run Faster-Whisper and stream segments.
-        Calls on_segment(dict) for each segment streamed by the child.
-        Returns a simple info object (duration at least).
-        """
+        """Run Faster-Whisper through the UI-independent local backend."""
         global force_whisper_cpu
-        # Language code for non-auto/multilingual
+
         language_code = None
         if job.language_name not in ('Auto', 'Multilingual'):
-            try:
-                language_code = languages[job.language_name]
-            except Exception:
-                language_code = None
+            language_code = languages.get(job.language_name)
 
-        # VAD threshold from config
         try:
             vad_threshold = float(config.get('voice_activity_detection_threshold', '0.5'))
         except Exception:
             vad_threshold = 0.5
 
-        args = {
-            "whisper_model": job.whisper_model,
-            "device": 'cpu' if force_whisper_cpu else 'auto',
-            "compute_type": job.whisper_compute_type,
-            "cpu_threads": number_threads,
-            "local_files_only": True,
-            "audio_path": tmp_audio_file,
-            "language_name": job.language_name,
-            "language_code": language_code,
-            "disfluencies": job.disfluencies,
-            "beam_size": 5,
-            "word_timestamps": True,
-            "vad_filter": True,
-            "vad_threshold": vad_threshold,
-            "locale": config.get("locale", "en"),
-        }
+        model_path = getattr(job.whisper_model, 'path', job.whisper_model)
+        request = TranscriptionRequest(
+            audio_path=tmp_audio_file,
+            model_path=str(model_path),
+            language_name=job.language_name,
+            language_code=language_code,
+            device='cpu' if force_whisper_cpu else 'auto',
+            compute_type=job.whisper_compute_type,
+            cpu_threads=number_threads,
+            disfluencies=job.disfluencies,
+            beam_size=5,
+            word_timestamps=True,
+            vad_threshold=vad_threshold,
+            locale=config.get('locale', 'en'),
+        )
 
-        # Spawn child process using spawn start method
-        ctx = mp.get_context("spawn")
-        q = ctx.Queue()
-        from .whisper_mp_worker import whisper_proc_entrypoint
-        proc = ctx.Process(target=whisper_proc_entrypoint, args=(args, q))
-        proc.start()
-        # Expose to allow cancel to terminate the child
-        self._mp_proc = proc
-        self._mp_queue = q
+        def log_message(level: str, message: str) -> None:
+            self.logn(message, 'error' if level == 'error' else None)
 
-        info = None
+        def update_progress(percent: float, detail: str | None) -> None:
+            self.set_progress(3, percent, job.speaker_detection)
+
         try:
-            while True:
-                try:
-                    msg = q.get(timeout=0.1)
-                except pyqueue.Empty:
-                    if self.cancel:
-                        # User requested cancel; terminate child
-                        try:
-                            proc.terminate()
-                        except Exception:
-                            pass
-                        raise Exception(t('err_user_cancelation'))
-                    if not proc.is_alive():
-                        # Process died without sending result
-                        exitcode = proc.exitcode
-                        self.logn(f"Transcription worker exited unexpectedly (code {exitcode}).", 'error')
-                        raise Exception('Subprocess terminated unexpectedly')
-                    continue
-
-                mtype = msg.get("type") if isinstance(msg, dict) else None
-                if mtype == "log":
-                    level = msg.get("level", "info")
-                    txt = msg.get("msg", "")
-                    if level == 'error':
-                        self.logn(txt, 'error')
-                    else:
-                        self.logn(txt)
-                elif mtype == "progress":
-                    pct = msg.get("pct")
-                    detail = msg.get("detail")
-                    try:
-                        if pct is not None:
-                            self.set_progress(3, float(pct), job.speaker_detection)
-                    except Exception:
-                        pass
-                elif mtype == "segment":
-                    seg = msg.get("segment") or {}
-                    try:
-                        on_segment(seg)
-                    except Exception as e:
-                        # If on_segment fails, stop child and raise
-                        try:
-                            proc.terminate()
-                        except Exception:
-                            pass
-                        raise
-                elif mtype == "result":
-                    if msg.get("ok"):
-                        info = msg.get("info", {})
-                    else:
-                        err = msg.get('error', 'Transcription failed')
-                        trc = msg.get('trace')
-                        self.logn(f"Transcription failed: {err}", 'error')
-                        if trc:
-                            self.logn(trc, where='file')
-                        raise Exception(err)
-                    break
-                # keep looping until we get a result
-        finally:
-            try:
-                proc.join(timeout=0.2)
-            except Exception:
-                pass
-            if proc.is_alive():
-                try:
-                    proc.terminate()
-                except Exception:
-                    pass
-            try:
-                proc.close()
-            except Exception:
-                pass
-            try:
-                q.close()
-                q.join_thread()
-            except Exception:
-                pass
-            # Clear exposed handles
-            self._mp_proc = None
-            self._mp_queue = None
-
-        class _Info:
-            __slots__ = ("duration",)
-            def __init__(self, d):
-                self.duration = d.get('duration')
-        info_obj = _Info(info or {})
-        return info_obj
+            return self.inference_backend.transcribe(
+                request,
+                on_segment=on_segment,
+                on_log=log_message,
+                on_progress=update_progress,
+                is_cancelled=lambda: self.cancel,
+            )
+        except InferenceWorkerError as error:
+            self.logn(f'Transcription failed: {error}', 'error')
+            if error.trace:
+                self.logn(error.trace, where='file')
+            raise
 
     def _run_diarize_subprocess(self, tmp_audio_file: str, job):
-        """Spawn a subprocess to run diarization and return list of segments.
-        Streams child logs/progress back to GUI and honors cancel.
-        """
+        """Run Pyannote through the UI-independent local backend."""
         global force_pyannote_cpu
-        ctx = mp.get_context("spawn")
-        q = ctx.Queue()
-        from .pyannote_mp_worker import pyannote_proc_entrypoint
-        args = {
-            "device": 'cpu' if force_pyannote_cpu else '',
-            "audio_path": tmp_audio_file,
-            "num_speakers": (int(job.speaker_detection) if str(job.speaker_detection).isdigit() else None),
-        }
-        proc = ctx.Process(target=pyannote_proc_entrypoint, args=(args, q))
-        proc.start()
-        # Keep handles for cancel
-        self._mp_proc = proc
-        self._mp_queue = q
 
-        diarization = None
+        request = DiarizationRequest(
+            audio_path=tmp_audio_file,
+            device='cpu' if force_pyannote_cpu else '',
+            num_speakers=(
+                int(job.speaker_detection)
+                if str(job.speaker_detection).isdigit()
+                else None
+            ),
+        )
+
+        def log_message(level: str, message: str) -> None:
+            self.logn('PyAnnote ' + message, where='file')
+
+        def update_progress(step: str, percent: int) -> None:
+            self.logr(f'{step}: {percent}%')
+            if step == 'segmentation':
+                self.set_progress(2, percent * 0.3, job.speaker_detection)
+            elif step == 'embeddings':
+                self.set_progress(2, 30 + (percent * 0.7), job.speaker_detection)
+
         try:
-            while True:
-                try:
-                    msg = q.get(timeout=0.1)
-                except pyqueue.Empty:
-                    if self.cancel:
-                        try:
-                            proc.terminate()
-                        except Exception:
-                            pass
-                        raise Exception(t('err_user_cancelation'))
-                    if not proc.is_alive():
-                        exitcode = proc.exitcode
-                        self.logn(f"Diarization worker exited unexpectedly (code {exitcode}). UI remains responsive.", 'error')
-                        raise Exception('Subprocess terminated unexpectedly')
-                    continue
+            return self.inference_backend.diarize(
+                request,
+                on_log=log_message,
+                on_progress=update_progress,
+                is_cancelled=lambda: self.cancel,
+            )
+        except InferenceWorkerError as error:
+            self.logn(f'PyAnnote error: {error}', 'error')
+            if error.trace:
+                self.logn(error.trace, where='file')
+            raise
 
-                mtype = msg.get("type") if isinstance(msg, dict) else None
-                if mtype == "log":
-                    txt = msg.get("msg", "")
-                    self.logn('PyAnnote ' + txt, where='file')
-                elif mtype == "progress":
-                    step_name = str(msg.get("step", ""))
-                    progress_percent = int(msg.get("pct", 0))
-                    self.logr(f'{step_name}: {progress_percent}%')
-                    if step_name == 'segmentation':
-                        self.set_progress(2, progress_percent * 0.3, job.speaker_detection)
-                    elif step_name == 'embeddings':
-                        self.set_progress(2, 30 + (progress_percent * 0.7), job.speaker_detection)
-                elif mtype == "result":
-                    if msg.get("ok"):
-                        diarization = msg.get("segments", [])
-                    else:
-                        err = msg.get('error', 'Diarization failed')
-                        trc = msg.get('trace')
-                        self.logn(f"PyAnnote error: {err}", 'error')
-                        if trc:
-                            self.logn(trc, where='file')
-                        raise Exception(err)
-                    break
-
-        finally:
-            try:
-                proc.join(timeout=0.2)
-            except Exception:
-                pass
-            if proc.is_alive():
-                try:
-                    proc.terminate()
-                except Exception:
-                    pass
-            try:
-                proc.close()
-            except Exception:
-                pass
-            try:
-                q.close()
-                q.join_thread()
-            except Exception:
-                pass
-            self._mp_proc = None
-            self._mp_queue = None
-
-        return diarization or []
-    
     def on_closing(self):
         # (see: https://stackoverflow.com/questions/111155/how-do-i-handle-the-window-close-event-in-tkinter)
         global force_pyannote_cpu
@@ -3269,31 +3118,11 @@ class App(ctk.CTk):
         self._shutting_down = True
         self.cancel = True
         try:
-            # Terminate active multiprocessing child (diarization/whisper) if present
+            # Stop the backend-owned inference child, if present.
             try:
-                if getattr(self, "_mp_proc", None) is not None and self._mp_proc.is_alive():
-                    try:
-                        self._mp_proc.terminate()
-                    except Exception:
-                        pass
-                    try:
-                        self._mp_proc.join(timeout=1.0)
-                    except Exception:
-                        pass
-            finally:
-                try:
-                    if getattr(self, "_mp_queue", None) is not None:
-                        try:
-                            self._mp_queue.close()
-                        except Exception:
-                            pass
-                        try:
-                            self._mp_queue.join_thread()
-                        except Exception:
-                            pass
-                finally:
-                    self._mp_proc = None
-                    self._mp_queue = None
+                self.inference_backend.close()
+            except Exception:
+                pass
 
             # Terminate ffmpeg if currently converting
             try:
@@ -3345,26 +3174,11 @@ def _cleanup_app(app):
         app._shutting_down = True
         app.cancel = True
 
-        # Terminate active multiprocessing child (diarization/whisper) if present
-        if getattr(app, "_mp_proc", None) is not None:
-            try:
-                if app._mp_proc.is_alive():
-                    app._mp_proc.terminate()
-                    app._mp_proc.join(timeout=1.0)
-            except Exception:
-                pass
-            finally:
-                app._mp_proc = None
-
-        # Close multiprocessing queue
-        if getattr(app, "_mp_queue", None) is not None:
-            try:
-                app._mp_queue.close()
-                app._mp_queue.join_thread()
-            except Exception:
-                pass
-            finally:
-                app._mp_queue = None
+        # Stop the backend-owned inference child, if present.
+        try:
+            app.inference_backend.close()
+        except Exception:
+            pass
 
         # Terminate ffmpeg if currently converting
         if getattr(app, "_ffmpeg_proc", None) is not None:

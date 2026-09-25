@@ -56,7 +56,7 @@ def test_audio_released_before_transcription(
     whisper_proc_entrypoint(
         {
             "audio_path": str(audio_path),
-            "whisper_model": SimpleNamespace(path=tmp_path),
+            "model_path": str(tmp_path),
             "device": "cpu",
             "language_name": language_name,
             "language_code": language_code,

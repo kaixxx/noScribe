@@ -75,7 +75,7 @@ def whisper_proc_entrypoint(args: dict, q):
             
         # Build model in child using provided options
         model = WhisperModel(
-            str(args["whisper_model"].path),
+            str(args["model_path"]),
             device=device,
             compute_type=args.get("compute_type", "float16"),
             cpu_threads=args.get("cpu_threads", 4),
