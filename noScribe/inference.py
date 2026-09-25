@@ -140,6 +140,35 @@ class DiarizationRequest:
     num_speakers: Optional[int] = None
 
 
+@dataclass(frozen=True)
+class InferenceWorkflowRequest:
+    """One upload followed by one or both inference operations."""
+
+    audio_path: str
+    transcription: TranscriptionRequest | None = None
+    diarization: DiarizationRequest | None = None
+
+    def __post_init__(self) -> None:
+        requests = tuple(
+            request
+            for request in (self.diarization, self.transcription)
+            if request is not None
+        )
+        if not requests:
+            raise ValueError("An inference workflow requires at least one operation.")
+        if any(request.audio_path != self.audio_path for request in requests):
+            raise ValueError("Workflow operations must use the same audio file.")
+        if len({request.model.backend_id for request in requests}) != 1:
+            raise ValueError("Workflow operations must use the same backend.")
+
+
+@dataclass(frozen=True)
+class InferenceWorkflowResult:
+    transcription_info: TranscriptionInfo | None = None
+    transcription_segments: tuple[TranscriptionSegment, ...] = ()
+    diarization_segments: tuple[DiarizationSegment, ...] = ()
+
+
 class InferenceCancelled(RuntimeError):
     """Raised when the active local inference operation is canceled."""
 

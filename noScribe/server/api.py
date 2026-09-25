@@ -282,6 +282,7 @@ def create_app(
         return {
             "protocol_version": SERVER_PROTOCOL_VERSION,
             "server_version": app.version,
+            "features": ["queued_workflows"],
             "data": processor.list_models(),
         }
 

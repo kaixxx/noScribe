@@ -2,7 +2,10 @@ from dataclasses import dataclass
 
 import pytest
 
-from noScribe.inference import TranscriptionRequest
+from noScribe.inference import (
+    InferenceWorkflowRequest,
+    TranscriptionRequest,
+)
 from noScribe.models import ModelDescriptor, ModelRef
 from noScribe.plugins.factory import create_builtin_registry
 from noScribe.plugins.manifest import (
@@ -51,6 +54,7 @@ class _Plugin:
     model_id: str = "same-name"
     canceled: bool = False
     closed: bool = False
+    supports_workflows: bool = False
 
     def list_models(self):
         return [ModelDescriptor(
@@ -62,6 +66,9 @@ class _Plugin:
 
     def transcribe(self, request, **callbacks):
         return str(request.model)
+
+    def run_workflow(self, request, **callbacks):
+        return str(request.transcription.model)
 
     def cancel(self):
         self.canceled = True
@@ -150,6 +157,20 @@ def test_registry_rejects_unknown_backend_and_duplicate_registration():
         registry.register(plugin)
     with pytest.raises(ValueError, match="Unknown inference backend"):
         registry.get("missing")
+
+
+def test_registry_routes_supported_atomic_workflow():
+    plugin = _Plugin(_manifest("remote", "remote"), supports_workflows=True)
+    registry = BackendRegistry([plugin])
+    transcription = TranscriptionRequest(
+        "audio.opus", ModelRef("remote", "same-name")
+    )
+
+    result = registry.run_workflow(InferenceWorkflowRequest(
+        "audio.opus", transcription=transcription
+    ))
+
+    assert result == "remote:same-name"
 
 
 def test_builtin_plugins_load_manifests_and_advertise_models():

@@ -101,6 +101,7 @@ de:
   whisper_cuda_retry: 'Whisper CUDA-Fehler erkannt. Erneuter Versuch auf der CPU.'
   vad: 'Sprachaktivitätserkennung...'
   language_detect: 'Erkannte Sprache "%{lang}" mit Wahrscheinlichkeit %{prob}'
+  server_queue_wait: 'Warten auf Serverplatz (Position %{position})'
   language_en_only: 'Achtung: Das für die Transkription gewählte KI-Modell unterstützt ausschließlich Englisch.'
   transcription_finished: 'Transkription beendet.'
   transcription_saved: 'Gespeichert unter: %{file}'

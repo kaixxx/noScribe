@@ -59,6 +59,7 @@ from .CTkToolTips import CTkToolTip
 from .inference import (
     DiarizationRequest,
     DiarizationSegment,
+    InferenceWorkflowRequest,
     InferenceWorkerError,
     LOCAL_DIARIZATION_BACKEND,
     LOCAL_WHISPER_BACKEND,
@@ -2593,6 +2594,7 @@ class App(ctk.CTk):
                             self._ffmpeg_proc = None
                 self.logn(t('audio_conversion_finished'))
                 self.set_progress(1, 100, speaker_setting)
+                remote_workflow_result = None
 
                 #-------------------------------------------------------
                 # 2) Speaker identification (diarization) with pyannote
@@ -2682,9 +2684,20 @@ class App(ctk.CTk):
                                     )
                                     else tmp_audio_file
                                 )
-                                diarization = self._run_diarize_subprocess(
-                                    diarization_audio, job
-                                )
+                                if self.inference_backend.supports_workflow(
+                                    job.diarization_model,
+                                    job.transcription_model,
+                                ):
+                                    remote_workflow_result = self._run_remote_workflow(
+                                        diarization_audio, job
+                                    )
+                                    diarization = list(
+                                        remote_workflow_result.diarization_segments
+                                    )
+                                else:
+                                    diarization = self._run_diarize_subprocess(
+                                        diarization_audio, job
+                                    )
                                 break
                             except Exception as err:
                                 if self._handle_cuda_fallback(
@@ -3019,9 +3032,18 @@ class App(ctk.CTk):
                             )
                             else tmp_audio_file
                         )
-                        info = self._run_whisper_subprocess_stream(
-                            transcription_audio, job, on_segment
-                        )
+                        if remote_workflow_result is not None:
+                            for segment in remote_workflow_result.transcription_segments:
+                                on_segment(segment)
+                            info = remote_workflow_result.transcription_info
+                            if info is None:
+                                raise InferenceWorkerError(
+                                    'Remote workflow returned no transcription metadata.'
+                                )
+                        else:
+                            info = self._run_whisper_subprocess_stream(
+                                transcription_audio, job, on_segment
+                            )
                         transcription_success = True
                         # if self.cancel:
                         #    raise Exception(t('err_user_cancelation')) 
@@ -3207,6 +3229,52 @@ class App(ctk.CTk):
             if error.trace:
                 self.logn(error.trace, where='file')
             raise
+
+    def _run_remote_workflow(self, tmp_audio_file: str, job):
+        """Run diarization and transcription with one queued remote upload."""
+        request = InferenceWorkflowRequest(
+            audio_path=tmp_audio_file,
+            diarization=DiarizationRequest(
+                audio_path=tmp_audio_file,
+                model=job.diarization_model,
+                num_speakers=job.num_speakers,
+            ),
+            transcription=TranscriptionRequest(
+                audio_path=tmp_audio_file,
+                model=job.transcription_model,
+                language=job.language,
+                multilingual=job.multilingual,
+                include_disfluencies=job.disfluencies,
+            ),
+        )
+
+        def handle_event(event: dict) -> None:
+            event_type = event.get('type')
+            operation = event.get('operation')
+            if event_type == 'status':
+                message_id = str(event.get('message_id') or '')
+                params = event.get('params') or {}
+                if message_id == 'server_queue_wait':
+                    self.logr(t(message_id, **params))
+                elif message_id:
+                    self.logn(t(message_id, **params))
+            elif event_type == 'log':
+                self.logn(
+                    str(event.get('msg') or ''),
+                    'error' if event.get('level') == 'error' else None,
+                )
+            elif event_type == 'progress' and event.get('pct') is not None:
+                percent = float(event['pct'])
+                if operation == 'diarization':
+                    self.set_progress(2, percent, _job_speaker_setting(job))
+                elif operation == 'transcription':
+                    self.set_progress(3, percent, _job_speaker_setting(job))
+
+        return self.inference_backend.run_workflow(
+            request,
+            on_event=handle_event,
+            is_cancelled=lambda: self.cancel,
+        )
 
     def _run_diarize_subprocess(self, tmp_audio_file: str, job):
         """Run Pyannote through the UI-independent local backend."""

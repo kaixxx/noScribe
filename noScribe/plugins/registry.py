@@ -114,6 +114,25 @@ class BackendRegistry:
             raise ValueError(f"Backend {plugin.manifest.id!r} cannot diarize.")
         return self._run(plugin, operation, request, **callbacks)
 
+    def supports_workflow(self, *refs: ModelRef) -> bool:
+        if not refs or len({ref.backend_id for ref in refs}) != 1:
+            return False
+        plugin = self.get(refs[0].backend_id)
+        return bool(getattr(plugin, "supports_workflows", False))
+
+    def run_workflow(self, request, **callbacks):
+        refs = [
+            operation.model
+            for operation in (request.diarization, request.transcription)
+            if operation is not None
+        ]
+        if not self.supports_workflow(*refs):
+            raise ValueError("The selected backend does not support workflows.")
+        plugin = self.get(refs[0].backend_id)
+        return self._run(
+            plugin, plugin.run_workflow, request, **callbacks
+        )
+
     def cancel(self) -> None:
         with self._lock:
             active = self._active
