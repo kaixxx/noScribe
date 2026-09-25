@@ -69,6 +69,7 @@ from .inference import (
 from .jobs import JobStatus, TranscriptionJob, TranscriptionQueue
 from .models import ModelRef
 from .plugins.factory import create_builtin_registry
+from .plugins.remote_profiles import load_remote_profiles
 from .tkHyperlinkManager import HyperlinkManager
 
 if platform.system() == "Darwin": # = MAC
@@ -760,6 +761,10 @@ def _init_app_state(app):
     app._headless = False
     app.user_models_dir = Path(config_dir) / "whisper_models"
     app.user_models_dir.mkdir(exist_ok=True)
+    app.remote_backends_dir = Path(config_dir) / "backends"
+    remote_profiles = load_remote_profiles(app.remote_backends_dir)
+    app.remote_backend_profiles = remote_profiles.profiles
+    app.remote_backend_profile_errors = remote_profiles.errors
     whisper_models_readme = app.user_models_dir / "readme.txt"
     if not whisper_models_readme.exists():
         with open(whisper_models_readme, "w") as file:
@@ -1241,6 +1246,12 @@ class App(ctk.CTk):
         self.log(t('welcome_credits', v=app_version, y=app_year))
         self.logn('https://github.com/kaixxx/noScribe', link='https://github.com/kaixxx/noScribe#readme')
         self.logn(t('welcome_instructions'))
+        for error in self.remote_backend_profile_errors:
+            self.logn(
+                f"Could not load remote backend profile {error.path.name!r}: "
+                f"{error.message}",
+                'error',
+            )
         
         # check for new releases
         if get_config('check_for_update', 'True') == 'True':

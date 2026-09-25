@@ -11,6 +11,11 @@ from noScribe.plugins.manifest import (
     PLUGIN_PROTOCOL_VERSION,
 )
 from noScribe.plugins.protocol import WorkerRequest, validate_worker_event
+from noScribe.plugins.remote_profiles import (
+    REMOTE_PROFILE_SCHEMA_VERSION,
+    RemoteBackendProfile,
+    load_remote_profiles,
+)
 from noScribe.plugins.registry import BackendRegistry
 from noScribe.inference import LocalWorkerSettings
 
@@ -180,3 +185,94 @@ def test_external_worker_protocol_has_versioned_request_and_shared_events():
     }
     with pytest.raises(ValueError, match="Unsupported worker event"):
         validate_worker_event({"type": "surprise"})
+
+
+def test_remote_profile_validates_and_normalizes_connection():
+    profile = RemoteBackendProfile.from_mapping({
+        "schema_version": REMOTE_PROFILE_SCHEMA_VERSION,
+        "id": "ifs-server",
+        "name": "IfS-Server",
+        "driver": "noscribe-http-v1",
+        "enabled": True,
+        "url": "https://noscribe.example.org/",
+        "api_key": "secret",
+    })
+
+    assert profile.id == "ifs-server"
+    assert profile.url == "https://noscribe.example.org"
+    assert profile.enabled is True
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("schema_version", 2, "schema version"),
+        ("schema_version", True, "schema version"),
+        ("id", "bad:id", "must not contain"),
+        ("url", "file:///tmp/server", "HTTP"),
+        ("url", "https://user:password@example.org", "credentials"),
+        ("enabled", "yes", "boolean"),
+        ("api_key", "", "non-empty string"),
+    ],
+)
+def test_remote_profile_rejects_invalid_values(field, value, match):
+    config = {
+        "schema_version": REMOTE_PROFILE_SCHEMA_VERSION,
+        "id": "ifs-server",
+        "name": "IfS-Server",
+        "driver": "noscribe-http-v1",
+        "enabled": True,
+        "url": "https://noscribe.example.org",
+        "api_key": "secret",
+    }
+    config[field] = value
+
+    with pytest.raises(ValueError, match=match):
+        RemoteBackendProfile.from_mapping(config)
+
+
+def test_remote_profile_loader_isolates_invalid_files_and_duplicate_ids(tmp_path):
+    profiles_dir = tmp_path / "backends"
+    profiles_dir.mkdir()
+    (profiles_dir / "01-first.yml").write_text(
+        "\n".join([
+            "schema_version: 1",
+            "id: ifs-server",
+            "name: IfS-Server",
+            "driver: noscribe-http-v1",
+            "url: https://noscribe.example.org",
+            "api_key: secret",
+        ]),
+        encoding="utf-8",
+    )
+    (profiles_dir / "02-duplicate.yaml").write_text(
+        "\n".join([
+            "schema_version: 1",
+            "id: ifs-server",
+            "name: Duplicate",
+            "driver: noscribe-http-v1",
+            "url: https://duplicate.example.org",
+            "api_key: secret",
+        ]),
+        encoding="utf-8",
+    )
+    (profiles_dir / "invalid.yml").write_text("- not-a-mapping\n", encoding="utf-8")
+
+    result = load_remote_profiles(profiles_dir)
+
+    assert [profile.name for profile in result.profiles] == ["IfS-Server"]
+    assert len(result.errors) == 2
+    assert {error.path.name for error in result.errors} == {
+        "02-duplicate.yaml",
+        "invalid.yml",
+    }
+
+
+def test_remote_profile_loader_creates_missing_directory(tmp_path):
+    profiles_dir = tmp_path / "backends"
+
+    result = load_remote_profiles(profiles_dir)
+
+    assert profiles_dir.is_dir()
+    assert result.profiles == ()
+    assert result.errors == ()

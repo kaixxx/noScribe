@@ -33,6 +33,42 @@ noScribe configuration directory. Their manifests use the same format, but
 their discovery and signature verification belong to the future plugin
 manager, not to `BackendRegistry`.
 
+## Remote backend profiles
+
+Remote server connections are configured independently from `config.yml`.
+Put one YAML file per connection into the `backends/` directory below the
+noScribe user configuration directory:
+
+```text
+backends/
+|-- ifs-server.yml
+`-- test-server.yml
+```
+
+Each file uses the versioned remote-profile schema:
+
+```yaml
+schema_version: 1
+id: ifs-server
+name: IfS-Server
+driver: noscribe-http-v1
+enabled: true
+url: https://noscribe.example.org
+api_key: secret
+```
+
+The `id` is the stable internal backend ID and must be unique across all
+profiles. The `name` is shown in the GUI after every model offered by this
+profile. URLs must use HTTP or HTTPS and must not contain credentials. API
+keys are currently stored as plain text, so profile files must be protected
+like other credentials.
+
+`remote_profiles.py` creates the directory and loads both `.yml` and `.yaml`
+files. Invalid files are reported individually and do not prevent other
+profiles from loading. A valid profile configures a connection; the driver is
+still responsible for obtaining the server's model catalogue and creating a
+remote plugin for the registry.
+
 ## Responsibilities
 
 - `manifest.py` parses and validates versioned `backend.json` files.
