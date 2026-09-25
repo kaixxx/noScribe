@@ -8,7 +8,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from .inference import LOCAL_WHISPER_BACKEND, ModelRef
+from .inference import LOCAL_WHISPER_BACKEND
+from .models import ModelRef
 
 
 class JobStatus(Enum):

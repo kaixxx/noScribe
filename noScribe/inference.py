@@ -8,6 +8,9 @@ import threading
 from dataclasses import dataclass, field
 from typing import Callable, Mapping, Optional
 
+from .models import ModelRef
+from .plugins.protocol import validate_worker_event
+
 
 LogCallback = Callable[[str, str], None]
 StatusCallback = Callable[[str, dict, str], None]
@@ -34,33 +37,6 @@ def _ignore_diarization_progress(step: str, percent: int) -> None:
 
 def _never_cancel() -> bool:
     return False
-
-
-@dataclass(frozen=True)
-class ModelRef:
-    """A model identifier qualified by the backend that provides it."""
-
-    backend_id: str
-    model_id: str
-
-    def __post_init__(self) -> None:
-        if not self.backend_id or not self.model_id:
-            raise ValueError("Model references require a backend and model ID.")
-        if ":" in self.backend_id or ":" in self.model_id:
-            raise ValueError("Backend and model IDs must not contain ':'.")
-
-    @classmethod
-    def parse(cls, value: str) -> "ModelRef":
-        try:
-            backend_id, model_id = value.split(":", 1)
-        except ValueError as error:
-            raise ValueError(
-                f"Invalid model reference {value!r}; expected 'backend:model'."
-            ) from error
-        return cls(backend_id=backend_id, model_id=model_id)
-
-    def __str__(self) -> str:
-        return f"{self.backend_id}:{self.model_id}"
 
 
 LOCAL_WHISPER_BACKEND = "local-whisper"
@@ -354,7 +330,7 @@ class LocalInferenceBackend:
                 self.cancel()
                 raise InferenceCancelled("Inference canceled")
             try:
-                return result_queue.get(timeout=0.1)
+                return validate_worker_event(result_queue.get(timeout=0.1))
             except pyqueue.Empty:
                 if not process.is_alive():
                     raise InferenceWorkerError(

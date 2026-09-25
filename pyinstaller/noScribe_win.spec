@@ -31,6 +31,7 @@ noScribe_datas += [
 ('../prompts/prompt_nd.yml', 'prompts/'), 
 ('../README.md', '.')]
 noScribe_datas += collect_data_files('customtkinter')
+noScribe_datas += collect_data_files('noScribe.plugins', includes=['**/backend.json'])
 noScribe_datas += copy_metadata('AdvancedHTMLParser')
 noScribe_datas += collect_data_files('faster_whisper')
 

@@ -1,0 +1,17 @@
+{
+  "id": "local-whisper",
+  "name": "Local Faster Whisper",
+  "version": "1.0.0",
+  "protocol_version": 1,
+  "engine": "whisper",
+  "execution": {
+    "type": "builtin",
+    "adapter": "local-whisper"
+  },
+  "capabilities": [
+    "transcription",
+    "word_timestamps",
+    "language_detection",
+    "multilingual"
+  ]
+}

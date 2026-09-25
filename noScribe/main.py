@@ -60,14 +60,15 @@ from .inference import (
     DiarizationRequest,
     DiarizationSegment,
     InferenceWorkerError,
+    LOCAL_DIARIZATION_BACKEND,
     LOCAL_WHISPER_BACKEND,
-    LocalInferenceBackend,
     LocalWorkerSettings,
-    ModelRef,
     TranscriptionRequest,
     TranscriptionSegment,
 )
 from .jobs import JobStatus, TranscriptionJob, TranscriptionQueue
+from .models import ModelRef
+from .plugins.factory import create_builtin_registry
 from .tkHyperlinkManager import HyperlinkManager
 
 if platform.system() == "Darwin": # = MAC
@@ -330,7 +331,9 @@ timestamp_re = re.compile(r'\[\d\d:\d\d:\d\d.\d\d\d --> \d\d:\d\d:\d\d.\d\d\d\]'
 
 
 # GUI presentation for the UI-independent job model.
-def format_job_summary(job: TranscriptionJob) -> str:
+def format_job_summary(
+    job: TranscriptionJob, transcription_model_name: str | None = None
+) -> str:
     """Build a localized, multi-line summary for GUI tooltips."""
     lines = []
 
@@ -346,7 +349,8 @@ def format_job_summary(job: TranscriptionJob) -> str:
     lines.append(f"{t('label_stop')} {stop_txt}")
     lines.append(f"{t('label_language')} {_job_language_name(job)}")
 
-    lines.append(f"{t('label_whisper_model')} {job.transcription_model}")
+    model_name = transcription_model_name or job.transcription_model.model_id
+    lines.append(f"{t('label_whisper_model')} {model_name}")
     lines.append(f"{t('label_pause')} {pause_label(job.pause)}")
     lines.append(f"{t('label_speaker')} {_job_speaker_setting(job)}")
     if job.speaker_names:
@@ -374,14 +378,13 @@ def _job_speaker_setting(job: TranscriptionJob) -> str:
     return str(job.num_speakers) if job.num_speakers is not None else 'auto'
 
 
-def _local_whisper_model_id(value: str) -> str:
-    """Accept a legacy bare model ID or a qualified local model reference."""
-    if ':' not in value:
-        return value
-    model = ModelRef.parse(value)
-    if model.backend_id != LOCAL_WHISPER_BACKEND:
-        raise ValueError(f"Model {model} is not provided by the local backend.")
-    return model.model_id
+def _model_ref(value: str) -> ModelRef:
+    """Accept a qualified ref or migrate a legacy bare local model ID."""
+    return (
+        ModelRef.parse(value)
+        if ':' in value
+        else ModelRef(LOCAL_WHISPER_BACKEND, value)
+    )
 
 
 def confirm_output_override(
@@ -780,23 +783,34 @@ def _init_app_state(app):
 
     # Get a list of available Whisper models.
     tmp = transcription.WhisperModelManager(app.user_models_dir)
-    app.whisper_models = tmp.get_installed_models()
+    app.local_whisper_models = tmp.get_installed_models()
     try:
         vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
     except (TypeError, ValueError):
         vad_threshold = 0.5
         config['voice_activity_detection_threshold'] = '0.5'
-    app.inference_backend = LocalInferenceBackend(
-        whisper_models={
-            name: str(model.path) for name, model in app.whisper_models.items()
-        },
-        settings=LocalWorkerSettings(
-            cpu_threads=int(number_threads),
-            force_whisper_cpu=force_whisper_cpu,
-            force_diarization_cpu=force_pyannote_cpu,
-            vad_threshold=vad_threshold,
-        ),
+    app.worker_settings = LocalWorkerSettings(
+        cpu_threads=int(number_threads),
+        force_whisper_cpu=force_whisper_cpu,
+        force_diarization_cpu=force_pyannote_cpu,
+        vad_threshold=vad_threshold,
     )
+    app.inference_backend = create_builtin_registry(
+        whisper_models={
+            name: str(model.path)
+            for name, model in app.local_whisper_models.items()
+        },
+        settings=app.worker_settings,
+    )
+    app.transcription_models = {
+        str(model.ref): model
+        for model in app.inference_backend.list_models("transcription")
+    }
+    app.transcription_model_options = app.inference_backend.model_options("transcription")
+    app.transcription_model_labels = {
+        str(model.ref): label
+        for label, model in app.transcription_model_options.items()
+    }
 
 
 class App(ctk.CTk):
@@ -934,7 +948,7 @@ class App(ctk.CTk):
 
             def _clicked(self, event=0):
                 self.old_value = self.get()
-                self._values = list(self.noScribe_parent.whisper_models.keys())
+                self._values = list(self.noScribe_parent.transcription_model_options.keys())
                 self._values.append('--------------------')
                 self._values.append(t('label_add_custom_models'))
                 self._dropdown_menu.configure(values=self._values)
@@ -967,14 +981,16 @@ class App(ctk.CTk):
         self.option_menu_whisper_model = CustomCTkOptionMenu(self, 
                                                        self.frame_options, 
                                                        width=100,
-                                                       values=list(self.whisper_models.keys()),
+                                                       values=list(self.transcription_model_options.keys()),
                                                        dynamic_resizing=False)
         self.option_menu_whisper_model.grid(column=1, row=3, sticky='e', pady=5)
-        last_whisper_model = get_config('last_whisper_model', 'precise')
-        if last_whisper_model in self.whisper_models:
-            self.option_menu_whisper_model.set(last_whisper_model)
-        elif len(self.whisper_models) > 0:
-            self.option_menu_whisper_model.set(next(iter(self.whisper_models)))
+        last_whisper_model = str(_model_ref(get_config('last_whisper_model', 'precise')))
+        if last_whisper_model in self.transcription_models:
+            self.option_menu_whisper_model.set(
+                self.transcription_model_labels[last_whisper_model]
+            )
+        elif len(self.transcription_model_options) > 0:
+            self.option_menu_whisper_model.set(next(iter(self.transcription_model_options)))
 
         # Mark pauses
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
@@ -1329,7 +1345,10 @@ class App(ctk.CTk):
 
             # Append a real, concise summary of the job's options
             try:
-                job_tooltip += '\n\n' + format_job_summary(job)
+                model_name = self.transcription_model_labels.get(
+                    str(job.transcription_model), job.transcription_model.model_id
+                )
+                job_tooltip += '\n\n' + format_job_summary(job, model_name)
             except Exception:
                 pass
 
@@ -2158,7 +2177,11 @@ class App(ctk.CTk):
         config['last_speaker'] = self.option_menu_speaker.get()
         # Names belong to the selected recording, not to future sessions.
         config.pop('last_speaker_names', None)
-        config['last_whisper_model'] = self.option_menu_whisper_model.get()
+        selected_model = self.transcription_model_options.get(
+            self.option_menu_whisper_model.get()
+        )
+        if selected_model is not None:
+            config['last_whisper_model'] = str(selected_model.ref)
         config['last_pause'] = self.option_menu_pause.get()
         config['last_overlapping'] = self.check_box_overlapping.get()
         config['last_timestamps'] = self.check_box_timestamps.get()
@@ -2190,8 +2213,9 @@ class App(ctk.CTk):
         
         # Get whisper model path
         sel_whisper_model = self.option_menu_whisper_model.get()
-        if sel_whisper_model not in self.whisper_models:
+        if sel_whisper_model not in self.transcription_model_options:
             raise FileNotFoundError(f"The whisper model '{sel_whisper_model}' does not exist.")
+        transcription_model = self.transcription_model_options[sel_whisper_model].ref
         # Persist the options the moment they are actually used. Saving only in
         # on_closing loses the last change
         # whenever the shutdown path bails early or is bypassed (Cmd+Q).
@@ -2208,7 +2232,7 @@ class App(ctk.CTk):
                 start_time=start_time,
                 stop_time=stop_time,
                 language_name=self.option_menu_language.get(),
-                transcription_model=ModelRef(LOCAL_WHISPER_BACKEND, sel_whisper_model),
+                transcription_model=transcription_model,
                 speaker_detection=self.option_menu_speaker.get(),
                 speaker_names=self.entry_speaker_names.get(),
                 overlapping=self.check_box_overlapping.get(),
@@ -2693,7 +2717,7 @@ class App(ctk.CTk):
 
                     # Prepare VAD data locally for pause adjustment (audio is
                     # 16 kHz mono after conversion by PyAV).
-                    vad_threshold = self.inference_backend.settings.vad_threshold
+                    vad_threshold = self.worker_settings.vad_threshold
                     sampling_rate = 16000
                     audio_array = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
                     duration = audio_array.shape[0] / sampling_rate
@@ -3006,7 +3030,7 @@ class App(ctk.CTk):
             prompt = t('pyannote_cuda_error_prompt', error=message)
             if tk.messagebox.askyesno(title='noScribe', message=prompt):
                 force_pyannote_cpu = True
-                self.inference_backend.force_cpu('pyannote')
+                self.inference_backend.get(LOCAL_DIARIZATION_BACKEND).force_cpu()
                 config['force_pyannote_cpu'] = 'true'
                 save_config()
                 return True
@@ -3018,7 +3042,7 @@ class App(ctk.CTk):
             prompt = t('whisper_cuda_error_prompt', error=message)
             if tk.messagebox.askyesno(title='noScribe', message=prompt):
                 force_whisper_cpu = True
-                self.inference_backend.force_cpu('whisper')
+                self.inference_backend.get(LOCAL_WHISPER_BACKEND).force_cpu()
                 config['force_whisper_cpu'] = 'true'
                 save_config()
                 return True
@@ -3213,25 +3237,22 @@ def run_cli_mode(args):
         # Validate and set the whisper model
         if args.model:
             try:
-                model_id = _local_whisper_model_id(args.model)
+                model_ref = _model_ref(args.model)
+                model = app.inference_backend.get_model(model_ref)
             except ValueError as error:
                 print(f"Error: {error}")
                 return 1
-            if model_id not in app.whisper_models:
-                print(f"Error: Model '{args.model}' not found.")
-                available = [
-                    str(ModelRef(LOCAL_WHISPER_BACKEND, name))
-                    for name in app.whisper_models
-                ]
-                print(f"Available models: {', '.join(available)}")
+            if "transcription" not in model.capabilities:
+                print(f"Error: Model '{model_ref}' cannot transcribe.")
                 return 1
-            args.model = model_id
+            args.model = str(model_ref)
         else:
             # Use default model
-            if 'precise' in app.whisper_models:
-                args.model = 'precise'
-            elif app.whisper_models:
-                args.model = next(iter(app.whisper_models))
+            default_model = str(ModelRef(LOCAL_WHISPER_BACKEND, 'precise'))
+            if default_model in app.transcription_models:
+                args.model = default_model
+            elif app.transcription_models:
+                args.model = next(iter(app.transcription_models))
             else:
                 print("Error: No Whisper models found.")
                 return 1
@@ -3295,11 +3316,11 @@ def show_available_models():
     try:
         # Create headless app instance to get models
         app = HeadlessApp()
-        models = app.whisper_models.keys()
+        models = app.inference_backend.list_models("transcription")
         
         print("Available Whisper models:")
         for model in models:
-            print(f"  - {ModelRef(LOCAL_WHISPER_BACKEND, model)}")
+            print(f"  - {model.ref} ({model.display_name})")
         
         if not models:
             print("  No models found. Please check your installation.")
@@ -3411,11 +3432,11 @@ def noScribeMain():
         desired_model_name = None
         if getattr(args, 'model', None):
             try:
-                model_id = _local_whisper_model_id(args.model)
+                model_ref = str(_model_ref(args.model))
             except ValueError:
-                model_id = None
-            if model_id in app.whisper_models:
-                desired_model_name = model_id
+                model_ref = None
+            if model_ref in app.transcription_models:
+                desired_model_name = app.transcription_model_labels[model_ref]
             else:
                 app.logn(f"Warning: Model '{args.model}' not found. Using default GUI selection.")
 
