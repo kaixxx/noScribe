@@ -60,7 +60,10 @@ from .inference import (
     DiarizationRequest,
     DiarizationSegment,
     InferenceWorkerError,
+    LOCAL_WHISPER_BACKEND,
     LocalInferenceBackend,
+    LocalWorkerSettings,
+    ModelRef,
     TranscriptionRequest,
     TranscriptionSegment,
 )
@@ -341,18 +344,44 @@ def format_job_summary(job: TranscriptionJob) -> str:
     stop_txt = utils.ms_to_str(job.stop) if job.stop > 0 else 'end'
     lines.append(f"{t('label_start')} {start_txt}")
     lines.append(f"{t('label_stop')} {stop_txt}")
-    lines.append(f"{t('label_language')} {job.language_name}")
+    lines.append(f"{t('label_language')} {_job_language_name(job)}")
 
-    model_disp = getattr(job.whisper_model, 'name', None) or str(job.whisper_model or '')
-    lines.append(f"{t('label_whisper_model')} {model_disp}")
+    lines.append(f"{t('label_whisper_model')} {job.transcription_model}")
     lines.append(f"{t('label_pause')} {pause_label(job.pause)}")
-    lines.append(f"{t('label_speaker')} {job.speaker_detection}")
+    lines.append(f"{t('label_speaker')} {_job_speaker_setting(job)}")
     if job.speaker_names:
         lines.append(f"{t('label_speaker_names')} {', '.join(job.speaker_names)}")
     lines.append(f"{t('label_overlapping')} {yn(job.overlapping)}")
     lines.append(f"{t('label_disfluencies')} {yn(job.disfluencies)}")
     lines.append(f"{t('label_timestamps')} {yn(job.timestamps)}")
     return "\n".join(line for line in lines if line)
+
+
+def _job_language_name(job: TranscriptionJob) -> str:
+    if job.multilingual:
+        return 'Multilingual'
+    if job.language is None:
+        return 'Auto'
+    return next(
+        (name for name, code in languages.items() if code == job.language),
+        job.language,
+    )
+
+
+def _job_speaker_setting(job: TranscriptionJob) -> str:
+    if not job.diarization_enabled:
+        return 'none'
+    return str(job.num_speakers) if job.num_speakers is not None else 'auto'
+
+
+def _local_whisper_model_id(value: str) -> str:
+    """Accept a legacy bare model ID or a qualified local model reference."""
+    if ':' not in value:
+        return value
+    model = ModelRef.parse(value)
+    if model.backend_id != LOCAL_WHISPER_BACKEND:
+        raise ValueError(f"Model {model} is not provided by the local backend.")
+    return model.model_id
 
 
 def confirm_output_override(
@@ -395,7 +424,7 @@ def parse_speaker_names(speaker_names):
 
 
 def create_transcription_job(audio_file=None, transcript_file=None, start_time=None, stop_time=None,
-                           language_name=None, whisper_model_name=None, speaker_detection=None,
+                           language_name=None, transcription_model=None, speaker_detection=None,
                            speaker_names=None,
                            overlapping=None, timestamps=None, disfluencies=None, pause=None,
                            cli_mode=False) -> TranscriptionJob:
@@ -410,9 +439,8 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     job.audio_file = audio_file or ''
     job.transcript_file = transcript_file or ''
     if job.transcript_file:
-        job.file_ext = os.path.splitext(job.transcript_file)[1][1:]
-        if not job.file_ext in ['html', 'txt', 'vtt']:
-            raise Exception(t('err_unsupported_output_format', file_type=job.file_ext))
+        if job.output_format not in ['html', 'txt', 'vtt']:
+            raise Exception(t('err_unsupported_output_format', file_type=job.output_format))
     
     # Time range
     job.start = start_time if start_time is not None else 0
@@ -421,23 +449,30 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     # Language - handle both language names and codes
     if language_name:
         if language_name in languages.values():
-            # Find language name by code
-            job.language_name = next(name for name, code in languages.items() if code == language_name)
+            job.multilingual = language_name == 'multilingual'
+            job.language = None if language_name in ('auto', 'multilingual') else language_name
         elif language_name in languages.keys():
-            # Language name provided directly
-            job.language_name = language_name
+            job.multilingual = language_name == 'Multilingual'
+            job.language = None if language_name in ('Auto', 'Multilingual') else languages[language_name]
         else:
             raise ValueError(f"Unknown language: {language_name}")
-    else:
-        job.language_name = 'Auto'
-    
-    # Model (will be validated later when we have access to the app instance)
-    job.whisper_model = whisper_model_name or 'precise'
+
+    if isinstance(transcription_model, ModelRef):
+        job.transcription_model = transcription_model
+    elif transcription_model:
+        model_value = str(transcription_model)
+        job.transcription_model = (
+            ModelRef.parse(model_value)
+            if ':' in model_value
+            else ModelRef(LOCAL_WHISPER_BACKEND, model_value)
+        )
     
     # Processing options with defaults
-    job.speaker_detection = speaker_detection if speaker_detection is not None else 'auto'
+    speaker_setting = speaker_detection if speaker_detection is not None else 'auto'
+    job.diarization_enabled = speaker_setting != 'none'
+    job.num_speakers = int(speaker_setting) if str(speaker_setting).isdigit() else None
     # Hidden GUI names must not appear in job metadata when detection is off.
-    job.speaker_names = parse_speaker_names(speaker_names) if job.speaker_detection != 'none' else []
+    job.speaker_names = parse_speaker_names(speaker_names) if job.diarization_enabled else []
     job.overlapping = overlapping if overlapping is not None else True
     job.timestamps = timestamps if timestamps is not None else False
     job.disfluencies = disfluencies if disfluencies is not None else True
@@ -454,37 +489,8 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     else:
         job.pause = 1  # default to '1sec+'
     
-    # Config-based options (use defaults from config)
-    job.whisper_beam_size = get_config('whisper_beam_size', 1)
-    job.whisper_temperature = get_config('whisper_temperature', 0.0)
-    job.whisper_compute_type = get_config('whisper_compute_type', 'default')
-    job.timestamp_interval = get_config('timestamp_interval', 60_000)
-    job.timestamp_color = get_config('timestamp_color', '#78909C')
-    job.pause_marker = get_config('pause_seconds_marker', '.')
-    job.auto_save = False if get_config('auto_save', 'True') == 'False' else True
-        
-    job.vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
-    
-    # Platform-specific XPU settings
-    """    
-    if platform.system() == "Darwin":  # MAC
-        xpu = get_config('pyannote_xpu', 'mps' if platform.mac_ver()[0] >= '12.3' else 'cpu')
-        job.pyannote_xpu = 'mps' if xpu == 'mps' else 'cpu'
-    elif platform.system() in ('Windows', 'Linux'):
-        try:
-            cuda_available = torch.cuda.is_available() and get_cuda_device_count() > 0
-        except:
-            cuda_available = False
-        xpu = get_config('pyannote_xpu', 'cuda' if cuda_available else 'cpu')
-        job.pyannote_xpu = 'cuda' if xpu == 'cuda' else 'cpu'
-        whisper_xpu = get_config('whisper_xpu', 'cuda' if cuda_available else 'cpu')
-        job.whisper_xpu = 'cuda' if whisper_xpu == 'cuda' else 'cpu'
-    else:
-        raise Exception('Platform not supported yet.')
-    """    
-    
     # Check for invalid VTT options
-    if job.file_ext == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
+    if job.output_format == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
         if cli_mode:
             print("Warning: VTT format doesn't support pause markers, overlapping speech, or timestamps. These options will be disabled.")
         job.pause = 0
@@ -505,7 +511,7 @@ def create_job_from_cli_args(args) -> TranscriptionJob:
         start_time=start_time,
         stop_time=stop_time,
         language_name=args.language,
-        whisper_model_name=args.model,
+        transcription_model=args.model,
         speaker_detection=args.speaker_detection,
         speaker_names=args.speaker_names,
         overlapping=args.overlapping,
@@ -549,7 +555,7 @@ Examples:
     parser.add_argument('--language', default=None,
                        help='Language code (e.g., en, de, fr) or "auto" for auto-detection')
     parser.add_argument('--model', default=None,
-                       help='Whisper model to use (use --help-models to see available models)')
+                       help='Qualified model reference (for example local-whisper:precise); legacy bare local model IDs are also accepted')
     parser.add_argument('--speaker-detection', choices=['none', 'auto', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], default=None,
                        help='Speaker detection/diarization setting')
     parser.add_argument('--speaker-names', default=None,
@@ -767,7 +773,6 @@ def _init_app_state(app):
     app.current_progress = -1
     # Track background activity for robust shutdown
     app._worker_threads = []
-    app.inference_backend = LocalInferenceBackend()
     app._ffmpeg_proc = None
     app._shutting_down = False
     app._ui_thread_id = get_ident()
@@ -776,6 +781,22 @@ def _init_app_state(app):
     # Get a list of available Whisper models.
     tmp = transcription.WhisperModelManager(app.user_models_dir)
     app.whisper_models = tmp.get_installed_models()
+    try:
+        vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
+    except (TypeError, ValueError):
+        vad_threshold = 0.5
+        config['voice_activity_detection_threshold'] = '0.5'
+    app.inference_backend = LocalInferenceBackend(
+        whisper_models={
+            name: str(model.path) for name, model in app.whisper_models.items()
+        },
+        settings=LocalWorkerSettings(
+            cpu_threads=int(number_threads),
+            force_whisper_cpu=force_whisper_cpu,
+            force_diarization_cpu=force_pyannote_cpu,
+            vad_threshold=vad_threshold,
+        ),
+    )
 
 
 class App(ctk.CTk):
@@ -2187,7 +2208,7 @@ class App(ctk.CTk):
                 start_time=start_time,
                 stop_time=stop_time,
                 language_name=self.option_menu_language.get(),
-                whisper_model_name=self.whisper_models[sel_whisper_model],  # Pass the full model object
+                transcription_model=ModelRef(LOCAL_WHISPER_BACKEND, sel_whisper_model),
                 speaker_detection=self.option_menu_speaker.get(),
                 speaker_names=self.entry_speaker_names.get(),
                 overlapping=self.check_box_overlapping.get(),
@@ -2197,7 +2218,7 @@ class App(ctk.CTk):
                 cli_mode=False
             )
             # Handle VTT format warnings in GUI mode
-            if job.file_ext == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
+            if job.output_format == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
                 self.logn()
                 self.logn(t('err_vtt_invalid_options'), 'error')
             
@@ -2325,7 +2346,7 @@ class App(ctk.CTk):
             if not getattr(self, '_headless', False) \
                     and queue_jobs_processed == 1 \
                     and job \
-                    and job.file_ext == 'html' \
+                    and job.output_format == 'html' \
                     and job.status == JobStatus.FINISHED \
                     and get_config('auto_edit_transcript', 'True') == 'True':
                 self.launch_editor(job.transcript_file)
@@ -2355,6 +2376,11 @@ class App(ctk.CTk):
         tmpdir = TemporaryDirectory('noScribe')
         tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
         orig_transcript_file = job.transcript_file
+        speaker_setting = _job_speaker_setting(job)
+        timestamp_interval = int(get_config('timestamp_interval', 60_000))
+        timestamp_color = str(get_config('timestamp_color', '#78909C'))
+        pause_marker = str(get_config('pause_seconds_marker', '.'))
+        auto_save = str(get_config('auto_save', 'True')).lower() != 'false'
 
         try:
             # Create option info string for logging
@@ -2363,8 +2389,10 @@ class App(ctk.CTk):
                 option_info += f'{t("label_start")} {utils.ms_to_str(job.start)} | '.replace(':', '꞉') # replace the normal colon here in the header with a special character so that MAXQDA does not misinterpret it as a time marker in the transcript.
             if job.stop > 0:
                 option_info += f'{t("label_stop")} {utils.ms_to_str(job.stop)} | '.replace(':', '꞉')
-            option_info += f'{t("label_language")} {job.language_name} ({languages[job.language_name]}) | '
-            option_info += f'{t("label_speaker")} {job.speaker_detection} | '
+            language_name = _job_language_name(job)
+            language_code = job.language or ('multilingual' if job.multilingual else 'auto')
+            option_info += f'{t("label_language")} {language_name} ({language_code}) | '
+            option_info += f'{t("label_speaker")} {_job_speaker_setting(job)} | '
             if job.speaker_names:
                 option_info += f'{t("label_speaker_names")} {", ".join(job.speaker_names)} | '
             # Render the on/off options as localized yes/no and the pause
@@ -2382,12 +2410,8 @@ class App(ctk.CTk):
                 os.makedirs(f'{config_dir}/log')
             self.log_file = open(f'{config_dir}/log/{Path(job.transcript_file).stem}.log', 'w', encoding="utf-8")
 
-            # Log job configuration
-            self.logn(f'whisper beam size: {job.whisper_beam_size}', where='file')
-            self.logn(f'whisper temperature: {job.whisper_temperature}', where='file')
-            self.logn(f'whisper compute type: {job.whisper_compute_type}', where='file')
-            self.logn(f'timestamp_interval: {job.timestamp_interval}', where='file')
-            self.logn(f'timestamp_color: {job.timestamp_color}', where='file')
+            # Log backend-independent job configuration.
+            self.logn(f'transcription model: {job.transcription_model}', where='file')
 
             # Log CPU capabilities
             self.logn("=== CPU FEATURES ===", where="file")
@@ -2397,17 +2421,6 @@ class App(ctk.CTk):
                     self.logn('    {:24}: {}'.format(key, value), where="file")
             elif platform.system() == "Darwin": # = MAC
                 self.logn(f"System: MAC {platform.machine()}", where="file")
-                """
-                if platform.mac_ver()[0] >= '12.3': # MPS needs macOS 12.3+
-                    if job.pyannote_xpu == 'mps':
-                        self.logn("macOS version >= 12.3:\nUsing MPS (with PYTORCH_ENABLE_MPS_FALLBACK enabled)", where="file")
-                    elif job.pyannote_xpu == 'cpu':
-                        self.logn("macOS version >= 12.3:\nUser selected to use CPU (results will be better, but you might wanna make yourself a coffee)", where="file")
-                    else:
-                        self.logn("macOS version >= 12.3:\nInvalid option for 'pyannote_xpu' in config.yml (should be 'mps' or 'cpu')\nYou might wanna change this\nUsing MPS anyway (with PYTORCH_ENABLE_MPS_FALLBACK enabled)", where="file")
-                else:
-                    self.logn("macOS version < 12.3:\nMPS not available: Using CPU\nPerformance might be poor\nConsider updating macOS, if possible", where="file")
-                """
             try:
 
                 #-------------------------------------------------------
@@ -2465,7 +2478,7 @@ class App(ctk.CTk):
                             count=decode_error_count,
                         )
                     )
-                self.set_progress(1, 100, job.speaker_detection)
+                self.set_progress(1, 100, speaker_setting)
 
                 #-------------------------------------------------------
                 # 2) Speaker identification (diarization) with pyannote
@@ -2535,7 +2548,7 @@ class App(ctk.CTk):
 
                 # Start Diarization:
 
-                if job.speaker_detection != 'none':
+                if job.diarization_enabled:
                     try:
                         job.status = JobStatus.SPEAKER_IDENTIFICATION
                         self.update_queue_table()
@@ -2543,7 +2556,7 @@ class App(ctk.CTk):
                         self.logn()
                         self.logn(t('start_identifying_speakers'), 'highlight')
                         self.logn(t('loading_pyannote'))
-                        # self.set_progress(1, 100, job.speaker_detection)
+                        # self.set_progress(1, 100, speaker_setting)
 
                         while True:
                             try:
@@ -2646,14 +2659,14 @@ class App(ctk.CTk):
                     def save_doc():
                         nonlocal last_auto_save
                         txt = ''
-                        if job.file_ext == 'html':
+                        if job.output_format == 'html':
                             txt = d.asHTML()
-                        elif job.file_ext == 'txt':
+                        elif job.output_format == 'txt':
                             txt = utils.html_to_text(d.asHTML(), use_only_body=True)
-                        elif job.file_ext == 'vtt':
+                        elif job.output_format == 'vtt':
                             txt = utils.html_to_webvtt(d.asHTML())
                         else:
-                            raise TypeError(f'Invalid file type "{job.file_ext}".')
+                            raise TypeError(f'Invalid file type "{job.output_format}".')
                         try:
                             if txt != '':
                                 with open(job.transcript_file, 'w', encoding="utf-8") as f:
@@ -2680,21 +2693,17 @@ class App(ctk.CTk):
 
                     # Prepare VAD data locally for pause adjustment (audio is
                     # 16 kHz mono after conversion by PyAV).
-                    try:
-                        job.vad_threshold = float(config['voice_activity_detection_threshold'])
-                    except Exception:
-                        config['voice_activity_detection_threshold'] = '0.5'
-                        job.vad_threshold = 0.5
+                    vad_threshold = self.inference_backend.settings.vad_threshold
                     sampling_rate = 16000
                     audio_array = decode_audio(tmp_audio_file, sampling_rate=sampling_rate)
                     duration = audio_array.shape[0] / sampling_rate
                     try:
                         vad_parameters = VadOptions(min_silence_duration_ms=500,
-                                                    threshold=job.vad_threshold,
+                                                    threshold=vad_threshold,
                                                     speech_pad_ms=0)
                     except TypeError:
                         vad_parameters = VadOptions(min_silence_duration_ms=500,
-                                                    onset=job.vad_threshold,
+                                                    onset=vad_threshold,
                                                     speech_pad_ms=0)
                     speech_chunks = get_speech_timestamps(audio_array, vad_parameters)
                     # Pause adjustment only needs timestamps and duration from here on.
@@ -2760,7 +2769,7 @@ class App(ctk.CTk):
                             elif pause_len >= 10: # longer than 10 seconds
                                 pause_str = ' ' + t('pause_seconds', seconds=pause_len)
                             else: # less than 10 seconds
-                                pause_str = ' (' + (job.pause_marker * pause_len) + ')'
+                                pause_str = ' (' + (pause_marker * pause_len) + ')'
 
                             if first_segment:
                                 pause_str = pause_str.lstrip() + ' '
@@ -2782,7 +2791,7 @@ class App(ctk.CTk):
                         seg_text = segment.text
                         seg_html = html.escape(seg_text, quote=False)
 
-                        if job.speaker_detection != 'none':
+                        if job.diarization_enabled:
                             # Speaker *identity* (change detection, overlap marker)
                             # is decided on the raw diarization label; the mapped
                             # user name is only for display. Keeping them apart
@@ -2820,11 +2829,11 @@ class App(ctk.CTk):
                                     speaker_disp = new_speaker_disp
                                     # add timestamp
                                     if job.timestamps:
-                                        seg_html = f'{speaker_disp}: <span style="color: {job.timestamp_color}" >{ts}</span>{html.escape(seg_text, quote=False)}'
+                                        seg_html = f'{speaker_disp}: <span style="color: {timestamp_color}" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                         seg_text = f'{speaker_disp}: {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
-                                        if job.file_ext != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
+                                        if job.output_format != 'vtt': # in vtt files, speaker names are added as special voice tags so skip this here
                                             seg_text = f'{speaker_disp}:{seg_text}'
                                             seg_html = html.escape(seg_text, quote=False)
                                         else:
@@ -2833,16 +2842,16 @@ class App(ctk.CTk):
                                         
                             else: # same speaker
                                 if job.timestamps:
-                                    if (start - last_timestamp_ms) > job.timestamp_interval:
-                                        seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
+                                    if (start - last_timestamp_ms) > timestamp_interval:
+                                        seg_html = f' <span style=\"color: {timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                         seg_text = f' {ts}{seg_text}'
                                         last_timestamp_ms = start
                                     else:
                                         seg_html = html.escape(seg_text, quote=False)
 
                         else: # no speaker detection
-                            if job.timestamps and (first_segment or (start - last_timestamp_ms) > job.timestamp_interval):
-                                seg_html = f' <span style=\"color: {job.timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
+                            if job.timestamps and (first_segment or (start - last_timestamp_ms) > timestamp_interval):
+                                seg_html = f' <span style=\"color: {timestamp_color}\" >{ts}</span>{html.escape(seg_text, quote=False)}'
                                 seg_text = f' {ts}{seg_text}'
                                 last_timestamp_ms = start
                             else:
@@ -2863,7 +2872,7 @@ class App(ctk.CTk):
 
                         # auto save periodically
                         nonlocal last_auto_save
-                        if job.auto_save:
+                        if auto_save:
                             if (datetime.datetime.now() - last_auto_save).total_seconds() > 5:
                                 save_doc()
                                 job.has_partial_transcript = True
@@ -2871,7 +2880,7 @@ class App(ctk.CTk):
                         # per-segment progress based on total duration
                         try:
                             progr = round((segment.end/duration) * 100)
-                            self.set_progress(3, progr, job.speaker_detection)
+                            self.set_progress(3, progr, speaker_setting)
                         except Exception:
                             pass
                     
@@ -2997,6 +3006,7 @@ class App(ctk.CTk):
             prompt = t('pyannote_cuda_error_prompt', error=message)
             if tk.messagebox.askyesno(title='noScribe', message=prompt):
                 force_pyannote_cpu = True
+                self.inference_backend.force_cpu('pyannote')
                 config['force_pyannote_cpu'] = 'true'
                 save_config()
                 return True
@@ -3008,6 +3018,7 @@ class App(ctk.CTk):
             prompt = t('whisper_cuda_error_prompt', error=message)
             if tk.messagebox.askyesno(title='noScribe', message=prompt):
                 force_whisper_cpu = True
+                self.inference_backend.force_cpu('whisper')
                 config['force_whisper_cpu'] = 'true'
                 save_config()
                 return True
@@ -3017,44 +3028,30 @@ class App(ctk.CTk):
 
     def _run_whisper_subprocess_stream(self, tmp_audio_file: str, job, on_segment):
         """Run Faster-Whisper through the UI-independent local backend."""
-        global force_whisper_cpu
-
-        language_code = None
-        if job.language_name not in ('Auto', 'Multilingual'):
-            language_code = languages.get(job.language_name)
-
-        try:
-            vad_threshold = float(config.get('voice_activity_detection_threshold', '0.5'))
-        except Exception:
-            vad_threshold = 0.5
-
-        model_path = getattr(job.whisper_model, 'path', job.whisper_model)
         request = TranscriptionRequest(
             audio_path=tmp_audio_file,
-            model_path=str(model_path),
-            language_name=job.language_name,
-            language_code=language_code,
-            device='cpu' if force_whisper_cpu else 'auto',
-            compute_type=job.whisper_compute_type,
-            cpu_threads=number_threads,
-            disfluencies=job.disfluencies,
-            beam_size=5,
-            word_timestamps=True,
-            vad_threshold=vad_threshold,
-            locale=config.get('locale', 'en'),
+            model=job.transcription_model,
+            language=job.language,
+            multilingual=job.multilingual,
+            include_disfluencies=job.disfluencies,
         )
 
         def log_message(level: str, message: str) -> None:
             self.logn(message, 'error' if level == 'error' else None)
 
         def update_progress(percent: float, detail: str | None) -> None:
-            self.set_progress(3, percent, job.speaker_detection)
+            self.set_progress(3, percent, _job_speaker_setting(job))
+
+        def show_status(message_id: str, params: dict, level: str) -> None:
+            message = t(message_id, **params)
+            self.logn(message, 'error' if level == 'error' else None)
 
         try:
             return self.inference_backend.transcribe(
                 request,
                 on_segment=on_segment,
                 on_log=log_message,
+                on_status=show_status,
                 on_progress=update_progress,
                 is_cancelled=lambda: self.cancel,
             )
@@ -3066,16 +3063,9 @@ class App(ctk.CTk):
 
     def _run_diarize_subprocess(self, tmp_audio_file: str, job):
         """Run Pyannote through the UI-independent local backend."""
-        global force_pyannote_cpu
-
         request = DiarizationRequest(
             audio_path=tmp_audio_file,
-            device='cpu' if force_pyannote_cpu else '',
-            num_speakers=(
-                int(job.speaker_detection)
-                if str(job.speaker_detection).isdigit()
-                else None
-            ),
+            num_speakers=job.num_speakers,
         )
 
         def log_message(level: str, message: str) -> None:
@@ -3084,9 +3074,9 @@ class App(ctk.CTk):
         def update_progress(step: str, percent: int) -> None:
             self.logr(f'{step}: {percent}%')
             if step == 'segmentation':
-                self.set_progress(2, percent * 0.3, job.speaker_detection)
+                self.set_progress(2, percent * 0.3, _job_speaker_setting(job))
             elif step == 'embeddings':
-                self.set_progress(2, 30 + (percent * 0.7), job.speaker_detection)
+                self.set_progress(2, 30 + (percent * 0.7), _job_speaker_setting(job))
 
         try:
             return self.inference_backend.diarize(
@@ -3222,10 +3212,20 @@ def run_cli_mode(args):
         
         # Validate and set the whisper model
         if args.model:
-            if args.model not in app.whisper_models:
-                print(f"Error: Model '{args.model}' not found.")
-                print(f"Available models: {', '.join(app.whisper_models.keys())}")
+            try:
+                model_id = _local_whisper_model_id(args.model)
+            except ValueError as error:
+                print(f"Error: {error}")
                 return 1
+            if model_id not in app.whisper_models:
+                print(f"Error: Model '{args.model}' not found.")
+                available = [
+                    str(ModelRef(LOCAL_WHISPER_BACKEND, name))
+                    for name in app.whisper_models
+                ]
+                print(f"Available models: {', '.join(available)}")
+                return 1
+            args.model = model_id
         else:
             # Use default model
             if 'precise' in app.whisper_models:
@@ -3238,9 +3238,6 @@ def run_cli_mode(args):
         
         # Create job from CLI arguments
         job = create_job_from_cli_args(args)
-        
-        # Set the whisper model path
-        job.whisper_model = app.whisper_models[args.model]
         
         # Validate files
         if not os.path.exists(job.audio_file):
@@ -3261,9 +3258,9 @@ def run_cli_mode(args):
         
         print(f"Starting transcription of '{job.audio_file}'...")
         print(f"Output will be saved to '{job.transcript_file}'")
-        print(f"Language: {job.language_name}")
+        print(f"Language: {_job_language_name(job)}")
         print(f"Model: {args.model}")
-        print(f"Speaker detection: {job.speaker_detection}")
+        print(f"Speaker detection: {_job_speaker_setting(job)}")
         print()
         
         # Start transcription worker with the queue
@@ -3302,7 +3299,7 @@ def show_available_models():
         
         print("Available Whisper models:")
         for model in models:
-            print(f"  - {model}")
+            print(f"  - {ModelRef(LOCAL_WHISPER_BACKEND, model)}")
         
         if not models:
             print("  No models found. Please check your installation.")
@@ -3413,8 +3410,12 @@ def noScribeMain():
         # Prefill selected model if provided
         desired_model_name = None
         if getattr(args, 'model', None):
-            if args.model in app.whisper_models:
-                desired_model_name = args.model
+            try:
+                model_id = _local_whisper_model_id(args.model)
+            except ValueError:
+                model_id = None
+            if model_id in app.whisper_models:
+                desired_model_name = model_id
             else:
                 app.logn(f"Warning: Model '{args.model}' not found. Using default GUI selection.")
 

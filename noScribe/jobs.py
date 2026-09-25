@@ -5,7 +5,10 @@ from __future__ import annotations
 import datetime
 import os
 from enum import Enum
-from typing import Any, Optional
+from pathlib import Path
+from typing import Optional
+
+from .inference import LOCAL_WHISPER_BACKEND, ModelRef
 
 
 class JobStatus(Enum):
@@ -43,12 +46,12 @@ class TranscriptionJob:
         self.start: int = 0
         self.stop: int = 0
 
-        self.language_name: str = 'Auto'
-        # Kept deliberately generic: job creation initially stores a model
-        # name and GUI validation later replaces it with a WhisperModel.
-        self.whisper_model: Any = None
+        self.language: Optional[str] = None
+        self.multilingual: bool = False
+        self.transcription_model = ModelRef(LOCAL_WHISPER_BACKEND, 'precise')
 
-        self.speaker_detection: str = 'auto'
+        self.diarization_enabled: bool = True
+        self.num_speakers: Optional[int] = None
         self.speaker_names: list[str] = []
         self.speaker_name_map: dict[str, str] = {}
         self.overlapping: bool = True
@@ -56,17 +59,9 @@ class TranscriptionJob:
         self.disfluencies: bool = True
         self.pause: int = 0
 
-        self.whisper_beam_size: int = 1
-        self.whisper_temperature: float = 0.0
-        self.whisper_compute_type: str = 'default'
-        self.timestamp_interval: int = 60_000
-        self.timestamp_color: str = '#78909C'
-        self.pause_marker: str = '.'
-        self.auto_save: bool = True
-        self.whisper_xpu: str = 'cpu'
-        self.vad_threshold: float = 0.5
-
-        self.file_ext: str = ''
+    @property
+    def output_format(self) -> str:
+        return Path(self.transcript_file).suffix.lstrip('.').lower()
 
     def set_running(self) -> None:
         self.status = JobStatus.AUDIO_CONVERSION

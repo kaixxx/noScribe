@@ -6,16 +6,21 @@ import multiprocessing as mp
 import queue as pyqueue
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Callable, Mapping, Optional
 
 
 LogCallback = Callable[[str, str], None]
+StatusCallback = Callable[[str, dict, str], None]
 TranscriptionProgressCallback = Callable[[float, Optional[str]], None]
 DiarizationProgressCallback = Callable[[str, int], None]
 CancelCallback = Callable[[], bool]
 
 
 def _ignore_log(level: str, message: str) -> None:
+    pass
+
+
+def _ignore_status(message_id: str, params: dict, level: str) -> None:
     pass
 
 
@@ -29,6 +34,47 @@ def _ignore_diarization_progress(step: str, percent: int) -> None:
 
 def _never_cancel() -> bool:
     return False
+
+
+@dataclass(frozen=True)
+class ModelRef:
+    """A model identifier qualified by the backend that provides it."""
+
+    backend_id: str
+    model_id: str
+
+    def __post_init__(self) -> None:
+        if not self.backend_id or not self.model_id:
+            raise ValueError("Model references require a backend and model ID.")
+        if ":" in self.backend_id or ":" in self.model_id:
+            raise ValueError("Backend and model IDs must not contain ':'.")
+
+    @classmethod
+    def parse(cls, value: str) -> "ModelRef":
+        try:
+            backend_id, model_id = value.split(":", 1)
+        except ValueError as error:
+            raise ValueError(
+                f"Invalid model reference {value!r}; expected 'backend:model'."
+            ) from error
+        return cls(backend_id=backend_id, model_id=model_id)
+
+    def __str__(self) -> str:
+        return f"{self.backend_id}:{self.model_id}"
+
+
+LOCAL_WHISPER_BACKEND = "local-whisper"
+LOCAL_DIARIZATION_BACKEND = "local-pyannote"
+
+
+@dataclass
+class LocalWorkerSettings:
+    """Machine-specific settings shared by all local inference jobs."""
+
+    cpu_threads: int = 4
+    force_whisper_cpu: bool = False
+    force_diarization_cpu: bool = False
+    vad_threshold: float = 0.5
 
 
 @dataclass(frozen=True)
@@ -103,51 +149,19 @@ class DiarizationSegment:
 @dataclass(frozen=True)
 class TranscriptionRequest:
     audio_path: str
-    model_path: str
-    language_name: str
-    language_code: Optional[str]
-    device: str = "auto"
-    compute_type: str = "default"
-    cpu_threads: int = 4
-    local_files_only: bool = True
-    disfluencies: bool = True
-    beam_size: int = 5
-    word_timestamps: bool = True
-    vad_filter: bool = True
-    vad_threshold: float = 0.5
-    locale: str = "en"
-
-    def to_worker_args(self) -> dict:
-        return {
-            "model_path": self.model_path,
-            "device": self.device,
-            "compute_type": self.compute_type,
-            "cpu_threads": self.cpu_threads,
-            "local_files_only": self.local_files_only,
-            "audio_path": self.audio_path,
-            "language_name": self.language_name,
-            "language_code": self.language_code,
-            "disfluencies": self.disfluencies,
-            "beam_size": self.beam_size,
-            "word_timestamps": self.word_timestamps,
-            "vad_filter": self.vad_filter,
-            "vad_threshold": self.vad_threshold,
-            "locale": self.locale,
-        }
+    model: ModelRef
+    language: Optional[str] = None
+    multilingual: bool = False
+    include_disfluencies: bool = True
 
 
 @dataclass(frozen=True)
 class DiarizationRequest:
     audio_path: str
+    model: ModelRef = field(
+        default_factory=lambda: ModelRef(LOCAL_DIARIZATION_BACKEND, "default")
+    )
     num_speakers: Optional[int] = None
-    device: str = ""
-
-    def to_worker_args(self) -> dict:
-        return {
-            "audio_path": self.audio_path,
-            "num_speakers": self.num_speakers,
-            "device": self.device,
-        }
 
 
 class InferenceCancelled(RuntimeError):
@@ -165,11 +179,25 @@ class InferenceWorkerError(RuntimeError):
 class LocalInferenceBackend:
     """Run the existing Whisper and Pyannote workers outside the GUI layer."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        whisper_models: Optional[Mapping[str, str]] = None,
+        settings: Optional[LocalWorkerSettings] = None,
+    ):
         self._lock = threading.Lock()
         self._process = None
         self._queue = None
         self._cancel_event = threading.Event()
+        self._whisper_models = dict(whisper_models or {})
+        self.settings = settings or LocalWorkerSettings()
+
+    def force_cpu(self, component: str) -> None:
+        if component == "whisper":
+            self.settings.force_whisper_cpu = True
+        elif component == "pyannote":
+            self.settings.force_diarization_cpu = True
+        else:
+            raise ValueError(f"Unknown inference component: {component}")
 
     def cancel(self) -> None:
         """Request cancellation and promptly terminate the active child."""
@@ -191,17 +219,43 @@ class LocalInferenceBackend:
         request: TranscriptionRequest,
         on_segment: Callable[[TranscriptionSegment], None],
         on_log: LogCallback = _ignore_log,
+        on_status: StatusCallback = _ignore_status,
         on_progress: TranscriptionProgressCallback = _ignore_transcription_progress,
         is_cancelled: CancelCallback = _never_cancel,
     ) -> TranscriptionInfo:
         from .whisper_mp_worker import whisper_proc_entrypoint
 
         self._cancel_event.clear()
+        if request.model.backend_id != LOCAL_WHISPER_BACKEND:
+            raise ValueError(
+                f"Backend {request.model.backend_id!r} cannot be handled locally."
+            )
+        try:
+            model_path = self._whisper_models[request.model.model_id]
+        except KeyError as error:
+            raise ValueError(f"Unknown local Whisper model: {request.model}") from error
+
+        worker_args = {
+            "model_path": model_path,
+            "device": "cpu" if self.settings.force_whisper_cpu else "auto",
+            "compute_type": "auto",
+            "cpu_threads": self.settings.cpu_threads,
+            "local_files_only": True,
+            "audio_path": request.audio_path,
+            "language": request.language,
+            "multilingual": request.multilingual,
+            "include_disfluencies": request.include_disfluencies,
+            "beam_size": 5,
+            "word_timestamps": True,
+            "vad_filter": True,
+            "vad_threshold": self.settings.vad_threshold,
+        }
+
         context = mp.get_context("spawn")
         result_queue = context.Queue()
         process = context.Process(
             target=whisper_proc_entrypoint,
-            args=(request.to_worker_args(), result_queue),
+            args=(worker_args, result_queue),
         )
         process.start()
         self._set_active(process, result_queue)
@@ -213,6 +267,12 @@ class LocalInferenceBackend:
                 message_type = message.get("type") if isinstance(message, dict) else None
                 if message_type == "log":
                     on_log(message.get("level", "info"), str(message.get("msg", "")))
+                elif message_type == "status":
+                    on_status(
+                        str(message.get("message_id", "")),
+                        message.get("params") or {},
+                        str(message.get("level", "info")),
+                    )
                 elif message_type == "progress":
                     percent = message.get("pct")
                     if percent is not None:
@@ -241,12 +301,21 @@ class LocalInferenceBackend:
     ) -> list[DiarizationSegment]:
         from .pyannote_mp_worker import pyannote_proc_entrypoint
 
+        if request.model.backend_id != LOCAL_DIARIZATION_BACKEND:
+            raise ValueError(
+                f"Backend {request.model.backend_id!r} cannot be handled locally."
+            )
+        worker_args = {
+            "audio_path": request.audio_path,
+            "num_speakers": request.num_speakers,
+            "device": "cpu" if self.settings.force_diarization_cpu else "",
+        }
         self._cancel_event.clear()
         context = mp.get_context("spawn")
         result_queue = context.Queue()
         process = context.Process(
             target=pyannote_proc_entrypoint,
-            args=(request.to_worker_args(), result_queue),
+            args=(worker_args, result_queue),
         )
         process.start()
         self._set_active(process, result_queue)

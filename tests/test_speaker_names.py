@@ -61,6 +61,29 @@ def test_real_job_carries_the_mapping_state():
     assert job_b.speaker_name_map == {}
 
 
+def test_job_stores_backend_independent_inference_options():
+    job = m.create_transcription_job(
+        language_name="de",
+        transcription_model="local-whisper:custom",
+        speaker_detection="3",
+    )
+
+    assert job.language == "de"
+    assert not job.multilingual
+    assert str(job.transcription_model) == "local-whisper:custom"
+    assert job.diarization_enabled
+    assert job.num_speakers == 3
+    assert not hasattr(job, "whisper_compute_type")
+    assert not hasattr(job, "vad_threshold")
+
+
+def test_auto_language_code_is_normalized():
+    job = m.create_transcription_job(language_name="auto")
+
+    assert job.language is None
+    assert not job.multilingual
+
+
 def test_a_repeated_job_rebuilds_the_mapping():
     """The queue's repeat button re-runs the same job object. Diarization runs
     again from scratch and may hand out different labels, so the mapping must

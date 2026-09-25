@@ -7,6 +7,9 @@ import noScribe.inference as inference
 from noScribe.inference import (
     DiarizationRequest,
     DiarizationSegment,
+    LOCAL_WHISPER_BACKEND,
+    LocalWorkerSettings,
+    ModelRef,
     TranscriptionInfo,
     TranscriptionRequest,
     TranscriptionSegment,
@@ -69,26 +72,30 @@ class _FakeContext:
         return self.process
 
 
-def test_transcription_request_uses_serializable_worker_arguments():
+def test_model_reference_round_trip_and_validation():
+    model = ModelRef.parse("local-whisper:my-model")
+
+    assert model == ModelRef("local-whisper", "my-model")
+    assert str(model) == "local-whisper:my-model"
+
+    with pytest.raises(ValueError):
+        ModelRef.parse("missing-backend")
+
+
+def test_transcription_request_contains_only_job_options():
     request = TranscriptionRequest(
         audio_path="recording.opus",
-        model_path="models/precise",
-        language_name="German",
-        language_code="de",
-        compute_type="float16",
-        cpu_threads=8,
-        disfluencies=False,
-        vad_threshold=0.42,
-        locale="de",
+        model=ModelRef(LOCAL_WHISPER_BACKEND, "precise"),
+        language="de",
+        include_disfluencies=False,
     )
 
-    args = request.to_worker_args()
-
-    assert args["audio_path"] == "recording.opus"
-    assert args["model_path"] == "models/precise"
-    assert "whisper_model" not in args
-    assert args["language_code"] == "de"
-    assert args["vad_threshold"] == 0.42
+    assert request.audio_path == "recording.opus"
+    assert str(request.model) == "local-whisper:precise"
+    assert request.language == "de"
+    assert not request.include_disfluencies
+    assert not hasattr(request, "device")
+    assert not hasattr(request, "locale")
 
 
 def test_transcription_segment_converts_worker_message_and_remains_adjustable():
@@ -131,17 +138,14 @@ def test_diarization_request_and_segment_use_backend_independent_values():
     request = DiarizationRequest(
         audio_path="recording.opus",
         num_speakers=3,
-        device="cuda",
     )
     segment = DiarizationSegment.from_mapping(
         {"start": 520, "end": 4730, "label": "SPEAKER_00"}
     )
 
-    assert request.to_worker_args() == {
-        "audio_path": "recording.opus",
-        "num_speakers": 3,
-        "device": "cuda",
-    }
+    assert request.audio_path == "recording.opus"
+    assert request.num_speakers == 3
+    assert str(request.model) == "local-pyannote:default"
     assert segment == DiarizationSegment(520, 4730, "SPEAKER_00")
 
 
@@ -149,6 +153,12 @@ def test_local_backend_translates_worker_stream(monkeypatch):
     context = _FakeContext(
         [
             {"type": "log", "level": "info", "msg": "loaded"},
+            {
+                "type": "status",
+                "level": "info",
+                "message_id": "language_detect",
+                "params": {"lang": "en", "prob": "0.99"},
+            },
             {"type": "progress", "pct": 25, "detail": "audio"},
             {
                 "type": "segment",
@@ -165,19 +175,38 @@ def test_local_backend_translates_worker_stream(monkeypatch):
     logs = []
     progress = []
     segments = []
+    statuses = []
 
-    result = inference.LocalInferenceBackend().transcribe(
-        TranscriptionRequest("audio.opus", "model", "Auto", None),
+    backend = inference.LocalInferenceBackend(
+        whisper_models={"model": "models/model"},
+        settings=LocalWorkerSettings(cpu_threads=8, vad_threshold=0.42),
+    )
+    result = backend.transcribe(
+        TranscriptionRequest(
+            "audio.opus", ModelRef(LOCAL_WHISPER_BACKEND, "model")
+        ),
         on_segment=segments.append,
         on_log=lambda level, message: logs.append((level, message)),
+        on_status=lambda message_id, params, level: statuses.append(
+            (message_id, params, level)
+        ),
         on_progress=lambda percent, detail: progress.append((percent, detail)),
     )
 
     assert result == TranscriptionInfo(duration=1.5, language="en")
     assert segments == [TranscriptionSegment(0.5, 1.5, "Hello")]
     assert logs == [("info", "loaded")]
+    assert statuses == [
+        ("language_detect", {"lang": "en", "prob": "0.99"}, "info")
+    ]
     assert progress == [(25.0, "audio")]
-    assert context.process.args[0]["model_path"] == "model"
+    worker_args = context.process.args[0]
+    assert worker_args["model_path"] == "models/model"
+    assert worker_args["cpu_threads"] == 8
+    assert worker_args["vad_threshold"] == 0.42
+    assert worker_args["word_timestamps"] is True
+    assert worker_args["local_files_only"] is True
+    assert "locale" not in worker_args
     assert context.process.closed
     assert context.queue.closed
 

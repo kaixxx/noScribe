@@ -11,8 +11,6 @@ if sys.version_info >= (3, 12):
 else:
     import importlib_resources as impres
 
-from i18n import t
-
 logger = logging.getLogger(__name__)
 
 
@@ -21,6 +19,7 @@ def whisper_proc_entrypoint(args: dict, q):
     Runs in a child process. Streams progress/logs to parent via `q`.
     Messages put on `q` are dicts with one of the following shapes:
       {"type": "log", "level": "info"|"warn"|"error"|"debug", "msg": "..."}
+      {"type": "status", "level": str, "message_id": str, "params": {...}}
       {"type": "progress", "pct": float, "detail": "..."}   # optional
       {"type": "result", "ok": True, "segments": [...], "info": {...}}
       {"type": "result", "ok": False, "error": str, "trace": str}
@@ -32,33 +31,16 @@ def whisper_proc_entrypoint(args: dict, q):
         from faster_whisper.vad import VadOptions
         import torch
         import yaml
-        import i18n
-
-        def plog(level, msg):
+        def status(message_id, params=None, level="info"):
             try:
-                q.put({"type": "log", "level": level, "msg": str(msg)})
+                q.put({
+                    "type": "status",
+                    "level": level,
+                    "message_id": message_id,
+                    "params": params or {},
+                })
             except Exception:
                 pass
-
-        # Initialize python-i18n in child process (PyInstaller uses spawn; no
-        # globals shared).
-        #
-        # TODO: python-i18n is unmaintained for more than five years.
-        #
-        # See the main file for more information on python-i18n and the
-        # approach. Here nothing should actually fail as any possible
-        # exceptions were already handled/checked in the main app.
-        i18n.set("filename_format", "{locale}.{format}")
-        i18n.set("enable_memoization", True)
-        i18n.set("fallback", "en")
-        i18n.set("locale", args.get("locale", "en"))
-
-        with impres.as_file(impres.files("trans")) as mypath:
-            i18n.load_path.append(mypath)
-
-            # Using `t` once here to load the localization files into memory.
-            # As there is no `print`, nothing happens really.
-            t("app_header")
         
         # determine device
         device = args.get("device", "")
@@ -82,16 +64,12 @@ def whisper_proc_entrypoint(args: dict, q):
             local_files_only=args.get("local_files_only", True),
         )
 
-        # Define callbacks that forward to parent via queue (not used by faster-whisper directly, but kept for parity)
-        def log_cb(level, msg):
-            plog(level, msg)
-
         # Prepare audio and VAD
         audio_path = args.get("audio_path")
         if not audio_path or not os.path.exists(audio_path):
             raise FileNotFoundError(f"Audio path does not exist: {audio_path}")
 
-        log_cb("info", t('vad'))
+        status("vad")
 
         # VAD options
         vad_threshold = float(args.get("vad_threshold", 0.5))
@@ -101,26 +79,19 @@ def whisper_proc_entrypoint(args: dict, q):
             vad_parameters = VadOptions(min_silence_duration_ms=500, onset=vad_threshold, speech_pad_ms=50)
 
         # Language handling
-        language_name = args.get("language_name")
-        language_code = args.get("language_code")
-        multilingual = False
-        whisper_lang = None
+        whisper_lang = args.get("language")
+        multilingual = bool(args.get("multilingual", False))
         
-        if not model.model.is_multilingual and language_code != 'en':
-            language_name = 'English'
-            language_code = 'en'
-            log_cb("info", t('language_en_only'))
+        if not model.model.is_multilingual and whisper_lang != 'en':
+            whisper_lang = 'en'
+            multilingual = False
+            status("language_en_only")
         
-        if language_name == "Multilingual":
-            multilingual = True
+        if multilingual:
             whisper_lang = None
-        elif language_name == "Auto":
-            whisper_lang = None
-        else:
-            whisper_lang = language_code
 
         # Detect language if requested (Auto)
-        if language_name == "Auto":
+        if whisper_lang is None and not multilingual:
             audio = decode_audio(
                 audio_path, sampling_rate=model.feature_extractor.sampling_rate
             )
@@ -131,11 +102,14 @@ def whisper_proc_entrypoint(args: dict, q):
             finally:
                 del audio
                 gc.collect()
-            log_cb("info", t('language_detect', lang=whisper_lang, prob=f'{language_probability:.2f}'))
+            status("language_detect", {
+                "lang": whisper_lang,
+                "prob": f'{language_probability:.2f}',
+            })
 
         # Build prompt/hotwords if disfluencies suppression is requested
         prompt = ""
-        if args.get("disfluencies", False):
+        if args.get("include_disfluencies", False):
             prompt_file = impres.files("prompts") / "prompt.yml"
         else:
             prompt_file = impres.files("prompts") / "prompt_nd.yml"
@@ -144,7 +118,7 @@ def whisper_proc_entrypoint(args: dict, q):
                 prompt = yaml.safe_load(f).get(whisper_lang, "")
         except Exception as e:
             logger.exception(e)
-            log_cb('error', t('err_loading_prompt') + '\n')
+            status("err_loading_prompt", level="error")
 
         # Pass the path so faster-whisper can release its original waveform
         # after VAD, before allocating the full spectrogram (see 28650f2e).
@@ -161,7 +135,7 @@ def whisper_proc_entrypoint(args: dict, q):
             vad_parameters=vad_parameters,
         )
         
-        log_cb('info', t('start_transcription') + '\n')
+        status("start_transcription")
         
         # Stream segments to parent as they arrive
         for s in segments:
@@ -211,8 +185,6 @@ def whisper_proc_entrypoint(args: dict, q):
         except Exception:
             pass
         gc.collect()
-        plog("debug", "Subprocess finished cleanly.")
-
     except Exception as e:
         try:
             q.put({

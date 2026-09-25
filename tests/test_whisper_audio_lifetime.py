@@ -58,14 +58,22 @@ def test_audio_released_before_transcription(
             "audio_path": str(audio_path),
             "model_path": str(tmp_path),
             "device": "cpu",
-            "language_name": language_name,
-            "language_code": language_code,
+            "language": (
+                language_code if language_name not in ("Auto", "Multilingual") else None
+            ),
+            "multilingual": language_name == "Multilingual",
         },
         messages,
     )
-    results = [msg for msg in list(messages.queue) if msg["type"] == "result"]
+    all_messages = list(messages.queue)
+    results = [msg for msg in all_messages if msg["type"] == "result"]
+    statuses = [msg for msg in all_messages if msg["type"] == "status"]
     assert len(results) == 1
     assert results[0]["ok"], results[0]
     assert results[0]["info"]["duration"] == 1.0
     assert len(decoded) == expected_decodes
     assert transcriptions == [str(audio_path)]
+    status_ids = [status["message_id"] for status in statuses]
+    assert "vad" in status_ids
+    assert "start_transcription" in status_ids
+    assert ("language_detect" in status_ids) == (expected_decodes == 1)
