@@ -20,14 +20,18 @@ job finishes.
 
 ## Installation and startup
 
-Install noScribe with the server dependencies and its normal Linux inference
-dependencies, or use `environments/requirements_server.txt`:
+The HTTP server dependencies are included in noScribe's normal platform
+requirements. Install the appropriate requirements file for the host. For a
+Linux server:
 
 ```bash
-python -m pip install -r environments/requirements_server.txt
+python -m pip install -r environments/requirements_linux.txt
 cp noscribe-server.example.yml /etc/noscribe/server.yml
 python -m noScribe.server --config /etc/noscribe/server.yml
 ```
+
+On Windows, use `requirements_win_cuda.txt` or `requirements_win_cpu.txt`
+instead. No separate server requirements installation is needed.
 
 The configured Whisper directory contains one subdirectory per model, each
 with a `model.bin`. `force_cpu: true` applies to both Whisper and Pyannote. If

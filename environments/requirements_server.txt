@@ -1,5 +1,0 @@
-# Linux server environment: base inference dependencies plus the HTTP layer.
--r requirements_linux.txt
-
-fastapi>=0.115,<1
-uvicorn>=0.30,<1

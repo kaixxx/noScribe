@@ -4,7 +4,7 @@ host: 127.0.0.1
 port: 8766
 
 max_queued_jobs: 50
-max_upload_bytes: 1073741824  # 1 GiB of compressed Opus audio
+max_upload_bytes: 1073741824  # 1 GiB of lossless FLAC audio
 max_audio_hours: 24
 reservation_ttl_seconds: 300
 upload_ready_ttl_seconds: 30
