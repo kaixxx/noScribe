@@ -136,7 +136,10 @@ endpoint. One workflow therefore uploads its recording exactly once.
 
 The response is an `application/x-ndjson` stream. Worker events include a
 `task_index` and `operation`; every task ends with `task_result`, and the whole
-workflow ends with one `result` event. Closing the response and sending
+workflow ends with one `result` event. The remote driver forwards transcription
+segments and completed diarization results through typed callbacks as they
+arrive, so the desktop can use the same live display path as local workers.
+Closing the response and sending
 `DELETE /v1/audio/jobs/{job_id}` cancels a job. Servers without the feature
 continue to use the legacy multipart `/v1/audio/transcriptions` and
 `/v1/audio/diarizations` endpoints.

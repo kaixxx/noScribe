@@ -336,6 +336,8 @@ def test_remote_http_plugin_queues_combined_workflow_and_uploads_once(tmp_path):
     with _workflow_server() as (url, received):
         plugin = RemoteHttpPlugin(_profile(url))
         events = []
+        streamed_segments = []
+        streamed_diarization = []
         result = plugin.run_workflow(
             InferenceWorkflowRequest(
                 str(audio_path),
@@ -352,6 +354,8 @@ def test_remote_http_plugin_queues_combined_workflow_and_uploads_once(tmp_path):
                 ),
             ),
             on_event=events.append,
+            on_transcription_segment=streamed_segments.append,
+            on_diarization_result=streamed_diarization.extend,
         )
         plugin.close()
 
@@ -376,6 +380,8 @@ def test_remote_http_plugin_queues_combined_workflow_and_uploads_once(tmp_path):
     assert result.transcription_info.language == "en"
     assert result.transcription_segments[0].text == "Hello"
     assert result.diarization_segments[0].label == "SPEAKER_00"
+    assert [segment.text for segment in streamed_segments] == ["Hello"]
+    assert [segment.label for segment in streamed_diarization] == ["SPEAKER_00"]
     assert any(event.get("message_id") == "server_queue_wait" for event in events)
 
 

@@ -2595,6 +2595,14 @@ class App(ctk.CTk):
                 self.logn(t('audio_conversion_finished'))
                 self.set_progress(1, 100, speaker_setting)
                 remote_workflow_result = None
+                diarization = []
+                remote_workflow_pending = (
+                    job.diarization_enabled
+                    and self.inference_backend.supports_workflow(
+                        job.diarization_model,
+                        job.transcription_model,
+                    )
+                )
 
                 #-------------------------------------------------------
                 # 2) Speaker identification (diarization) with pyannote
@@ -2674,7 +2682,7 @@ class App(ctk.CTk):
                         self.logn(t('loading_pyannote'))
                         # self.set_progress(1, 100, speaker_setting)
 
-                        while True:
+                        while not remote_workflow_pending:
                             try:
                                 diarization_audio = (
                                     tmp_remote_audio_file
@@ -2684,20 +2692,9 @@ class App(ctk.CTk):
                                     )
                                     else tmp_audio_file
                                 )
-                                if self.inference_backend.supports_workflow(
-                                    job.diarization_model,
-                                    job.transcription_model,
-                                ):
-                                    remote_workflow_result = self._run_remote_workflow(
-                                        diarization_audio, job
-                                    )
-                                    diarization = list(
-                                        remote_workflow_result.diarization_segments
-                                    )
-                                else:
-                                    diarization = self._run_diarize_subprocess(
-                                        diarization_audio, job
-                                    )
+                                diarization = self._run_diarize_subprocess(
+                                    diarization_audio, job
+                                )
                                 break
                             except Exception as err:
                                 if self._handle_cuda_fallback(
@@ -2707,12 +2704,13 @@ class App(ctk.CTk):
                                     continue
                                 raise
 
-                        # write segments to log file
-                        for segment in diarization:
-                            line = f'{utils.ms_to_str(job.start + segment.start_ms, include_ms=True)} - {utils.ms_to_str(job.start + segment.end_ms, include_ms=True)} {segment.label}'
-                            self.logn(line, where='file')
+                        if not remote_workflow_pending:
+                            # write segments to log file
+                            for segment in diarization:
+                                line = f'{utils.ms_to_str(job.start + segment.start_ms, include_ms=True)} - {utils.ms_to_str(job.start + segment.end_ms, include_ms=True)} {segment.label}'
+                                self.logn(line, where='file')
 
-                        self.logn()
+                            self.logn()
 
                     except Exception as e:
                         traceback_str = traceback.format_exc()
@@ -2728,12 +2726,13 @@ class App(ctk.CTk):
                 #-------------------------------------------------------
                 # 3) Transcribe with faster-whisper
 
-                job.status = JobStatus.TRANSCRIPTION
-                self.update_queue_table()
+                if not remote_workflow_pending:
+                    job.status = JobStatus.TRANSCRIPTION
+                    self.update_queue_table()
 
-                self.logn()
-                self.logn(t('start_transcription'), 'highlight')
-                self.logn(t('loading_whisper'))
+                    self.logn()
+                    self.logn(t('start_transcription'), 'highlight')
+                    self.logn(t('loading_whisper'))
 
                 info = None
                 transcription_success = False
@@ -3032,9 +3031,13 @@ class App(ctk.CTk):
                             )
                             else tmp_audio_file
                         )
-                        if remote_workflow_result is not None:
-                            for segment in remote_workflow_result.transcription_segments:
-                                on_segment(segment)
+                        if remote_workflow_pending:
+                            remote_workflow_result = self._run_remote_workflow(
+                                transcription_audio,
+                                job,
+                                on_segment=on_segment,
+                                diarization=diarization,
+                            )
                             info = remote_workflow_result.transcription_info
                             if info is None:
                                 raise InferenceWorkerError(
@@ -3230,7 +3233,14 @@ class App(ctk.CTk):
                 self.logn(error.trace, where='file')
             raise
 
-    def _run_remote_workflow(self, tmp_audio_file: str, job):
+    def _run_remote_workflow(
+        self,
+        tmp_audio_file: str,
+        job,
+        *,
+        on_segment,
+        diarization: list[DiarizationSegment],
+    ):
         """Run diarization and transcription with one queued remote upload."""
         request = InferenceWorkflowRequest(
             audio_path=tmp_audio_file,
@@ -3251,28 +3261,63 @@ class App(ctk.CTk):
         def handle_event(event: dict) -> None:
             event_type = event.get('type')
             operation = event.get('operation')
-            if event_type == 'status':
+            if event_type == 'task_started' and operation == 'transcription':
+                job.status = JobStatus.TRANSCRIPTION
+                self.update_queue_table()
+                self.logn()
+                self.logn(t('start_transcription'), 'highlight')
+                self.logn(t('loading_whisper'))
+            elif event_type == 'status':
                 message_id = str(event.get('message_id') or '')
                 params = event.get('params') or {}
                 if message_id == 'server_queue_wait':
                     self.logr(t(message_id, **params))
                 elif message_id:
-                    self.logn(t(message_id, **params))
+                    self.logn(
+                        t(message_id, **params),
+                        'error' if event.get('level') == 'error' else None,
+                    )
             elif event_type == 'log':
-                self.logn(
-                    str(event.get('msg') or ''),
-                    'error' if event.get('level') == 'error' else None,
-                )
+                message = str(event.get('msg') or '')
+                if operation == 'diarization':
+                    self.logn('PyAnnote ' + message, where='file')
+                else:
+                    self.logn(
+                        message,
+                        'error' if event.get('level') == 'error' else None,
+                    )
             elif event_type == 'progress' and event.get('pct') is not None:
                 percent = float(event['pct'])
                 if operation == 'diarization':
-                    self.set_progress(2, percent, _job_speaker_setting(job))
+                    step = str(event.get('step') or '')
+                    self.logr(f'{step}: {int(percent)}%')
+                    if step == 'segmentation':
+                        self.set_progress(
+                            2,
+                            percent * 0.3,
+                            _job_speaker_setting(job),
+                        )
+                    elif step == 'embeddings':
+                        self.set_progress(
+                            2,
+                            30 + (percent * 0.7),
+                            _job_speaker_setting(job),
+                        )
                 elif operation == 'transcription':
                     self.set_progress(3, percent, _job_speaker_setting(job))
+
+        def receive_diarization(segments) -> None:
+            diarization[:] = segments
+            for segment in diarization:
+                line = f'{utils.ms_to_str(job.start + segment.start_ms, include_ms=True)} - {utils.ms_to_str(job.start + segment.end_ms, include_ms=True)} {segment.label}'
+                self.logn(line, where='file')
+            self.logn()
 
         return self.inference_backend.run_workflow(
             request,
             on_event=handle_event,
+            on_transcription_segment=on_segment,
+            on_diarization_result=receive_diarization,
             is_cancelled=lambda: self.cancel,
         )
 

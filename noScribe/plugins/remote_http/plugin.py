@@ -224,6 +224,8 @@ class RemoteHttpPlugin:
         self,
         request: InferenceWorkflowRequest,
         on_event=lambda _event: None,
+        on_transcription_segment=lambda _segment: None,
+        on_diarization_result=lambda _segments: None,
         is_cancelled=lambda: False,
     ) -> InferenceWorkflowResult:
         if not self.supports_workflows:
@@ -337,11 +339,11 @@ class RemoteHttpPlugin:
                         event["type"] == "segment"
                         and event.get("operation") == "transcription"
                     ):
-                        transcription_segments.append(
-                            TranscriptionSegment.from_mapping(
-                                event.get("segment") or {}
-                            )
+                        segment = TranscriptionSegment.from_mapping(
+                            event.get("segment") or {}
                         )
+                        transcription_segments.append(segment)
+                        on_transcription_segment(segment)
                     elif event["type"] == "task_result":
                         self._require_success(event, "Remote task failed")
                         if event.get("operation") == "diarization":
@@ -349,6 +351,7 @@ class RemoteHttpPlugin:
                                 _diarization_segment(segment)
                                 for segment in event.get("segments") or []
                             ]
+                            on_diarization_result(tuple(diarization_segments))
                         elif event.get("operation") == "transcription":
                             transcription_info = TranscriptionInfo.from_mapping(
                                 event.get("info") or {}
