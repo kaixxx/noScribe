@@ -14,7 +14,9 @@ from noScribe.server.jobs import JobSnapshot, JobState, JobTask
 from noScribe.server.processor import (
     RegistryWorkflowProcessor,
     discover_whisper_models,
+    validate_opus_audio,
 )
+from noScribe.audio.convert import ToOpus
 
 
 class FakeRegistry:
@@ -84,7 +86,9 @@ def test_processor_runs_diarization_then_transcription_with_one_audio(tmp_path):
 
     registry = FakeRegistry()
     processor = RegistryWorkflowProcessor(
-        registry, wav_converter=fake_wav_converter
+        registry,
+        wav_converter=fake_wav_converter,
+        audio_validator=lambda _path, _limit: 2.0,
     )
     events = []
     processor.process(
@@ -115,7 +119,9 @@ def test_processor_runs_diarization_then_transcription_with_one_audio(tmp_path):
 
 
 def test_processor_catalogue_uses_stable_slash_qualified_ids():
-    processor = RegistryWorkflowProcessor(FakeRegistry())
+    processor = RegistryWorkflowProcessor(
+        FakeRegistry(), audio_validator=lambda _path, _limit: 2.0
+    )
 
     assert [model["id"] for model in processor.list_models()] == [
         "local-whisper/precise",
@@ -126,7 +132,9 @@ def test_processor_catalogue_uses_stable_slash_qualified_ids():
 def test_processor_rejects_unknown_options(tmp_path):
     source = tmp_path / "audio.opus"
     source.write_bytes(b"opus")
-    processor = RegistryWorkflowProcessor(FakeRegistry())
+    processor = RegistryWorkflowProcessor(
+        FakeRegistry(), audio_validator=lambda _path, _limit: 2.0
+    )
 
     with pytest.raises(ValueError, match="Unsupported transcription options"):
         processor.process(
@@ -148,3 +156,16 @@ def test_model_discovery_ignores_incomplete_directories(tmp_path):
     assert discover_whisper_models(tmp_path) == {
         "precise": str(complete.resolve())
     }
+
+
+def test_opus_validator_checks_codec_and_duration(tmp_path):
+    source = Path(__file__).parent / "data" / "interview.mp3"
+    opus = tmp_path / "interview.opus"
+    with ToOpus(source, opus) as converter:
+        converter.stop_after(1000)
+        while converter.convert():
+            pass
+
+    assert validate_opus_audio(opus, 2.0) == pytest.approx(1.0, abs=0.1)
+    with pytest.raises(ValueError, match="duration limit"):
+        validate_opus_audio(opus, 0.5)

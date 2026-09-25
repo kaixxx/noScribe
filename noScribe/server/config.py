@@ -20,6 +20,7 @@ class ServerConfig:
     max_audio_hours: float = 24.0
     reservation_ttl_seconds: float = 300.0
     upload_ready_ttl_seconds: float = 30.0
+    terminal_job_ttl_seconds: float = 60.0
     upload_timeout_seconds: float = 3600.0
     job_timeout_seconds: float = 24 * 3600.0
     force_cpu: bool = False
@@ -27,6 +28,7 @@ class ServerConfig:
     vad_threshold: float = 0.5
     whisper_models_dir: Path = Path("models")
     runtime_dir: Path = Path(tempfile.gettempdir()) / "noscribe-server"
+    require_tmpfs: bool = False
 
     def __post_init__(self) -> None:
         try:
@@ -48,6 +50,7 @@ class ServerConfig:
         for name in (
             "reservation_ttl_seconds",
             "upload_ready_ttl_seconds",
+            "terminal_job_ttl_seconds",
             "upload_timeout_seconds",
             "job_timeout_seconds",
         ):

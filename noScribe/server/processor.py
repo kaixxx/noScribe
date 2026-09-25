@@ -20,9 +20,13 @@ class RegistryWorkflowProcessor:
         registry: BackendRegistry,
         *,
         wav_converter: Callable[[Path, Path], None] | None = None,
+        max_audio_seconds: float = 24 * 3600,
+        audio_validator: Callable[[Path, float], float] | None = None,
     ):
         self.registry = registry
         self._wav_converter = wav_converter or _convert_to_wav
+        self._max_audio_seconds = max_audio_seconds
+        self._audio_validator = audio_validator or validate_opus_audio
         self._models = self._build_model_map(registry.list_models())
 
     def list_models(self) -> list[dict[str, object]]:
@@ -61,6 +65,7 @@ class RegistryWorkflowProcessor:
     ) -> None:
         wav_path: Path | None = None
         try:
+            self._audio_validator(audio_path, self._max_audio_seconds)
             if any(task.operation == "diarization" for task in job.tasks):
                 wav_path = audio_path.with_suffix(".wav")
                 self._wav_converter(audio_path, wav_path)
@@ -237,6 +242,34 @@ def create_server_registry(config) -> BackendRegistry:
         ),
     )
     return registry
+
+
+def validate_opus_audio(path: Path, max_duration_seconds: float) -> float:
+    """Validate the uploaded container and return its declared duration."""
+    import av
+
+    try:
+        with av.open(str(path), mode="r") as container:
+            audio_streams = list(container.streams.audio)
+            if len(audio_streams) != 1:
+                raise ValueError("Audio must contain exactly one audio stream.")
+            stream = audio_streams[0]
+            codec_name = getattr(stream.codec_context.codec, "name", "")
+            if codec_name != "opus" or "ogg" not in container.format.name.split(","):
+                raise ValueError("Uploaded audio must be Opus in an Ogg container.")
+            if stream.duration is not None and stream.time_base is not None:
+                duration = float(stream.duration * stream.time_base)
+            elif container.duration is not None:
+                duration = float(container.duration / av.time_base)
+            else:
+                raise ValueError("Audio duration could not be determined.")
+    except (OSError, av.error.FFmpegError) as error:
+        raise ValueError("Uploaded audio could not be decoded.") from error
+    if duration <= 0:
+        raise ValueError("Uploaded audio is empty.")
+    if duration > max_duration_seconds:
+        raise ValueError("Uploaded audio exceeds the configured duration limit.")
+    return duration
 
 
 def discover_whisper_models(directory: Path) -> dict[str, str]:

@@ -8,6 +8,7 @@ max_upload_bytes: 1073741824  # 1 GiB of compressed Opus audio
 max_audio_hours: 24
 reservation_ttl_seconds: 300
 upload_ready_ttl_seconds: 30
+terminal_job_ttl_seconds: 60
 upload_timeout_seconds: 3600
 job_timeout_seconds: 86400
 
@@ -19,3 +20,4 @@ whisper_models_dir: models
 
 # On Linux production systems this should point to a size-limited tmpfs.
 runtime_dir: /dev/shm/noscribe-server
+require_tmpfs: true

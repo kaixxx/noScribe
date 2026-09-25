@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 import uvicorn
@@ -22,8 +23,17 @@ def main() -> None:
     )
     args = parser.parse_args()
     config = load_server_config(args.config)
+    os.umask(0o077)
+    try:
+        import resource
+
+        resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    except (ImportError, OSError, ValueError):
+        pass
     registry = create_server_registry(config)
-    processor = RegistryWorkflowProcessor(registry)
+    processor = RegistryWorkflowProcessor(
+        registry, max_audio_seconds=config.max_audio_hours * 3600
+    )
     app = create_app(config, processor)
     try:
         uvicorn.run(app, host=config.host, port=config.port, access_log=False)

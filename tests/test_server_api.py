@@ -34,7 +34,9 @@ class FakeProcessor:
 
 def _client(tmp_path, **config_values):
     processor = FakeProcessor()
-    config = ServerConfig(runtime_dir=tmp_path, **config_values)
+    config = ServerConfig(
+        runtime_dir=tmp_path, require_tmpfs=False, **config_values
+    )
     scheduler = JobScheduler(max_queued=config.max_queued_jobs)
     return TestClient(create_app(config, processor, scheduler=scheduler)), processor
 
@@ -82,7 +84,10 @@ def test_api_does_not_accept_upload_until_job_reaches_front(tmp_path):
     response = client.post(
         f"/v1/audio/jobs/{second['job_id']}/audio",
         content=payload,
-        headers={"X-noScribe-Job-Token": second["job_token"]},
+        headers={
+            "Content-Type": "audio/ogg",
+            "X-noScribe-Job-Token": second["job_token"],
+        },
     )
 
     assert response.status_code == 409
@@ -102,7 +107,10 @@ def test_api_enforces_size_before_and_during_upload(tmp_path):
     mismatch = client.post(
         f"/v1/audio/jobs/{job['job_id']}/audio",
         content=b"123456",
-        headers={"X-noScribe-Job-Token": job["job_token"]},
+        headers={
+            "Content-Type": "audio/ogg",
+            "X-noScribe-Job-Token": job["job_token"],
+        },
     )
     assert mismatch.status_code == 400
     assert list(tmp_path.iterdir()) == []

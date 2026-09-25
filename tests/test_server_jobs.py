@@ -135,3 +135,18 @@ def test_scheduler_serializes_concurrent_submissions():
     assert len(admissions) == 10
     assert sum(job.state is JobState.READY_FOR_UPLOAD for job in admissions) == 1
     assert scheduler.queued_count == 9
+
+
+def test_terminal_job_metadata_is_purged_after_short_retention():
+    clock = Clock()
+    scheduler = JobScheduler(clock=clock, terminal_ttl=10)
+    job = scheduler.submit([_task()], audio_filename="audio.opus", audio_size=1)
+    scheduler.begin_upload(job.job_id, job.token)
+    scheduler.begin_processing(job.job_id, job.token)
+    scheduler.complete(job.job_id, job.token)
+
+    clock.advance(10)
+    scheduler.reap_expired()
+
+    with pytest.raises(JobNotFound):
+        scheduler.get(job.job_id, job.token)

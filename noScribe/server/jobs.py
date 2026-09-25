@@ -96,6 +96,7 @@ class _Job:
     expires_at: float
     upload_before: float | None = None
     error_code: str | None = None
+    terminal_at: float | None = None
 
 
 class JobScheduler:
@@ -107,15 +108,17 @@ class JobScheduler:
         max_queued: int = 50,
         reservation_ttl: float = 300.0,
         upload_ready_ttl: float = 30.0,
+        terminal_ttl: float = 60.0,
         clock: Callable[[], float] = time.monotonic,
     ):
         if max_queued < 0:
             raise ValueError("max_queued must not be negative")
-        if reservation_ttl <= 0 or upload_ready_ttl <= 0:
+        if reservation_ttl <= 0 or upload_ready_ttl <= 0 or terminal_ttl <= 0:
             raise ValueError("Job timeouts must be positive")
         self.max_queued = max_queued
         self.reservation_ttl = reservation_ttl
         self.upload_ready_ttl = upload_ready_ttl
+        self.terminal_ttl = terminal_ttl
         self._clock = clock
         self._jobs: dict[str, _Job] = {}
         self._waiting: deque[str] = deque()
@@ -208,6 +211,7 @@ class JobScheduler:
             if job.state in TERMINAL_STATES:
                 return self._snapshot_locked(job)
             job.state = JobState.CANCELLED
+            job.terminal_at = self._clock()
             self._release_locked(job)
             self._changed.notify_all()
             return self._snapshot_locked(job)
@@ -259,6 +263,7 @@ class JobScheduler:
             self._require_state(job, JobState.RUNNING)
             job.state = state
             job.error_code = error_code
+            job.terminal_at = self._clock()
             self._release_locked(job)
             self._changed.notify_all()
             return self._snapshot_locked(job)
@@ -324,7 +329,15 @@ class JobScheduler:
     def _reap_expired_locked(self) -> bool:
         now = self._clock()
         changed = False
+        purge = []
         for job in self._jobs.values():
+            if (
+                job.state in TERMINAL_STATES
+                and job.terminal_at is not None
+                and now >= job.terminal_at + self.terminal_ttl
+            ):
+                purge.append(job.job_id)
+                continue
             expired = (
                 job.state is JobState.QUEUED and now >= job.expires_at
             ) or (
@@ -334,8 +347,12 @@ class JobScheduler:
             )
             if expired:
                 job.state = JobState.EXPIRED
+                job.terminal_at = now
                 self._release_locked(job)
                 changed = True
+        for job_id in purge:
+            self._jobs.pop(job_id, None)
+            changed = True
         return changed
 
 

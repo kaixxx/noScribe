@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import asyncio
 import os
 import queue
 import tempfile
@@ -25,6 +26,7 @@ from .jobs import (
     JobTask,
     QueueFull,
 )
+from .storage import prepare_runtime_directory
 
 
 SERVER_PROTOCOL_VERSION = 1
@@ -78,7 +80,9 @@ class InferenceService:
         self.processor = processor
         self._cancel_events: dict[str, threading.Event] = {}
         self._lock = threading.Lock()
-        self.config.runtime_dir.mkdir(parents=True, exist_ok=True)
+        prepare_runtime_directory(
+            self.config.runtime_dir, require_tmpfs=self.config.require_tmpfs
+        )
 
     async def receive_audio(
         self,
@@ -104,9 +108,22 @@ class InferenceService:
         started = time.monotonic()
         try:
             with os.fdopen(descriptor, "wb") as stream:
-                async for chunk in request.stream():
-                    if time.monotonic() - started > self.config.upload_timeout_seconds:
+                chunks = request.stream().__aiter__()
+                while True:
+                    remaining = (
+                        self.config.upload_timeout_seconds
+                        - (time.monotonic() - started)
+                    )
+                    if remaining <= 0:
                         raise HTTPException(408, "Audio upload timed out.")
+                    try:
+                        chunk = await asyncio.wait_for(
+                            anext(chunks), timeout=remaining
+                        )
+                    except StopAsyncIteration:
+                        break
+                    except TimeoutError as error:
+                        raise HTTPException(408, "Audio upload timed out.") from error
                     received += len(chunk)
                     if received > self.config.max_upload_bytes:
                         raise HTTPException(413, "Audio upload is too large.")
@@ -130,6 +147,7 @@ class InferenceService:
     ) -> StreamingResponse:
         events: queue.Queue[object] = queue.Queue(maxsize=100)
         cancel_event = threading.Event()
+        timed_out = threading.Event()
         finished = threading.Event()
         with self._lock:
             self._cancel_events[snapshot.job_id] = cancel_event
@@ -143,6 +161,14 @@ class InferenceService:
                     continue
 
         def run() -> None:
+            def timeout_job() -> None:
+                timed_out.set()
+                cancel_event.set()
+                self.processor.cancel()
+
+            timer = threading.Timer(self.config.job_timeout_seconds, timeout_job)
+            timer.daemon = True
+            timer.start()
             try:
                 self.scheduler.begin_processing(snapshot.job_id, token)
                 self.processor.process(
@@ -154,18 +180,22 @@ class InferenceService:
                     self.scheduler.complete(snapshot.job_id, token)
                     emit({"type": "result", "ok": True})
             except Exception:
+                if timed_out.is_set():
+                    error_code = "job_timeout"
+                elif cancel_event.is_set():
+                    error_code = "job_cancelled"
+                else:
+                    error_code = "server_job_failed"
                 try:
-                    self.scheduler.fail(
-                        snapshot.job_id, token, "server_job_failed"
-                    )
+                    if error_code == "job_cancelled":
+                        self.scheduler.cancel(snapshot.job_id, token)
+                    else:
+                        self.scheduler.fail(snapshot.job_id, token, error_code)
                 except (InvalidJobState, JobNotFound):
                     pass
-                emit({
-                    "type": "result",
-                    "ok": False,
-                    "error": "server_job_failed",
-                })
+                emit({"type": "result", "ok": False, "error": error_code})
             finally:
+                timer.cancel()
                 audio_path.unlink(missing_ok=True)
                 finished.set()
                 with self._lock:
@@ -220,6 +250,7 @@ def create_app(
         max_queued=config.max_queued_jobs,
         reservation_ttl=config.reservation_ttl_seconds,
         upload_ready_ttl=config.upload_ready_ttl_seconds,
+        terminal_ttl=config.terminal_job_ttl_seconds,
     )
     service = InferenceService(config, scheduler, processor)
     app = FastAPI(title="noScribe inference server", version="0.1.0")
@@ -302,6 +333,12 @@ def create_app(
         x_noscribe_job_token: str = Header(alias="X-noScribe-Job-Token"),
     ):
         snapshot = scheduler.get(job_id, x_noscribe_job_token, renew=False)
+        if request.headers.get("content-type", "").split(";", 1)[0] not in {
+            "audio/ogg",
+            "audio/opus",
+            "application/octet-stream",
+        }:
+            raise HTTPException(415, "Expected an Opus audio request body.")
         if snapshot.audio_size > config.max_upload_bytes:
             raise HTTPException(413, "Reserved audio is too large.")
         path = await service.receive_audio(
