@@ -16,6 +16,12 @@ class ToWav:
     Convert an arbitrary file to wave format.
     """
 
+    output_format = "wav"
+    output_codec = "pcm_s16le"
+    output_rate = 16000
+    output_layout = "mono"
+    output_bit_rate = None
+
     def __init__(self, file_input: Path, file_output: Path, force: bool = False):
         # Check whether output path exists. Only overwrite if `force=True`.
         if file_output.exists() and not force:
@@ -44,11 +50,17 @@ class ToWav:
         )
 
         self.container_input = av.open(self.file_input)
-        self.container_output = av.open(self.file_output, mode="w", format="wav")
+        self.container_output = av.open(
+            self.file_output, mode="w", format=self.output_format
+        )
         self.stream_input = self.container_input.streams.audio[0]
         self.stream_output = self.container_output.add_stream(
-            "pcm_s16le", rate=16000, layout="mono"
+            self.output_codec,
+            rate=self.output_rate,
+            layout=self.output_layout,
         )
+        if self.output_bit_rate is not None:
+            self.stream_output.bit_rate = self.output_bit_rate
         self.packet_iterator = self.container_input.demux(self.stream_input)
         self.pending_frames.clear()
         self.decode_error_count = 0
@@ -163,3 +175,13 @@ class ToWav:
             self.container_output.mux(packet)
 
         return True
+
+
+class ToOpus(ToWav):
+    """Convert an arbitrary input to compact mono Opus for network transfer."""
+
+    output_format = "ogg"
+    output_codec = "libopus"
+    output_rate = 48000
+    output_layout = "mono"
+    output_bit_rate = 32000

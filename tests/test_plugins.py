@@ -202,6 +202,16 @@ def test_remote_profile_validates_and_normalizes_connection():
     assert profile.url == "https://noscribe.example.org"
     assert profile.enabled is True
 
+    local_profile = RemoteBackendProfile.from_mapping({
+        "schema_version": REMOTE_PROFILE_SCHEMA_VERSION,
+        "id": "development",
+        "name": "Development",
+        "driver": "noscribe-http-v1",
+        "url": "http://127.0.0.1:8000",
+        "api_key": "secret",
+    })
+    assert local_profile.url == "http://127.0.0.1:8000"
+
 
 @pytest.mark.parametrize(
     ("field", "value", "match"),
@@ -210,6 +220,7 @@ def test_remote_profile_validates_and_normalizes_connection():
         ("schema_version", True, "schema version"),
         ("id", "bad:id", "must not contain"),
         ("url", "file:///tmp/server", "HTTP"),
+        ("url", "http://example.org", "require HTTPS"),
         ("url", "https://user:password@example.org", "credentials"),
         ("enabled", "yes", "boolean"),
         ("api_key", "", "non-empty string"),

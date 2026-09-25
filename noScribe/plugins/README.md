@@ -59,9 +59,9 @@ api_key: secret
 
 The `id` is the stable internal backend ID and must be unique across all
 profiles. The `name` is shown in the GUI after every model offered by this
-profile. URLs must use HTTP or HTTPS and must not contain credentials. API
-keys are currently stored as plain text, so profile files must be protected
-like other credentials.
+profile. URLs must use HTTPS and must not contain credentials; plain HTTP is
+accepted only for loopback development servers. API keys are currently stored
+as plain text, so profile files must be protected like other credentials.
 
 `remote_profiles.py` creates the directory and loads both `.yml` and `.yaml`
 files. Invalid files are reported individually and do not prevent other
@@ -100,13 +100,48 @@ or external plugin may instead advertise models from several engines.
 - `external`: an independently packaged worker executable. The manifest's
   `command` is resolved relative to the installed plugin directory.
 - `remote`: a configuration package using a driver bundled with noScribe.
-  The first supported driver will be `noscribe-http-v1`.
+  The bundled `noscribe-http-v1` driver is implemented in `remote_http/`.
 
 Whisper and Pyannote currently use `builtin`, so they continue to share the
 same PyInstaller runtime and dependencies. The execution type is packaging
 metadata; all plugins are exposed through the same registry interface.
 
-## Protocol version 1
+## noScribe HTTP protocol version 1
+
+The bundled remote driver authenticates every request with
+`Authorization: Bearer <API_KEY>`. On startup it requests `GET /v1/models`.
+The response identifies the protocol and advertises model capabilities:
+
+```json
+{
+  "protocol_version": 1,
+  "server_version": "0.1.0",
+  "data": [
+    {
+      "id": "precise",
+      "name": "precise",
+      "engine": "faster-whisper",
+      "capabilities": ["transcription"]
+    }
+  ]
+}
+```
+
+Inference uses multipart requests to `POST /v1/audio/transcriptions` and
+`POST /v1/audio/diarizations`. The client sets `response_format` to
+`noscribe_jsonl`; the response is an `application/x-ndjson` stream using the
+common events from `protocol.py`. A final `result` event is mandatory. The
+server may return `X-noScribe-Job-ID`; cancellation then uses
+`DELETE /v1/jobs/{job_id}` in addition to closing the response stream.
+
+Before any remote request, the desktop pipeline extracts and converts the
+selected recording range to mono Opus at 32 kbit/s. The driver refuses other
+file extensions, preventing the existing WAV working file or an original
+video from being uploaded accidentally. When a selected remote profile also
+offers diarization, noScribe automatically uses that profile's diarization
+model; otherwise it falls back to local Pyannote.
+
+## External worker protocol version 1
 
 External workers will use JSON Lines over standard input and output. A request
 has this envelope:

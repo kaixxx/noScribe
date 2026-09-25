@@ -8,7 +8,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from .inference import LOCAL_WHISPER_BACKEND
+from .inference import LOCAL_DIARIZATION_BACKEND, LOCAL_WHISPER_BACKEND
 from .models import ModelRef
 
 
@@ -50,6 +50,7 @@ class TranscriptionJob:
         self.language: Optional[str] = None
         self.multilingual: bool = False
         self.transcription_model = ModelRef(LOCAL_WHISPER_BACKEND, 'precise')
+        self.diarization_model = ModelRef(LOCAL_DIARIZATION_BACKEND, 'default')
 
         self.diarization_enabled: bool = True
         self.num_speakers: Optional[int] = None

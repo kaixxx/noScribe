@@ -38,6 +38,25 @@ def test_to_wav_with_expected_input(tmp_path):
         )
 
 
+def test_to_opus_creates_compact_mono_audio(tmp_path):
+    path_input = impres.files("tests") / "data" / "interview.mp3"
+    path_output = tmp_path / "interview.opus"
+
+    with audio.convert.ToOpus(path_input, path_output) as converter:
+        converter.stop_after(1000)
+        while converter.convert():
+            pass
+
+    with av.open(path_output) as container:
+        stream = container.streams.audio[0]
+        assert stream.codec_context.name == "opus"
+        assert stream.sample_rate == 48000
+        assert stream.channels == 1
+        assert stream.duration * stream.time_base == pytest.approx(1, abs=0.1)
+
+    assert path_output.stat().st_size < 10 * 1024
+
+
 def test_to_wav_overwrites_output_file(tmp_path):
     """
     Test the `ToWav` class that existing files get overwritten only if

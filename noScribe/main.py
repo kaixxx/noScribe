@@ -68,7 +68,8 @@ from .inference import (
 )
 from .jobs import JobStatus, TranscriptionJob, TranscriptionQueue
 from .models import ModelRef
-from .plugins.factory import create_builtin_registry
+from .plugins.factory import create_builtin_registry, register_remote_profiles
+from .plugins.manifest import ExecutionType
 from .plugins.remote_profiles import load_remote_profiles
 from .tkHyperlinkManager import HyperlinkManager
 
@@ -428,7 +429,8 @@ def parse_speaker_names(speaker_names):
 
 
 def create_transcription_job(audio_file=None, transcript_file=None, start_time=None, stop_time=None,
-                           language_name=None, transcription_model=None, speaker_detection=None,
+                           language_name=None, transcription_model=None, diarization_model=None,
+                           speaker_detection=None,
                            speaker_names=None,
                            overlapping=None, timestamps=None, disfluencies=None, pause=None,
                            cli_mode=False) -> TranscriptionJob:
@@ -470,6 +472,10 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
             if ':' in model_value
             else ModelRef(LOCAL_WHISPER_BACKEND, model_value)
         )
+    if isinstance(diarization_model, ModelRef):
+        job.diarization_model = diarization_model
+    elif diarization_model:
+        job.diarization_model = ModelRef.parse(str(diarization_model))
     
     # Processing options with defaults
     speaker_setting = speaker_detection if speaker_detection is not None else 'auto'
@@ -502,6 +508,28 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
         job.timestamps = False
     
     return job
+
+
+def select_diarization_model(inference_backend, transcription_model: ModelRef) -> ModelRef:
+    """Prefer diarization on the selected remote profile, then local Pyannote."""
+    models = inference_backend.list_models("diarization")
+    for model in models:
+        if model.ref.backend_id == transcription_model.backend_id:
+            return model.ref
+    local_default = ModelRef(LOCAL_DIARIZATION_BACKEND, "default")
+    if any(model.ref == local_default for model in models):
+        return local_default
+    if models:
+        return models[0].ref
+    return local_default
+
+
+def model_uses_remote_backend(inference_backend, model: ModelRef) -> bool:
+    return (
+        inference_backend.get(model.backend_id).manifest.execution.type
+        is ExecutionType.REMOTE
+    )
+
 
 def create_job_from_cli_args(args) -> TranscriptionJob:
     """Create a TranscriptionJob from command line arguments"""
@@ -806,6 +834,10 @@ def _init_app_state(app):
             for name, model in app.local_whisper_models.items()
         },
         settings=app.worker_settings,
+    )
+    app.remote_backend_registration_errors = register_remote_profiles(
+        app.inference_backend,
+        app.remote_backend_profiles,
     )
     app.transcription_models = {
         str(model.ref): model
@@ -1249,6 +1281,12 @@ class App(ctk.CTk):
         for error in self.remote_backend_profile_errors:
             self.logn(
                 f"Could not load remote backend profile {error.path.name!r}: "
+                f"{error.message}",
+                'error',
+            )
+        for error in self.remote_backend_registration_errors:
+            self.logn(
+                f"Could not connect remote backend {error.profile.name!r}: "
                 f"{error.message}",
                 'error',
             )
@@ -2244,6 +2282,9 @@ class App(ctk.CTk):
                 stop_time=stop_time,
                 language_name=self.option_menu_language.get(),
                 transcription_model=transcription_model,
+                diarization_model=select_diarization_model(
+                    self.inference_backend, transcription_model
+                ),
                 speaker_detection=self.option_menu_speaker.get(),
                 speaker_names=self.entry_speaker_names.get(),
                 overlapping=self.check_box_overlapping.get(),
@@ -2409,7 +2450,18 @@ class App(ctk.CTk):
         self.update_queue_table()
         
         tmpdir = TemporaryDirectory('noScribe')
+        remote_audio = model_uses_remote_backend(
+            self.inference_backend, job.transcription_model
+        ) or (
+            job.diarization_enabled
+            and model_uses_remote_backend(
+                self.inference_backend, job.diarization_model
+            )
+        )
         tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
+        tmp_remote_audio_file = (
+            os.path.join(tmpdir.name, 'tmp_audio.opus') if remote_audio else None
+        )
         orig_transcript_file = job.transcript_file
         speaker_setting = _job_speaker_setting(job)
         timestamp_interval = int(get_config('timestamp_interval', 60_000))
@@ -2505,7 +2557,6 @@ class App(ctk.CTk):
                         self._ffmpeg_proc.close()
                         self._ffmpeg_proc = None
 
-                self.logn(t('audio_conversion_finished'))
                 if decode_error_count > 0:
                     self.logn(
                         t(
@@ -2513,6 +2564,34 @@ class App(ctk.CTk):
                             count=decode_error_count,
                         )
                     )
+
+                if tmp_remote_audio_file:
+                    try:
+                        self._ffmpeg_proc = audio.convert.ToOpus(
+                            Path(tmp_audio_file),
+                            Path(tmp_remote_audio_file),
+                            force=True,
+                        )
+                        self._ffmpeg_proc.open()
+                        while self._ffmpeg_proc.convert():
+                            if self.cancel:
+                                raise Exception(t('err_user_cancelation'))
+                    except Exception as e:
+                        traceback_str = traceback.format_exc()
+                        if str(e) == t('err_user_cancelation') or self.cancel:
+                            job.set_canceled(t('err_user_cancelation'))
+                            self.update_queue_table()
+                            raise
+                        job.set_error(
+                            f"{t('err_converting_audio')}: {e}", traceback_str
+                        )
+                        self.update_queue_table()
+                        raise Exception(t('err_ffmpeg'), job.error_message) from e
+                    finally:
+                        if self._ffmpeg_proc is not None:
+                            self._ffmpeg_proc.close()
+                            self._ffmpeg_proc = None
+                self.logn(t('audio_conversion_finished'))
                 self.set_progress(1, 100, speaker_setting)
 
                 #-------------------------------------------------------
@@ -2595,10 +2674,22 @@ class App(ctk.CTk):
 
                         while True:
                             try:
-                                diarization = self._run_diarize_subprocess(tmp_audio_file, job)
+                                diarization_audio = (
+                                    tmp_remote_audio_file
+                                    if model_uses_remote_backend(
+                                        self.inference_backend,
+                                        job.diarization_model,
+                                    )
+                                    else tmp_audio_file
+                                )
+                                diarization = self._run_diarize_subprocess(
+                                    diarization_audio, job
+                                )
                                 break
                             except Exception as err:
-                                if self._handle_cuda_fallback('pyannote', err):
+                                if self._handle_cuda_fallback(
+                                    'pyannote', err, job.diarization_model
+                                ):
                                     self.logn(t('pyannote_cuda_retry'), 'highlight')
                                     continue
                                 raise
@@ -2920,7 +3011,17 @@ class App(ctk.CTk):
                             pass
                     
                     try:
-                        info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment)
+                        transcription_audio = (
+                            tmp_remote_audio_file
+                            if model_uses_remote_backend(
+                                self.inference_backend,
+                                job.transcription_model,
+                            )
+                            else tmp_audio_file
+                        )
+                        info = self._run_whisper_subprocess_stream(
+                            transcription_audio, job, on_segment
+                        )
                         transcription_success = True
                         # if self.cancel:
                         #    raise Exception(t('err_user_cancelation')) 
@@ -2930,7 +3031,9 @@ class App(ctk.CTk):
                         self.logn()
                         self.logn(t('transcription_finished'), 'highlight')
                     except Exception as err:
-                        if self._handle_cuda_fallback('whisper', err):
+                        if self._handle_cuda_fallback(
+                            'whisper', err, job.transcription_model
+                        ):
                             retry_cuda = True
                         else:
                             raise
@@ -3028,7 +3131,12 @@ class App(ctk.CTk):
             self.logn(f'Error starting transcription: {str(e)}', 'error')
             tk.messagebox.showerror(title='noScribe', message=f'Error starting transcription: {str(e)}')
 
-    def _handle_cuda_fallback(self, component: str, error: Exception) -> bool:
+    def _handle_cuda_fallback(
+        self,
+        component: str,
+        error: Exception,
+        model: ModelRef,
+    ) -> bool:
         global force_pyannote_cpu
         global force_whisper_cpu
         message = str(error).strip()
@@ -3036,6 +3144,8 @@ class App(ctk.CTk):
             return False
 
         if component == 'pyannote':
+            if model.backend_id != LOCAL_DIARIZATION_BACKEND:
+                return False
             if force_pyannote_cpu:
                 return False
             prompt = t('pyannote_cuda_error_prompt', error=message)
@@ -3048,6 +3158,8 @@ class App(ctk.CTk):
             return False
 
         if component == 'whisper':
+            if model.backend_id != LOCAL_WHISPER_BACKEND:
+                return False
             if force_whisper_cpu:
                 return False
             prompt = t('whisper_cuda_error_prompt', error=message)
@@ -3100,6 +3212,7 @@ class App(ctk.CTk):
         """Run Pyannote through the UI-independent local backend."""
         request = DiarizationRequest(
             audio_path=tmp_audio_file,
+            model=job.diarization_model,
             num_speakers=job.num_speakers,
         )
 
@@ -3270,6 +3383,9 @@ def run_cli_mode(args):
         
         # Create job from CLI arguments
         job = create_job_from_cli_args(args)
+        job.diarization_model = select_diarization_model(
+            app.inference_backend, job.transcription_model
+        )
         
         # Validate files
         if not os.path.exists(job.audio_file):

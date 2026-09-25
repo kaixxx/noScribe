@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -125,4 +126,19 @@ def _validate_url(value: str) -> str:
         raise ValueError("Remote backend field 'url' must be an HTTP(S) URL.")
     if parsed.username or parsed.password:
         raise ValueError("Remote backend URLs must not contain credentials.")
+    if parsed.scheme == "http" and not _is_loopback_host(parsed.hostname):
+        raise ValueError(
+            "Remote backend URLs require HTTPS except for loopback connections."
+        )
     return value.rstrip("/")
+
+
+def _is_loopback_host(hostname: str | None) -> bool:
+    if not hostname:
+        return False
+    if hostname.casefold() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        return False
