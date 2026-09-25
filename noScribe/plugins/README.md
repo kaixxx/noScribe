@@ -141,6 +141,26 @@ video from being uploaded accidentally. When a selected remote profile also
 offers diarization, noScribe automatically uses that profile's diarization
 model; otherwise it falls back to local Pyannote.
 
+### Development dummy server
+
+The repository includes a dependency-free dummy server for testing the whole
+desktop flow without inference models or a GPU:
+
+```powershell
+conda run -n noScribe_0_6_non_cuda python tools/noscribe_dummy_server.py
+```
+
+The server listens only on `127.0.0.1:8765` by default and prints a complete
+profile on startup. Save that profile as, for example,
+`backends/dummy-server.yml` below the noScribe user configuration directory,
+then restart noScribe. The model menu will contain
+`Dummy transcription (Dummy-Server)`. The server accepts the generated Opus
+upload in memory, streams fixed transcription and diarization events, and
+does not write uploaded data to disk. Stop it with Ctrl+C.
+
+Useful options are `--port`, `--token`, and `--delay`. The dummy server uses
+plain HTTP deliberately and is intended only for loopback development.
+
 ## External worker protocol version 1
 
 External workers will use JSON Lines over standard input and output. A request

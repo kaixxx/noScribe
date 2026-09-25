@@ -284,7 +284,7 @@ class RemoteHttpPlugin:
                 self._active_response = response
                 self._active_job_id = response.headers.get("X-noScribe-Job-ID")
             try:
-                for line in response.iter_lines():
+                for line in response.iter_lines(chunk_size=1):
                     if self._cancel_event.is_set() or is_cancelled():
                         self.cancel()
                         raise InferenceCancelled("Inference canceled")
