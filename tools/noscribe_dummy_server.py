@@ -100,8 +100,8 @@ class DummyInferenceHandler(BaseHTTPRequestHandler):
         if fields.get("response_format") != "noscribe_jsonl":
             self._send_json(400, {"error": "response_format must be noscribe_jsonl"})
             return
-        if not uploaded_file[0].lower().endswith(".opus"):
-            self._send_json(400, {"error": "The uploaded audio must be Opus"})
+        if not uploaded_file[0].lower().endswith(".flac"):
+            self._send_json(400, {"error": "The uploaded audio must be FLAC"})
             return
 
         job_id = f"job-{uuid.uuid4().hex}"
@@ -164,6 +164,8 @@ class DummyInferenceHandler(BaseHTTPRequestHandler):
             size = int(audio["size"])
             if size <= 0 or size > MAX_UPLOAD_BYTES:
                 raise ValueError("Invalid audio size")
+            if not str(audio.get("filename", "")).lower().endswith(".flac"):
+                raise ValueError("The uploaded audio must be FLAC")
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
             self._send_json(400, {"error": str(error)})
             return

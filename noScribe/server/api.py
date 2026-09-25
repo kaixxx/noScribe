@@ -91,11 +91,11 @@ class InferenceService:
         token: str,
     ) -> Path:
         if request.headers.get("content-type", "").split(";", 1)[0] not in {
-            "audio/ogg",
-            "audio/opus",
+            "audio/flac",
+            "audio/x-flac",
             "application/octet-stream",
         }:
-            raise HTTPException(415, "Expected an Opus audio request body.")
+            raise HTTPException(415, "Expected a FLAC audio request body.")
         content_length = request.headers.get("content-length")
         if content_length is not None:
             try:
@@ -107,7 +107,7 @@ class InferenceService:
 
         self.scheduler.begin_upload(snapshot.job_id, token)
         descriptor, filename = tempfile.mkstemp(
-            prefix="upload-", suffix=".opus", dir=self.config.runtime_dir
+            prefix="upload-", suffix=".flac", dir=self.config.runtime_dir
         )
         path = Path(filename)
         received = 0
@@ -296,8 +296,8 @@ def create_app(
     def reserve_job(body: JobBody):
         if body.audio.size > config.max_upload_bytes:
             raise HTTPException(413, "Reserved audio is too large.")
-        if not body.audio.filename.casefold().endswith(".opus"):
-            raise HTTPException(400, "Server workflows require Opus audio.")
+        if not body.audio.filename.casefold().endswith(".flac"):
+            raise HTTPException(400, "Server workflows require FLAC audio.")
         try:
             tasks = tuple(
                 JobTask(task.type, task.model, task.options) for task in body.tasks
@@ -366,7 +366,7 @@ def create_app(
             processor.validate_tasks((task,))
             admission = scheduler.submit(
                 (task,),
-                audio_filename="audio.opus",
+                audio_filename="audio.flac",
                 audio_size=audio_size,
                 allow_queue=False,
             )

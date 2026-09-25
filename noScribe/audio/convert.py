@@ -177,11 +177,11 @@ class ToWav:
         return True
 
 
-class ToOpus(ToWav):
-    """Convert an arbitrary input to compact mono Opus for network transfer."""
+class ToFlac(ToWav):
+    """Convert an arbitrary input to lossless mono FLAC for network transfer."""
 
-    output_format = "ogg"
-    output_codec = "libopus"
-    output_rate = 48000
+    output_format = "flac"
+    output_codec = "flac"
+    output_rate = 16000
     output_layout = "mono"
-    output_bit_rate = 32000
+    output_bit_rate = None

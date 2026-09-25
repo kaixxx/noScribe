@@ -21,8 +21,8 @@ def test_dummy_server_supports_the_remote_client_end_to_end(tmp_path):
         url=url,
         api_key="test-key",
     )
-    audio_path = tmp_path / "audio.opus"
-    audio_path.write_bytes(b"OggS-dummy-audio")
+    audio_path = tmp_path / "audio.flac"
+    audio_path.write_bytes(b"fLaC-dummy-audio")
 
     try:
         unauthorized = requests.get(f"{url}/v1/models", timeout=2)

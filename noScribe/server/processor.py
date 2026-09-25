@@ -26,7 +26,7 @@ class RegistryWorkflowProcessor:
         self.registry = registry
         self._wav_converter = wav_converter or _convert_to_wav
         self._max_audio_seconds = max_audio_seconds
-        self._audio_validator = audio_validator or validate_opus_audio
+        self._audio_validator = audio_validator or validate_flac_audio
         self._models = self._build_model_map(registry.list_models())
 
     def list_models(self) -> list[dict[str, object]]:
@@ -66,9 +66,10 @@ class RegistryWorkflowProcessor:
         wav_path: Path | None = None
         try:
             self._audio_validator(audio_path, self._max_audio_seconds)
-            if any(task.operation == "diarization" for task in job.tasks):
-                wav_path = audio_path.with_suffix(".wav")
-                self._wav_converter(audio_path, wav_path)
+            # Decode the lossless transport once. Both workers then receive the
+            # same 16 kHz mono PCM input as the local desktop pipeline.
+            wav_path = audio_path.with_suffix(".wav")
+            self._wav_converter(audio_path, wav_path)
 
             for task_index, task in enumerate(job.tasks):
                 if is_cancelled():
@@ -80,10 +81,9 @@ class RegistryWorkflowProcessor:
                 })
                 if task.operation == "transcription":
                     self._transcribe(
-                        task_index, task, audio_path, emit, is_cancelled
+                        task_index, task, wav_path, emit, is_cancelled
                     )
                 else:
-                    assert wav_path is not None
                     self._diarize(
                         task_index, task, wav_path, emit, is_cancelled
                     )
@@ -244,7 +244,7 @@ def create_server_registry(config) -> BackendRegistry:
     return registry
 
 
-def validate_opus_audio(path: Path, max_duration_seconds: float) -> float:
+def validate_flac_audio(path: Path, max_duration_seconds: float) -> float:
     """Validate the uploaded container and return its declared duration."""
     import av
 
@@ -255,8 +255,10 @@ def validate_opus_audio(path: Path, max_duration_seconds: float) -> float:
                 raise ValueError("Audio must contain exactly one audio stream.")
             stream = audio_streams[0]
             codec_name = getattr(stream.codec_context.codec, "name", "")
-            if codec_name != "opus" or "ogg" not in container.format.name.split(","):
-                raise ValueError("Uploaded audio must be Opus in an Ogg container.")
+            if codec_name != "flac" or "flac" not in container.format.name.split(","):
+                raise ValueError("Uploaded audio must be FLAC.")
+            if stream.sample_rate != 16000 or stream.channels != 1:
+                raise ValueError("Uploaded FLAC must be 16 kHz mono audio.")
             if stream.duration is not None and stream.time_base is not None:
                 duration = float(stream.duration * stream.time_base)
             elif container.duration is not None:

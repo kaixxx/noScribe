@@ -131,7 +131,7 @@ Servers that advertise the `queued_workflows` feature use a two-phase job
 protocol. `POST /v1/audio/jobs` reserves an atomic list of transcription and/or
 diarization tasks without uploading audio. The client polls the returned job
 with its short-lived capability token. Only after the state changes to
-`ready_for_upload` does it send the raw Opus body to the job's `/audio`
+`ready_for_upload` does it send the raw FLAC body to the job's `/audio`
 endpoint. One workflow therefore uploads its recording exactly once.
 
 The response is an `application/x-ndjson` stream. Worker events include a
@@ -142,7 +142,7 @@ continue to use the legacy multipart `/v1/audio/transcriptions` and
 `/v1/audio/diarizations` endpoints.
 
 Before any remote request, the desktop pipeline extracts and converts the
-selected recording range to mono Opus at 32 kbit/s. The driver refuses other
+selected recording range to lossless 16 kHz mono FLAC. The driver refuses other
 file extensions, preventing the existing WAV working file or an original
 video from being uploaded accidentally. When a selected remote profile also
 offers diarization, noScribe automatically uses that profile's diarization
@@ -161,7 +161,7 @@ The server listens only on `127.0.0.1:8765` by default and prints a complete
 profile on startup. Save that profile as, for example,
 `backends/dummy-server.yml` below the noScribe user configuration directory,
 then restart noScribe. The model menu will contain
-`Dummy transcription (Dummy-Server)`. The server accepts the generated Opus
+`Dummy transcription (Dummy-Server)`. The server accepts the generated FLAC
 upload in memory, streams fixed transcription and diarization events, and
 does not write uploaded data to disk. Stop it with Ctrl+C.
 

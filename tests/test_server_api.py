@@ -41,10 +41,10 @@ def _client(tmp_path, **config_values):
     return TestClient(create_app(config, processor, scheduler=scheduler)), processor
 
 
-def _reserve(client, payload=b"OggS-audio"):
+def _reserve(client, payload=b"fLaC-audio"):
     response = client.post("/v1/audio/jobs", json={
         "tasks": [{"type": "transcription", "model": "precise"}],
-        "audio": {"filename": "interview.opus", "size": len(payload)},
+        "audio": {"filename": "interview.flac", "size": len(payload)},
     })
     assert response.status_code == 202
     return response.json(), payload
@@ -64,7 +64,7 @@ def test_api_reserves_before_upload_and_streams_without_retaining_audio(tmp_path
         f"/v1/audio/jobs/{job['job_id']}/audio",
         content=payload,
         headers={
-            "Content-Type": "audio/ogg",
+            "Content-Type": "audio/flac",
             "X-noScribe-Job-Token": job["job_token"],
         },
     )
@@ -78,14 +78,14 @@ def test_api_reserves_before_upload_and_streams_without_retaining_audio(tmp_path
 
 def test_api_does_not_accept_upload_until_job_reaches_front(tmp_path):
     client, _processor = _client(tmp_path)
-    first, _ = _reserve(client, b"OggS-first")
-    second, payload = _reserve(client, b"OggS-second")
+    first, _ = _reserve(client, b"fLaC-first")
+    second, payload = _reserve(client, b"fLaC-second")
 
     response = client.post(
         f"/v1/audio/jobs/{second['job_id']}/audio",
         content=payload,
         headers={
-            "Content-Type": "audio/ogg",
+            "Content-Type": "audio/flac",
             "X-noScribe-Job-Token": second["job_token"],
         },
     )
@@ -99,7 +99,7 @@ def test_api_enforces_size_before_and_during_upload(tmp_path):
     client, _processor = _client(tmp_path, max_upload_bytes=10)
     too_large = client.post("/v1/audio/jobs", json={
         "tasks": [{"type": "transcription", "model": "precise"}],
-        "audio": {"filename": "large.opus", "size": 11},
+        "audio": {"filename": "large.flac", "size": 11},
     })
     assert too_large.status_code == 413
 
@@ -108,7 +108,7 @@ def test_api_enforces_size_before_and_during_upload(tmp_path):
         f"/v1/audio/jobs/{job['job_id']}/audio",
         content=b"123456",
         headers={
-            "Content-Type": "audio/ogg",
+            "Content-Type": "audio/flac",
             "X-noScribe-Job-Token": job["job_token"],
         },
     )
@@ -135,20 +135,20 @@ def test_queue_limit_returns_429(tmp_path):
 
     response = client.post("/v1/audio/jobs", json={
         "tasks": [{"type": "transcription", "model": "precise"}],
-        "audio": {"filename": "three.opus", "size": 5},
+        "audio": {"filename": "three.flac", "size": 5},
     })
     assert response.status_code == 429
 
 
 def test_direct_transcription_endpoint_runs_only_when_slot_is_free(tmp_path):
     client, processor = _client(tmp_path)
-    payload = b"OggS-direct"
+    payload = b"fLaC-direct"
 
     response = client.post(
         "/v1/audio/transcriptions",
         params={"model": "precise", "language": "de"},
         content=payload,
-        headers={"Content-Type": "audio/ogg"},
+        headers={"Content-Type": "audio/flac"},
     )
 
     assert response.status_code == 200
@@ -165,8 +165,8 @@ def test_direct_endpoint_rejects_upload_instead_of_queueing_it(tmp_path):
     response = client.post(
         "/v1/audio/transcriptions",
         params={"model": "precise"},
-        content=b"OggS-direct",
-        headers={"Content-Type": "audio/ogg"},
+        content=b"fLaC-direct",
+        headers={"Content-Type": "audio/flac"},
     )
 
     assert response.status_code == 429

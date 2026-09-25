@@ -54,18 +54,18 @@ Content-Type: application/json
       "options": {"language": "de"}
     }
   ],
-  "audio": {"filename": "interview.opus", "size": 12345678}
+  "audio": {"filename": "interview.flac", "size": 12345678}
 }
 ```
 
 The response contains `job_id`, `job_token`, `state`, and `position`. Poll with
 the token in `X-noScribe-Job-Token`. Once the state is `ready_for_upload`, send
-the Opus bytes as the raw request body:
+the FLAC bytes as the raw request body:
 
 ```http
 POST /v1/audio/jobs/{job_id}/audio
 X-noScribe-Job-Token: <job_token>
-Content-Type: audio/ogg
+Content-Type: audio/flac
 Content-Length: 12345678
 ```
 
@@ -75,7 +75,7 @@ previous result.
 
 For simple integrations, the server also exposes the OpenAI-shaped paths
 `POST /v1/audio/transcriptions` and `POST /v1/audio/diarizations`. They accept
-one raw Ogg/Opus request body and query parameters such as `model` and
+one raw FLAC request body and query parameters such as `model` and
 `language`, and return the same NDJSON event stream. These convenience routes
 do not queue: they return HTTP 429 with `Retry-After` when the execution slot is
 occupied. They deliberately do not claim full OpenAI multipart compatibility;
@@ -89,12 +89,12 @@ abandoned. Audio is not accepted while a reservation waits.
 ## Zero-retention controls
 
 Production configuration should use a size-limited tmpfs such as `/run` and
-set `require_tmpfs: true`. Uploaded Opus and derived WAV files receive random
+set `require_tmpfs: true`. Uploaded FLAC and derived WAV files receive random
 private names, are deleted in all normal completion and error paths, and stale
 files with those generated names are removed at startup. Terminal job metadata
 is removed after a short TTL.
 
-The server verifies actual byte count, Ogg/Opus format, decoded duration,
+The server verifies actual byte count, FLAC format, decoded duration,
 upload time, and processing time. It disables process core dumps when launched
 through its module entry point. For the zero-retention claim to include memory
 pressure, disable swap on the host or use encrypted swap; tmpfs pages can

@@ -38,23 +38,35 @@ def test_to_wav_with_expected_input(tmp_path):
         )
 
 
-def test_to_opus_creates_compact_mono_audio(tmp_path):
+def test_to_flac_creates_lossless_16khz_mono_audio(tmp_path):
     path_input = impres.files("tests") / "data" / "interview.mp3"
-    path_output = tmp_path / "interview.opus"
+    path_wav = tmp_path / "interview.wav"
+    path_output = tmp_path / "interview.flac"
 
-    with audio.convert.ToOpus(path_input, path_output) as converter:
+    with audio.convert.ToWav(path_input, path_wav) as converter:
         converter.stop_after(1000)
+        while converter.convert():
+            pass
+    with audio.convert.ToFlac(path_wav, path_output) as converter:
         while converter.convert():
             pass
 
     with av.open(path_output) as container:
         stream = container.streams.audio[0]
-        assert stream.codec_context.name == "opus"
-        assert stream.sample_rate == 48000
+        assert stream.codec_context.name == "flac"
+        assert stream.sample_rate == 16000
         assert stream.channels == 1
         assert stream.duration * stream.time_base == pytest.approx(1, abs=0.1)
 
-    assert path_output.stat().st_size < 10 * 1024
+    def decoded_samples(path):
+        with av.open(path) as container:
+            return b"".join(
+                frame.to_ndarray().tobytes()
+                for frame in container.decode(audio=0)
+            )
+
+    assert decoded_samples(path_output) == decoded_samples(path_wav)
+    assert path_output.stat().st_size < 40 * 1024
 
 
 def test_to_wav_overwrites_output_file(tmp_path):

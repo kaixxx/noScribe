@@ -231,9 +231,9 @@ class RemoteHttpPlugin:
                 "Remote server does not support queued workflows."
             )
         path = Path(request.audio_path)
-        if path.suffix.casefold() != ".opus":
+        if path.suffix.casefold() != ".flac":
             raise InferenceWorkerError(
-                "Remote inference requires a locally prepared Opus audio file."
+                "Remote inference requires a locally prepared FLAC audio file."
             )
         tasks = []
         if request.diarization is not None:
@@ -309,7 +309,7 @@ class RemoteHttpPlugin:
                     f"{self.profile.url}/v1/audio/jobs/{job_id}/audio",
                     headers={
                         **self._job_headers(job_token),
-                        "Content-Type": "audio/ogg",
+                        "Content-Type": "audio/flac",
                         "Content-Length": str(path.stat().st_size),
                     },
                     data=audio_stream,
@@ -496,9 +496,9 @@ class RemoteHttpPlugin:
     ) -> Iterable[dict]:
         self._cancel_event.clear()
         path = Path(audio_path)
-        if path.suffix.lower() != ".opus":
+        if path.suffix.lower() != ".flac":
             raise InferenceWorkerError(
-                "Remote inference requires a locally prepared Opus audio file."
+                "Remote inference requires a locally prepared FLAC audio file."
             )
         mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
         try:

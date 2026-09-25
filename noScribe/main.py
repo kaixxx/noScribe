@@ -2461,7 +2461,7 @@ class App(ctk.CTk):
         )
         tmp_audio_file = os.path.join(tmpdir.name, 'tmp_audio.wav')
         tmp_remote_audio_file = (
-            os.path.join(tmpdir.name, 'tmp_audio.opus') if remote_audio else None
+            os.path.join(tmpdir.name, 'tmp_audio.flac') if remote_audio else None
         )
         orig_transcript_file = job.transcript_file
         speaker_setting = _job_speaker_setting(job)
@@ -2568,7 +2568,7 @@ class App(ctk.CTk):
 
                 if tmp_remote_audio_file:
                     try:
-                        self._ffmpeg_proc = audio.convert.ToOpus(
+                        self._ffmpeg_proc = audio.convert.ToFlac(
                             Path(tmp_audio_file),
                             Path(tmp_remote_audio_file),
                             force=True,

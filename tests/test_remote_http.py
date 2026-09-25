@@ -246,8 +246,8 @@ def _workflow_server():
 
 
 def test_remote_http_plugin_loads_models_and_streams_transcription(tmp_path):
-    audio_path = tmp_path / "audio.opus"
-    audio_path.write_bytes(b"OggS-test-audio")
+    audio_path = tmp_path / "audio.flac"
+    audio_path.write_bytes(b"fLaC-test-audio")
 
     with _remote_server() as (url, received):
         plugin = RemoteHttpPlugin(_profile(url))
@@ -279,12 +279,12 @@ def test_remote_http_plugin_loads_models_and_streams_transcription(tmp_path):
     post_body = next(item[3] for item in received if item[0] == "POST")
     assert b'name="model"' in post_body
     assert b"precise" in post_body
-    assert b'name="file"; filename="audio.opus"' in post_body
+    assert b'name="file"; filename="audio.flac"' in post_body
 
 
 def test_remote_http_plugin_maps_diarization_seconds_to_milliseconds(tmp_path):
-    audio_path = tmp_path / "audio.opus"
-    audio_path.write_bytes(b"OggS-test-audio")
+    audio_path = tmp_path / "audio.flac"
+    audio_path.write_bytes(b"fLaC-test-audio")
 
     with _remote_server() as (url, _received):
         plugin = RemoteHttpPlugin(_profile(url))
@@ -320,7 +320,7 @@ def test_remote_http_plugin_refuses_uncompressed_transport_file(tmp_path):
                 on_segment=lambda _segment: None,
             )
         except InferenceWorkerError as error:
-            assert "Opus" in str(error)
+            assert "FLAC" in str(error)
         else:
             raise AssertionError("WAV upload was not rejected")
         finally:
@@ -330,8 +330,8 @@ def test_remote_http_plugin_refuses_uncompressed_transport_file(tmp_path):
 
 
 def test_remote_http_plugin_queues_combined_workflow_and_uploads_once(tmp_path):
-    audio_path = tmp_path / "audio.opus"
-    audio_path.write_bytes(b"OggS-workflow-audio")
+    audio_path = tmp_path / "audio.flac"
+    audio_path.write_bytes(b"fLaC-workflow-audio")
 
     with _workflow_server() as (url, received):
         plugin = RemoteHttpPlugin(_profile(url))

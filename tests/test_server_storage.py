@@ -2,16 +2,16 @@ from noScribe.server.storage import cleanup_stale_audio, prepare_runtime_directo
 
 
 def test_runtime_cleanup_only_removes_server_generated_audio(tmp_path):
-    stale_opus = tmp_path / "upload-abc.opus"
+    stale_flac = tmp_path / "upload-abc.flac"
     stale_wav = tmp_path / "upload-abc.wav"
     unrelated = tmp_path / "keep.txt"
-    stale_opus.write_bytes(b"sensitive")
+    stale_flac.write_bytes(b"sensitive")
     stale_wav.write_bytes(b"sensitive")
     unrelated.write_text("keep", encoding="utf-8")
 
     cleanup_stale_audio(tmp_path)
 
-    assert not stale_opus.exists()
+    assert not stale_flac.exists()
     assert not stale_wav.exists()
     assert unrelated.exists()
 

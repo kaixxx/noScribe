@@ -15,10 +15,10 @@ from noScribe.server.processor import (
     RegistryWorkflowProcessor,
     create_server_registry,
     discover_whisper_models,
-    validate_opus_audio,
+    validate_flac_audio,
 )
 from noScribe.server.config import ServerConfig
-from noScribe.audio.convert import ToOpus
+from noScribe.audio.convert import ToFlac
 
 
 class FakeRegistry:
@@ -73,14 +73,14 @@ def _job(tasks):
         JobState.RUNNING,
         0,
         tuple(tasks),
-        "audio.opus",
+        "audio.flac",
         10,
     )
 
 
 def test_processor_runs_diarization_then_transcription_with_one_audio(tmp_path):
-    source = tmp_path / "audio.opus"
-    source.write_bytes(b"opus")
+    source = tmp_path / "audio.flac"
+    source.write_bytes(b"flac")
 
     def fake_wav_converter(input_path, output_path):
         assert input_path == source
@@ -108,7 +108,7 @@ def test_processor_runs_diarization_then_transcription_with_one_audio(tmp_path):
         "transcription",
     ]
     assert registry.calls[0][1].audio_path.endswith(".wav")
-    assert registry.calls[1][1].audio_path.endswith(".opus")
+    assert registry.calls[1][1].audio_path.endswith(".wav")
     assert not source.with_suffix(".wav").exists()
     assert [event["type"] for event in events].count("task_result") == 2
     diarization_result = next(
@@ -132,10 +132,12 @@ def test_processor_catalogue_uses_stable_slash_qualified_ids():
 
 
 def test_processor_rejects_unknown_options(tmp_path):
-    source = tmp_path / "audio.opus"
-    source.write_bytes(b"opus")
+    source = tmp_path / "audio.flac"
+    source.write_bytes(b"flac")
     processor = RegistryWorkflowProcessor(
-        FakeRegistry(), audio_validator=lambda _path, _limit: 2.0
+        FakeRegistry(),
+        audio_validator=lambda _path, _limit: 2.0,
+        wav_converter=lambda _source, target: target.write_bytes(b"wav"),
     )
 
     with pytest.raises(ValueError, match="Unsupported transcription options"):
@@ -160,17 +162,17 @@ def test_model_discovery_ignores_incomplete_directories(tmp_path):
     }
 
 
-def test_opus_validator_checks_codec_and_duration(tmp_path):
+def test_flac_validator_checks_codec_and_duration(tmp_path):
     source = Path(__file__).parent / "data" / "interview.mp3"
-    opus = tmp_path / "interview.opus"
-    with ToOpus(source, opus) as converter:
+    flac = tmp_path / "interview.flac"
+    with ToFlac(source, flac) as converter:
         converter.stop_after(1000)
         while converter.convert():
             pass
 
-    assert validate_opus_audio(opus, 2.0) == pytest.approx(1.0, abs=0.1)
+    assert validate_flac_audio(flac, 2.0) == pytest.approx(1.0, abs=0.1)
     with pytest.raises(ValueError, match="duration limit"):
-        validate_opus_audio(opus, 0.5)
+        validate_flac_audio(flac, 0.5)
 
 
 def test_force_cpu_configures_both_builtin_workers(tmp_path):
