@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ipaddress
-import os
 import tempfile
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -25,6 +24,8 @@ class ServerConfig:
     job_timeout_seconds: float = 24 * 3600.0
     force_cpu: bool = False
     cpu_threads: int = 4
+    vad_threshold: float = 0.5
+    whisper_models_dir: Path = Path("models")
     runtime_dir: Path = Path(tempfile.gettempdir()) / "noscribe-server"
 
     def __post_init__(self) -> None:
@@ -42,6 +43,8 @@ class ServerConfig:
             raise ValueError("Audio limits must be positive.")
         if self.cpu_threads <= 0:
             raise ValueError("cpu_threads must be positive.")
+        if not 0 <= self.vad_threshold <= 1:
+            raise ValueError("vad_threshold must be between 0 and 1.")
         for name in (
             "reservation_ttl_seconds",
             "upload_ready_ttl_seconds",
@@ -51,6 +54,7 @@ class ServerConfig:
             if getattr(self, name) <= 0:
                 raise ValueError(f"{name} must be positive.")
         object.__setattr__(self, "runtime_dir", Path(self.runtime_dir))
+        object.__setattr__(self, "whisper_models_dir", Path(self.whisper_models_dir))
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> "ServerConfig":

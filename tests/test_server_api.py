@@ -21,6 +21,9 @@ class FakeProcessor:
             "capabilities": ["transcription"],
         }]
 
+    def validate_tasks(self, tasks):
+        pass
+
     def process(self, job, audio_path: Path, emit, is_cancelled):
         self.calls.append((job, audio_path.read_bytes()))
         emit({"type": "status", "message_id": "server.test", "params": {}})

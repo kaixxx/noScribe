@@ -34,6 +34,8 @@ _END = object()
 class WorkflowProcessor(Protocol):
     def list_models(self) -> list[Mapping[str, object]]: ...
 
+    def validate_tasks(self, tasks: tuple[JobTask, ...]) -> None: ...
+
     def process(
         self,
         job: JobSnapshot,
@@ -262,6 +264,7 @@ def create_app(
             tasks = tuple(
                 JobTask(task.type, task.model, task.options) for task in body.tasks
             )
+            processor.validate_tasks(tasks)
             admission = scheduler.submit(
                 tasks,
                 audio_filename=Path(body.audio.filename).name,
