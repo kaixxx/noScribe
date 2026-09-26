@@ -120,6 +120,7 @@ ru:
     Перезаписать этот выходной файл?
   err_invalid_time_string: 'Неверное время: "%{time}"'
   err_options: 'Ошибка в настройках'
+  err_remote_backend_connection: 'Не удалось подключиться к удалённому бэкенду «%{name}».'
   err_unsupported_output_format: 'Ошибка: Формат вывода "%{file_type}" не поддерживается.'
   err_no_audio_file: 'Ошибка: Пожалуйста, выберите аудиофайл.'
   err_no_transcript_file: 'Ошибка: Пожалуйста, выберите имя файла для готовой транскрипции.'

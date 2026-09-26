@@ -119,6 +119,7 @@ es:
     ¿Deseas sobrescribir el archivo de salida?
   err_invalid_time_string: 'Este no es un formato de tiempo válido: "%{time}"'
   err_options: 'Error en las opciones'
+  err_remote_backend_connection: 'No se pudo conectar con el backend remoto «%{name}».'
   err_unsupported_output_format: 'Error: El formato de salida "%{file_type}" no es compatible.'
   err_no_audio_file: 'Error: Por favor, selecciona un archivo de audio.'
   err_no_transcript_file: 'Error: Por favor, elige un nombre de archivo para la transcripción finalizada.'

@@ -120,6 +120,7 @@ pt:
     Deseja substituir o arquivo de saída?
   err_invalid_time_string: 'Este não é um horário válido: "%{time}"'
   err_options: 'Erro nas opções'
+  err_remote_backend_connection: 'Não foi possível conectar ao backend remoto «%{name}».'
   err_unsupported_output_format: 'Erro: O formato de saída "%{file_type}" não é suportado.'
   err_no_audio_file: 'Erro: Por favor, selecione um arquivo de áudio.'
   err_no_transcript_file: 'Erro: Por favor, escolha um nome de arquivo para a transcrição concluída.'

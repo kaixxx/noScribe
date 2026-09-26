@@ -119,6 +119,7 @@ fr:
     Voulez-vous écraser ce fichier de sortie ?
   err_invalid_time_string: "Il s'agit d'une heure invalide : \"%{time}\""
   err_options: "Erreur dans les options"
+  err_remote_backend_connection: "Impossible de se connecter au backend distant « %{name} »."
   err_unsupported_output_format: "Erreur : Le format de sortie \"%{file_type}\" n'est pas pris en charge."
   err_no_audio_file: "Erreur : Veuillez sélectionner un fichier audio."
   err_no_transcript_file: "Erreur : Veuillez choisir un nom de fichier pour la transcription terminée."

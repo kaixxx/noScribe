@@ -121,6 +121,7 @@ de:
   err_setup: 'Während des Einrichtung ist ein Fehler aufgetreten. Bitte die Internetverbindung prüfen.'
   err_invalid_time_string: 'Das ist keine korrekte Zeitangabe: "%{time}"'
   err_options: 'Fehler in den Optionen'
+  err_remote_backend_connection: 'Verbindung zum Remote-Backend „%{name}“ nicht möglich.'
   err_unsupported_output_format: 'Fehler: Ausgabeformat "%{file_type}" wird nicht unterstützt.'
   err_no_audio_file: 'Fehler: Bitte eine Audiodatei wählen.'
   err_no_transcript_file: 'Fehler: Bitte einen Dateinamen für das fertige Transkript wählen.'

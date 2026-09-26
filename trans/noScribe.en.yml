@@ -127,6 +127,7 @@ en:
   err_setup: 'An error occurred during the setup. Check if you have a working internet connection and restart the program.'
   err_invalid_time_string: 'This is not a valid time: "%{time}"'
   err_options: 'Error in options'
+  err_remote_backend_connection: "Could not connect remote backend '%{name}'."
   err_no_audio_file: 'Error: Please select an audio file.'
   err_no_transcript_file: 'Error: Please choose a filename for the finished transcript.'
   err_unsupported_output_format: 'Error: Output format "%{file_type}" is not supported.'

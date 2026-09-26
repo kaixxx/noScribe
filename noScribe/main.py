@@ -851,6 +851,14 @@ def _init_app_state(app):
     }
 
 
+def _remote_backend_error_details(error) -> str:
+    """Return the diagnostic form of a remote backend connection error."""
+    return (
+        f"Could not connect remote backend {error.profile.name!r}: "
+        f"{error.message}"
+    )
+
+
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -1286,10 +1294,11 @@ class App(ctk.CTk):
                 'error',
             )
         for error in self.remote_backend_registration_errors:
+            print(_remote_backend_error_details(error), file=sys.stderr)
             self.logn(
-                f"Could not connect remote backend {error.profile.name!r}: "
-                f"{error.message}",
+                t('err_remote_backend_connection', name=error.profile.name),
                 'error',
+                where='screen',
             )
         
         # check for new releases
@@ -3456,6 +3465,8 @@ class HeadlessApp(App):
         # Do not initialize Tk/CTk to avoid DISPLAY requirements
         _init_app_state(self)
         self._headless = True
+        for error in self.remote_backend_registration_errors:
+            print(_remote_backend_error_details(error), file=sys.stderr)
 
     def __getattr__(self, name):
         # Avoid Tk attribute delegation recursion when CTk isn't initialized
