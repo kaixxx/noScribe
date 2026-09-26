@@ -364,6 +364,42 @@ def format_job_summary(
     return "\n".join(line for line in lines if line)
 
 
+def transcription_model_name(model_labels: dict[str, str], model: ModelRef) -> str:
+    """Return the same model label that the model selector shows."""
+    return model_labels.get(str(model), model.model_id)
+
+
+def format_transcript_options(
+    job: TranscriptionJob, model_name: str
+) -> str:
+    """Build the localized options line stored in the transcript header."""
+    options = []
+    # Use a non-ASCII colon in times so MAXQDA does not interpret these
+    # header values as transcript time markers.
+    if job.start > 0:
+        options.append(
+            f'{t("label_start")} {utils.ms_to_str(job.start)}'.replace(':', '꞉')
+        )
+    if job.stop > 0:
+        options.append(
+            f'{t("label_stop")} {utils.ms_to_str(job.stop)}'.replace(':', '꞉')
+        )
+    language_name = _job_language_name(job)
+    language_code = job.language or ('multilingual' if job.multilingual else 'auto')
+    options.append(f'{t("label_language")} {language_name} ({language_code})')
+    options.append(f'{t("label_whisper_model")} {model_name}')
+    options.append(f'{t("label_speaker")} {_job_speaker_setting(job)}')
+    if job.speaker_names:
+        options.append(f'{t("label_speaker_names")} {", ".join(job.speaker_names)}')
+    # Store localized yes/no values instead of Python's True/False literals.
+    yes, no = t('opt_yes'), t('opt_no')
+    options.append(f'{t("label_overlapping")} {yes if job.overlapping else no}')
+    options.append(f'{t("label_timestamps")} {yes if job.timestamps else no}')
+    options.append(f'{t("label_disfluencies")} {yes if job.disfluencies else no}')
+    options.append(f'{t("label_pause")} {pause_label(job.pause)}')
+    return ' | '.join(options)
+
+
 def _job_language_name(job: TranscriptionJob) -> str:
     if job.multilingual:
         return 'Multilingual'
@@ -1404,8 +1440,8 @@ class App(ctk.CTk):
 
             # Append a real, concise summary of the job's options
             try:
-                model_name = self.transcription_model_labels.get(
-                    str(job.transcription_model), job.transcription_model.model_id
+                model_name = transcription_model_name(
+                    self.transcription_model_labels, job.transcription_model
                 )
                 job_tooltip += '\n\n' + format_job_summary(job, model_name)
             except Exception:
@@ -2500,27 +2536,10 @@ class App(ctk.CTk):
         auto_save = str(get_config('auto_save', 'True')).lower() != 'false'
 
         try:
-            # Create option info string for logging
-            option_info = ''
-            if job.start > 0:
-                option_info += f'{t("label_start")} {utils.ms_to_str(job.start)} | '.replace(':', '꞉') # replace the normal colon here in the header with a special character so that MAXQDA does not misinterpret it as a time marker in the transcript.
-            if job.stop > 0:
-                option_info += f'{t("label_stop")} {utils.ms_to_str(job.stop)} | '.replace(':', '꞉')
-            language_name = _job_language_name(job)
-            language_code = job.language or ('multilingual' if job.multilingual else 'auto')
-            option_info += f'{t("label_language")} {language_name} ({language_code}) | '
-            option_info += f'{t("label_speaker")} {_job_speaker_setting(job)} | '
-            if job.speaker_names:
-                option_info += f'{t("label_speaker_names")} {", ".join(job.speaker_names)} | '
-            # Render the on/off options as localized yes/no and the pause
-            # threshold as its label, so this header -- which ends up in the
-            # transcript itself -- never mixes True/False with a raw 0. The job
-            # tooltip shows the same values, but as ✓/✗ where space is tight.
-            yes, no = t('opt_yes'), t('opt_no')
-            option_info += f'{t("label_overlapping")} {yes if job.overlapping else no} | '
-            option_info += f'{t("label_timestamps")} {yes if job.timestamps else no} | '
-            option_info += f'{t("label_disfluencies")} {yes if job.disfluencies else no} | '
-            option_info += f'{t("label_pause")} {pause_label(job.pause)}'
+            model_name = transcription_model_name(
+                self.transcription_model_labels, job.transcription_model
+            )
+            option_info = format_transcript_options(job, model_name)
 
             # Create log file
             if not os.path.exists(f'{config_dir}/log'):
