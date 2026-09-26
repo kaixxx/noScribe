@@ -1958,18 +1958,38 @@ class App(ctk.CTk):
                     tags='error', where='file', tb=tb
                 )
 
+    def _replace_log_text(self, txt, tags, link, tb, where):
+        """Replace the current screen-log line as one atomic UI operation."""
+        if not hasattr(self, 'log_textbox') or not self.log_textbox.winfo_exists():
+            return
+        try:
+            self.log_textbox.configure(state=tk.NORMAL)
+            previous = self.log_textbox.get("end-1c linestart", "end-1c")
+            self.log_textbox.delete("end-1c linestart", "end-1c")
+            self.log_len = max(0, self.log_len - len(previous))
+            self.log_textbox.configure(state=tk.DISABLED)
+            self._append_log_text(txt, tags, link, tb, where)
+        except Exception as error:
+            if where == 'both':
+                self.log(
+                    f"Error replacing log_textbox line: {error}\nOriginal error: {txt}",
+                    tags='error', where='file', tb=tb
+                )
+
     def logn(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '', tb: str = '') -> None:
         """ Log with a newline appended """
         self.log(f'{txt}\n', tags, where, link, tb)
 
     def logr(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '', tb: str = '') -> None:
         """ Replace the last line of the log """
-        if where != 'file' and not getattr(self, '_headless', False) and hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
-            self.log_textbox.configure(state=ctk.NORMAL)
-            tmp_txt = self.log_textbox.get("end-1c linestart", "end-1c")
-            self.log_textbox.delete("end-1c linestart", "end-1c")
-            self.log_len -= len(tmp_txt)
-        self.log(txt, tags, where, link, tb)
+        if where != 'file':
+            print(f'\r{txt}', end='')
+            if not getattr(self, '_headless', False):
+                self._dispatch_ui(
+                    lambda: self._replace_log_text(txt, tags, link, tb, where)
+                )
+        if where != 'screen':
+            self.log(txt, tags, 'file', link, tb)
 
     def create_default_transcript_names(self, dir=None):
         self.transcript_files_list = []
