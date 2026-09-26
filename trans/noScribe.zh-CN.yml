@@ -64,6 +64,7 @@ zh-CN: &defaults
   # 任务状态
   waiting: '等待中'
   audio_conversion: '音频转换'
+  waiting_for_server: '正在等待服务器空位'
   speaker_identification: '说话人识别'
   transcription: '转录'
   canceling: '正在取消'

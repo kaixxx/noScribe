@@ -64,6 +64,7 @@ it:
   # Stato del lavoro
   waiting: 'in attesa'
   audio_conversion: 'conversione audio'
+  waiting_for_server: 'in attesa di uno slot sul server'
   speaker_identification: 'identificazione parlanti'
   transcription: 'trascrizione'
   canceling: 'annullamento in corso'

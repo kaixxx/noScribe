@@ -15,10 +15,17 @@ def _queue(*statuses):
 
 
 def test_keeps_the_running_job_and_its_order():
-    q = _queue(JobStatus.FINISHED, JobStatus.TRANSCRIPTION, JobStatus.WAITING,
-               JobStatus.CANCELED, JobStatus.AUDIO_CONVERSION, JobStatus.ERROR)
+    q = _queue(
+        JobStatus.FINISHED,
+        JobStatus.TRANSCRIPTION,
+        JobStatus.WAITING,
+        JobStatus.CANCELED,
+        JobStatus.AUDIO_CONVERSION,
+        JobStatus.WAITING_FOR_SERVER,
+        JobStatus.ERROR,
+    )
     q.clear_inactive()
-    assert [j.audio_file for j in q.jobs] == ['1.wav', '4.wav']
+    assert [j.audio_file for j in q.jobs] == ['1.wav', '4.wav', '5.wav']
 
 
 def test_clears_everything_when_nothing_runs():
@@ -32,6 +39,13 @@ def test_canceling_job_survives():
     q = _queue(JobStatus.CANCELING, JobStatus.WAITING)
     q.clear_inactive()
     assert [j.status for j in q.jobs] == [JobStatus.CANCELING]
+
+
+def test_waiting_for_server_is_a_running_job():
+    q = _queue(JobStatus.WAITING_FOR_SERVER)
+
+    assert q.is_running()
+    assert q.get_waiting_jobs() == []
 
 
 def test_has_inactive_jobs_matches_what_clearing_does():

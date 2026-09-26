@@ -64,6 +64,7 @@ ja:
   # ジョブの状態
   waiting: '待機中'
   audio_conversion: 'オーディオ変換'
+  waiting_for_server: 'サーバーの空き待ち'
   speaker_identification: '話者識別'
   transcription: '転写'
   canceling: 'キャンセル中'

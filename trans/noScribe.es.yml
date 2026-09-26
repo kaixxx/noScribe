@@ -64,6 +64,7 @@ es:
   # Estado de la tarea
   waiting: 'esperando'
   audio_conversion: 'conversión de audio'
+  waiting_for_server: 'esperando un puesto en el servidor'
   speaker_identification: 'identificación de hablantes'
   transcription: 'transcripción'
   canceling: 'cancelando'

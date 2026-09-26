@@ -64,6 +64,7 @@ fr:
   # Statut de la tâche
   waiting: 'en attente'
   audio_conversion: 'conversion audio'
+  waiting_for_server: 'attente d’une place sur le serveur'
   speaker_identification: 'identification des locuteurs'
   transcription: 'transcription'
   canceling: 'annulation en cours'

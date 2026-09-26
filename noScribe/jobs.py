@@ -15,6 +15,7 @@ from .models import ModelRef
 class JobStatus(Enum):
     WAITING = "waiting"
     AUDIO_CONVERSION = "audio_conversion"
+    WAITING_FOR_SERVER = "waiting_for_server"
     SPEAKER_IDENTIFICATION = "speaker_identification"
     TRANSCRIPTION = "transcription"
     CANCELING = "canceling"
@@ -97,6 +98,7 @@ class TranscriptionQueue:
 
     RUNNING_STATUSES = frozenset({
         JobStatus.AUDIO_CONVERSION,
+        JobStatus.WAITING_FOR_SERVER,
         JobStatus.SPEAKER_IDENTIFICATION,
         JobStatus.TRANSCRIPTION,
         JobStatus.CANCELING,

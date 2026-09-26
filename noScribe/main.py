@@ -1374,7 +1374,7 @@ class App(ctk.CTk):
             if job.status == JobStatus.WAITING:
                 status_color = "gray"
                 job_tooltip = t('job_tt_waiting')
-            elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
+            elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.WAITING_FOR_SERVER, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
                 status_color = "orange"
                 audio_name = '\u23F5 ' + audio_name
                 job_tooltip = t('job_tt_running')
@@ -1414,7 +1414,7 @@ class App(ctk.CTk):
                 row['frame'].set_status_text(status_text, status_color)
                 
                 # Update progress bar visibility based on job status
-                is_processing = job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]
+                is_processing = job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.WAITING_FOR_SERVER, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]
                 if is_processing:
                     row['frame'].set_progress(job.progress, show_progress=True)
                 else:
@@ -1453,7 +1453,7 @@ class App(ctk.CTk):
                     try:
                         row['cancel_btn'].configure(command=lambda j=job: self._on_queue_row_action(j))
                         # Color: red if running, gray otherwise
-                        if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
+                        if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.WAITING_FOR_SERVER, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
                             row['cancel_btn'].configure(fg_color='darkred', hover_color='darkred')
                         else:
                             row['cancel_btn'].configure(fg_color=btn_color, hover_color='darkred')
@@ -1463,7 +1463,7 @@ class App(ctk.CTk):
                         # Update tooltip on the X button to reflect current status
                         if job.status == JobStatus.WAITING:
                             cancel_tt_text = t('queue_tt_remove_waiting')
-                        elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION, JobStatus.CANCELING]:
+                        elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.WAITING_FOR_SERVER, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION, JobStatus.CANCELING]:
                             cancel_tt_text = t('queue_tt_remove_entry')
                         else:
                             cancel_tt_text = t('queue_tt_remove_entry')
@@ -1547,7 +1547,7 @@ class App(ctk.CTk):
                 entry_frame.set_status_text(status_text, status_color)
                 
                 # Set progress bar visibility based on job status
-                is_processing = job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]
+                is_processing = job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.WAITING_FOR_SERVER, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]
                 if is_processing:
                     entry_frame.set_progress(job.progress, show_progress=True)
                 else:
@@ -1560,7 +1560,7 @@ class App(ctk.CTk):
                     text='X',
                     width=24,
                     height=20,
-                    fg_color=('darkred' if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION] else btn_color),
+                    fg_color=('darkred' if job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.WAITING_FOR_SERVER, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION] else btn_color),
                     hover_color=('darkred'),
                     command=lambda j=job: self._on_queue_row_action(j)
                 )
@@ -1568,7 +1568,7 @@ class App(ctk.CTk):
                 # Tooltip for X button per status
                 if job.status == JobStatus.WAITING:
                     cancel_tt_text = t('queue_tt_remove_waiting')
-                elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
+                elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.WAITING_FOR_SERVER, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
                     cancel_tt_text = t('queue_tt_cancel_running')
                 else:
                     cancel_tt_text = t('queue_tt_remove_entry')
@@ -1757,7 +1757,7 @@ class App(ctk.CTk):
                     except ValueError:
                         pass
                     self.update_queue_table()
-            elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
+            elif job.status in [JobStatus.AUDIO_CONVERSION, JobStatus.WAITING_FOR_SERVER, JobStatus.SPEAKER_IDENTIFICATION, JobStatus.TRANSCRIPTION]:
                 # Confirm cancel of running job
                 if tk.messagebox.askyesno(title='noScribe', message=t('transcription_canceled')):
                     self.logn()
@@ -3208,20 +3208,37 @@ class App(ctk.CTk):
             include_disfluencies=job.disfluencies,
         )
 
+        def mark_transcription_started() -> None:
+            if job.status == JobStatus.WAITING_FOR_SERVER:
+                job.status = JobStatus.TRANSCRIPTION
+                self.update_queue_table()
+
         def log_message(level: str, message: str) -> None:
+            mark_transcription_started()
             self.logn(message, 'error' if level == 'error' else None)
 
         def update_progress(percent: float, detail: str | None) -> None:
+            mark_transcription_started()
             self.set_progress(3, percent, _job_speaker_setting(job))
 
         def show_status(message_id: str, params: dict, level: str) -> None:
+            if message_id == 'server_queue_wait':
+                if job.status != JobStatus.WAITING_FOR_SERVER:
+                    job.status = JobStatus.WAITING_FOR_SERVER
+                    self.update_queue_table()
+            else:
+                mark_transcription_started()
             message = t(message_id, **params)
             self.logn(message, 'error' if level == 'error' else None)
+
+        def stream_segment(segment: TranscriptionSegment) -> None:
+            mark_transcription_started()
+            on_segment(segment)
 
         try:
             return self.inference_backend.transcribe(
                 request,
-                on_segment=on_segment,
+                on_segment=stream_segment,
                 on_log=log_message,
                 on_status=show_status,
                 on_progress=update_progress,
@@ -3261,16 +3278,23 @@ class App(ctk.CTk):
         def handle_event(event: dict) -> None:
             event_type = event.get('type')
             operation = event.get('operation')
-            if event_type == 'task_started' and operation == 'transcription':
-                job.status = JobStatus.TRANSCRIPTION
-                self.update_queue_table()
-                self.logn()
-                self.logn(t('start_transcription'), 'highlight')
-                self.logn(t('loading_whisper'))
+            if event_type == 'task_started':
+                if operation == 'diarization':
+                    job.status = JobStatus.SPEAKER_IDENTIFICATION
+                    self.update_queue_table()
+                elif operation == 'transcription':
+                    job.status = JobStatus.TRANSCRIPTION
+                    self.update_queue_table()
+                    self.logn()
+                    self.logn(t('start_transcription'), 'highlight')
+                    self.logn(t('loading_whisper'))
             elif event_type == 'status':
                 message_id = str(event.get('message_id') or '')
                 params = event.get('params') or {}
                 if message_id == 'server_queue_wait':
+                    if job.status != JobStatus.WAITING_FOR_SERVER:
+                        job.status = JobStatus.WAITING_FOR_SERVER
+                        self.update_queue_table()
                     self.logr(t(message_id, **params))
                 elif message_id:
                     self.logn(

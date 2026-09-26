@@ -65,6 +65,7 @@ de:
   # job status
   waiting: 'Wartend'
   audio_conversion: 'Audiokonvertierung'
+  waiting_for_server: 'Warten auf Serverplatz'
   speaker_identification: 'Sprecher:innenidentifikation'
   transcription: 'Transkription'
   canceling: 'Abbruch läuft' 

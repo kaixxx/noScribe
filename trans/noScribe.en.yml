@@ -68,6 +68,7 @@ en:
   # job status
   waiting: 'waiting'
   audio_conversion: 'audio conversion'
+  waiting_for_server: 'waiting for server slot'
   speaker_identification: 'speaker identification'
   transcription: 'transcription'
   canceling: 'canceling in progress'

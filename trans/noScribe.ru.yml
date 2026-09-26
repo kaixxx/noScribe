@@ -65,6 +65,7 @@ ru:
   # Статус задания
   waiting: 'ожидание'
   audio_conversion: 'преобразование аудио'
+  waiting_for_server: 'ожидание места на сервере'
   speaker_identification: 'определение дикторов'
   transcription: 'транскрибация'
   canceling: 'отмена выполняется'
