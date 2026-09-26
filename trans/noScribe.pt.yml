@@ -95,6 +95,7 @@ pt:
   audio_conversion_skipped_invalid_packets: '%{count} pacotes de áudio inválidos foram ignorados.'
   start_identifying_speakers: 'Identificação de alto-falantes...'
   loading_pyannote: 'Carregando pyannote'
+  streaming_audio: 'Transmitindo áudio para o servidor...'
   start_canceling: 'Cancelando... (aguarde um segundo)'
   start_transcription: 'Transcrição...'
   loading_whisper: 'Carregando whisper'

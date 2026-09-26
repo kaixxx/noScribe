@@ -94,6 +94,7 @@ ja:
   audio_conversion_skipped_invalid_packets: '%{count} 件の無効な音声パケットをスキップしました。'
   start_identifying_speakers: '話者の識別を開始中...'
   loading_pyannote: 'pyannoteの読み込み中'
+  streaming_audio: '音声をサーバーに転送しています...'
   start_canceling: 'キャンセル中...（しばらくお待ちください）'
   start_transcription: '転写を開始中...'
   loading_whisper: 'whisperの読み込み中'

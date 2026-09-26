@@ -99,6 +99,7 @@ en:
   audio_conversion_skipped_invalid_packets: '%{count} invalid audio packets were skipped.'
   start_identifying_speakers: 'Speaker identification...'
   loading_pyannote: 'Loading pyannote'
+  streaming_audio: 'Streaming audio to server...'
   start_canceling: 'Canceling... (please wait a second)'
   start_transcription: 'Transcription...'
   loading_whisper: 'Loading whisper'

@@ -94,6 +94,7 @@ es:
   audio_conversion_skipped_invalid_packets: 'Se omitieron %{count} paquetes de audio no válidos.'
   start_identifying_speakers: 'Identificación de oradores...'
   loading_pyannote: 'Cargando pyannote'
+  streaming_audio: 'Transmitiendo audio al servidor...'
   start_canceling: 'Cancelando... (por favor, espera un momento)'
   start_transcription: 'Transcribiendo...'
   loading_whisper: 'Cargando whisper'

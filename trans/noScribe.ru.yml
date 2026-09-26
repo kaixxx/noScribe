@@ -95,6 +95,7 @@ ru:
   audio_conversion_skipped_invalid_packets: 'Пропущено недопустимых аудиопакетов: %{count}.'
   start_identifying_speakers: 'Определение дикторов...'
   loading_pyannote: 'Загрузка pyannote'
+  streaming_audio: 'Передача аудио на сервер...'
   start_canceling: 'Отмена... (пожалуйста, подождите)'
   start_transcription: 'Транскрибация...'
   loading_whisper: 'Загрузка whisper'

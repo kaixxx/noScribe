@@ -306,6 +306,12 @@ class RemoteHttpPlugin:
                 self.cancel()
                 raise InferenceCancelled("Inference canceled")
 
+            on_event({
+                "type": "status",
+                "message_id": "streaming_audio",
+                "params": {},
+                "level": "info",
+            })
             with path.open("rb") as audio_stream:
                 response = self._session.post(
                     f"{self.profile.url}/v1/audio/jobs/{job_id}/audio",

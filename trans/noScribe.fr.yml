@@ -94,6 +94,7 @@ fr:
   audio_conversion_skipped_invalid_packets: "%{count} paquets audio invalides ont été ignorés."
   start_identifying_speakers: "Identification des locuteurs en cours..."
   loading_pyannote: "Chargement de pyannote"
+  streaming_audio: "Transmission de l'audio au serveur..."
   start_canceling: "Annulation en cours... (veuillez patienter un instant)"
   start_transcription: "Transcription en cours..."
   loading_whisper: "Chargement de whisper"

@@ -383,6 +383,8 @@ def test_remote_http_plugin_queues_combined_workflow_and_uploads_once(tmp_path):
     assert [segment.text for segment in streamed_segments] == ["Hello"]
     assert [segment.label for segment in streamed_diarization] == ["SPEAKER_00"]
     assert any(event.get("message_id") == "server_queue_wait" for event in events)
+    message_ids = [event.get("message_id") for event in events]
+    assert message_ids.index("server_queue_wait") < message_ids.index("streaming_audio")
 
 
 def test_remote_registration_skips_disabled_and_isolates_unknown_drivers():

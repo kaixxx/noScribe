@@ -3344,6 +3344,11 @@ class App(ctk.CTk):
                         job.status = JobStatus.WAITING_FOR_SERVER
                         self.update_queue_table()
                     self.logr(t(message_id, **params))
+                elif message_id == 'streaming_audio' \
+                        and job.status == JobStatus.WAITING_FOR_SERVER:
+                    # Replace the live queue-position line once uploading starts.
+                    self.logr(t(message_id, **params))
+                    self.logn()
                 elif message_id:
                     self.logn(
                         t(message_id, **params),

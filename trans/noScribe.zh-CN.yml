@@ -94,6 +94,7 @@ zh-CN: &defaults
   audio_conversion_skipped_invalid_packets: '已跳过 %{count} 个无效音频包。'
   start_identifying_speakers: '正在识别说话人...'
   loading_pyannote: '加载pyannote中'
+  streaming_audio: '正在将音频传输到服务器...'
   start_canceling: '正在取消...（请稍候）'
   start_transcription: '正在转录...'
   loading_whisper: '正在加载whisper'
