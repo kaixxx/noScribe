@@ -60,8 +60,10 @@ api_key: secret
 The `id` is the stable internal backend ID and must be unique across all
 profiles. The `name` is shown in the GUI after every model offered by this
 profile. URLs must use HTTPS and must not contain credentials; plain HTTP is
-accepted only for loopback development servers. API keys are currently stored
-as plain text, so profile files must be protected like other credentials.
+accepted only for loopback development servers and literal IPv4 addresses in
+the private RFC 1918 ranges. Hostnames, public addresses, and other reserved
+address ranges still require HTTPS. API keys are currently stored as plain
+text, so profile files must be protected like other credentials.
 
 `remote_profiles.py` creates the directory and loads both `.yml` and `.yaml`
 files. Invalid files are reported individually and do not prevent other

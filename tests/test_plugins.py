@@ -235,6 +235,57 @@ def test_remote_profile_validates_and_normalizes_connection():
 
 
 @pytest.mark.parametrize(
+    "host",
+    [
+        "10.0.0.1",
+        "10.255.255.254",
+        "172.16.0.1",
+        "172.31.255.254",
+        "192.168.0.1",
+        "192.168.255.254",
+    ],
+)
+def test_remote_profile_allows_http_for_rfc1918_addresses(host):
+    profile = RemoteBackendProfile.from_mapping({
+        "schema_version": REMOTE_PROFILE_SCHEMA_VERSION,
+        "id": "lan-server",
+        "name": "LAN server",
+        "driver": "noscribe-http-v1",
+        "url": f"http://{host}:8765/noscribe",
+        "api_key": "secret",
+    })
+
+    assert profile.url == f"http://{host}:8765/noscribe"
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "9.255.255.255",
+        "11.0.0.1",
+        "172.15.255.255",
+        "172.32.0.1",
+        "192.167.255.255",
+        "192.169.0.1",
+        "100.64.0.1",
+        "169.254.1.1",
+        "server.lan",
+        "[fc00::1]",
+    ],
+)
+def test_remote_profile_rejects_http_outside_loopback_and_rfc1918(host):
+    with pytest.raises(ValueError, match="require HTTPS"):
+        RemoteBackendProfile.from_mapping({
+            "schema_version": REMOTE_PROFILE_SCHEMA_VERSION,
+            "id": "insecure-server",
+            "name": "Insecure server",
+            "driver": "noscribe-http-v1",
+            "url": f"http://{host}:8765/noscribe",
+            "api_key": "secret",
+        })
+
+
+@pytest.mark.parametrize(
     ("field", "value", "match"),
     [
         ("schema_version", 2, "schema version"),

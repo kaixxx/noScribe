@@ -12,6 +12,11 @@ import yaml
 
 
 REMOTE_PROFILE_SCHEMA_VERSION = 1
+_RFC1918_NETWORKS = (
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+)
 
 
 @dataclass(frozen=True)
@@ -126,19 +131,25 @@ def _validate_url(value: str) -> str:
         raise ValueError("Remote backend field 'url' must be an HTTP(S) URL.")
     if parsed.username or parsed.password:
         raise ValueError("Remote backend URLs must not contain credentials.")
-    if parsed.scheme == "http" and not _is_loopback_host(parsed.hostname):
+    if parsed.scheme == "http" and not _is_private_http_host(parsed.hostname):
         raise ValueError(
-            "Remote backend URLs require HTTPS except for loopback connections."
+            "Remote backend URLs require HTTPS except for loopback and "
+            "RFC 1918 private IPv4 addresses."
         )
     return value.rstrip("/")
 
 
-def _is_loopback_host(hostname: str | None) -> bool:
+def _is_private_http_host(hostname: str | None) -> bool:
     if not hostname:
         return False
     if hostname.casefold() == "localhost":
         return True
     try:
-        return ipaddress.ip_address(hostname).is_loopback
+        address = ipaddress.ip_address(hostname)
     except ValueError:
         return False
+    if address.is_loopback:
+        return True
+    return isinstance(address, ipaddress.IPv4Address) and any(
+        address in network for network in _RFC1918_NETWORKS
+    )
