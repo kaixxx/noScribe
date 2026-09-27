@@ -5,7 +5,9 @@ import pytest
 
 pytest.importorskip("tkinter")
 
-from noScribe.main import App
+from noScribe import main
+from noScribe.inference import InferenceWorkerError
+from noScribe.main import App, _gui_error_message
 
 
 def _app_stub():
@@ -86,3 +88,23 @@ def test_background_progress_messages_replace_one_line_atomically():
 
     assert app.log_textbox.text == "embeddings: 100%"
     assert app.log_len == len(app.log_textbox.text)
+
+
+def test_gui_error_uses_short_message_from_wrapped_backend_error(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "t",
+        lambda message_id, **params: f"{message_id}: {params['name']}",
+    )
+    technical = InferenceWorkerError(
+        "HTTPConnectionPool(host='server'): Max retries exceeded",
+        user_message_id="err_remote_backend_connection",
+        user_message_params={"name": "IfS-Server"},
+    )
+    try:
+        raise RuntimeError("step failed") from technical
+    except RuntimeError as wrapped:
+        message = _gui_error_message(wrapped)
+
+    assert "IfS-Server" in message
+    assert "HTTPConnectionPool" not in message

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import threading
+from dataclasses import replace
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -19,6 +20,7 @@ from ...inference import (
     TranscriptionInfo,
     TranscriptionSegment,
 )
+from ...http_api_protocol import NOSCRIBE_HTTP_API_PROTOCOL_VERSION
 from ...models import ModelDescriptor, ModelRef
 from ..manifest import PLUGIN_PROTOCOL_VERSION, PluginManifest
 from ..protocol import validate_worker_event
@@ -30,6 +32,31 @@ _MODEL_TIMEOUT = (3.05, 10)
 _REQUEST_TIMEOUT = (10, None)
 _CANCEL_TIMEOUT = (3.05, 5)
 _QUEUE_POLL_INTERVAL = 0.5
+_UPLOAD_CHUNK_SIZE = 64 * 1024
+
+
+class _CancelableUpload:
+    """File-like request body that observes cancellation between chunks."""
+
+    def __init__(self, stream, cancel_event: threading.Event):
+        self._stream = stream
+        self._cancel_event = cancel_event
+
+    def read(self, size: int = -1):
+        if self._cancel_event.is_set():
+            raise InferenceCancelled("Inference canceled")
+        if size < 0 or size > _UPLOAD_CHUNK_SIZE:
+            size = _UPLOAD_CHUNK_SIZE
+        data = self._stream.read(size)
+        if self._cancel_event.is_set():
+            raise InferenceCancelled("Inference canceled")
+        return data
+
+    def close(self) -> None:
+        self._stream.close()
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
 
 
 class RemoteHttpPlugin:
@@ -47,7 +74,9 @@ class RemoteHttpPlugin:
         self._session = session or requests.Session()
         self._cancel_event = threading.Event()
         self._active_lock = threading.Lock()
+        self._models_lock = threading.Lock()
         self._active_response: requests.Response | None = None
+        self._active_upload: _CancelableUpload | None = None
         self._active_job_id: str | None = None
         self._active_job_token: str | None = None
         self._models, server_version, features = self._fetch_models()
@@ -71,7 +100,23 @@ class RemoteHttpPlugin:
         })
 
     def list_models(self) -> list[ModelDescriptor]:
-        return list(self._models)
+        with self._models_lock:
+            return list(self._models)
+
+    def refresh_models(self) -> None:
+        """Atomically replace the advertised models after a successful fetch."""
+        models, server_version, features = self._fetch_models()
+        capabilities = frozenset(
+            capability for model in models for capability in model.capabilities
+        )
+        with self._models_lock:
+            self._models = models
+            self.supports_workflows = "queued_workflows" in features
+            self.manifest = replace(
+                self.manifest,
+                version=server_version,
+                capabilities=capabilities,
+            )
 
     def transcribe(
         self,
@@ -312,7 +357,10 @@ class RemoteHttpPlugin:
                 "params": {},
                 "level": "info",
             })
-            with path.open("rb") as audio_stream:
+            audio_stream = _CancelableUpload(path.open("rb"), self._cancel_event)
+            with self._active_lock:
+                self._active_upload = audio_stream
+            try:
                 response = self._session.post(
                     f"{self.profile.url}/v1/audio/jobs/{job_id}/audio",
                     headers={
@@ -324,6 +372,11 @@ class RemoteHttpPlugin:
                     stream=True,
                     timeout=_REQUEST_TIMEOUT,
                 )
+            finally:
+                with self._active_lock:
+                    if self._active_upload is audio_stream:
+                        self._active_upload = None
+                audio_stream.close()
             self._raise_for_status(response, "Remote audio upload failed")
             with self._active_lock:
                 self._active_response = response
@@ -377,12 +430,17 @@ class RemoteHttpPlugin:
             )
         except InferenceCancelled:
             raise
-        except InferenceWorkerError:
+        except InferenceWorkerError as error:
+            if not error.user_message_id:
+                error.user_message_id = "err_remote_backend_connection"
+                error.user_message_params = {"name": self.profile.name}
             raise
         except (OSError, requests.RequestException, ValueError) as error:
             if self._cancel_event.is_set() or is_cancelled():
                 raise InferenceCancelled("Inference canceled") from error
-            raise InferenceWorkerError(f"Remote workflow failed: {error}") from error
+            raise self._remote_connection_error(
+                f"Remote workflow failed: {error}"
+            ) from error
         finally:
             with self._active_lock:
                 self._active_response = None
@@ -393,8 +451,11 @@ class RemoteHttpPlugin:
         self._cancel_event.set()
         with self._active_lock:
             response = self._active_response
+            upload = self._active_upload
             job_id = self._active_job_id
             job_token = self._active_job_token
+        if upload is not None:
+            upload.close()
         if response is not None:
             response.close()
         if job_id:
@@ -430,7 +491,7 @@ class RemoteHttpPlugin:
         except (requests.RequestException, ValueError) as error:
             if isinstance(error, InferenceWorkerError):
                 raise
-            raise InferenceWorkerError(
+            raise self._remote_connection_error(
                 f"Could not retrieve models from {self.profile.name}: {error}"
             ) from error
 
@@ -440,11 +501,13 @@ class RemoteHttpPlugin:
         if (
             not isinstance(protocol_version, int)
             or isinstance(protocol_version, bool)
-            or protocol_version != PLUGIN_PROTOCOL_VERSION
+            or protocol_version != NOSCRIBE_HTTP_API_PROTOCOL_VERSION
         ):
             raise InferenceWorkerError(
                 f"Remote server uses protocol {protocol_version!r}; "
-                f"this app supports {PLUGIN_PROTOCOL_VERSION}."
+                f"this app supports {NOSCRIBE_HTTP_API_PROTOCOL_VERSION}.",
+                user_message_id="err_remote_backend_connection",
+                user_message_params={"name": self.profile.name},
             )
         raw_models = payload.get("data", payload.get("models"))
         if not isinstance(raw_models, list):
@@ -546,12 +609,17 @@ class RemoteHttpPlugin:
                         self._active_job_id = None
         except InferenceCancelled:
             raise
-        except InferenceWorkerError:
+        except InferenceWorkerError as error:
+            if not error.user_message_id:
+                error.user_message_id = "err_remote_backend_connection"
+                error.user_message_params = {"name": self.profile.name}
             raise
         except (OSError, requests.RequestException) as error:
             if self._cancel_event.is_set() or is_cancelled():
                 raise InferenceCancelled("Inference canceled") from error
-            raise InferenceWorkerError(f"Remote inference request failed: {error}") from error
+            raise self._remote_connection_error(
+                f"Remote inference request failed: {error}"
+            ) from error
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -571,13 +639,23 @@ class RemoteHttpPlugin:
             )
         return event
 
-    @staticmethod
-    def _raise_for_status(response: requests.Response, prefix: str) -> None:
+    def _raise_for_status(self, response: requests.Response, prefix: str) -> None:
         if response.ok:
             return
         detail = response.text.strip()[:500]
         suffix = f": {detail}" if detail else ""
-        raise InferenceWorkerError(f"{prefix} (HTTP {response.status_code}){suffix}")
+        raise InferenceWorkerError(
+            f"{prefix} (HTTP {response.status_code}){suffix}",
+            user_message_id="err_remote_backend_connection",
+            user_message_params={"name": self.profile.name},
+        )
+
+    def _remote_connection_error(self, message: str) -> InferenceWorkerError:
+        return InferenceWorkerError(
+            message,
+            user_message_id="err_remote_backend_connection",
+            user_message_params={"name": self.profile.name},
+        )
 
 
 def _form_bool(value: bool) -> str:

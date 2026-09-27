@@ -30,6 +30,11 @@ cp noscribe-server.example.yml /etc/noscribe/server.yml
 python -m noScribe.server --config /etc/noscribe/server.yml
 ```
 
+The server is intentionally run from the source checkout and is excluded from
+the PyInstaller desktop bundles.  Updating or operating the centrally managed
+server should therefore not require rebuilding or distributing the desktop
+application.
+
 On Windows, use `requirements_win_cuda.txt` or `requirements_win_cpu.txt`
 instead. No separate server requirements installation is needed.
 
@@ -65,6 +70,9 @@ Content-Type: application/json
 The response contains `job_id`, `job_token`, `state`, and `position`. Poll with
 the token in `X-noScribe-Job-Token`. Once the state is `ready_for_upload`, send
 the FLAC bytes as the raw request body:
+
+Reservation JSON is limited to 64 KiB and one workflow contains at most two
+tasks (one diarization and one transcription request).
 
 ```http
 POST /v1/audio/jobs/{job_id}/audio

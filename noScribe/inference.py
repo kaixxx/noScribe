@@ -174,11 +174,25 @@ class InferenceCancelled(RuntimeError):
 
 
 class InferenceWorkerError(RuntimeError):
-    """An inference child process reported an error."""
+    """An inference backend reported an error.
 
-    def __init__(self, message: str, trace: Optional[str] = None):
+    ``message`` and ``trace`` are diagnostic and may be logged to the console
+    or log file.  Remote adapters can additionally provide a translation key
+    for a short message that is safe and useful in the GUI.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        trace: Optional[str] = None,
+        *,
+        user_message_id: Optional[str] = None,
+        user_message_params: Optional[Mapping[str, object]] = None,
+    ):
         super().__init__(message)
         self.trace = trace
+        self.user_message_id = user_message_id
+        self.user_message_params = dict(user_message_params or {})
 
 
 class LocalInferenceBackend:

@@ -14,8 +14,9 @@ from typing import Callable, Mapping, Protocol
 
 from fastapi import FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from ..http_api_protocol import NOSCRIBE_HTTP_API_PROTOCOL_VERSION
 from .config import ServerConfig
 from .jobs import (
     InvalidJobState,
@@ -29,7 +30,7 @@ from .jobs import (
 from .storage import prepare_runtime_directory
 
 
-SERVER_PROTOCOL_VERSION = 1
+MAX_RESERVATION_JSON_BYTES = 64 * 1024
 _END = object()
 
 
@@ -51,20 +52,20 @@ class WorkflowProcessor(Protocol):
 
 class TaskBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    type: str
-    model: str = Field(min_length=1)
+    type: str = Field(min_length=1, max_length=32)
+    model: str = Field(min_length=1, max_length=256)
     options: dict[str, object] = Field(default_factory=dict)
 
 
 class AudioBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    filename: str = Field(min_length=1)
+    filename: str = Field(min_length=1, max_length=512)
     size: int = Field(gt=0)
 
 
 class JobBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    tasks: list[TaskBody] = Field(min_length=1)
+    tasks: list[TaskBody] = Field(min_length=1, max_length=2)
     audio: AudioBody
 
 
@@ -106,9 +107,17 @@ class InferenceService:
                 raise HTTPException(400, "Upload size differs from the reservation.")
 
         self.scheduler.begin_upload(snapshot.job_id, token)
-        descriptor, filename = tempfile.mkstemp(
-            prefix="upload-", suffix=".flac", dir=self.config.runtime_dir
-        )
+        try:
+            descriptor, filename = tempfile.mkstemp(
+                prefix="upload-", suffix=".flac", dir=self.config.runtime_dir
+            )
+        except OSError as error:
+            # begin_upload owns the sole processing slot.  Release it even if
+            # the runtime filesystem is full or otherwise unavailable.
+            self.scheduler.cancel(snapshot.job_id, token)
+            raise HTTPException(
+                507, "Could not create temporary upload storage."
+            ) from error
         path = Path(filename)
         received = 0
         started = time.monotonic()
@@ -286,18 +295,40 @@ def create_app(
     @app.get("/v1/models")
     def models():
         return {
-            "protocol_version": SERVER_PROTOCOL_VERSION,
+            "protocol_version": NOSCRIBE_HTTP_API_PROTOCOL_VERSION,
             "server_version": app.version,
             "features": ["queued_workflows"],
             "data": processor.list_models(),
         }
 
     @app.post("/v1/audio/jobs", status_code=status.HTTP_202_ACCEPTED)
-    def reserve_job(body: JobBody):
+    async def reserve_job(request: Request):
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                declared_length = int(content_length)
+            except ValueError as error:
+                raise HTTPException(400, "Invalid Content-Length header.") from error
+            if declared_length > MAX_RESERVATION_JSON_BYTES:
+                raise HTTPException(413, "Reservation request is too large.")
+
+        raw_body = bytearray()
+        async for chunk in request.stream():
+            raw_body.extend(chunk)
+            if len(raw_body) > MAX_RESERVATION_JSON_BYTES:
+                raise HTTPException(413, "Reservation request is too large.")
+        try:
+            body = JobBody.model_validate_json(raw_body)
+        except ValidationError as error:
+            raise HTTPException(422, "Invalid reservation request.") from error
+
         if body.audio.size > config.max_upload_bytes:
             raise HTTPException(413, "Reserved audio is too large.")
         if not body.audio.filename.casefold().endswith(".flac"):
             raise HTTPException(400, "Server workflows require FLAC audio.")
+        operations = [task.type for task in body.tasks]
+        if len(set(operations)) != len(operations):
+            raise HTTPException(422, "A workflow may contain each task type once.")
         try:
             tasks = tuple(
                 JobTask(task.type, task.model, task.options) for task in body.tasks

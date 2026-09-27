@@ -24,28 +24,33 @@ class BackendRegistry:
     def __init__(self, plugins: Iterable[BackendPlugin] = ()):
         self._plugins: dict[str, BackendPlugin] = {}
         self._active: BackendPlugin | None = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         for plugin in plugins:
             self.register(plugin)
 
     def register(self, plugin: BackendPlugin) -> None:
         backend_id = plugin.manifest.id
-        if backend_id in self._plugins:
-            raise ValueError(f"Backend {backend_id!r} is already registered.")
-        self._plugins[backend_id] = plugin
+        with self._lock:
+            if backend_id in self._plugins:
+                raise ValueError(f"Backend {backend_id!r} is already registered.")
+            self._plugins[backend_id] = plugin
 
     def get(self, backend_id: str) -> BackendPlugin:
-        try:
-            return self._plugins[backend_id]
-        except KeyError as error:
-            raise ValueError(f"Unknown inference backend: {backend_id}") from error
+        with self._lock:
+            try:
+                return self._plugins[backend_id]
+            except KeyError as error:
+                raise ValueError(f"Unknown inference backend: {backend_id}") from error
 
     def list_plugins(self) -> tuple[PluginManifest, ...]:
-        return tuple(plugin.manifest for plugin in self._plugins.values())
+        with self._lock:
+            return tuple(plugin.manifest for plugin in self._plugins.values())
 
     def list_models(self, capability: str | None = None) -> list[ModelDescriptor]:
         models = []
-        for plugin in self._plugins.values():
+        with self._lock:
+            plugins = tuple(self._plugins.values())
+        for plugin in plugins:
             for model in plugin.list_models():
                 if capability is None or capability in model.capabilities:
                     models.append(model)
@@ -139,10 +144,17 @@ class BackendRegistry:
         if active is not None:
             active.cancel()
 
+    @property
+    def busy(self) -> bool:
+        with self._lock:
+            return self._active is not None
+
     def close(self) -> None:
         self.cancel()
         seen = set()
-        for plugin in self._plugins.values():
+        with self._lock:
+            plugins = tuple(self._plugins.values())
+        for plugin in plugins:
             identity = id(plugin)
             if identity not in seen:
                 plugin.close()

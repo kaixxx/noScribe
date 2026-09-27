@@ -27,6 +27,7 @@ import platform
 import queue as pyqueue
 import re
 import sys
+import time
 import tkinter as tk
 import traceback
 import urllib
@@ -69,7 +70,11 @@ from .inference import (
 )
 from .jobs import JobStatus, TranscriptionJob, TranscriptionQueue
 from .models import ModelRef
-from .plugins.factory import create_builtin_registry, register_remote_profiles
+from .plugins.factory import (
+    create_builtin_registry,
+    refresh_remote_profiles,
+    register_remote_profiles,
+)
 from .plugins.manifest import ExecutionType
 from .plugins.remote_profiles import load_remote_profiles
 from .tkHyperlinkManager import HyperlinkManager
@@ -101,6 +106,7 @@ logger = logging.getLogger()
 
 app_version = '0.7.2'
 app_year = '2026'
+REMOTE_MODEL_REFRESH_SECONDS = 15.0
 
 ctk.set_appearance_mode('dark')
 ctk.set_default_color_theme('blue')
@@ -850,6 +856,9 @@ def _init_app_state(app):
     app._shutting_down = False
     app._ui_thread_id = get_ident()
     app._ui_tasks = pyqueue.Queue()
+    app._remote_model_refresh_in_progress = False
+    app._remote_models_refreshed_at = float('-inf')
+    app._last_remote_refresh_errors = ()
 
     # Get a list of available Whisper models.
     tmp = transcription.WhisperModelManager(app.user_models_dir)
@@ -876,11 +885,17 @@ def _init_app_state(app):
         app.inference_backend,
         app.remote_backend_profiles,
     )
+    _update_transcription_model_catalog(app)
+
+
+def _update_transcription_model_catalog(app) -> None:
     app.transcription_models = {
         str(model.ref): model
         for model in app.inference_backend.list_models("transcription")
     }
-    app.transcription_model_options = app.inference_backend.model_options("transcription")
+    app.transcription_model_options = app.inference_backend.model_options(
+        "transcription"
+    )
     app.transcription_model_labels = {
         str(model.ref): label
         for label, model in app.transcription_model_options.items()
@@ -893,6 +908,24 @@ def _remote_backend_error_details(error) -> str:
         f"Could not connect remote backend {error.profile.name!r}: "
         f"{error.message}"
     )
+
+
+def _gui_error_message(error: BaseException, fallback: str | None = None) -> str:
+    """Return a concise translated message without discarding diagnostics.
+
+    Wrapping exceptions are common in the three processing phases, so inspect
+    the complete exception chain before falling back to its technical text.
+    """
+    current: BaseException | None = error
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, InferenceWorkerError):
+            message_id = current.user_message_id
+            if message_id:
+                return t(message_id, **current.user_message_params)
+        current = current.__cause__ or current.__context__
+    return fallback or str(error)
 
 
 class App(ctk.CTk):
@@ -1035,6 +1068,7 @@ class App(ctk.CTk):
                 self._values.append(t('label_add_custom_models'))
                 self._dropdown_menu.configure(values=self._values)
                 super()._clicked(event)
+                self.noScribe_parent.refresh_remote_models()
                 
             def _dropdown_callback(self, value: str):
                 if value == self._values[-2]:  # divider
@@ -1378,6 +1412,74 @@ class App(ctk.CTk):
             except Exception:
                 logger.exception("Error handling a UI task")
         self.after(20, self._drain_ui_tasks)
+
+    def refresh_remote_models(self) -> None:
+        """Refresh remote model catalogs without blocking the Tk event loop."""
+        now = time.monotonic()
+        if (
+            self._remote_model_refresh_in_progress
+            or self.inference_backend.busy
+            or now - self._remote_models_refreshed_at
+            < REMOTE_MODEL_REFRESH_SECONDS
+        ):
+            return
+        self._remote_model_refresh_in_progress = True
+
+        selected = self.transcription_model_options.get(
+            self.option_menu_whisper_model.get()
+        )
+        selected_ref = str(selected.ref) if selected is not None else None
+
+        def refresh() -> None:
+            errors = refresh_remote_profiles(
+                self.inference_backend, self.remote_backend_profiles
+            )
+
+            def apply() -> None:
+                self._remote_model_refresh_in_progress = False
+                self._remote_models_refreshed_at = time.monotonic()
+                self.remote_backend_registration_errors = errors
+                _update_transcription_model_catalog(self)
+
+                values = list(self.transcription_model_options)
+                menu_values = [
+                    *values,
+                    '--------------------',
+                    t('label_add_custom_models'),
+                ]
+                self.option_menu_whisper_model.configure(values=menu_values)
+                if selected_ref in self.transcription_model_labels:
+                    self.option_menu_whisper_model.set(
+                        self.transcription_model_labels[selected_ref]
+                    )
+                elif values:
+                    self.option_menu_whisper_model.set(values[0])
+
+                error_keys = tuple(
+                    (error.profile.id, error.message) for error in errors
+                )
+                if error_keys != self._last_remote_refresh_errors:
+                    for error in errors:
+                        print(_remote_backend_error_details(error), file=sys.stderr)
+                        self.logn(
+                            t(
+                                'err_remote_backend_connection',
+                                name=error.profile.name,
+                            ),
+                            'error',
+                            where='screen',
+                        )
+                    self._last_remote_refresh_errors = error_keys
+                try:
+                    self._worker_threads.remove(worker)
+                except ValueError:
+                    pass
+
+            self._dispatch_ui(apply)
+
+        worker = Thread(target=refresh, daemon=True)
+        self._worker_threads.append(worker)
+        worker.start()
 
     def on_whisper_model_selected(self, value):
         print(self.option_menu_whisper_model.old_value)
@@ -2449,7 +2551,7 @@ class App(ctk.CTk):
                     
                 except Exception as e:
                     # Distinguish cancellation from real errors
-                    error_msg = job.error_message or str(e)
+                    error_msg = _gui_error_message(e, job.error_message)
                     if str(e) == t('err_user_cancelation') or self.cancel:
                         # A user cancel is not an error: log the plain message,
                         # not a traceback that makes it look like a crash.
@@ -3293,7 +3395,12 @@ class App(ctk.CTk):
                 is_cancelled=lambda: self.cancel,
             )
         except InferenceWorkerError as error:
-            self.logn(f'Transcription failed: {error}', 'error')
+            if error.user_message_id:
+                self.logn(_gui_error_message(error), 'error')
+                self.logn(f'Transcription failed: {error}', where='file')
+                print(f'Transcription failed: {error}', file=sys.stderr)
+            else:
+                self.logn(f'Transcription failed: {error}', 'error')
             if error.trace:
                 self.logn(error.trace, where='file')
             raise
@@ -3424,7 +3531,12 @@ class App(ctk.CTk):
                 is_cancelled=lambda: self.cancel,
             )
         except InferenceWorkerError as error:
-            self.logn(f'PyAnnote error: {error}', 'error')
+            if error.user_message_id:
+                self.logn(_gui_error_message(error), 'error')
+                self.logn(f'PyAnnote error: {error}', where='file')
+                print(f'PyAnnote error: {error}', file=sys.stderr)
+            else:
+                self.logn(f'PyAnnote error: {error}', 'error')
             if error.trace:
                 self.logn(error.trace, where='file')
             raise

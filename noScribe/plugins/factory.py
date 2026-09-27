@@ -49,3 +49,29 @@ def register_remote_profiles(
         except Exception as error:
             errors.append(RemoteBackendRegistrationError(profile, str(error)))
     return tuple(errors)
+
+
+def refresh_remote_profiles(
+    registry: BackendRegistry,
+    profiles: tuple[RemoteBackendProfile, ...],
+) -> tuple[RemoteBackendRegistrationError, ...]:
+    """Refresh connected remotes and retry profiles unavailable at startup."""
+    errors = []
+    for profile in profiles:
+        if not profile.enabled:
+            continue
+        try:
+            try:
+                plugin = registry.get(profile.id)
+            except ValueError:
+                plugin = RemoteHttpPlugin(profile)
+                registry.register(plugin)
+                continue
+            if not isinstance(plugin, RemoteHttpPlugin):
+                raise ValueError(
+                    f"Backend ID {profile.id!r} is already used by another plugin."
+                )
+            plugin.refresh_models()
+        except Exception as error:
+            errors.append(RemoteBackendRegistrationError(profile, str(error)))
+    return tuple(errors)

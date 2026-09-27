@@ -1,10 +1,12 @@
 import json
+import io
 import threading
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from noScribe.inference import (
     DiarizationRequest,
+    InferenceCancelled,
     InferenceWorkflowRequest,
     TranscriptionRequest,
 )
@@ -13,6 +15,7 @@ from noScribe.models import ModelRef
 from noScribe.plugins.factory import register_remote_profiles
 from noScribe.plugins.registry import BackendRegistry
 from noScribe.plugins.remote_http import RemoteHttpPlugin
+from noScribe.plugins.remote_http.plugin import _CancelableUpload
 from noScribe.plugins.remote_profiles import RemoteBackendProfile
 
 
@@ -327,6 +330,72 @@ def test_remote_http_plugin_refuses_uncompressed_transport_file(tmp_path):
             plugin.close()
 
     assert not any(item[0] == "POST" for item in received)
+
+
+def test_cancelable_upload_stops_before_reading_more_audio():
+    cancel_event = threading.Event()
+    upload = _CancelableUpload(io.BytesIO(b"x" * 200_000), cancel_event)
+
+    assert len(upload.read(200_000)) == 64 * 1024
+    cancel_event.set()
+    try:
+        upload.read(200_000)
+    except InferenceCancelled:
+        pass
+    else:
+        raise AssertionError("Canceled upload continued reading audio")
+
+
+def test_remote_connection_error_has_short_gui_message():
+    try:
+        RemoteHttpPlugin(_profile("http://127.0.0.1:1"))
+    except InferenceWorkerError as error:
+        assert error.user_message_id == "err_remote_backend_connection"
+        assert error.user_message_params == {"name": "IfS-Server"}
+        assert "127.0.0.1" in str(error)
+    else:
+        raise AssertionError("Unavailable backend did not fail")
+
+
+def test_remote_model_catalog_can_be_refreshed_without_recreating_plugin():
+    class Response:
+        ok = True
+        text = ""
+
+        def __init__(self, model_id):
+            self._model_id = model_id
+
+        def json(self):
+            return {
+                "protocol_version": 1,
+                "server_version": "test",
+                "features": ["queued_workflows"],
+                "data": [{
+                    "id": self._model_id,
+                    "name": self._model_id,
+                    "engine": "test",
+                    "capabilities": ["transcription"],
+                }],
+            }
+
+    class Session:
+        def __init__(self):
+            self.model_ids = iter(("old-model", "new-model"))
+
+        def get(self, *_args, **_kwargs):
+            return Response(next(self.model_ids))
+
+        def close(self):
+            pass
+
+    plugin = RemoteHttpPlugin(
+        _profile("https://example.invalid"), session=Session()
+    )
+    assert [model.ref.model_id for model in plugin.list_models()] == ["old-model"]
+
+    plugin.refresh_models()
+
+    assert [model.ref.model_id for model in plugin.list_models()] == ["new-model"]
 
 
 def test_remote_http_plugin_queues_combined_workflow_and_uploads_once(tmp_path):

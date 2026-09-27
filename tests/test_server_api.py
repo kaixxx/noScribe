@@ -3,7 +3,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from noScribe.server.api import create_app
+from noScribe.server import api as server_api
+from noScribe.server.api import MAX_RESERVATION_JSON_BYTES, create_app
 from noScribe.server.config import ServerConfig
 from noScribe.server.jobs import JobScheduler
 
@@ -138,6 +139,69 @@ def test_queue_limit_returns_429(tmp_path):
         "audio": {"filename": "three.flac", "size": 5},
     })
     assert response.status_code == 429
+
+
+def test_reservation_limits_json_size_and_task_count(tmp_path):
+    client, _processor = _client(tmp_path)
+    too_many_tasks = client.post("/v1/audio/jobs", json={
+        "tasks": [
+            {"type": "transcription", "model": "precise"},
+            {"type": "diarization", "model": "speakers"},
+            {"type": "transcription", "model": "precise"},
+        ],
+        "audio": {"filename": "interview.flac", "size": 5},
+    })
+    assert too_many_tasks.status_code == 422
+
+    duplicate_tasks = client.post("/v1/audio/jobs", json={
+        "tasks": [
+            {"type": "transcription", "model": "precise"},
+            {"type": "transcription", "model": "precise"},
+        ],
+        "audio": {"filename": "interview.flac", "size": 5},
+    })
+    assert duplicate_tasks.status_code == 422
+
+    oversized = json.dumps({
+        "tasks": [{
+            "type": "transcription",
+            "model": "precise",
+            "options": {"padding": "x" * MAX_RESERVATION_JSON_BYTES},
+        }],
+        "audio": {"filename": "interview.flac", "size": 5},
+    })
+    too_large = client.post(
+        "/v1/audio/jobs",
+        content=oversized,
+        headers={"Content-Type": "application/json"},
+    )
+    assert too_large.status_code == 413
+
+
+def test_tempfile_creation_failure_releases_processing_slot(tmp_path, monkeypatch):
+    client, _processor = _client(tmp_path)
+    first, first_payload = _reserve(client, b"first")
+    second, _ = _reserve(client, b"second")
+
+    def fail_mkstemp(**_kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(server_api.tempfile, "mkstemp", fail_mkstemp)
+    response = client.post(
+        f"/v1/audio/jobs/{first['job_id']}/audio",
+        content=first_payload,
+        headers={
+            "Content-Type": "audio/flac",
+            "X-noScribe-Job-Token": first["job_token"],
+        },
+    )
+    assert response.status_code == 507
+
+    second_status = client.get(
+        f"/v1/audio/jobs/{second['job_id']}",
+        headers={"X-noScribe-Job-Token": second["job_token"]},
+    )
+    assert second_status.json()["state"] == "ready_for_upload"
 
 
 def test_direct_transcription_endpoint_runs_only_when_slot_is_free(tmp_path):
