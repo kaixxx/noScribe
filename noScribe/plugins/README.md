@@ -65,6 +65,11 @@ the private RFC 1918 ranges. Hostnames, public addresses, and other reserved
 address ranges still require HTTPS. API keys are currently stored as plain
 text, so profile files must be protected like other credentials.
 
+The desktop GUI exposes these files through **Add or manage server...** at the
+end of the model menu. It can create, edit, enable, test, and delete profiles.
+Changes are synchronized with the backend registry immediately; profile
+changes are blocked while an inference backend is active.
+
 `remote_profiles.py` creates the directory and loads both `.yml` and `.yaml`
 files. Invalid files are reported individually and do not prevent other
 profiles from loading. A valid profile configures a connection; the driver is

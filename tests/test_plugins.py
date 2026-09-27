@@ -7,7 +7,8 @@ from noScribe.inference import (
     TranscriptionRequest,
 )
 from noScribe.models import ModelDescriptor, ModelRef
-from noScribe.plugins.factory import create_builtin_registry
+from noScribe.plugins import factory
+from noScribe.plugins.factory import create_builtin_registry, sync_remote_profiles
 from noScribe.plugins.manifest import (
     ExecutionType,
     PluginManifest,
@@ -17,7 +18,10 @@ from noScribe.plugins.protocol import WorkerRequest, validate_worker_event
 from noScribe.plugins.remote_profiles import (
     REMOTE_PROFILE_SCHEMA_VERSION,
     RemoteBackendProfile,
+    delete_remote_profile,
     load_remote_profiles,
+    new_remote_profile_id,
+    save_remote_profile,
 )
 from noScribe.plugins.registry import BackendRegistry
 from noScribe.inference import LocalWorkerSettings
@@ -157,6 +161,16 @@ def test_registry_rejects_unknown_backend_and_duplicate_registration():
         registry.register(plugin)
     with pytest.raises(ValueError, match="Unknown inference backend"):
         registry.get("missing")
+
+
+def test_registry_unregisters_and_closes_idle_plugin():
+    plugin = _Plugin(_manifest("remote", "remote"))
+    registry = BackendRegistry([plugin])
+
+    registry.unregister("remote")
+
+    assert plugin.closed is True
+    assert registry.list_plugins() == ()
 
 
 def test_registry_routes_supported_atomic_workflow():
@@ -359,3 +373,79 @@ def test_remote_profile_loader_creates_missing_directory(tmp_path):
     assert profiles_dir.is_dir()
     assert result.profiles == ()
     assert result.errors == ()
+
+
+def test_remote_profile_manager_saves_updates_and_deletes_atomically(tmp_path):
+    profiles_dir = tmp_path / "backends"
+    profile_id = new_remote_profile_id("IfS Server", set())
+    assert profile_id == "ifs-server"
+    assert new_remote_profile_id("IfS Server", {profile_id}) == "ifs-server-2"
+
+    profile = RemoteBackendProfile.from_mapping({
+        "schema_version": REMOTE_PROFILE_SCHEMA_VERSION,
+        "id": profile_id,
+        "name": "IfS Server",
+        "driver": "noscribe-http-v1",
+        "enabled": True,
+        "url": "https://noscribe.example.org/",
+        "api_key": "visible-secret",
+    })
+    saved = save_remote_profile(profiles_dir, profile)
+
+    assert saved.source == profiles_dir / "ifs-server.yml"
+    assert saved.url == "https://noscribe.example.org"
+    assert load_remote_profiles(profiles_dir).profiles == (saved,)
+
+    updated = RemoteBackendProfile(
+        **{**saved.__dict__, "name": "Updated server", "enabled": False}
+    )
+    updated = save_remote_profile(profiles_dir, updated)
+    assert len(tuple(profiles_dir.glob("*.yml"))) == 1
+    assert load_remote_profiles(profiles_dir).profiles == (updated,)
+
+    delete_remote_profile(profiles_dir, updated)
+    assert load_remote_profiles(profiles_dir).profiles == ()
+
+
+def test_remote_profile_sync_replaces_changed_and_removes_disabled(monkeypatch):
+    created = []
+
+    class FakeRemotePlugin(_Plugin):
+        def __init__(self, profile):
+            super().__init__(_manifest(
+                profile.id, "remote", name=profile.name
+            ))
+            self.profile = profile
+            self.refresh_count = 0
+            created.append(self)
+
+        def refresh_models(self):
+            self.refresh_count += 1
+
+    monkeypatch.setattr(factory, "RemoteHttpPlugin", FakeRemotePlugin)
+    profile = RemoteBackendProfile(
+        id="server",
+        name="Server",
+        driver="noscribe-http-v1",
+        url="https://server.example.org",
+        api_key="first",
+    )
+    registry = BackendRegistry()
+
+    assert sync_remote_profiles(registry, (profile,)) == ()
+    first = registry.get("server")
+    assert first is created[0]
+
+    changed = RemoteBackendProfile(
+        **{**profile.__dict__, "api_key": "second"}
+    )
+    assert sync_remote_profiles(registry, (changed,)) == ()
+    assert first.closed is True
+    assert registry.get("server").profile.api_key == "second"
+
+    disabled = RemoteBackendProfile(
+        **{**changed.__dict__, "enabled": False}
+    )
+    assert sync_remote_profiles(registry, (disabled,)) == ()
+    with pytest.raises(ValueError, match="Unknown inference backend"):
+        registry.get("server")

@@ -72,11 +72,19 @@ from .jobs import JobStatus, TranscriptionJob, TranscriptionQueue
 from .models import ModelRef
 from .plugins.factory import (
     create_builtin_registry,
-    refresh_remote_profiles,
     register_remote_profiles,
+    sync_remote_profiles,
 )
 from .plugins.manifest import ExecutionType
-from .plugins.remote_profiles import load_remote_profiles
+from .plugins.remote_http import NOSCRIBE_HTTP_DRIVER, RemoteHttpPlugin
+from .plugins.remote_profiles import (
+    REMOTE_PROFILE_SCHEMA_VERSION,
+    RemoteBackendProfile,
+    delete_remote_profile,
+    load_remote_profiles,
+    new_remote_profile_id,
+    save_remote_profile,
+)
 from .tkHyperlinkManager import HyperlinkManager
 
 if platform.system() == "Darwin": # = MAC
@@ -574,6 +582,19 @@ def model_uses_remote_backend(inference_backend, model: ModelRef) -> bool:
     )
 
 
+def _backend_configuration_busy(app) -> bool:
+    if app.inference_backend.busy:
+        return True
+    active_states = {
+        JobStatus.AUDIO_CONVERSION,
+        JobStatus.WAITING_FOR_SERVER,
+        JobStatus.SPEAKER_IDENTIFICATION,
+        JobStatus.TRANSCRIPTION,
+        JobStatus.CANCELING,
+    }
+    return any(job.status in active_states for job in app.queue.jobs)
+
+
 def create_job_from_cli_args(args) -> TranscriptionJob:
     """Create a TranscriptionJob from command line arguments"""
     # Parse time arguments
@@ -857,6 +878,7 @@ def _init_app_state(app):
     app._ui_thread_id = get_ident()
     app._ui_tasks = pyqueue.Queue()
     app._remote_model_refresh_in_progress = False
+    app._remote_model_refresh_pending = False
     app._remote_models_refreshed_at = float('-inf')
     app._last_remote_refresh_errors = ()
 
@@ -900,6 +922,15 @@ def _update_transcription_model_catalog(app) -> None:
         str(model.ref): label
         for label, model in app.transcription_model_options.items()
     }
+
+
+def _model_menu_values(app) -> list[str]:
+    return [
+        *app.transcription_model_options,
+        '--------------------',
+        t('label_add_custom_models'),
+        t('label_manage_servers'),
+    ]
 
 
 def _remote_backend_error_details(error) -> str:
@@ -1063,17 +1094,15 @@ class App(ctk.CTk):
 
             def _clicked(self, event=0):
                 self.old_value = self.get()
-                self._values = list(self.noScribe_parent.transcription_model_options.keys())
-                self._values.append('--------------------')
-                self._values.append(t('label_add_custom_models'))
+                self._values = _model_menu_values(self.noScribe_parent)
                 self._dropdown_menu.configure(values=self._values)
                 super()._clicked(event)
                 self.noScribe_parent.refresh_remote_models()
                 
             def _dropdown_callback(self, value: str):
-                if value == self._values[-2]:  # divider
+                if value == '--------------------':
                     return
-                if value == self._values[-1]:  # Add custom model
+                if value == t('label_add_custom_models'):
                     # show custom model folder
                     path = self.noScribe_parent.user_models_dir
                     try:
@@ -1088,6 +1117,8 @@ class App(ctk.CTk):
                             raise OSError(f"Unsupported operating system: {os_type}")
                     except Exception as e:
                         self.noScribe_parent.logn(f"Failed to open folder: {e}")
+                elif value == t('label_manage_servers'):
+                    self.noScribe_parent.open_server_manager()
                 else:
                     super()._dropdown_callback(value)
         
@@ -1413,14 +1444,17 @@ class App(ctk.CTk):
                 logger.exception("Error handling a UI task")
         self.after(20, self._drain_ui_tasks)
 
-    def refresh_remote_models(self) -> None:
+    def refresh_remote_models(self, *, force: bool = False) -> None:
         """Refresh remote model catalogs without blocking the Tk event loop."""
         now = time.monotonic()
+        if self._remote_model_refresh_in_progress:
+            if force:
+                self._remote_model_refresh_pending = True
+            return
         if (
-            self._remote_model_refresh_in_progress
-            or self.inference_backend.busy
-            or now - self._remote_models_refreshed_at
-            < REMOTE_MODEL_REFRESH_SECONDS
+            self.inference_backend.busy
+            or (not force and now - self._remote_models_refreshed_at
+                < REMOTE_MODEL_REFRESH_SECONDS)
         ):
             return
         self._remote_model_refresh_in_progress = True
@@ -1431,9 +1465,18 @@ class App(ctk.CTk):
         selected_ref = str(selected.ref) if selected is not None else None
 
         def refresh() -> None:
-            errors = refresh_remote_profiles(
-                self.inference_backend, self.remote_backend_profiles
-            )
+            refresh_failure = None
+            try:
+                errors = sync_remote_profiles(
+                    self.inference_backend, self.remote_backend_profiles
+                )
+            except Exception as error:
+                errors = ()
+                refresh_failure = error
+                print(
+                    f"Could not synchronize remote backends: {error}",
+                    file=sys.stderr,
+                )
 
             def apply() -> None:
                 self._remote_model_refresh_in_progress = False
@@ -1442,11 +1485,7 @@ class App(ctk.CTk):
                 _update_transcription_model_catalog(self)
 
                 values = list(self.transcription_model_options)
-                menu_values = [
-                    *values,
-                    '--------------------',
-                    t('label_add_custom_models'),
-                ]
+                menu_values = _model_menu_values(self)
                 self.option_menu_whisper_model.configure(values=menu_values)
                 if selected_ref in self.transcription_model_labels:
                     self.option_menu_whisper_model.set(
@@ -1470,16 +1509,449 @@ class App(ctk.CTk):
                             where='screen',
                         )
                     self._last_remote_refresh_errors = error_keys
+                if refresh_failure is not None:
+                    self.logn(t('err_remote_backend_refresh'), 'error', where='screen')
                 try:
                     self._worker_threads.remove(worker)
                 except ValueError:
                     pass
+                if self._remote_model_refresh_pending:
+                    self._remote_model_refresh_pending = False
+                    self.after(0, lambda: self.refresh_remote_models(force=True))
 
             self._dispatch_ui(apply)
 
         worker = Thread(target=refresh, daemon=True)
         self._worker_threads.append(worker)
         worker.start()
+
+    def open_server_manager(self) -> None:
+        """Open the editor for independently stored remote server profiles."""
+        if _backend_configuration_busy(self):
+            tk.messagebox.showerror(
+                title='noScribe', message=t('server_manager_busy')
+            )
+            return
+        existing_dialog = getattr(self, '_server_manager_dialog', None)
+        if existing_dialog is not None and existing_dialog.winfo_exists():
+            existing_dialog.focus()
+            return
+
+        dlg = ctk.CTkToplevel(self)
+        self._server_manager_dialog = dlg
+        dlg.title(t('server_manager_title'))
+        dlg.geometry('780x440')
+        dlg.minsize(720, 400)
+        dlg.transient(self)
+        dlg.grid_columnconfigure(0, weight=0)
+        dlg.grid_columnconfigure(1, weight=1)
+        dlg.grid_rowconfigure(0, weight=1)
+
+        left = ctk.CTkFrame(dlg, width=240)
+        left.grid(row=0, column=0, padx=(15, 8), pady=15, sticky='nsew')
+        left.grid_propagate(False)
+        left.grid_rowconfigure(1, weight=1)
+        left.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            left, text=t('server_manager_profiles'), anchor='w'
+        ).grid(row=0, column=0, columnspan=2, padx=10, pady=(10, 5), sticky='ew')
+        # Native Tk widgets do not observe CustomTkinter's widget scaling.
+        # Apply the current CTk font scaling explicitly so the profile list
+        # matches the labels and entries on high-DPI displays.
+        try:
+            profile_list_font = left._apply_font_scaling(ctk.CTkFont())
+        except Exception:
+            profile_list_font = ('TkDefaultFont', -26)
+        profile_list = tk.Listbox(
+            left,
+            exportselection=False,
+            borderwidth=0,
+            highlightthickness=0,
+            activestyle='none',
+            font=profile_list_font,
+            bg='#2b2b2b',
+            fg='#f2f2f2',
+            selectbackground='#1f6aa5',
+            selectforeground='white',
+        )
+        profile_list.grid(
+            row=1, column=0, columnspan=2, padx=10, pady=5, sticky='nsew'
+        )
+
+        right = ctk.CTkFrame(dlg)
+        right.grid(row=0, column=1, padx=(8, 15), pady=15, sticky='nsew')
+        right.grid_columnconfigure(1, weight=1)
+
+        fields = {}
+        for row, (key, label_key) in enumerate((
+            ('name', 'server_manager_name'),
+            ('url', 'server_manager_url'),
+            ('api_key', 'server_manager_api_key'),
+        )):
+            ctk.CTkLabel(right, text=t(label_key), anchor='w').grid(
+                row=row, column=0, padx=(15, 10), pady=(18 if row == 0 else 8, 4),
+                sticky='w',
+            )
+            entry = ctk.CTkEntry(right)
+            entry.grid(
+                row=row, column=1, padx=(0, 15), pady=(18 if row == 0 else 8, 4),
+                sticky='ew',
+            )
+            fields[key] = entry
+
+        enabled_var = tk.BooleanVar(value=True)
+        enabled_checkbox = ctk.CTkCheckBox(
+            right,
+            text=t('server_manager_enabled'),
+            variable=enabled_var,
+            onvalue=True,
+            offvalue=False,
+        )
+        enabled_checkbox.grid(
+            row=3, column=1, padx=(0, 15), pady=(12, 8), sticky='w'
+        )
+
+        status_label = ctk.CTkLabel(
+            right, text='', anchor='w', justify='left', wraplength=430
+        )
+        status_label.grid(
+            row=4, column=0, columnspan=2, padx=15, pady=(12, 5), sticky='ew'
+        )
+        right.grid_rowconfigure(4, weight=1)
+
+        current_id: str | None = None
+        visible_profiles: list[RemoteBackendProfile] = []
+        form_dirty = False
+        changing_form = False
+
+        def profile_by_id(profile_id: str | None):
+            return next(
+                (profile for profile in self.remote_backend_profiles
+                 if profile.id == profile_id),
+                None,
+            )
+
+        def set_entry(entry, value: str) -> None:
+            entry.delete(0, tk.END)
+            entry.insert(0, value)
+
+        def show_profile(profile: RemoteBackendProfile | None) -> None:
+            nonlocal current_id, form_dirty, changing_form
+            changing_form = True
+            current_id = profile.id if profile is not None else None
+            set_entry(fields['name'], profile.name if profile else '')
+            set_entry(fields['url'], profile.url if profile else '')
+            set_entry(fields['api_key'], profile.api_key if profile else '')
+            enabled_var.set(profile.enabled if profile else True)
+            changing_form = False
+            form_dirty = False
+            status_label.configure(text='')
+            fields['name'].focus()
+
+        def refresh_list(selected_id: str | None = None) -> None:
+            nonlocal visible_profiles
+            visible_profiles = sorted(
+                self.remote_backend_profiles,
+                key=lambda profile: profile.name.casefold(),
+            )
+            profile_list.delete(0, tk.END)
+            selected_index = None
+            for index, profile in enumerate(visible_profiles):
+                suffix = '' if profile.enabled else t('server_manager_disabled_suffix')
+                profile_list.insert(tk.END, f'{profile.name}{suffix}')
+                if profile.id == selected_id:
+                    selected_index = index
+            if selected_index is not None:
+                profile_list.selection_set(selected_index)
+                profile_list.see(selected_index)
+
+        def candidate_from_form() -> RemoteBackendProfile:
+            existing = profile_by_id(current_id)
+            name = fields['name'].get().strip()
+            profile_id = (
+                existing.id if existing is not None
+                else new_remote_profile_id(
+                    name,
+                    {
+                        manifest.id
+                        for manifest in self.inference_backend.list_plugins()
+                    } | {
+                        profile.id for profile in self.remote_backend_profiles
+                    },
+                )
+            )
+            return RemoteBackendProfile.from_mapping({
+                'schema_version': REMOTE_PROFILE_SCHEMA_VERSION,
+                'id': profile_id,
+                'name': name,
+                'driver': NOSCRIBE_HTTP_DRIVER,
+                'enabled': bool(enabled_var.get()),
+                'url': fields['url'].get().strip(),
+                'api_key': fields['api_key'].get().strip(),
+            }, source=existing.source if existing is not None else None)
+
+        def mark_dirty(_event=None) -> None:
+            nonlocal form_dirty
+            if not changing_form:
+                form_dirty = True
+
+        def update_list_label(profile: RemoteBackendProfile) -> None:
+            for index, value in enumerate(visible_profiles):
+                if value.id != profile.id:
+                    continue
+                visible_profiles[index] = profile
+                suffix = (
+                    '' if profile.enabled
+                    else t('server_manager_disabled_suffix')
+                )
+                profile_list.delete(index)
+                profile_list.insert(index, f'{profile.name}{suffix}')
+                profile_list.selection_set(index)
+                return
+
+        def persist_profile(*, show_error: bool) -> bool:
+            nonlocal current_id, form_dirty
+            if not form_dirty:
+                return True
+            if _backend_configuration_busy(self):
+                message = t('server_manager_busy')
+                status_label.configure(text=message)
+                if show_error:
+                    tk.messagebox.showerror(
+                        title='noScribe', message=message, parent=dlg
+                    )
+                return False
+            try:
+                candidate = candidate_from_form()
+            except (OSError, ValueError) as error:
+                message = str(error)
+                status_label.configure(text=message)
+                if show_error:
+                    tk.messagebox.showerror(
+                        title='noScribe', message=message, parent=dlg
+                    )
+                return False
+            existing = profile_by_id(current_id)
+            if existing == candidate:
+                form_dirty = False
+                return True
+            try:
+                profile = save_remote_profile(
+                    self.remote_backends_dir, candidate
+                )
+            except OSError as error:
+                message = str(error)
+                status_label.configure(text=message)
+                if show_error:
+                    tk.messagebox.showerror(
+                        title='noScribe', message=message, parent=dlg
+                    )
+                return False
+            profiles = [
+                value for value in self.remote_backend_profiles
+                if value.id != profile.id
+            ]
+            profiles.append(profile)
+            self.remote_backend_profiles = tuple(profiles)
+            was_new = current_id is None
+            current_id = profile.id
+            form_dirty = False
+            if was_new:
+                dlg.after_idle(
+                    lambda saved_id=profile.id: (
+                        refresh_list(saved_id)
+                        if current_id == saved_id and dlg.winfo_exists()
+                        else None
+                    )
+                )
+            else:
+                for index, value in enumerate(visible_profiles):
+                    if value.id == profile.id:
+                        visible_profiles[index] = profile
+                        break
+                # Do not rewrite Listbox rows inside a FocusOut event: the
+                # focus may be moving to another profile and mutating the
+                # selection here would swallow that click.
+                dlg.after_idle(
+                    lambda saved=profile: (
+                        update_list_label(saved)
+                        if current_id == saved.id and dlg.winfo_exists()
+                        else None
+                    )
+                )
+            status_label.configure(text=t('server_manager_saved'))
+            self.refresh_remote_models(force=True)
+            return True
+
+        def save_on_focus_out(_event=None) -> None:
+            persist_profile(show_error=False)
+
+        def selected(_event=None) -> None:
+            selection = profile_list.curselection()
+            if not selection:
+                return
+            target_id = visible_profiles[selection[0]].id
+            if target_id == current_id:
+                return
+            if not persist_profile(show_error=True):
+                refresh_list(current_id)
+                return
+            target = profile_by_id(target_id)
+            if target is not None:
+                refresh_list(target.id)
+                show_profile(target)
+
+        def add_profile() -> None:
+            if not persist_profile(show_error=True):
+                refresh_list(current_id)
+                return
+            profile_list.selection_clear(0, tk.END)
+            show_profile(None)
+
+        def remove_profile() -> None:
+            nonlocal current_id
+            profile = profile_by_id(current_id)
+            if profile is None:
+                return
+            if _backend_configuration_busy(self):
+                tk.messagebox.showerror(
+                    title='noScribe', message=t('server_manager_busy'), parent=dlg
+                )
+                return
+            if not tk.messagebox.askyesno(
+                title='noScribe',
+                message=t('server_manager_delete_confirm', name=profile.name),
+                parent=dlg,
+            ):
+                return
+            try:
+                delete_remote_profile(self.remote_backends_dir, profile)
+            except (OSError, ValueError) as error:
+                tk.messagebox.showerror(
+                    title='noScribe', message=str(error), parent=dlg
+                )
+                return
+            self.remote_backend_profiles = tuple(
+                value for value in self.remote_backend_profiles
+                if value.id != profile.id
+            )
+            current_id = None
+            refresh_list()
+            show_profile(None)
+            status_label.configure(text=t('server_manager_deleted'))
+            self.refresh_remote_models(force=True)
+
+        def test_connection() -> None:
+            if _backend_configuration_busy(self):
+                tk.messagebox.showerror(
+                    title='noScribe', message=t('server_manager_busy'), parent=dlg
+                )
+                return
+            try:
+                profile = candidate_from_form()
+            except ValueError as error:
+                tk.messagebox.showerror(
+                    title='noScribe', message=str(error), parent=dlg
+                )
+                return
+            test_button.configure(state=tk.DISABLED)
+            status_label.configure(text=t('server_manager_testing'))
+
+            def run_test() -> None:
+                plugin = None
+                try:
+                    plugin = RemoteHttpPlugin(profile)
+                    count = len(plugin.list_models())
+                    error = None
+                except Exception as caught:
+                    count = 0
+                    error = caught
+                    print(
+                        f"Could not test remote backend {profile.name!r}: {caught}",
+                        file=sys.stderr,
+                    )
+                finally:
+                    if plugin is not None:
+                        plugin.close()
+
+                def finish_test() -> None:
+                    try:
+                        self._worker_threads.remove(worker)
+                    except ValueError:
+                        pass
+                    if not dlg.winfo_exists():
+                        return
+                    test_button.configure(state=tk.NORMAL)
+                    status_label.configure(
+                        text=(
+                            t('server_manager_test_ok', count=count)
+                            if error is None
+                            else t('server_manager_test_failed', error=str(error))
+                        )
+                    )
+
+                self._dispatch_ui(finish_test)
+
+            worker = Thread(target=run_test, daemon=True)
+            self._worker_threads.append(worker)
+            worker.start()
+
+        for entry in fields.values():
+            entry.bind('<KeyRelease>', mark_dirty, add='+')
+            entry.bind('<FocusOut>', save_on_focus_out, add='+')
+
+        def enabled_changed() -> None:
+            mark_dirty()
+            persist_profile(show_error=True)
+
+        enabled_checkbox.configure(command=enabled_changed)
+
+        ctk.CTkButton(left, text='+', width=42, command=add_profile).grid(
+            row=2, column=0, padx=(10, 4), pady=(5, 10), sticky='w'
+        )
+        ctk.CTkButton(
+            left,
+            text=t('server_manager_delete'),
+            width=100,
+            fg_color='#8b2f2f',
+            hover_color='#6f2525',
+            command=remove_profile,
+        ).grid(row=2, column=1, padx=(4, 10), pady=(5, 10), sticky='e')
+
+        actions = ctk.CTkFrame(right, fg_color='transparent')
+        actions.grid(row=5, column=0, columnspan=2, padx=15, pady=15, sticky='e')
+        test_button = ctk.CTkButton(
+            actions,
+            text=t('server_manager_test'),
+            width=120,
+            command=test_connection,
+        )
+        test_button.pack(side='left', padx=(0, 8))
+
+        def close_dialog() -> None:
+            if not persist_profile(show_error=True):
+                return
+            self._server_manager_dialog = None
+            dlg.grab_release()
+            dlg.destroy()
+
+        ctk.CTkButton(
+            actions,
+            text=t('server_manager_close'),
+            width=100,
+            command=close_dialog,
+        ).pack(side='left')
+
+        profile_list.bind('<<ListboxSelect>>', selected)
+        dlg.protocol('WM_DELETE_WINDOW', close_dialog)
+        refresh_list()
+        if visible_profiles:
+            profile_list.selection_set(0)
+            show_profile(visible_profiles[0])
+        else:
+            show_profile(None)
+        dlg.grab_set()
+        dlg.focus()
 
     def on_whisper_model_selected(self, value):
         print(self.option_menu_whisper_model.old_value)

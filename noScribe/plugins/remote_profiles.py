@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import ipaddress
+import os
+import re
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -116,6 +119,72 @@ def load_remote_profiles(directory: Path) -> RemoteProfileLoadResult:
             errors.append(RemoteProfileError(path=path, message=str(error)))
 
     return RemoteProfileLoadResult(tuple(profiles), tuple(errors))
+
+
+def new_remote_profile_id(name: str, existing_ids: set[str]) -> str:
+    """Return a readable, filesystem-safe ID that remains stable after save."""
+    base = re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-")
+    base = base or "remote-server"
+    candidate = base
+    suffix = 2
+    while candidate in existing_ids:
+        candidate = f"{base}-{suffix}"
+        suffix += 1
+    return candidate
+
+
+def save_remote_profile(
+    directory: Path, profile: RemoteBackendProfile
+) -> RemoteBackendProfile:
+    """Atomically persist one profile and return it with its source path."""
+    directory.mkdir(parents=True, exist_ok=True)
+    root = directory.resolve()
+    source = profile.source
+    if source is not None and source.resolve().parent == root:
+        target = source
+    else:
+        target = directory / f"{profile.id}.yml"
+        suffix = 2
+        while target.exists():
+            target = directory / f"{profile.id}-{suffix}.yml"
+            suffix += 1
+
+    value = {
+        "schema_version": REMOTE_PROFILE_SCHEMA_VERSION,
+        "id": profile.id,
+        "name": profile.name,
+        "driver": profile.driver,
+        "enabled": profile.enabled,
+        "url": profile.url,
+        "api_key": profile.api_key,
+    }
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{target.stem}-", suffix=".tmp", dir=directory
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            yaml.safe_dump(value, stream, sort_keys=False, allow_unicode=True)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, target)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+    return RemoteBackendProfile.from_mapping(value, source=target)
+
+
+def delete_remote_profile(
+    directory: Path, profile: RemoteBackendProfile
+) -> None:
+    """Delete only a profile file contained in the configured profile folder."""
+    if profile.source is None:
+        return
+    root = directory.resolve()
+    source = profile.source.resolve()
+    if source.parent != root:
+        raise ValueError("Remote profile file is outside the profile directory.")
+    source.unlink(missing_ok=True)
 
 
 def _required_string(value: Mapping[str, Any], key: str) -> str:

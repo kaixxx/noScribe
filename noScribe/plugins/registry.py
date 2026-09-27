@@ -42,6 +42,17 @@ class BackendRegistry:
             except KeyError as error:
                 raise ValueError(f"Unknown inference backend: {backend_id}") from error
 
+    def unregister(self, backend_id: str) -> None:
+        """Remove and close an idle plugin."""
+        with self._lock:
+            plugin = self._plugins.get(backend_id)
+            if plugin is None:
+                return
+            if self._active is plugin:
+                raise RuntimeError("An active inference backend cannot be removed.")
+            del self._plugins[backend_id]
+        plugin.close()
+
     def list_plugins(self) -> tuple[PluginManifest, ...]:
         with self._lock:
             return tuple(plugin.manifest for plugin in self._plugins.values())

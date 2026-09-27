@@ -75,3 +75,24 @@ def refresh_remote_profiles(
         except Exception as error:
             errors.append(RemoteBackendRegistrationError(profile, str(error)))
     return tuple(errors)
+
+
+def sync_remote_profiles(
+    registry: BackendRegistry,
+    profiles: tuple[RemoteBackendProfile, ...],
+) -> tuple[RemoteBackendRegistrationError, ...]:
+    """Make registered remote plugins match the persisted profile set."""
+    desired = {profile.id: profile for profile in profiles if profile.enabled}
+
+    for manifest in registry.list_plugins():
+        try:
+            plugin = registry.get(manifest.id)
+        except ValueError:
+            continue
+        if not isinstance(plugin, RemoteHttpPlugin):
+            continue
+        profile = desired.get(manifest.id)
+        if profile is None or plugin.profile != profile:
+            registry.unregister(manifest.id)
+
+    return refresh_remote_profiles(registry, tuple(desired.values()))
