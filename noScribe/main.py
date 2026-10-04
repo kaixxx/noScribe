@@ -2043,10 +2043,13 @@ class App(ctk.CTk):
         if platform.system() == 'Windows':
             program = impres.files("noScribeEdit") / "noScribeEdit.exe"
         elif platform.system() == "Darwin": # = MAC
-            # use local copy in development, installed one if used as an app:
-            program = impres.files("noScribeEdit") / "noScribeEdit"
-            if not program.exists():
+            # The frozen app uses the separately installed editor. Do not try
+            # importlib.resources there: noScribeEdit is intentionally not
+            # part of the noScribe bundle and therefore is not importable.
+            if getattr(sys, "frozen", False):
                 program = Path("/Applications") / "noScribeEdit.app" / "Contents" / "MacOS" / "noScribeEdit"
+            else:
+                program = impres.files("noScribeEdit") / "noScribeEdit"
         elif platform.system() == "Linux":
             if hasattr(sys, "_MEIPASS"):
                 program = Path(sys._MEIPASS) / "noScribeEdit" / "noScribeEdit"
