@@ -3,7 +3,7 @@ import sys
 from subprocess import Popen
 from datetime import datetime
 
-noScribe_version = '0.7'
+noScribe_version = '0.8'
 clean_build = True
 run_pyinstaller_non_cuda = False
 run_pyinstaller_cuda = True

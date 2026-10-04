@@ -85,7 +85,7 @@ logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 logger = logging.getLogger()
 
-app_version = '0.7.2'
+app_version = '0.8'
 app_year = '2026'
 
 ctk.set_appearance_mode('dark')
