@@ -129,3 +129,31 @@ def test_empty_cli_result_returns_failure(app, tmp_path, monkeypatch, capsys):
     assert "No text was recognized" in output
     assert "Output saved to:" not in output
     assert not Path(job.transcript_file).exists()
+
+
+@pytest.mark.parametrize("detection", ["none", "auto"])
+def test_segment_logs_metadata_without_text(app, tmp_path, monkeypatch, capsys, detection):
+    # Exercise the actual file logging as well as the live output.
+    monkeypatch.setattr(app, "log", m.App.log.__get__(app))
+    monkeypatch.setattr(app, "logn", m.App.logn.__get__(app))
+    text = " Confidential interview content."
+
+    def whisper(path, job, on_segment):
+        on_segment(_segment(text))
+        on_segment(_segment(" \t ", start=2.0))
+        return {}
+
+    monkeypatch.setattr(app, "_run_whisper_subprocess_stream", whisper)
+    job = _job(tmp_path, detection=detection)
+    app.queue.add_job(job)
+    app.transcription_worker()
+
+    assert job.status == m.JobStatus.FINISHED
+    assert text.strip() in capsys.readouterr().out
+    assert text.strip() in Path(job.transcript_file).read_text(encoding="utf-8")
+    log = (tmp_path / "log" / "transcript.log").read_text(encoding="utf-8")
+    assert text.strip() not in log
+    segments = [line for line in log.splitlines() if line.startswith("Segment received:")]
+    assert segments == [
+        f"Segment received: start=00:00:01.000 end=00:00:01.500 chars={len(text)}"
+    ]

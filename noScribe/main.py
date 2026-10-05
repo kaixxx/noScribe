@@ -3181,7 +3181,16 @@ class App(ctk.CTk):
                         a = d.createElementFromHTML(a_html)
                         p.appendChild(a)
 
-                        self.log(seg_text)
+                        # Keep the live transcript visible without persisting its
+                        # contents in the job log. Count only the original text,
+                        # before speaker labels and timestamps were added.
+                        self.log(seg_text, where='screen')
+                        self.logn(
+                            f'Segment received: start={utils.ms_to_str(orig_audio_start, include_ms=True)} '
+                            f'end={utils.ms_to_str(orig_audio_end, include_ms=True)} '
+                            f'chars={len(segment.text)}',
+                            where='file',
+                        )
                         
                         first_segment = False
 
