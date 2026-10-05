@@ -1,7 +1,10 @@
+from fractions import Fraction
 import importlib.resources as impres
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
+import soundfile as sf
 import av
 
 from noScribe import audio
@@ -174,11 +177,13 @@ def test_to_wav_skips_invalid_packets(tmp_path, monkeypatch):
     class FakeInputContainer:
         def __init__(self, packets):
             self._packets = packets
-            self.streams = SimpleNamespace(audio=["audio-stream"])
+            self.streams = SimpleNamespace(
+                audio=[SimpleNamespace(start_time=None)], video=[]
+            )
             self.closed = False
 
         def demux(self, stream):
-            assert stream == "audio-stream"
+            assert stream is self.streams.audio[0]
             return iter(self._packets)
 
         def close(self):
@@ -246,3 +251,191 @@ def test_to_wav_skips_invalid_packets(tmp_path, monkeypatch):
     assert output_container.muxed_packets == ["packet-0.0", "packet-0.5", "flush-packet"]
     assert input_container.closed is True
     assert output_container.closed is True
+
+
+def _write_wav_counting_seconds(path, seconds):
+    """A 16 kHz WAV whose samples hold the number of the second they are in,
+    times 1000, so a converted file shows where it starts."""
+    samples = np.repeat(np.arange(seconds, dtype=np.int16) * 1000, 16000)
+    sf.write(path, samples, 16000)
+
+
+def test_to_wav_start_stop_in_wav_input(tmp_path):
+    """
+    WAV reports no start time for its stream (`start_time is None`), which
+    made `seek` fail with "unsupported operand type(s) for *: 'NoneType' and
+    'Fraction'" -- a start time could not be used on any WAV file.
+    """
+
+    path_input = tmp_path / "counting.wav"
+    path_output = tmp_path / "part.wav"
+    _write_wav_counting_seconds(path_input, 10)
+    with av.open(path_input) as container:
+        assert container.streams.audio[0].start_time is None
+
+    with audio.convert.ToWav(path_input, path_output) as towav:
+        towav.seek(4 * 1000)
+        towav.stop_after(7 * 1000)
+        while towav.convert():
+            pass
+
+    samples, _ = sf.read(path_output, dtype="int16")
+    assert samples[0] == 4000
+    assert len(samples) / 16000 == pytest.approx(3, abs=0.1)
+
+
+@pytest.mark.parametrize(
+    "samples, rate, start, stop",
+    [
+        (10 * 16000, 16000, 12 * 1000, 0),
+        (10 * 16000, 16000, 6 * 1000, 5 * 1000),
+        # The last 45 samples at 44.1 kHz resample to fewer than the resampler
+        # hands on: a frame reaches the encoder, but no packet leaves it.
+        (3 * 44100 + 45, 44100, 3 * 1000, 0),
+    ],
+)
+def test_to_wav_says_when_there_is_nothing_to_convert(tmp_path, samples, rate, start, stop):
+    """
+    A start time at or after the end, or a stop time before the start, leaves
+    nothing to convert -- and PyAV creates the output file only with the first
+    packet it writes, so the next step failed on a missing file. Now that
+    seeking works on WAV, it is easy to get there; the conversion says so
+    itself.
+    """
+
+    path_input = tmp_path / "input.wav"
+    sf.write(path_input, np.zeros(samples, dtype=np.int16), rate)
+
+    with pytest.raises(ValueError, match="No audio to convert"):
+        with audio.convert.ToWav(path_input, tmp_path / "part.wav") as towav:
+            towav.seek(start)
+            if stop:
+                towav.stop_after(stop)
+            while towav.convert():
+                pass
+    assert not (tmp_path / "part.wav").exists()
+
+
+class _SeeksToTheStart:
+    """An input container whose index is too coarse to land anywhere but at
+    the start, like an audio-only WebM or Matroska file with cues only at its
+    clusters, seconds apart."""
+
+    def __init__(self, container):
+        self._container = container
+
+    def seek(self, offset, stream):
+        self._container.seek(0, stream=stream)
+
+    def close(self):
+        self._container.close()
+
+
+def test_to_wav_drops_what_the_seek_lands_on_before_the_start(tmp_path):
+    """
+    `seek` lands at or before the start -- at the last index point, which in
+    some containers is seconds before it. Everything from there on used to be
+    converted, so the transcript began early and every timestamp was late.
+    What the seek lands on before the start is dropped, to within one frame.
+    """
+
+    path_input = tmp_path / "counting.wav"
+    path_output = tmp_path / "part.wav"
+    _write_wav_counting_seconds(path_input, 10)
+    with av.open(path_input) as container:
+        frame_samples = next(container.decode(audio=0)).samples
+
+    with audio.convert.ToWav(path_input, path_output) as towav:
+        towav.container_input = _SeeksToTheStart(towav.container_input)
+        towav.seek(4 * 1000)
+        towav.stop_after(7 * 1000)
+        while towav.convert():
+            pass
+
+    samples, _ = sf.read(path_output, dtype="int16")
+    assert samples[0] >= 3000
+    assert np.count_nonzero(samples < 4000) < frame_samples
+    assert len(samples) / 16000 == pytest.approx(3, abs=0.2)
+    # Exporters need the actual sample position, including the seek's preroll.
+    assert towav.start_offset_ms < 4000
+    assert 4000 - towav.start_offset_ms < frame_samples / 16000 * 1000
+
+
+def test_to_wav_start_stop_count_from_stream_start(tmp_path):
+    """
+    Not every stream starts at zero: MP3 skips the encoder delay (25 ms in
+    tests/data/interview.mp3), MPEG-TS keeps a running clock. The start
+    position used to be counted back from the stream's start time instead of
+    forward, so it landed twice that early; frame times include it, so the
+    stop position has to add it as well. The time base of MP3 in AVI is
+    32/1225 s, which multiplying by its denominator got wrong.
+    """
+
+    seeks = []
+    towav = audio.convert.ToWav(tmp_path / "in.avi", tmp_path / "out.wav")
+    towav.stream_input = SimpleNamespace(time_base=Fraction(32, 1225), start_time=1225)
+    towav.container_input = SimpleNamespace(
+        streams=SimpleNamespace(video=[]),
+        seek=lambda offset, stream: seeks.append(offset)
+    )
+
+    towav.seek(4 * 1000)
+    towav.stop_after(7 * 1000)
+
+    # The stream starts at 1225 * 32/1225 = 32 s.
+    assert seeks == [int(36 / Fraction(32, 1225))]
+    assert towav.stop_after_sec == pytest.approx(39)
+
+
+@pytest.mark.parametrize("suffix", ["wav", "flac"])
+@pytest.mark.parametrize("start, stop", [(2345, 2340), (2345, 2345)])
+@pytest.mark.parametrize("stop_first", [False, True])
+def test_empty_or_reversed_range_is_rejected_before_writing(
+    tmp_path, suffix, start, stop, stop_first
+):
+    source = tmp_path / f"input.{suffix}"
+    output = tmp_path / "part.wav"
+    _write_wav_counting_seconds(source, 5)
+    with pytest.raises(ValueError, match="stop time must be after the start time"):
+        with audio.convert.ToWav(source, output) as towav:
+            if stop_first:
+                towav.stop_after(stop)
+                towav.seek(start)
+            else:
+                towav.seek(start)
+                towav.stop_after(stop)
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("start", [0, 500, 3000])
+def test_video_ranges_and_offsets_follow_playback_timeline(
+    tmp_path, delayed_audio_video, start
+):
+    output = tmp_path / "part.wav"
+    with audio.convert.ToWav(delayed_audio_video, output) as towav:
+        if start:
+            towav.seek(start)
+        towav.stop_after(6000)
+        while towav.convert():
+            pass
+
+    samples, rate = sf.read(output, dtype="int16")
+    if start == 3000:
+        # Audio sample values count seconds since the track began at video 2 s.
+        # Starting at video 3 s must select the track's second second, not fourth.
+        assert np.median(samples[1600:3200]) == pytest.approx(1000, abs=100)
+        assert towav.start_offset_ms == pytest.approx(3000, abs=30)
+        assert len(samples) / rate == pytest.approx(3, abs=0.06)
+    else:
+        assert towav.start_offset_ms == pytest.approx(2000, abs=30)
+        assert len(samples) / rate == pytest.approx(4, abs=0.06)
+
+
+def test_stop_before_delayed_video_audio_reports_no_audio(tmp_path, delayed_audio_video):
+    output = tmp_path / "part.wav"
+    with pytest.raises(ValueError, match="No audio to convert"):
+        with audio.convert.ToWav(delayed_audio_video, output) as towav:
+            towav.stop_after(1000)
+            while towav.convert():
+                pass
+    assert not output.exists()

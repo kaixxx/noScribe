@@ -45,7 +45,7 @@ de:
     Sie werden den Sprecher:innen in der Reihenfolge ihres ersten Auftretens
     zugeordnet und ersetzen die Labels S00/S01 im Transkript.
   ask_speaker_names_count: 'Sie haben %{n_names} Name(n) eingegeben, aber die Sprecher:innenzahl ist auf %{n_speakers} gesetzt. Die Namen werden dadurch womöglich den falschen Personen zugeordnet. Trotzdem starten?'
-  warn_speaker_names_more_speakers: 'Es wurden mehr Sprecher:innen erkannt als Namen eingegeben (%{n_names}). Die überzähligen behalten ihre ursprünglichen Labels.'
+  warn_speaker_names_more_speakers: 'Es wurden mehr Sprecher:innen erkannt als Namen eingegeben (%{n_names}). Die überzähligen werden stattdessen nummeriert, im Anschluss an die benannten und in der Reihenfolge ihres Auftretens.'
   label_whisper_model: 'Modell:'
   label_add_custom_models: 'KI-Modelle hinzufügen...'
   label_manage_servers: 'Server hinzufügen oder verwalten...'
@@ -154,6 +154,7 @@ de:
   err_user_cancelation: 'Abbruch durch Nutzer:in'
   err_whisper_main: 'whisper wurde mit folgendem Fehler beendet: %{e}'
   err_transcription: 'Fehler im 3. Schritt - Transkription'
+  err_empty_transcript: 'Im ausgewählten Bereich wurde kein Text erkannt. Prüfen Sie die Audiodatei und die Transkriptionseinstellungen.'
   rescue_saving: 'Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Stattdessen wurde das Transkript in dieser Datei gesichert: %{file}'
   rescue_saving_failed: 'Fehler: Beim Speichern unter dem ursprünglichen Dateinamen ist ein Fehler aufgetreten. Der alternative Dateiname existiert ebenso bereits. Die Transkription wird beendet. (Das Transkript darf nicht bereits in Word geöffnet sein!)'
   pyannote_cuda_error_prompt: |-

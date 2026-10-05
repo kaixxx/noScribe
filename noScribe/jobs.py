@@ -61,6 +61,7 @@ class TranscriptionJob:
         self.timestamps: bool = False
         self.disfluencies: bool = True
         self.pause: int = 0
+        self.auto_save: bool = True
 
     @property
     def output_format(self) -> str:

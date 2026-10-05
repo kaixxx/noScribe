@@ -44,7 +44,7 @@ zh-CN: &defaults
     按首次出现的顺序分配给说话人，
     并替换转录中的S00/S01标签。
   ask_speaker_names_count: '您输入了 %{n_names} 个名字，但说话人数量设置为 %{n_speakers}。名字可能会分配给错误的人。仍要开始吗？'
-  warn_speaker_names_more_speakers: '检测到的说话人数量超过输入的名字数量（%{n_names}）。多余的说话人保留其原始标签。'
+  warn_speaker_names_more_speakers: '检测到的说话人数量超过输入的名字数量（%{n_names}）。多余的说话人将改为编号，接在已命名的说话人之后，按出现顺序排列。'
   label_whisper_model: '人工智能模型：'
   label_add_custom_models: '添加人工智能模型...'  
   label_overlapping: '重叠发言：'
@@ -134,6 +134,7 @@ zh-CN: &defaults
   err_user_cancelation: '转录过程已被用户取消。'
   err_whisper_main: 'Whisper主进程终止，错误代码：%{e}'
   err_transcription: '步骤3中的转录错误。'
+  err_empty_transcript: '在所选范围内未识别到文本。请检查音频和转录设置。'
   rescue_saving: '保存至原始文件名失败。已保存至此文件：%{file}'
   rescue_saving_failed: '错误：保存至原始文件名失败。备用文件名已存在。程序将退出。（请确保转录文件未在Word中打开！）'
   pyannote_cuda_error_prompt: |-

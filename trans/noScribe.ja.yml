@@ -45,7 +45,7 @@ ja:
     最初に登場した順に話者へ割り当てられ、
     文字起こし内のS00/S01ラベルを置き換えます。
   ask_speaker_names_count: '%{n_names}件の名前が入力されましたが、話者数は%{n_speakers}に設定されています。名前が誤った人物に割り当てられる可能性があります。それでも開始しますか？'
-  warn_speaker_names_more_speakers: '入力された名前（%{n_names}件）より多くの話者が検出されました。余分な話者は元のラベルのままになります。'
+  warn_speaker_names_more_speakers: '入力された名前（%{n_names}件）より多くの話者が検出されました。余分な話者には代わりに、名前の付いた話者に続く番号が登場順に付きます。'
   label_whisper_model: 'モデル：'
   label_add_custom_models: 'AIモデルを追加...'
   label_overlapping: 'オーバーラッピング・スピーチ：'
@@ -133,6 +133,7 @@ ja:
   err_user_cancelation: 'ユーザーによってプロセスがキャンセルされました。'
   err_whisper_main: 'Whisperメインがエラーコード %{e} で終了しました'
   err_transcription: 'ステップ3でエラーが発生しました-転写'
+  err_empty_transcript: '選択した範囲でテキストが認識されませんでした。音声と文字起こしの設定を確認してください。'
   rescue_saving: '元のファイル名への保存に失敗しました。代わりにこのファイルに保存されました：%{file}'
   rescue_saving_failed: 'エラー：元のファイル名への保存に失敗しました。代替のファイル名も存在します。終了する必要があります。（Wordでトランスクリプトが既に開かれていないことを確認してください！）'
   pyannote_cuda_error_prompt: |-

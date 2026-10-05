@@ -63,5 +63,5 @@ app = BUNDLE(
     name='noScribe.app',
     icon='../img/noScribeLogo.ico',
     bundle_identifier='org.noScribe.noScribe',
-    info_plist={"CFBundleShortVersionString":"0.7.1"},
+    info_plist={"CFBundleShortVersionString":"0.8"},
 )

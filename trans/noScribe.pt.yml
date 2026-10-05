@@ -45,7 +45,7 @@ pt:
     São atribuídos aos falantes pela ordem da primeira aparição
     e substituem as etiquetas S00/S01 na transcrição.
   ask_speaker_names_count: 'Introduziu %{n_names} nome(s), mas o número de oradores está definido como %{n_speakers}. Os nomes podem ser atribuídos às pessoas erradas. Iniciar mesmo assim?'
-  warn_speaker_names_more_speakers: 'Foram detetados mais oradores do que os nomes inseridos (%{n_names}). Os oradores excedentes mantêm as suas etiquetas originais.'
+  warn_speaker_names_more_speakers: 'Foram detetados mais oradores do que os nomes inseridos (%{n_names}). Os oradores excedentes são numerados em vez disso, a seguir aos nomeados e por ordem de aparecimento.'
   label_whisper_model: 'Modelo:'
   label_add_custom_models: 'Adicionar modelo de IA...'  
   label_overlapping: 'Sobreposição:'
@@ -134,6 +134,7 @@ pt:
   err_user_cancelation: 'O processo foi cancelado pelo usuário.'
   err_whisper_main: Whisper terminou com o código de erro %{e}
   err_transcription: 'Erro na etapa 3 - transcrição'
+  err_empty_transcript: 'Não foi reconhecido texto no intervalo selecionado. Verifique o áudio e as definições de transcrição.'
   rescue_saving: 'Falha ao salvar com o nome de arquivo original. Salvo em vez disso neste arquivo: %{file}'
   rescue_saving_failed: 'Erro: Falha ao salvar com o nome de arquivo original. O nome alternativo também existe. Preciso sair. (Certifique-se de que sua transcrição não esteja aberta no Word!)'
   pyannote_cuda_error_prompt: |-

@@ -44,7 +44,7 @@ fr:
     Ils sont attribués aux locuteurs dans l'ordre de leur première apparition
     et remplacent les étiquettes S00/S01 dans la transcription.
   ask_speaker_names_count: 'Vous avez saisi %{n_names} nom(s), mais le nombre de locuteurs est réglé sur %{n_speakers}. Les noms risquent d''être attribués aux mauvaises personnes. Démarrer quand même ?'
-  warn_speaker_names_more_speakers: 'Plus de locuteurs ont été détectés que de noms saisis (%{n_names}). Les locuteurs en trop conservent leurs étiquettes d''origine.'
+  warn_speaker_names_more_speakers: 'Plus de locuteurs ont été détectés que de noms saisis (%{n_names}). Les locuteurs en trop sont numérotés à la place, à la suite des locuteurs nommés et dans l''ordre d''apparition.'
   label_whisper_model: "Modèle :"
   label_add_custom_models: "Ajouter un modèle d'IA..."
   label_overlapping: 'Chevauchements de parole'
@@ -133,6 +133,7 @@ fr:
   err_user_cancelation: "Le processus a été annulé par l'utilisateur."
   err_whisper_main: "Arrêt de whisper avec le code d'erreur %{e}"
   err_transcription: "Erreur à l'étape 3 - transcription"
+  err_empty_transcript: 'Aucun texte n’a été reconnu dans la plage sélectionnée. Vérifiez le fichier audio et les paramètres de transcription.'
   rescue_saving: "Échec de l'enregistrement sous le nom de fichier d'origine. Enregistré sous ce fichier à la place : %{file}"
   rescue_saving_failed: "Erreur : Échec de l'enregistrement sous le nom de fichier d'origine. Le nom de fichier alternatif existe également. Je dois quitter. (Assurez-vous que votre transcription n'est pas déjà ouverte dans Word !)"
   pyannote_cuda_error_prompt: |-
