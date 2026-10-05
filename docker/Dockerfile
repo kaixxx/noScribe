@@ -73,7 +73,8 @@ ENV PYTHONUNBUFFERED=1 \
 #   - docker/constraints.txt, hand-maintained pins with a reason each
 #   - docker/requirements.lock, the full package set of the last tested image
 # The final check fails the build when the installed set no longer matches
-# the lock, e.g. after requirements_linux.txt changed.
+# the lock, e.g. after requirements_linux.txt changed. It strips CRs, since a
+# Windows checkout with core.autocrlf may hold the lock file with CRLF.
 COPY environments/requirements_linux.txt /tmp/pip/requirements.txt
 COPY docker/constraints.txt docker/requirements.lock /tmp/pip/
 RUN set -eu; cd /tmp/pip; \
@@ -86,7 +87,7 @@ RUN set -eu; cd /tmp/pip; \
     pip install -r requirements-docker.txt -c constraints.txt; \
     if [ "${USE_LOCK}" = 1 ]; then \
       pip freeze --all | grep -v '^pip==' > installed.txt; \
-      grep -v '^#' requirements.lock | diff -u - installed.txt \
+      grep -v '^#' requirements.lock | tr -d '\r' | diff -u - installed.txt \
         || { echo "ERROR: installed packages differ from docker/requirements.lock; run docker/update-lock.sh" >&2; exit 1; }; \
     fi; \
     rm -rf /tmp/pip
@@ -112,7 +113,10 @@ RUN useradd --create-home --uid 1000 noscribe \
 
 # PYTHONPATH: noScribe locates its resources (models, pyannote, trans, img,
 # prompts) as top-level packages, and the working directory is /data.
+# PYTHONSAFEPATH: keeps `python -m` from putting that working directory, the
+# user's mounted folder, in front of it on sys.path.
 ENV PYTHONPATH=/opt/noscribe \
+    PYTHONSAFEPATH=1 \
     HOME=/home/noscribe \
     XDG_CONFIG_HOME=/config \
     XDG_CACHE_HOME=/tmp/.cache \
