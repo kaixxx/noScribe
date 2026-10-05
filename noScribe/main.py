@@ -2732,6 +2732,11 @@ class App(ctk.CTk):
                             # similar.
                             raise Exception(t('err_user_cancelation'))
 
+                    # Conversion can begin before the requested start by part
+                    # of a frame, or later if a video's audio track is delayed.
+                    # Use its actual media position for all exported timestamps.
+                    transcript_start = self._ffmpeg_proc.start_offset_ms
+
                 except Exception as e:
                     traceback_str = traceback.format_exc()
 
@@ -2847,7 +2852,7 @@ class App(ctk.CTk):
 
                         # write segments to log file
                         for segment in diarization:
-                            line = f'{utils.ms_to_str(job.start + segment["start"], include_ms=True)} - {utils.ms_to_str(job.start + segment["end"], include_ms=True)} {segment["label"]}'
+                            line = f'{utils.ms_to_str(transcript_start + segment["start"], include_ms=True)} - {utils.ms_to_str(transcript_start + segment["end"], include_ms=True)} {segment["label"]}'
                             self.logn(line, where='file')
 
                         self.logn()
@@ -3047,9 +3052,9 @@ class App(ctk.CTk):
                         # get time of the segment in milliseconds
                         start = round(segment.start * 1000.0)
                         end = round(segment.end * 1000.0)
-                        # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestamps will not match the original audio:
-                        orig_audio_start = job.start + start
-                        orig_audio_end = job.start + end
+                        # Restore the converted clip's actual media position.
+                        orig_audio_start = transcript_start + start
+                        orig_audio_end = transcript_start + end
 
                         if job.timestamps:
                             ts = utils.ms_to_str(orig_audio_start)
@@ -3068,8 +3073,8 @@ class App(ctk.CTk):
                             if first_segment:
                                 pause_str = pause_str.lstrip() + ' '
 
-                            orig_audio_start_pause = job.start + last_segment_end
-                            orig_audio_end_pause = job.start + start
+                            orig_audio_start_pause = transcript_start + last_segment_end
+                            orig_audio_end_pause = transcript_start + start
                             a = d.createElement('a')
                             a.name = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}_{speaker_disp}'
                             a.appendText(pause_str)

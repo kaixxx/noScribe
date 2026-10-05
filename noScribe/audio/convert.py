@@ -30,6 +30,10 @@ class ToWav:
         self.packet_iterator = None
         self.pending_frames = deque()
         self.start_at_sec: float = None
+        # Media position of the first converted sample, for transcript timestamps.
+        self.start_offset_ms: int = 0
+        self._timeline_start_sec: float = None
+        self._first_frame = True
         self.stop_after_sec: float = None
         self.decode_error_count: int = 0
         self._packets_written: int = 0
@@ -55,7 +59,11 @@ class ToWav:
         self.pending_frames.clear()
         self.decode_error_count = 0
         self._packets_written = 0
+        self.start_offset_ms = 0
+        self._first_frame = True
         self._output_flushed = False
+        self._timeline_start_sec = None
+        self._start_time()
 
         return self
 
@@ -85,14 +93,14 @@ class ToWav:
     def seek(self, milliseconds: int):
         """
         Start the conversion at this position, in milliseconds from the start
-        of the stream.
+        of the media timeline (the playback timeline for video).
 
         Needs to be called after `open` was called.
         """
 
-        # Positions count from the start of the stream; frame times and seek
-        # targets include its start time.
+        # Frame times and seek targets include the media timeline's origin.
         self.start_at_sec = milliseconds / 1000.0 + self._start_time()
+        self._validate_range()
 
         # See https://github.com/PyAV-Org/PyAV/blob/main/tests/test_seek.py for
         # more examples on the approach.
@@ -110,25 +118,43 @@ class ToWav:
     def stop_after(self, milliseconds: int):
         """
         Stop the conversion at this position, in milliseconds from the start
-        of the stream (like `seek`, not counted from the seek position). A
+        of the media timeline (like `seek`, not counted from the seek position). A
         position before the seek position leaves nothing to convert.
 
         Needs to be called after `open` was called.
         """
 
-        # Frame times include the stream's start time, see `seek`.
+        # Frame times include the media timeline's origin, see `seek`.
         self.stop_after_sec = milliseconds / 1000.0 + self._start_time()
+        self._validate_range()
+
+    def _validate_range(self):
+        if (
+            self.stop_after_sec is not None
+            and self.stop_after_sec <= (
+                self.start_at_sec if self.start_at_sec is not None else self._start_time()
+            )
+        ):
+            raise ValueError("No audio to convert: the stop time must be after the start time.")
 
     def _start_time(self) -> float:
         """
-        Time of the stream's first sample in seconds. Not every container
-        starts at zero (MP3 skips the encoder delay, MPEG-TS keeps a running
+        Origin of the media timeline in seconds. For video, the audio track
+        may start after the picture; use the container's origin so start/stop
+        positions agree with playback. Audio-only files count from the audio
+        stream's first sample. Not every container starts at zero (MP3 skips
+        the encoder delay, MPEG-TS keeps a running
         clock), and some, WAV among them, report no start time at all.
         """
 
-        if self.stream_input.start_time is None:
-            return 0.0
-        return float(self.stream_input.start_time * self.stream_input.time_base)
+        if self._timeline_start_sec is None:
+            if self.container_input.streams.video and self.container_input.start_time is not None:
+                self._timeline_start_sec = self.container_input.start_time / av.time_base
+            elif self.stream_input.start_time is None:
+                self._timeline_start_sec = 0.0
+            else:
+                self._timeline_start_sec = float(self.stream_input.start_time * self.stream_input.time_base)
+        return self._timeline_start_sec
 
     def convert(self) -> bool:
         """
@@ -167,6 +193,15 @@ class ToWav:
             return self._finished()
 
         # Otherwise convert frame.
+        if self._first_frame:
+            # A backward seek can leave part of a frame before the requested
+            # start, or a delayed video audio track can begin after it. Keep
+            # transcript timestamps anchored to the samples actually written.
+            if frame.time is not None:
+                self.start_offset_ms = round((frame.time - self._start_time()) * 1000)
+            elif self.start_at_sec is not None:
+                self.start_offset_ms = round((self.start_at_sec - self._start_time()) * 1000)
+            self._first_frame = False
         for packet in self.stream_output.encode(frame):
             self.container_output.mux(packet)
             self._packets_written += 1

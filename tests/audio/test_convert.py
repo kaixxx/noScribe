@@ -146,11 +146,13 @@ def test_to_wav_skips_invalid_packets(tmp_path, monkeypatch):
     class FakeInputContainer:
         def __init__(self, packets):
             self._packets = packets
-            self.streams = SimpleNamespace(audio=["audio-stream"])
+            self.streams = SimpleNamespace(
+                audio=[SimpleNamespace(start_time=None)], video=[]
+            )
             self.closed = False
 
         def demux(self, stream):
-            assert stream == "audio-stream"
+            assert stream is self.streams.audio[0]
             return iter(self._packets)
 
         def close(self):
@@ -323,6 +325,9 @@ def test_to_wav_drops_what_the_seek_lands_on_before_the_start(tmp_path):
     assert samples[0] >= 3000
     assert np.count_nonzero(samples < 4000) < frame_samples
     assert len(samples) / 16000 == pytest.approx(3, abs=0.2)
+    # Exporters need the actual sample position, including the seek's preroll.
+    assert towav.start_offset_ms < 4000
+    assert 4000 - towav.start_offset_ms < frame_samples / 16000 * 1000
 
 
 def test_to_wav_start_stop_count_from_stream_start(tmp_path):
@@ -339,6 +344,7 @@ def test_to_wav_start_stop_count_from_stream_start(tmp_path):
     towav = audio.convert.ToWav(tmp_path / "in.avi", tmp_path / "out.wav")
     towav.stream_input = SimpleNamespace(time_base=Fraction(32, 1225), start_time=1225)
     towav.container_input = SimpleNamespace(
+        streams=SimpleNamespace(video=[]),
         seek=lambda offset, stream: seeks.append(offset)
     )
 
@@ -348,3 +354,57 @@ def test_to_wav_start_stop_count_from_stream_start(tmp_path):
     # The stream starts at 1225 * 32/1225 = 32 s.
     assert seeks == [int(36 / Fraction(32, 1225))]
     assert towav.stop_after_sec == pytest.approx(39)
+
+
+@pytest.mark.parametrize("suffix", ["wav", "flac"])
+@pytest.mark.parametrize("start, stop", [(2345, 2340), (2345, 2345)])
+@pytest.mark.parametrize("stop_first", [False, True])
+def test_empty_or_reversed_range_is_rejected_before_writing(
+    tmp_path, suffix, start, stop, stop_first
+):
+    source = tmp_path / f"input.{suffix}"
+    output = tmp_path / "part.wav"
+    _write_wav_counting_seconds(source, 5)
+    with pytest.raises(ValueError, match="stop time must be after the start time"):
+        with audio.convert.ToWav(source, output) as towav:
+            if stop_first:
+                towav.stop_after(stop)
+                towav.seek(start)
+            else:
+                towav.seek(start)
+                towav.stop_after(stop)
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("start", [0, 500, 3000])
+def test_video_ranges_and_offsets_follow_playback_timeline(
+    tmp_path, delayed_audio_video, start
+):
+    output = tmp_path / "part.wav"
+    with audio.convert.ToWav(delayed_audio_video, output) as towav:
+        if start:
+            towav.seek(start)
+        towav.stop_after(6000)
+        while towav.convert():
+            pass
+
+    samples, rate = sf.read(output, dtype="int16")
+    if start == 3000:
+        # Audio sample values count seconds since the track began at video 2 s.
+        # Starting at video 3 s must select the track's second second, not fourth.
+        assert np.median(samples[1600:3200]) == pytest.approx(1000, abs=100)
+        assert towav.start_offset_ms == pytest.approx(3000, abs=30)
+        assert len(samples) / rate == pytest.approx(3, abs=0.06)
+    else:
+        assert towav.start_offset_ms == pytest.approx(2000, abs=30)
+        assert len(samples) / rate == pytest.approx(4, abs=0.06)
+
+
+def test_stop_before_delayed_video_audio_reports_no_audio(tmp_path, delayed_audio_video):
+    output = tmp_path / "part.wav"
+    with pytest.raises(ValueError, match="No audio to convert"):
+        with audio.convert.ToWav(delayed_audio_video, output) as towav:
+            towav.stop_after(1000)
+            while towav.convert():
+                pass
+    assert not output.exists()
