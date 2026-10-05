@@ -119,7 +119,8 @@ def harness(diarization, voice_at, file_ext='html', names=(), overlapping=True):
     app = FakeApp(voice_at)
     scope = {'datetime': datetime, 'html': html, 'utils': utils, 'voice_check': voice_check,
              't': lambda key, **kwargs: f'{key}{kwargs or ""}', 'duration': 3600.0, 'sampling_rate': 16000,
-             'speech_chunks': [], 'traceback': traceback, 'get_config': lambda key, default=None: default}
+             'speech_chunks': [], 'traceback': traceback, 'get_config': lambda key, default=None: default,
+             'transcript_start': 0}  # where the converted audio starts in the media
     exec(compile(_lift(), str(MAIN), 'exec'), scope)
     on_segment, check_voices, run_voice_check, voice_segments, first_segment = scope['build'](
         app, job, d, main_body, diarization, 'audio.wav')
