@@ -3308,13 +3308,17 @@ class App(ctk.CTk):
                                 # More voices than names, and news: the rewrite
                                 # brought one in. Said only now that it stands.
                                 self.logn(t('warn_speaker_names_more_speakers', n_names=len(names)), 'error')
-                            # What moved, under the names it was and is written with.
+                            # What moved, under the names it was and is written with --
+                            # where and how long, not what was said: the log file
+                            # keeps no transcript text.
                             def shown(label, mapping):
                                 return ('//' if label.startswith('//') else '') + mapping.get(label.lstrip('/'), label.lstrip('/'))
+                            def at(seconds):
+                                return utils.ms_to_str(transcript_start + round(seconds * 1000))
                             for passage, before, after in moves:
-                                self.logn(f"voice check: {utils.ms_to_str(transcript_start + round(passage['start'] * 1000))} "
-                                          f"{shown(before, names_given)} -> {shown(after, job.speaker_name_map)}:"
-                                          f"{passage['text'][:60]}", where='file')
+                                self.logn(f"voice check: {at(passage['start'])} "
+                                          f"{shown(before, names_given)} -> {shown(after, job.speaker_name_map)} "
+                                          f"end={at(passage['end'])} chars={len(passage['text'].strip())}", where='file')
                         self.logn(t('voice_check_done', count=len(moves)))
 
                     def run_voice_check():

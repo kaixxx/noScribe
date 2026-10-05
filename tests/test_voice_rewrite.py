@@ -82,12 +82,15 @@ class FakeApp:
         from noScribe.main import App
         self._apply_speaker_name = types.MethodType(App._apply_speaker_name, self)
         self.voice_at, self.logged, self.saved = voice_at, [], []
+        self.in_file = []  # what reaches the log file
 
-    def log(self, txt='', *args, **kwargs):
+    def log(self, txt='', tags=None, where='both', *args, **kwargs):
         self.logged.append(txt)
+        if where != 'screen':
+            self.in_file.append(txt)
 
-    def logn(self, txt='', *args, **kwargs):
-        self.log(f'{txt}\n')
+    def logn(self, txt='', tags=None, where='both', *args, **kwargs):
+        self.log(f'{txt}\n', tags, where)
 
     def set_progress(self, *args, **kwargs):
         pass
@@ -224,6 +227,21 @@ def test_a_moved_answer_is_written_under_its_speaker():
     assert first.startswith('S00:') and first.endswith('Does it help?')
     assert second.startswith('S01:') and 'Yes, sure.' in second and second.endswith('It really does.')
     assert any('voice check: 00:00:02 S00 -> S01' in line for line in h.app.logged)
+
+
+def test_the_log_file_says_what_moved_but_not_what_was_said():
+    """The log file keeps no transcript text, as for every segment written; a
+    moved passage is logged by its place, its length and its speakers only."""
+    turns, segments = two_people()
+    h = harness(turns, voice_at=lambda t: VOICES['SPEAKER_00' if t < 1.7 else 'SPEAKER_01'])
+    for segment in segments:
+        h.on_segment(segment)
+    h.check_voices()
+    moved = [line for line in h.app.in_file if line.startswith('voice check:')]
+    assert moved and all(' end=' in line and ' chars=' in line for line in moved)
+    written = ' '.join(segment['text'] for segment in segments)
+    words = {w.strip('.,?!') for w in written.split() if len(w.strip('.,?!')) > 3}
+    assert words and not any(w in line for line in h.app.in_file for w in words)
 
 
 def test_names_follow_the_order_in_which_the_voices_are_first_heard():
