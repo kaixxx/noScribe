@@ -29,8 +29,10 @@ class ToWav:
         self.stream_output: av.stream.Stream = None
         self.packet_iterator = None
         self.pending_frames = deque()
+        self.start_at_sec: float = None
         self.stop_after_sec: float = None
         self.decode_error_count: int = 0
+        self._packets_written: int = 0
         self._output_flushed = False
 
     def open(self):
@@ -52,6 +54,7 @@ class ToWav:
         self.packet_iterator = self.container_input.demux(self.stream_input)
         self.pending_frames.clear()
         self.decode_error_count = 0
+        self._packets_written = 0
         self._output_flushed = False
 
         return self
@@ -61,18 +64,7 @@ class ToWav:
         Close the file descriptors for the audio conversion.
         """
 
-        if not self._output_flushed and self.container_output is not None:
-            try:
-                for packet in self.stream_output.encode(None):
-                    self.container_output.mux(packet)
-            except Exception as exc:
-                logger.warning(
-                    "Failed to flush converted audio stream for %s: %s",
-                    self.file_output,
-                    exc,
-                )
-            finally:
-                self._output_flushed = True
+        self._flush()
 
         if self.container_input is not None:
             self.container_input.close()
@@ -92,13 +84,15 @@ class ToWav:
 
     def seek(self, milliseconds: int):
         """
-        Seeks in the stream approximately to the given milliseconds. This way,
-        conversion starts at this point.
+        Start the conversion at this position, in milliseconds from the start
+        of the stream.
 
         Needs to be called after `open` was called.
         """
 
-        seconds = milliseconds / 1000.0
+        # Positions count from the start of the stream; frame times and seek
+        # targets include its start time.
+        self.start_at_sec = milliseconds / 1000.0 + self._start_time()
 
         # See https://github.com/PyAV-Org/PyAV/blob/main/tests/test_seek.py for
         # more examples on the approach.
@@ -106,29 +100,35 @@ class ToWav:
         # https://pyav.org/docs/develop/api/audio.html#module-av.audio.stream
         #
         # `seek` jumps in the stream based on time base (fractions of a
-        # second). Thus, using the denominator to get the seek position by
-        # multiplying with seconds.
-
-        # Get time base.
-        time_base = self.stream_input.time_base
-
-        # Take start time into consideration.
-        start_time = self.stream_input.start_time * time_base
-
-        # Seek.
-        seek_to = (seconds - start_time) * time_base.denominator
+        # second). Thus, dividing the seconds by the time base gives the seek
+        # position. It lands at or before it -- in some containers seconds
+        # before, at the last index point -- so `convert` drops the frames
+        # that end before the start.
+        seek_to = self.start_at_sec / self.stream_input.time_base
         self.container_input.seek(int(seek_to), stream=self.stream_input)
 
     def stop_after(self, milliseconds: int):
         """
-        Define after how many milliseconds conversion should stop.
+        Stop the conversion at this position, in milliseconds from the start
+        of the stream (like `seek`, not counted from the seek position). A
+        position before the seek position leaves nothing to convert.
 
-        Be careful as this function will not check whether milliseconds are
-        greater than the current position of the stream. Thus, if milliseconds
-        is greater than the current position, the output file will be empty.
+        Needs to be called after `open` was called.
         """
 
-        self.stop_after_sec = milliseconds / 1000.0
+        # Frame times include the stream's start time, see `seek`.
+        self.stop_after_sec = milliseconds / 1000.0 + self._start_time()
+
+    def _start_time(self) -> float:
+        """
+        Time of the stream's first sample in seconds. Not every container
+        starts at zero (MP3 skips the encoder delay, MPEG-TS keeps a running
+        clock), and some, WAV among them, report no start time at all.
+        """
+
+        if self.stream_input.start_time is None:
+            return 0.0
+        return float(self.stream_input.start_time * self.stream_input.time_base)
 
     def convert(self) -> bool:
         """
@@ -139,7 +139,7 @@ class ToWav:
             try:
                 packet = next(self.packet_iterator)
             except StopIteration:
-                return False
+                return self._finished()
 
             try:
                 self.pending_frames.extend(packet.decode())
@@ -154,12 +154,56 @@ class ToWav:
 
         frame = self.pending_frames.popleft()
 
+        # Drop what the seek landed on before the start.
+        if (
+            self.start_at_sec is not None
+            and frame.time is not None
+            and frame.time + frame.samples / frame.sample_rate <= self.start_at_sec
+        ):
+            return True
+
         # Check whether we are already past the stop time.
-        if self.stop_after_sec and frame.time is not None and self.stop_after_sec < frame.time:
-            return False
+        if self.stop_after_sec is not None and frame.time is not None and self.stop_after_sec < frame.time:
+            return self._finished()
 
         # Otherwise convert frame.
         for packet in self.stream_output.encode(frame):
             self.container_output.mux(packet)
+            self._packets_written += 1
 
         return True
+
+    def _flush(self):
+        """
+        Write out what the encoder still holds.
+        """
+
+        if self._output_flushed or self.container_output is None:
+            return
+        try:
+            for packet in self.stream_output.encode(None):
+                self.container_output.mux(packet)
+                self._packets_written += 1
+        except Exception as exc:
+            logger.warning(
+                "Failed to flush converted audio stream for %s: %s",
+                self.file_output,
+                exc,
+            )
+        finally:
+            self._output_flushed = True
+
+    def _finished(self) -> bool:
+        """
+        End the conversion. PyAV creates the output file with the first packet
+        it writes; without one there is no file at all, and the next step would
+        fail on its absence instead.
+        """
+
+        self._flush()
+        if not self._packets_written:
+            raise ValueError(
+                "No audio to convert: the file holds none that can be decoded, "
+                "or the start time lies at or after its end or after the stop time."
+            )
+        return False
