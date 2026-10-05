@@ -114,6 +114,10 @@ def pyannote_proc_entrypoint(args: dict, q):
         os.environ.setdefault("MPL_IGNORE_SYSTEM_FONTS", "1")
         os.environ["MPLCONFIGDIR"] = os.path.join(
             appdirs.user_cache_dir("noScribe"), "matplotlib")
+        # pyannote enables usage telemetry by default, including recording
+        # duration and speaker-count settings. Keep noScribe processing local,
+        # even if the parent environment enables telemetry for other apps.
+        os.environ["PYANNOTE_METRICS_ENABLED"] = "0"
         from pyannote.audio import Pipeline
 
         def plog(level, msg):
