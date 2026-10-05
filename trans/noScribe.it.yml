@@ -130,6 +130,7 @@ it:
   err_user_cancelation: 'Processo annullato dall utente.'
   err_whisper_main: 'Whisper terminato con il codice di errore %{e}'
   err_transcription: 'Errore nella fase 3 - trascrizione'
+  err_empty_transcript: 'Non è stato riconosciuto alcun testo nell’intervallo selezionato. Controlla l’audio e le impostazioni di trascrizione.'
   rescue_saving: 'Salvataggio con il nome originale non riuscito. Salvato invece in questo file: %{file}'
   rescue_saving_failed: 'Errore: salvataggio con il nome originale non riuscito. Il nome alternativo esiste già. Il programma deve essere chiuso. (Assicurati che la trascrizione non sia già aperta in Word!)'
   pyannote_cuda_error_prompt: |-

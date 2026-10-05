@@ -130,6 +130,7 @@ es:
   err_user_cancelation: 'El proceso ha sido cancelado por el usuario.'
   err_whisper_main: 'Terminación de Whisper con el código de error %{e}'
   err_transcription: 'Error en el paso 3: transcripción'
+  err_empty_transcript: 'No se reconoció ningún texto en el intervalo seleccionado. Comprueba el audio y los ajustes de transcripción.'
   rescue_saving: 'Fallo al guardar con el nombre de archivo original. Guardado en este archivo en su lugar: %{file}'
   rescue_saving_failed: 'Error: Fallo al guardar con el nombre de archivo original. El nombre de archivo alternativo también existe. Tengo que salir. (¡Asegúrate de que tu transcripción no esté abierta en Word!)'
   pyannote_cuda_error_prompt: |-

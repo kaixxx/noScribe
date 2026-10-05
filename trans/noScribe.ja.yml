@@ -130,6 +130,7 @@ ja:
   err_user_cancelation: 'ユーザーによってプロセスがキャンセルされました。'
   err_whisper_main: 'Whisperメインがエラーコード %{e} で終了しました'
   err_transcription: 'ステップ3でエラーが発生しました-転写'
+  err_empty_transcript: '選択した範囲でテキストが認識されませんでした。音声と文字起こしの設定を確認してください。'
   rescue_saving: '元のファイル名への保存に失敗しました。代わりにこのファイルに保存されました：%{file}'
   rescue_saving_failed: 'エラー：元のファイル名への保存に失敗しました。代替のファイル名も存在します。終了する必要があります。（Wordでトランスクリプトが既に開かれていないことを確認してください！）'
   pyannote_cuda_error_prompt: |-

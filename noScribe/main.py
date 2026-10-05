@@ -3047,6 +3047,11 @@ class App(ctk.CTk):
                                 self.words = d.get('words')
                         segment = _Seg(seg)
 
+                        # Empty segments must not create speaker labels, pauses,
+                        # or autosaves that look like a meaningful transcript.
+                        if not segment.text or not segment.text.strip():
+                            return
+
                         segment = adjust_for_pause(segment)
 
                         # get time of the segment in milliseconds
@@ -3185,6 +3190,8 @@ class App(ctk.CTk):
                     
                     try:
                         info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment)
+                        if first_segment:
+                            raise ValueError(t('err_empty_transcript'))
                         transcription_success = True
                         # if self.cancel:
                         #    raise Exception(t('err_user_cancelation')) 
