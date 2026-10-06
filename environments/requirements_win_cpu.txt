@@ -1,6 +1,6 @@
 # Install with `pip install -r requirements_win_cpu.txt`
 # torchaudio # install as dependency
-av
+av<19  # faster-whisper 1.2.1 passes metadata_errors to av.open(), which PyAV 19 removed
 AdvancedHTMLParser
 appdirs
 cpufeature
