@@ -16,7 +16,7 @@ import importlib as _importlib
 # Everything main.py used to bind on the package as a side effect of being
 # imported eagerly. Kept so `import noScribe; noScribe.utils...` still works
 # and so a typo gets an honest "no attribute" rather than a stale one.
-_SUBMODULES = ("main", "audio", "exception", "transcription", "utils")
+_SUBMODULES = ("main", "audio", "exception", "transcription", "utils", "voice_check")
 
 # Star-import reads __all__, never __dir__; without this `from noScribe import *`
 # would bind the helper names above instead of the package's own module.
