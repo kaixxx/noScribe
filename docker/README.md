@@ -121,11 +121,9 @@ open a browser from inside the container.
 
 ## Image tags
 
-This repository does not publish images. The naming scheme below is the one
-used by the [noscribe-docker](https://github.com/chrtmnn/noscribe-docker)
-project (`ghcr.io/chrtmnn/noscribe`), which builds from the same Dockerfile
-layout; it is recorded here so that locally built and published images are
-named alike.
+This repository does not publish images. The naming scheme below is the
+proposed one for images built from this Dockerfile; it is recorded here so
+that locally built and published images are named alike.
 
 ```
 <noScribe version>[-r<N>][-<flavor>]
