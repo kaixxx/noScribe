@@ -12,7 +12,8 @@ the machine. (Only the GUI mode contacts GitHub on start to look for a new
 noScribe release, as the desktop app does; `check_for_update` in `config.yml`
 turns that off.)
 
-- CPU only (no GPU support yet)
+- CPU only; a separate GPU (CUDA) image is coming soon
+- amd64 (x86_64) only; see [Apple Silicon and ARM](#apple-silicon-and-arm)
 - about 3 GB to download, about 8 GB on disk
 - transcription takes roughly 1.5 times the length of the recording on a
   desktop CPU
@@ -61,6 +62,19 @@ docker run --rm noscribe --help-models  # installed Whisper models
 
 In PowerShell, write `${PWD}` instead of `$PWD`.
 
+### Apple Silicon and ARM
+
+The image is built for amd64 only. The pinned `docker/requirements.lock`
+contains `torchaudio==2.8.0+cpu`, which exists only for x86_64, and
+`torchcodec==0.7.0` has no Linux aarch64 wheel. On Apple Silicon and other ARM
+machines, build and run it as an amd64 image, which works through emulation
+but is slow:
+
+```bash
+docker build --platform linux/amd64 -f docker/Dockerfile -t noscribe .
+docker run --rm --platform linux/amd64 -v "$PWD:/data" noscribe interview.mp3 interview.html
+```
+
 ### File permissions on Linux
 
 The container runs as UID 1000. If your user has a different UID, pass it so
@@ -104,6 +118,51 @@ More folders can be mounted under their own names, for example
 
 Limitations: the noScribe Editor is not part of the image, and links cannot
 open a browser from inside the container.
+
+## Image tags
+
+This repository does not publish images. The naming scheme below is the one
+used by the [noscribe-docker](https://github.com/chrtmnn/noscribe-docker)
+project (`ghcr.io/chrtmnn/noscribe`), which builds from the same Dockerfile
+layout; it is recorded here so that locally built and published images are
+named alike.
+
+```
+<noScribe version>[-r<N>][-<flavor>]
+```
+
+- **noScribe version**: the upstream release the image contains, without a
+  leading `v` (`0.7.2`).
+- **`-r<N>`**: build revision for that noScribe version, starting at `r1`. It
+  increases whenever the image changes while noScribe stays the same: new
+  `requirements.lock`, new base image, changed entrypoint, different model
+  revision.
+- **`-<flavor>`**: image variant. The default (headless, CPU, models included)
+  has no suffix.
+
+| Tag                  | Points to                                          | Moves? |
+|----------------------|----------------------------------------------------|--------|
+| `0.7.2-r1`           | exactly this build, default flavor                 | never  |
+| `0.7.2-r1-gui`       | exactly this build, `gui` flavor                   | never  |
+| `0.7.2`, `0.7.2-gui` | latest revision for noScribe 0.7.2                 | yes    |
+| `latest`, `gui`      | latest revision of the latest noScribe version     | yes    |
+| `edge`, `edge-gui`   | current `main`, not a release                      | yes    |
+
+Use a full `X.Y.Z-rN[-flavor]` tag wherever reproducibility matters.
+
+| Flavor   | Content                                           | Status  |
+|----------|---------------------------------------------------|---------|
+| *(none)* | headless CLI, CPU, both Whisper models            | built   |
+| `gui`    | default plus noScribe Editor and GUI dependencies | experimental |
+| `cuda`   | NVIDIA GPU build (CUDA PyTorch wheels, own lock file) | planned |
+| `slim`   | without Whisper models                            | idea    |
+
+Flavors are not combined (`-cuda-gui`) unless there is a concrete need; every
+combination multiplies the build matrix.
+
+A release is a git tag `v<noScribe version>-r<N>` (for example `v0.7.2-r1`);
+the image tag is the git tag without the `v`. Branch and pull-request builds
+are never pushed.
 
 ## Python dependencies
 
