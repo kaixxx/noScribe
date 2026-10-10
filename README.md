@@ -32,6 +32,8 @@
 
 See the corresponding sections on my website: https://noscribe.de 
 
+To run noScribe without its window in a Docker container (CPU only, for servers and batch jobs), see [docker/README.md](docker/README.md).
+
 ## About Me
 **Kai Dröge**, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).
 
