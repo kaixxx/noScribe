@@ -6,7 +6,7 @@
 torch==2.13
 torchaudio==2.11
 torchcodec==0.15.0
-av
+av<19  # faster-whisper 1.2.1 passes metadata_errors to av.open(), which PyAV 19 removed
 AdvancedHTMLParser
 appdirs
 customtkinter

@@ -85,7 +85,7 @@ logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 logger = logging.getLogger()
 
-app_version = '0.7.2'
+app_version = '0.8'
 app_year = '2026'
 
 ctk.set_appearance_mode('dark')
@@ -196,8 +196,19 @@ def get_config(key: str, default) -> str:
         config[key] = default
     return config[key]
 
-force_pyannote_cpu = get_config('force_pyannote_cpu', '').lower() == 'true'
-force_whisper_cpu = get_config('force_whisper_cpu', '').lower() == 'true'
+def get_config_flag(key: str, default: bool) -> bool:
+    """ Get an on/off config value. noScribe writes the strings 'True' and 'False',
+    but a hand-edited config.yml may hold a YAML boolean (true, False, yes, off)
+    or 1 and 0. Anything else keeps the default. """
+    value = str(get_config(key, str(default))).strip().lower()
+    if value in ('true', 'yes', 'on', '1'):
+        return True
+    if value in ('false', 'no', 'off', '0'):
+        return False
+    return default
+
+force_pyannote_cpu = get_config_flag('force_pyannote_cpu', False)
+force_whisper_cpu = get_config_flag('force_whisper_cpu', False)
 
 _CUDA_ERROR_KEYWORDS = (
     'cuda',
@@ -703,7 +714,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     job.timestamp_interval = get_config('timestamp_interval', 60_000)
     job.timestamp_color = get_config('timestamp_color', '#78909C')
     job.pause_marker = get_config('pause_seconds_marker', '.')
-    job.auto_save = False if get_config('auto_save', 'True') == 'False' else True
+    job.auto_save = get_config_flag('auto_save', True)
         
     job.vad_threshold = float(get_config('voice_activity_detection_threshold', '0.5'))
     
@@ -1449,7 +1460,7 @@ class App(ctk.CTk):
         self.logn(t('welcome_instructions'))
         
         # check for new releases
-        if get_config('check_for_update', 'True') == 'True':
+        if get_config_flag('check_for_update', True):
             try:
                 latest_release = json.loads(urllib.request.urlopen(
                     urllib.request.Request('https://api.github.com/repos/kaixxx/noScribe/releases/latest',
@@ -2043,10 +2054,13 @@ class App(ctk.CTk):
         if platform.system() == 'Windows':
             program = impres.files("noScribeEdit") / "noScribeEdit.exe"
         elif platform.system() == "Darwin": # = MAC
-            # use local copy in development, installed one if used as an app:
-            program = impres.files("noScribeEdit") / "noScribeEdit"
-            if not program.exists():
+            # The frozen app uses the separately installed editor. Do not try
+            # importlib.resources there: noScribeEdit is intentionally not
+            # part of the noScribe bundle and therefore is not importable.
+            if getattr(sys, "frozen", False):
                 program = Path("/Applications") / "noScribeEdit.app" / "Contents" / "MacOS" / "noScribeEdit"
+            else:
+                program = impres.files("noScribeEdit") / "noScribeEdit"
         elif platform.system() == "Linux":
             if hasattr(sys, "_MEIPASS"):
                 program = Path(sys._MEIPASS) / "noScribeEdit" / "noScribeEdit"
@@ -2087,8 +2101,10 @@ class App(ctk.CTk):
             if txt[:-1] != t('welcome_instructions'):
                 print(txt, end='')            
             if not getattr(self, '_headless', False):
+                # partial binds the text now: the file part below rewrites txt,
+                # and from a worker thread this runs later, on the UI thread.
                 self._dispatch_ui(
-                    lambda: self._append_log_text(txt, tags, link, tb, where)
+                    partial(self._append_log_text, txt, tags, link, tb, where)
                 )
 
         # Handle file logging if requested
@@ -2116,7 +2132,8 @@ class App(ctk.CTk):
                 self.log_textbox.delete("1.0", f"1.0 + {self.log_len - 3000} chars")
                 self.log_len = 3000
             if link:
-                tags = tags + self.hyperlink.add(partial(self.openLink, link))
+                # A single tag comes as a string ('error'), several as a list.
+                tags = ([tags] if isinstance(tags, str) else tags) + self.hyperlink.add(partial(self.openLink, link))
             self.log_textbox.insert(tk.END, txt, tags)
             self.log_textbox.yview_moveto(1)
             self.log_len += len(txt)
@@ -2134,12 +2151,20 @@ class App(ctk.CTk):
 
     def logr(self, txt: str = '', tags: list = [], where: str = 'both', link:str = '', tb: str = '') -> None:
         """ Replace the last line of the log """
-        if where != 'file' and not getattr(self, '_headless', False) and hasattr(self, 'log_textbox') and self.log_textbox.winfo_exists():
-            self.log_textbox.configure(state=ctk.NORMAL)
-            tmp_txt = self.log_textbox.get("end-1c linestart", "end-1c")
-            self.log_textbox.delete("end-1c linestart", "end-1c")
-            self.log_len -= len(tmp_txt)
+        if where != 'file' and not getattr(self, '_headless', False):
+            # Queued like the insert that log() queues next, so it removes the
+            # line written before it -- not whatever the window shows now.
+            self._dispatch_ui(self._remove_last_log_line)
         self.log(txt, tags, where, link, tb)
+
+    def _remove_last_log_line(self):
+        if not hasattr(self, 'log_textbox') or not self.log_textbox.winfo_exists():
+            return
+        self.log_textbox.configure(state=ctk.NORMAL)
+        tmp_txt = self.log_textbox.get("end-1c linestart", "end-1c")
+        self.log_textbox.delete("end-1c linestart", "end-1c")
+        self.log_len -= len(tmp_txt)
+        self.log_textbox.configure(state=ctk.DISABLED)
 
     def create_default_transcript_names(self, dir=None):
         self.transcript_files_list = []
@@ -2466,13 +2491,21 @@ class App(ctk.CTk):
         return queue
 
     def _apply_speaker_name(self, speaker, job):
-        """Map a diarization speaker label (e.g. "S01" or "//S01") to a
-        user-provided name. Names are assigned in the order speakers first
-        appear, so the first person heard gets the first name — regardless of
-        whether the diarization starts numbering at S00 or S01.
+        """Map a diarization speaker label (e.g. "S01" or "//S01") to the name
+        it is written under: a user-provided name, or a number. Both are assigned
+        in the order speakers first appear in the transcript, so the first person
+        heard gets the first name, or S00 -- pyannote's own labels are cluster
+        numbers, under which whoever opens the recording may just as well be S01.
+
+        The numbering happens here, where a speaker is first *written*, and not on
+        the diarization: across 132 test recordings the first diarization turn
+        belonged to someone other than the speaker of the first transcript segment
+        in 17 (two turns starting in the same millisecond, a noise before the
+        first sentence, a long first segment), and those transcripts would still
+        have opened with S01.
         """
-        names = job.speaker_names
-        if not speaker or not names:
+        names = job.speaker_names or []
+        if not speaker:
             return speaker
         overlapping = speaker.startswith('//')
         base = speaker[2:] if overlapping else speaker
@@ -2484,16 +2517,28 @@ class App(ctk.CTk):
             if idx < len(names):
                 mapping[base] = names[idx]
             else:
+                # No name for this speaker: number it by its place in the order
+                # of appearance, like everyone else -- stepping over a number
+                # that somebody was given as a name.
+                taken = set(names) | set(mapping.values())
+                mapping[base] = next(f'S{n:02d}' for n in range(idx, idx + len(taken) + 1)
+                                     if f'S{n:02d}' not in taken)
                 # More speakers than names. This can't be caught up front with
                 # "auto" (the count is only known now), so note it in the log —
                 # non-modal, so it never interrupts an unattended run. idx grows
                 # by one per new speaker, so this is the first overflow.
-                mapping[base] = base
-                if idx == len(names):
+                if names and idx == len(names):
                     self.logn()
                     self.logn(t('warn_speaker_names_more_speakers', n_names=len(names)), 'error')
         name = mapping[base]
         return f'//{name}' if overlapping else name
+
+    @staticmethod
+    def _speaker_key(job):
+        """Which of pyannote's labels each written speaker stands for, for the log
+        file: its diarization turns carry pyannote's labels, and a transcript "S01"
+        looks like "SPEAKER_01" without being it."""
+        return ', '.join(f'{name} = SPEAKER_{label[1:]}' for label, name in job.speaker_name_map.items())
 
     def transcription_worker(self, start_job_index=None):
         """Process transcription jobs from the queue"""
@@ -2587,7 +2632,7 @@ class App(ctk.CTk):
                     and job \
                     and job.file_ext == 'html' \
                     and job.status == JobStatus.FINISHED \
-                    and get_config('auto_edit_transcript', 'True') == 'True':
+                    and get_config_flag('auto_edit_transcript', True):
                 self.launch_editor(job.transcript_file)
             elif queue_jobs_processed > 1 and not getattr(self, '_headless', False):
                 # if more than one job has been processed, switch to queue tab for an overview 
@@ -2697,6 +2742,11 @@ class App(ctk.CTk):
                             # TODO: replace this with an UserCancelException or
                             # similar.
                             raise Exception(t('err_user_cancelation'))
+
+                    # Conversion can begin before the requested start by part
+                    # of a frame, or later if a video's audio track is delayed.
+                    # Use its actual media position for all exported timestamps.
+                    transcript_start = self._ffmpeg_proc.start_offset_ms
 
                 except Exception as e:
                     traceback_str = traceback.format_exc()
@@ -2813,7 +2863,7 @@ class App(ctk.CTk):
 
                         # write segments to log file
                         for segment in diarization:
-                            line = f'{utils.ms_to_str(job.start + segment["start"], include_ms=True)} - {utils.ms_to_str(job.start + segment["end"], include_ms=True)} {segment["label"]}'
+                            line = f'{utils.ms_to_str(transcript_start + segment["start"], include_ms=True)} - {utils.ms_to_str(transcript_start + segment["end"], include_ms=True)} {segment["label"]}'
                             self.logn(line, where='file')
 
                         self.logn()
@@ -2895,7 +2945,10 @@ class App(ctk.CTk):
                     main_body.appendChild(p)
 
                     speaker = ''          # raw diarization label (identity)
-                    speaker_disp = ''     # mapped user name (display / anchor)
+                    speaker_disp = ''     # name or number it is written under (display / anchor)
+                    # A retry after a CUDA error writes the document afresh, so the
+                    # order in which speakers appear is counted afresh too.
+                    job.speaker_name_map = {}
                     prev_speaker = ''
                     last_auto_save = datetime.datetime.now()
 
@@ -3005,14 +3058,19 @@ class App(ctk.CTk):
                                 self.words = d.get('words')
                         segment = _Seg(seg)
 
+                        # Empty segments must not create speaker labels, pauses,
+                        # or autosaves that look like a meaningful transcript.
+                        if not segment.text or not segment.text.strip():
+                            return
+
                         segment = adjust_for_pause(segment)
 
                         # get time of the segment in milliseconds
                         start = round(segment.start * 1000.0)
                         end = round(segment.end * 1000.0)
-                        # if we skipped a part at the beginning of the audio we have to add this here again, otherwise the timestamps will not match the original audio:
-                        orig_audio_start = job.start + start
-                        orig_audio_end = job.start + end
+                        # Restore the converted clip's actual media position.
+                        orig_audio_start = transcript_start + start
+                        orig_audio_end = transcript_start + end
 
                         if job.timestamps:
                             ts = utils.ms_to_str(orig_audio_start)
@@ -3031,8 +3089,8 @@ class App(ctk.CTk):
                             if first_segment:
                                 pause_str = pause_str.lstrip() + ' '
 
-                            orig_audio_start_pause = job.start + last_segment_end
-                            orig_audio_end_pause = job.start + start
+                            orig_audio_start_pause = transcript_start + last_segment_end
+                            orig_audio_end_pause = transcript_start + start
                             a = d.createElement('a')
                             a.name = f'ts_{orig_audio_start_pause}_{orig_audio_end_pause}_{speaker_disp}'
                             a.appendText(pause_str)
@@ -3123,7 +3181,16 @@ class App(ctk.CTk):
                         a = d.createElementFromHTML(a_html)
                         p.appendChild(a)
 
-                        self.log(seg_text)
+                        # Keep the live transcript visible without persisting its
+                        # contents in the job log. Count only the original text,
+                        # before speaker labels and timestamps were added.
+                        self.log(seg_text, where='screen')
+                        self.logn(
+                            f'Segment received: start={utils.ms_to_str(orig_audio_start, include_ms=True)} '
+                            f'end={utils.ms_to_str(orig_audio_end, include_ms=True)} '
+                            f'chars={len(segment.text)}',
+                            where='file',
+                        )
                         
                         first_segment = False
 
@@ -3143,6 +3210,8 @@ class App(ctk.CTk):
                     
                     try:
                         info = self._run_whisper_subprocess_stream(tmp_audio_file, job, on_segment)
+                        if first_segment:
+                            raise ValueError(t('err_empty_transcript'))
                         transcription_success = True
                         # if self.cancel:
                         #    raise Exception(t('err_user_cancelation')) 
@@ -3160,6 +3229,13 @@ class App(ctk.CTk):
                         if not first_segment:
                             save_doc()
                             job.has_partial_transcript = job.status != JobStatus.FINISHED
+                            # A canceled or failed job saves its transcript under
+                            # the same numbers, so it needs the key just as much.
+                            if job.speaker_name_map and not retry_cuda:
+                                # On a line of its own, after a transcript that
+                                # may have stopped mid-line.
+                                self.logn(where='file')
+                                self.logn(self._speaker_key(job), where='file')
                         else:
                             job.has_partial_transcript = False
                         if transcription_success:
@@ -3196,7 +3272,7 @@ class App(ctk.CTk):
         try:
             # A fixed speaker count is known up front and the user is present at
             # Start / Add-to-queue. Entering names is optional (leaving the field
-            # empty just keeps the S01/S02 labels), but IF names are given their
+            # empty just numbers the speakers S00, S01, ...), but IF names are given their
             # count must match the speaker count, else they would be mis-assigned
             # — so ask only when names were entered and the count disagrees. With
             # "auto" the count is not known yet, so that case is only noted in the

@@ -1,5 +1,19 @@
 # noScribe Changelog
 
+## version 0.8
+- Custom speaker names, fixed subtitle timing, and many other small fixes and workflow improvements by Markus Kämmerer / @happyarts
+- On Mac, Rosetta2 is not required anymore. Audio conversion now uses PyAV instead of a separately bundled FFmpeg (@mutlusun)
+- Improved command-line operation without a graphical interface
+
+**noScribe Editor:**
+- New audio seek bar at the bottom of the editor, synchronized with the transcript (Zyad Ahmed / @zyadbarghout and Kai Dröge / @kaixxx)
+- Editor now also Rosetta2 free: Audio playback uses Qt Multimedia and PyAV instead of FFmpeg/ffplay executable (Zyad Ahmed / @zyadbarghout)
+- More robust audio loading and decoding, small fixes
+
+Thanks also to Heinz-Alexander Fütterer (@afuetterer) for translation
+corrections, @gernophil for Linux packaging fixes, and @electricsteve
+for a formatting fix.
+
 ## version 0.7
 - Batch transcription: process several files at once
 - Improved speaker identification
