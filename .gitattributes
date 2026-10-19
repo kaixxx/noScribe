@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# Shell scripts are run inside Linux containers; CRLF breaks them
+*.sh text eol=lf
+# Compared line by line against `pip freeze` during the image build
+docker/requirements.lock text eol=lf

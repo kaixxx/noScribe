@@ -1,0 +1,18 @@
+.git
+.github
+.idea
+.vscode
+**/__pycache__
+build
+dist
+tests
+pyinstaller
+*.bat
+generate_linux_binary.sh
+
+# Only the Linux requirements are needed for the image.
+environments
+!environments/requirements_linux.txt
+
+# Whisper models are downloaded during the build; keep local copies out.
+models
