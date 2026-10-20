@@ -102,6 +102,9 @@ it:
   whisper_cuda_retry: |-
     Rilevato errore CUDA di Whisper. Riprovo sulla CPU. Questo tentativo riguarda solo il lavoro corrente.
     Per usare sempre la CPU ed evitare questo errore CUDA, impostare force_whisper_cpu: true in config.yml.
+  gpu_worker_crash_retry: |-
+    Il processo GPU di %{component} è terminato in modo imprevisto (codice di uscita %{exitcode}, ultima fase: %{stage}). La causa è sconosciuta. Questo lavoro verrà ritentato sulla CPU.
+    Per usare sempre la CPU, impostare %{option}: true in config.yml.
   vad: "Rilevamento dell'attività vocale..."
   language_detect: 'Lingua rilevata "%{lang}" con probabilità %{prob}'
   language_en_only: 'Tieni presente che il modello di IA scelto per la trascrizione è solo in inglese.'

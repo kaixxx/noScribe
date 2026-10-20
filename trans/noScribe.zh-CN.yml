@@ -102,6 +102,9 @@ zh-CN: &defaults
   whisper_cuda_retry: |-
     检测到 Whisper 的 CUDA 错误。正在使用 CPU 重试。 此次重试仅适用于当前任务。
     如需始终使用 CPU 并避免此 CUDA 错误，请在 config.yml 中设置 force_whisper_cpu: true。
+  gpu_worker_crash_retry: |-
+    %{component} 的 GPU 工作进程意外退出（退出代码 %{exitcode}，最后阶段：%{stage}）。原因未知。正在使用 CPU 重试当前任务。
+    如需始终使用 CPU，请在 config.yml 中设置 %{option}: true。
   vad: '语音活动检测...'
   language_detect: '检测到语言“%{lang}”，概率 %{prob}'
   language_en_only: '请注意，所选用于转写的 AI 模型仅支持英文。'

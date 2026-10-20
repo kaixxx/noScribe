@@ -107,6 +107,9 @@ en:
   whisper_cuda_retry: |-
     Whisper CUDA error detected. Retrying on CPU. This retry applies only to the current job.
     To always use CPU and avoid this CUDA error, set force_whisper_cpu: true in config.yml.
+  gpu_worker_crash_retry: |-
+    The %{component} GPU worker exited unexpectedly (exit code %{exitcode}, last stage: %{stage}). The cause is unknown. Retrying this job on CPU.
+    To always use CPU, set %{option}: true in config.yml.
   vad: 'Voice activity detection...'
   language_detect: 'Detected language "%{lang}" with probability %{prob}'
   language_en_only: 'Note that the AI model selected for transcription is English-only.'

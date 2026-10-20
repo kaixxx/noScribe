@@ -37,7 +37,10 @@ PROBE = textwrap.dedent("""
     from noScribe.pyannote_mp_worker import pyannote_proc_entrypoint
     q = queue.Queue()
     pyannote_proc_entrypoint({"audio_path": "unused.wav"}, q)
-    print(q.get_nowait()["error"])
+    while not q.empty():
+        message = q.get_nowait()
+        if message.get("type") == "result":
+            print(message["error"])
 """)
 
 

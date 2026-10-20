@@ -102,6 +102,9 @@ ja:
   whisper_cuda_retry: |-
     Whisper の CUDA エラーを検出しました。CPU で再試行します。 この再試行は現在のジョブにのみ適用されます。
     常に CPU を使用してこの CUDA エラーを回避するには、config.yml で force_whisper_cpu: true を設定してください。
+  gpu_worker_crash_retry: |-
+    %{component} の GPU ワーカーが予期せず終了しました（終了コード %{exitcode}、最後の処理段階: %{stage}）。原因は不明です。このジョブを CPU で再試行します。
+    常に CPU を使用するには、config.yml で %{option}: true を設定してください。
   vad: '音声活動検出...'
   language_detect: '検出された言語は「%{lang}」（確率 %{prob}）'
   language_en_only: '選択した文字起こし用のAIモデルは英語専用です。'
