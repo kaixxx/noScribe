@@ -96,8 +96,12 @@ fr:
   start_canceling: "Annulation en cours... (veuillez patienter un instant)"
   start_transcription: "Transcription en cours..."
   loading_whisper: "Chargement de whisper"
-  pyannote_cuda_retry: 'Erreur CUDA PyAnnote détectée. Nouvel essai sur le CPU.'
-  whisper_cuda_retry: 'Erreur CUDA Whisper détectée. Nouvel essai sur le CPU.'
+  pyannote_cuda_retry: |-
+    Erreur CUDA PyAnnote détectée. Nouvel essai sur le CPU. Ce nouvel essai concerne uniquement la tâche en cours.
+    Pour toujours utiliser le CPU et éviter cette erreur CUDA, définissez force_pyannote_cpu: true dans config.yml.
+  whisper_cuda_retry: |-
+    Erreur CUDA Whisper détectée. Nouvel essai sur le CPU. Ce nouvel essai concerne uniquement la tâche en cours.
+    Pour toujours utiliser le CPU et éviter cette erreur CUDA, définissez force_whisper_cpu: true dans config.yml.
   vad: "Détection d'activité vocale..."
   language_detect: 'Langue détectée « %{lang} » avec une probabilité de %{prob}'
   language_en_only: "Notez que le modèle d'IA sélectionné pour la transcription est réservé à l'anglais."
@@ -133,18 +137,6 @@ fr:
   err_empty_transcript: 'Aucun texte n’a été reconnu dans la plage sélectionnée. Vérifiez le fichier audio et les paramètres de transcription.'
   rescue_saving: "Échec de l'enregistrement sous le nom de fichier d'origine. Enregistré sous ce fichier à la place : %{file}"
   rescue_saving_failed: "Erreur : Échec de l'enregistrement sous le nom de fichier d'origine. Le nom de fichier alternatif existe également. Je dois quitter. (Assurez-vous que votre transcription n'est pas déjà ouverte dans Word !)"
-  pyannote_cuda_error_prompt: |-
-    La diarisation PyAnnote a échoué avec une erreur CUDA :
-
-    %{error}
-
-    Basculer sur un traitement CPU et réessayer ?
-  whisper_cuda_error_prompt: |-
-    La transcription Whisper a échoué avec une erreur CUDA :
-
-    %{error}
-
-    Basculer sur un traitement CPU et réessayer ?
   err_noScribeEdit_not_found: "Erreur : Impossible de trouver l'éditeur noScribe."
   err_vtt_invalid_options: 'Avertissement : les options "Chevauchements de parole", "Marquer les pauses" et "Horodatage" ne sont pas prises en charge dans les fichiers VTT.'
   err_editor_invalid_format: "L'éditeur ne peut être utilisé qu'avec des fichiers HTML. Voulez-vous quand même le lancer ?"

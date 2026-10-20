@@ -207,6 +207,7 @@ def get_config_flag(key: str, default: bool) -> bool:
         return False
     return default
 
+# Runtime CPU fallback must not overwrite these saved preferences.
 force_pyannote_cpu = get_config_flag('force_pyannote_cpu', False)
 force_whisper_cpu = get_config_flag('force_whisper_cpu', False)
 
@@ -362,6 +363,8 @@ class TranscriptionJob:
         self.transcript_file: str = ''
         # Partial transcript tracking
         self.has_partial_transcript: bool = False
+        self.whisper_cpu_fallback: bool = False
+        self.pyannote_cpu_fallback: bool = False
         
         # Time range
         self.start: int = 0  # milliseconds
@@ -399,6 +402,8 @@ class TranscriptionJob:
     
     def set_running(self):
         """Mark job as running and record start time"""
+        self.whisper_cpu_fallback = False
+        self.pyannote_cpu_fallback = False
         self.status = JobStatus.AUDIO_CONVERSION
         self.started_at = datetime.datetime.now()
         # Names are assigned in order of first appearance, so the mapping has
@@ -2427,8 +2432,6 @@ class App(ctk.CTk):
         config['last_overlapping'] = self.check_box_overlapping.get()
         config['last_timestamps'] = self.check_box_timestamps.get()
         config['last_disfluencies'] = self.check_box_disfluencies.get()
-        config['force_pyannote_cpu'] = str(force_pyannote_cpu)
-        config['force_whisper_cpu'] = str(force_whisper_cpu)
         save_config()
 
     def collect_transcription_options(self) -> TranscriptionQueue:
@@ -2856,7 +2859,7 @@ class App(ctk.CTk):
                                 diarization = self._run_diarize_subprocess(tmp_audio_file, job)
                                 break
                             except Exception as err:
-                                if self._handle_cuda_fallback('pyannote', err):
+                                if self._handle_cuda_fallback('pyannote', err, job):
                                     self.logn(t('pyannote_cuda_retry'), 'highlight')
                                     continue
                                 raise
@@ -3221,7 +3224,7 @@ class App(ctk.CTk):
                         self.logn()
                         self.logn(t('transcription_finished'), 'highlight')
                     except Exception as err:
-                        if self._handle_cuda_fallback('whisper', err):
+                        if self._handle_cuda_fallback('whisper', err, job):
                             retry_cuda = True
                         else:
                             raise
@@ -3326,34 +3329,23 @@ class App(ctk.CTk):
             self.logn(f'Error starting transcription: {str(e)}', 'error')
             tk.messagebox.showerror(title='noScribe', message=f'Error starting transcription: {str(e)}')
 
-    def _handle_cuda_fallback(self, component: str, error: Exception) -> bool:
-        global force_pyannote_cpu
-        global force_whisper_cpu
+    def _handle_cuda_fallback(self, component: str, error: Exception, job: TranscriptionJob) -> bool:
+        """Automatically retry the affected component once on CPU for this job."""
         message = str(error).strip()
         if not _is_cuda_error_message(message):
             return False
 
         if component == 'pyannote':
-            if force_pyannote_cpu:
+            if force_pyannote_cpu or job.pyannote_cpu_fallback:
                 return False
-            prompt = t('pyannote_cuda_error_prompt', error=message)
-            if tk.messagebox.askyesno(title='noScribe', message=prompt):
-                force_pyannote_cpu = True
-                config['force_pyannote_cpu'] = 'true'
-                save_config()
-                return True
-            return False
+            job.pyannote_cpu_fallback = True
+            return True
 
         if component == 'whisper':
-            if force_whisper_cpu:
+            if force_whisper_cpu or job.whisper_cpu_fallback:
                 return False
-            prompt = t('whisper_cuda_error_prompt', error=message)
-            if tk.messagebox.askyesno(title='noScribe', message=prompt):
-                force_whisper_cpu = True
-                config['force_whisper_cpu'] = 'true'
-                save_config()
-                return True
-            return False
+            job.whisper_cpu_fallback = True
+            return True
 
         return False
 
@@ -3379,7 +3371,7 @@ class App(ctk.CTk):
 
         args = {
             "whisper_model": job.whisper_model,
-            "device": 'cpu' if force_whisper_cpu else 'auto',
+            "device": 'cpu' if force_whisper_cpu or job.whisper_cpu_fallback else 'auto',
             "compute_type": job.whisper_compute_type,
             "cpu_threads": number_threads,
             "local_files_only": True,
@@ -3502,7 +3494,7 @@ class App(ctk.CTk):
         q = ctx.Queue()
         from .pyannote_mp_worker import pyannote_proc_entrypoint
         args = {
-            "device": 'cpu' if force_pyannote_cpu else '',
+            "device": 'cpu' if force_pyannote_cpu or job.pyannote_cpu_fallback else '',
             "audio_path": tmp_audio_file,
             "num_speakers": (int(job.speaker_detection) if str(job.speaker_detection).isdigit() else None),
         }
