@@ -22,7 +22,10 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['speechbrain'],
+    # The optional Voxtral stack stays out of the packaged app even when the
+    # build venv has it: a partial MLX copy would let the model picker offer
+    # Voxtral and then fail to run it.
+    excludes=['speechbrain', 'mlx', 'mlx_lm', 'mlx_voxtral'],
     noarchive=False,
     optimize=0,
 )
