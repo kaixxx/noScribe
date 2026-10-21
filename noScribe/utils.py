@@ -5,7 +5,13 @@ Different small and distinct helper functions
 import html
 import html.parser
 import re
+import sys
 from pathlib import Path
+
+if sys.version_info >= (3, 12):
+    import importlib.resources as impres
+else:
+    import importlib_resources as impres
 
 import i18n
 
@@ -23,6 +29,19 @@ HTML_BLOCK_LEVEL_ELEMENTS = {
     "h6",
 }
 REGEX_DETECT_TIMESTAMP = re.compile(r"\[\d\d:\d\d:\d\d\]")
+
+
+def translations_dir() -> str:
+    """
+    Return the folder with the noScribe.<locale>.yml files as a real path.
+
+    python-i18n reads its load path again whenever a key is not memoized yet
+    (a missing key, or the first lookup that falls back to "en"), so the path
+    must stay valid for the whole run. `impres.as_file(impres.files("trans"))`
+    returns a temporary copy that is deleted when its `with` block ends.
+    Joining a file name on `impres.files("trans")` gives the real file instead.
+    """
+    return str((impres.files("trans") / "noScribe.en.yml").parent)
 
 
 def str_to_ms(time_str: str) -> int:
