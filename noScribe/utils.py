@@ -37,9 +37,11 @@ def translations_dir() -> str:
 
     python-i18n reads its load path again whenever a key is not memoized yet
     (a missing key, or the first lookup that falls back to "en"), so the path
-    must stay valid for the whole run. `impres.as_file(impres.files("trans"))`
-    returns a temporary copy that is deleted when its `with` block ends.
-    Joining a file name on `impres.files("trans")` gives the real file instead.
+    must stay valid for the whole run. This assumes the translation resources
+    are unpacked on the filesystem (as in source installs and PyInstaller
+    bundles), not stored in a zip archive. Joining a file name on
+    `impres.files("trans")` locates the containing directory without creating
+    a temporary copy whose lifetime is limited to an `impres.as_file()` block.
     """
     return str((impres.files("trans") / "noScribe.en.yml").parent)
 
