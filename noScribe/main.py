@@ -3524,7 +3524,8 @@ class App(ctk.CTk):
                     worker_state = {'device': msg.get('device'), 'stage': msg.get('stage')}
                 elif mtype == "log":
                     txt = msg.get("msg", "")
-                    self.logn('PyAnnote ' + txt, where='file')
+                    where = 'both' if msg.get("level") == "info" else 'file'
+                    self.logn('PyAnnote: ' + txt, where=where)
                 elif mtype == "progress":
                     step_name = str(msg.get("step", ""))
                     progress_percent = int(msg.get("pct", 0))

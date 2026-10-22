@@ -87,6 +87,7 @@ def whisper_proc_entrypoint(args: dict, q):
             local_files_only=args.get("local_files_only", True),
         )
         state.update('audio_loading', device=getattr(model.model, 'device', device))
+        plog("info", f"Whisper: using {state.device}")
 
         # Define callbacks that forward to parent via queue (not used by faster-whisper directly, but kept for parity)
         def log_cb(level, msg):

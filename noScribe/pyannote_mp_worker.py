@@ -177,6 +177,7 @@ def pyannote_proc_entrypoint(args: dict, q):
         waveform, sample_rate = load_waveform(audio_file)
         state.update('device_transfer')
         pipeline.to(torch.device(device))
+        plog("info", f"using {device}")
 
         seg_list = []
         state.update('diarization')
