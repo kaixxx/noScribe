@@ -186,8 +186,8 @@ still passes.
 
 The `Dockerfile` in the repository root is unrelated to this image. It is the
 build environment that `generate_linux_binary.sh` uses for the PyInstaller
-binary. That script also tags its image `noscribe`, so running it replaces the
-image built here; rebuild afterwards or use a different tag for one of them.
+binary and tags its image `noscribe-pyinstaller`, so it does not replace the
+image built here.
 
 ## Files
 
