@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
 
-# Headless CLI image (CPU). Build from the repository root:
+# Headless CLI image. Build from the repository root:
 #
 #   docker build -f docker/Dockerfile -t noscribe .
+#   docker build -f docker/Dockerfile --build-arg TORCH_VARIANT=cu128 -t noscribe:cuda .
 #
 # The Dockerfile in the repository root is unrelated: it is the build
 # environment for the Linux binary, used by generate_linux_binary.sh.
@@ -49,9 +50,12 @@ RUN set -eu; \
 FROM python:${PYTHON_VERSION}-slim-${DEBIAN_RELEASE} AS deps
 
 ARG TORCH_VERSION=2.8.0
-ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
-# USE_LOCK=0 ignores docker/requirements.lock and resolves fresh versions;
-# only docker/update-lock.sh uses that, to regenerate the lock file.
+# PyTorch wheel variant: "cpu" (default) or the CUDA 12.8 build "cu128" (the
+# `cuda` flavor). It selects the PyTorch package index and the lock file:
+# docker/requirements.lock for cpu, docker/requirements-<variant>.lock otherwise.
+ARG TORCH_VARIANT=cpu
+# USE_LOCK=0 ignores the lock file and resolves fresh versions; only
+# docker/update-lock.sh uses that, to regenerate the lock file.
 ARG USE_LOCK=1
 
 # libtk8.6: noScribe always imports tkinter/customtkinter, even headless.
@@ -67,28 +71,32 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_ROOT_USER_ACTION=ignore
 
-# CPU-only PyTorch first, then requirements_linux.txt (minus pyinstaller).
+# PyTorch from its own index first (TORCH_VARIANT), then requirements_linux.txt
+# (minus pyinstaller). The CUDA wheels bring cuBLAS and cuDNN as pip packages,
+# so no CUDA base image is needed.
 # Versions come from three constraint sources:
-#   - TORCH_VERSION, so pip cannot swap in the much larger CUDA build from PyPI
+#   - TORCH_VERSION, so pip cannot swap in a torch build from PyPI
 #   - docker/constraints.txt, hand-maintained pins with a reason each
-#   - docker/requirements.lock, the full package set of the last tested image
+#   - the lock file, the full package set of the last tested image
 # The final check fails the build when the installed set no longer matches
 # the lock, e.g. after requirements_linux.txt changed. It strips CRs, since a
 # Windows checkout with core.autocrlf may hold the lock file with CRLF.
 COPY environments/requirements_linux.txt /tmp/pip/requirements.txt
-COPY docker/constraints.txt docker/requirements.lock /tmp/pip/
+COPY docker/constraints.txt docker/requirements*.lock /tmp/pip/
 RUN set -eu; cd /tmp/pip; \
+    lock=requirements.lock; \
+    [ "${TORCH_VARIANT}" = cpu ] || lock="requirements-${TORCH_VARIANT}.lock"; \
     echo "torch==${TORCH_VERSION}" >> constraints.txt; \
     echo "torchaudio==${TORCH_VERSION}" >> constraints.txt; \
-    if [ "${USE_LOCK}" = 1 ]; then cat requirements.lock >> constraints.txt; fi; \
-    pip install --index-url "${TORCH_INDEX_URL}" -c constraints.txt \
+    if [ "${USE_LOCK}" = 1 ]; then cat "$lock" >> constraints.txt; fi; \
+    pip install --index-url "https://download.pytorch.org/whl/${TORCH_VARIANT}" -c constraints.txt \
         "torch==${TORCH_VERSION}" "torchaudio==${TORCH_VERSION}"; \
     grep -viE '^[[:space:]]*pyinstaller' requirements.txt > requirements-docker.txt; \
     pip install -r requirements-docker.txt -c constraints.txt; \
     if [ "${USE_LOCK}" = 1 ]; then \
       pip freeze --all | grep -v '^pip==' > installed.txt; \
-      grep -v '^#' requirements.lock | tr -d '\r' | diff -u - installed.txt \
-        || { echo "ERROR: installed packages differ from docker/requirements.lock; run docker/update-lock.sh" >&2; exit 1; }; \
+      grep -v '^#' "$lock" | tr -d '\r' | diff -u - installed.txt \
+        || { echo "ERROR: installed packages differ from docker/$lock; run docker/update-lock.sh ${TORCH_VARIANT}" >&2; exit 1; }; \
     fi; \
     rm -rf /tmp/pip
 
