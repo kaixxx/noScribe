@@ -193,20 +193,28 @@ a few weeks apart can end up with different packages. For the image,
 build. The build installs the requirements constrained to that set and fails
 if the result differs, for example after `requirements_linux.txt` changed.
 
-To move to newer versions, or after changing the requirements:
+Regenerate the lock files when the package set changes:
+
+- the build fails with "installed packages differ from docker/...lock",
+  usually because `requirements_linux.txt` changed
+- `docker/constraints.txt`, `TORCH_VERSION` or `PYTHON_VERSION` changed
+- you want newer package versions
+
+Changes to the noScribe code, the entrypoint or the models do not need it.
+Each variant has its own lock file, and such a change affects both, so
+regenerate both:
 
 ```bash
-docker/update-lock.sh
+docker/update-lock.sh          # docker/requirements.lock
+docker/update-lock.sh cu128    # docker/requirements-cu128.lock
 docker build -f docker/Dockerfile -t noscribe .
+docker build -f docker/Dockerfile --build-arg TORCH_VARIANT=cu128 -t noscribe:cuda .
 ```
 
-For the GPU variant, `docker/update-lock.sh cu128` regenerates
-`docker/requirements-cu128.lock`; build it with `--build-arg TORCH_VARIANT=cu128`.
-
-Test the image before committing the new lock file. Pins that must survive
-regeneration belong in `docker/constraints.txt`, each with its reason. At the
-moment that is `av<19`: PyAV 19 removed an argument that faster-whisper 1.2.1
-still passes.
+Test both images, the CUDA one on a GPU, before committing the new lock
+files. Pins that must survive regeneration belong in `docker/constraints.txt`,
+each with its reason. At the moment that is `av<19`: PyAV 19 removed an
+argument that faster-whisper 1.2.1 still passes.
 
 ## Not to be confused with the root Dockerfile
 
