@@ -88,7 +88,10 @@ RUN set -eu; cd /tmp/pip; \
     [ "${TORCH_VARIANT}" = cpu ] || lock="requirements-${TORCH_VARIANT}.lock"; \
     echo "torch==${TORCH_VERSION}" >> constraints.txt; \
     echo "torchaudio==${TORCH_VERSION}" >> constraints.txt; \
-    if [ "${USE_LOCK}" = 1 ]; then cat "$lock" >> constraints.txt; fi; \
+    if [ "${USE_LOCK}" = 1 ]; then \
+      [ -f "$lock" ] || { echo "ERROR: no docker/$lock; run docker/update-lock.sh ${TORCH_VARIANT}" >&2; exit 1; }; \
+      cat "$lock" >> constraints.txt; \
+    fi; \
     pip install --index-url "https://download.pytorch.org/whl/${TORCH_VARIANT}" -c constraints.txt \
         "torch==${TORCH_VERSION}" "torchaudio==${TORCH_VERSION}"; \
     grep -viE '^[[:space:]]*pyinstaller' requirements.txt > requirements-docker.txt; \

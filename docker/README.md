@@ -69,7 +69,7 @@ The image is built for amd64 only. The pinned `docker/requirements.lock`
 contains `torchaudio==2.8.0+cpu`, which exists only for x86_64, and
 `torchcodec==0.7.0` has no Linux aarch64 wheel. On Apple Silicon and other ARM
 machines, build and run it as an amd64 image, which works through emulation
-but is slow:
+but is slow (the GPU variant is amd64 only as well):
 
 ```bash
 docker build --platform linux/amd64 -f docker/Dockerfile -t noscribe .

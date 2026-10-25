@@ -13,9 +13,6 @@ variant="${1:-cpu}"
 lock=docker/requirements.lock
 [ "$variant" = cpu ] || lock="docker/requirements-$variant.lock"
 
-# The Dockerfile copies the lock files even when they are not applied.
-[ -f docker/requirements.lock ] || : > docker/requirements.lock
-
 docker build -f docker/Dockerfile --target deps --build-arg USE_LOCK=0 \
   --build-arg "TORCH_VARIANT=$variant" -t "noscribe:relock-$variant" .
 
