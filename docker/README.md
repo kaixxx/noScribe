@@ -12,7 +12,8 @@ the machine. (Only the GUI mode contacts GitHub on start to look for a new
 noScribe release, as the desktop app does; `check_for_update` in `config.yml`
 turns that off.)
 
-- CPU only; a separate GPU (CUDA) image is coming soon
+- CPU by default; an NVIDIA GPU variant is described under
+  [GPU (CUDA)](#gpu-cuda-experimental)
 - amd64 (x86_64) only; see [Apple Silicon and ARM](#apple-silicon-and-arm)
 - about 3 GB to download, about 8 GB on disk
 - transcription takes roughly 1.5 times the length of the recording on a
@@ -68,7 +69,7 @@ The image is built for amd64 only. The pinned `docker/requirements.lock`
 contains `torchaudio==2.8.0+cpu`, which exists only for x86_64, and
 `torchcodec==0.7.0` has no Linux aarch64 wheel. On Apple Silicon and other ARM
 machines, build and run it as an amd64 image, which works through emulation
-but is slow:
+but is slow (the GPU variant is amd64 only as well):
 
 ```bash
 docker build --platform linux/amd64 -f docker/Dockerfile -t noscribe .
@@ -119,6 +120,28 @@ More folders can be mounted under their own names, for example
 Limitations: the noScribe Editor is not part of the image, and links cannot
 open a browser from inside the container.
 
+## GPU (CUDA, experimental)
+
+For NVIDIA GPUs the same image can be built with the CUDA 12.8 build of
+PyTorch. The CUDA libraries (cuBLAS, cuDNN) come as pip packages with
+PyTorch, so no CUDA base image is needed. The variant has its own lock file,
+`docker/requirements-cu128.lock`. noScribe picks the GPU automatically.
+
+```bash
+docker build -f docker/Dockerfile --build-arg TORCH_VARIANT=cu128 -t noscribe:cuda .
+docker run --rm --gpus all -v "$PWD:/data" noscribe:cuda interview.mp3 interview.html --language de
+```
+
+The host needs a current NVIDIA driver. On Linux, Docker also needs the
+[NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+for `--gpus all`. On Windows, Docker Desktop with WSL2 and the NVIDIA driver
+is enough.
+
+- about 17 GB on disk
+- tested with an RTX 3070 on Windows 11 (Docker Desktop, WSL2): 3 minutes of
+  audio with `precise` and speaker detection in 32 seconds
+- not yet tested on native Linux with the NVIDIA Container Toolkit
+
 ## Image tags
 
 This repository does not publish images. The naming scheme below is the
@@ -152,7 +175,7 @@ Use a full `X.Y.Z-rN[-flavor]` tag wherever reproducibility matters.
 |----------|---------------------------------------------------|---------|
 | *(none)* | headless CLI, CPU, both Whisper models            | built   |
 | `gui`    | default plus noScribe Editor and GUI dependencies | experimental |
-| `cuda`   | NVIDIA GPU build (CUDA PyTorch wheels, own lock file) | planned |
+| `cuda`   | NVIDIA GPU build (CUDA PyTorch wheels, own lock file) | experimental |
 | `slim`   | without Whisper models                            | idea    |
 
 Flavors are not combined (`-cuda-gui`) unless there is a concrete need; every
@@ -170,17 +193,28 @@ a few weeks apart can end up with different packages. For the image,
 build. The build installs the requirements constrained to that set and fails
 if the result differs, for example after `requirements_linux.txt` changed.
 
-To move to newer versions, or after changing the requirements:
+Regenerate the lock files when the package set changes:
+
+- the build fails with "installed packages differ from docker/...lock",
+  usually because `requirements_linux.txt` changed
+- `docker/constraints.txt`, `TORCH_VERSION` or `PYTHON_VERSION` changed
+- you want newer package versions
+
+Changes to the noScribe code, the entrypoint or the models do not need it.
+Each variant has its own lock file, and such a change affects both, so
+regenerate both:
 
 ```bash
-docker/update-lock.sh
+docker/update-lock.sh          # docker/requirements.lock
+docker/update-lock.sh cu128    # docker/requirements-cu128.lock
 docker build -f docker/Dockerfile -t noscribe .
+docker build -f docker/Dockerfile --build-arg TORCH_VARIANT=cu128 -t noscribe:cuda .
 ```
 
-Test the image before committing the new lock file. Pins that must survive
-regeneration belong in `docker/constraints.txt`, each with its reason. At the
-moment that is `av<19`: PyAV 19 removed an argument that faster-whisper 1.2.1
-still passes.
+Test both images, the CUDA one on a GPU, before committing the new lock
+files. Pins that must survive regeneration belong in `docker/constraints.txt`,
+each with its reason. At the moment that is `av<19`: PyAV 19 removed an
+argument that faster-whisper 1.2.1 still passes.
 
 ## Not to be confused with the root Dockerfile
 
@@ -198,4 +232,5 @@ image built here.
 | `docker/entrypoint.sh`           | starts noScribe headless, or the GUI with `gui` |
 | `docker/constraints.txt`         | hand-maintained version pins                    |
 | `docker/requirements.lock`       | generated package list of the tested image      |
-| `docker/update-lock.sh`          | regenerates `requirements.lock`                 |
+| `docker/requirements-cu128.lock` | the same for the GPU (CUDA) variant             |
+| `docker/update-lock.sh`          | regenerates the lock files                      |

@@ -1,15 +1,20 @@
 #!/bin/sh
-# Regenerate docker/requirements.lock: resolve environments/requirements_linux.txt
-# afresh (still honouring docker/constraints.txt) and record the resulting
-# package set. Build and test the image afterwards before committing the new
-# lock file.
+# Regenerate a lock file: resolve environments/requirements_linux.txt afresh
+# (still honouring docker/constraints.txt) and record the resulting package set.
+#
+#   docker/update-lock.sh          # docker/requirements.lock (cpu)
+#   docker/update-lock.sh cu128    # docker/requirements-cu128.lock (cuda flavor)
+#
+# Build and test the image afterwards before committing the new lock file.
 set -eu
 cd "$(dirname "$0")/.."
 
-# The Dockerfile copies the lock file even when it is not applied.
-[ -f docker/requirements.lock ] || : > docker/requirements.lock
+variant="${1:-cpu}"
+lock=docker/requirements.lock
+[ "$variant" = cpu ] || lock="docker/requirements-$variant.lock"
 
-docker build -f docker/Dockerfile --target deps --build-arg USE_LOCK=0 -t noscribe:relock .
+docker build -f docker/Dockerfile --target deps --build-arg USE_LOCK=0 \
+  --build-arg "TORCH_VARIANT=$variant" -t "noscribe:relock-$variant" .
 
 {
   cat <<'HEADER'
@@ -17,9 +22,9 @@ docker build -f docker/Dockerfile --target deps --build-arg USE_LOCK=0 -t noscri
 # Full set of Python packages in the tested image (pip freeze). The Dockerfile
 # uses it as a constraints file and fails the build if the result differs.
 HEADER
-  docker run --rm noscribe:relock pip freeze --all | tr -d '\r' | grep -v '^pip=='
-} > docker/requirements.lock.tmp
-mv docker/requirements.lock.tmp docker/requirements.lock
+  docker run --rm "noscribe:relock-$variant" pip freeze --all | tr -d '\r' | grep -v '^pip=='
+} > "$lock.tmp"
+mv "$lock.tmp" "$lock"
 
-echo "docker/requirements.lock updated:"
-git --no-pager diff --stat -- docker/requirements.lock || true
+echo "$lock updated:"
+git --no-pager diff --stat -- "$lock" || true
