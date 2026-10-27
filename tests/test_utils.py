@@ -331,6 +331,26 @@ def test_html_to_webvtt():
     assert utils.html_to_webvtt(html_string) == result_string
 
 
+@pytest.mark.parametrize("media_path", [
+    "C:/Interviews/Ein Gespräch mit Heikedine Körting kurz.mp3",
+    "C:/Interviews/Fragen & Antworten.mp3",
+])
+def test_html_to_webvtt_media_path(media_path):
+    html_string = """
+    <body>
+        <p>My Title</p>
+        <p>My Information Header</p>
+        <p><a name="ts_50_3530_s1">Hello.</a></p>
+    </body>
+    """
+    assert utils.html_to_webvtt(html_string, media_path=media_path) == (
+        "WEBVTT My Title\n\n"
+        "NOTE\nMy Information Header\n\n"
+        f"NOTE media: {media_path}\n\n"
+        "1\n00:00:00.050 --> 00:00:03.530\n<v s1>Hello.\n\n"
+    )
+
+
 class TestApostropheFix:
     """
     Tests that apostrophes are correctly preserved in all output formats.

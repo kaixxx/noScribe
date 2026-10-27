@@ -270,7 +270,7 @@ def _vtt_escape(txt: str) -> str:
     return txt
 
 
-def html_to_webvtt(html_string: str) -> str:
+def html_to_webvtt(html_string: str, media_path: str = None) -> str:
     """
     Converts an HTML interview output file to a WebVTT transcript.
 
@@ -280,6 +280,7 @@ def html_to_webvtt(html_string: str) -> str:
 
     Args:
         html_string: The input string to be processed.
+        media_path: Optional audio file path for the NOTE media block.
 
     Returns:
         A string containing the WebVTT transcript.
@@ -389,6 +390,8 @@ def html_to_webvtt(html_string: str) -> str:
 
     ret += _vtt_escape(parser.get_title()) + "\n\n"
     ret += _vtt_escape("NOTE\n" + parser.get_info()) + "\n\n"
+    if media_path:
+        ret += f"NOTE media: {media_path}\n\n"
 
     for index, item in enumerate(parser.get_segments()):
         # Add index.
