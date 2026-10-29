@@ -238,18 +238,11 @@ class RegistryWorkflowProcessor:
 
 def create_server_registry(config) -> BackendRegistry:
     """Discover configured models and construct the shared built-in plugins."""
-    from ..inference import LocalWorkerSettings
     from ..plugins.factory import create_builtin_registry
 
     model_paths = discover_whisper_models(config.whisper_models_dir)
     registry = create_builtin_registry(
         whisper_models=model_paths,
-        settings=LocalWorkerSettings(
-            cpu_threads=config.cpu_threads,
-            force_whisper_cpu=config.force_cpu,
-            force_diarization_cpu=config.force_cpu,
-            vad_threshold=config.vad_threshold,
-        ),
         settings_dir=config.plugin_settings_dir,
     )
     return registry

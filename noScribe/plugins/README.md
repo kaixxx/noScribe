@@ -70,10 +70,12 @@ desktop can still offer its existing CPU retry, persisting that choice in the
 affected plugin's file. The server has no user prompt or implicit CPU retry for
 an explicit device.
 
-Absent fields inherit existing desktop/server worker settings during the
-transition, then plugin defaults. Missing files do not need to be created.
-Plugin files take precedence over legacy `force_*_cpu`, `force_cpu`, thread and
-VAD settings. They are loaded on startup; restart after editing. Invalid files
+On the server, absent files or fields use the plugin's own defaults; central
+server configuration contains no worker options. On the desktop, absent fields
+continue to inherit existing desktop worker settings during the transition;
+plugin files take precedence over desktop CPU, thread and VAD settings.
+Missing files do not need to be created. Settings are loaded on startup;
+restart after editing. Invalid files
 or unsupported settings fail explicitly. Settings are not included in model
 catalogues or sent with remote jobs.
 

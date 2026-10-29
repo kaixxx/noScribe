@@ -23,9 +23,6 @@ class ServerConfig:
     terminal_job_ttl_seconds: float = 60.0
     upload_timeout_seconds: float = 3600.0
     job_timeout_seconds: float = 24 * 3600.0
-    force_cpu: bool = False
-    cpu_threads: int = 4
-    vad_threshold: float = 0.5
     whisper_models_dir: Path = Path("models")
     plugin_settings_dir: Path | None = None
     runtime_dir: Path = Path(tempfile.gettempdir()) / "noscribe-server"
@@ -34,14 +31,12 @@ class ServerConfig:
     def __post_init__(self) -> None:
         if not isinstance(self.host, str) or not self.host:
             raise ValueError("Server host must be a non-empty string.")
-        for name in ("force_cpu", "require_tmpfs"):
-            if not isinstance(getattr(self, name), bool):
-                raise ValueError(f"{name} must be a boolean.")
+        if not isinstance(self.require_tmpfs, bool):
+            raise ValueError("require_tmpfs must be a boolean.")
         for name in (
             "port",
             "max_queued_jobs",
             "max_upload_bytes",
-            "cpu_threads",
         ):
             if isinstance(getattr(self, name), bool) or not isinstance(
                 getattr(self, name), int
@@ -54,7 +49,6 @@ class ServerConfig:
             "terminal_job_ttl_seconds",
             "upload_timeout_seconds",
             "job_timeout_seconds",
-            "vad_threshold",
         ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -71,10 +65,6 @@ class ServerConfig:
             raise ValueError("max_queued_jobs must not be negative.")
         if self.max_upload_bytes <= 0 or self.max_audio_hours <= 0:
             raise ValueError("Audio limits must be positive.")
-        if self.cpu_threads <= 0:
-            raise ValueError("cpu_threads must be positive.")
-        if not 0 <= self.vad_threshold <= 1:
-            raise ValueError("vad_threshold must be between 0 and 1.")
         for name in (
             "reservation_ttl_seconds",
             "upload_ready_ttl_seconds",

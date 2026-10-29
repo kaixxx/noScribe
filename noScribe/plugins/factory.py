@@ -25,7 +25,7 @@ class RemoteBackendRegistrationError:
 
 def create_builtin_registry(
     whisper_models: Mapping[str, str],
-    settings: LocalWorkerSettings,
+    settings: LocalWorkerSettings | None = None,
     settings_dir: Path | None = None,
 ) -> BackendRegistry:
     """Create the registry without treating built-ins as special at runtime."""
@@ -36,19 +36,20 @@ def create_builtin_registry(
             device="cpu" if settings.force_whisper_cpu else "auto",
             cpu_threads=settings.cpu_threads,
             vad_threshold=settings.vad_threshold,
-        ),
+        ) if settings is not None else None,
     )
     diarization_settings = PyannoteWorkerSettings.from_mapping(
         store.load("local-pyannote") if store else {},
         defaults=PyannoteWorkerSettings(
             device="cpu" if settings.force_diarization_cpu else "auto",
-        ),
+        ) if settings is not None else None,
     )
     # Keep legacy desktop consumers (including its preliminary VAD) in sync.
-    settings.cpu_threads = whisper_settings.cpu_threads
-    settings.vad_threshold = whisper_settings.vad_threshold
-    settings.force_whisper_cpu = whisper_settings.device == "cpu"
-    settings.force_diarization_cpu = diarization_settings.device == "cpu"
+    if settings is not None:
+        settings.cpu_threads = whisper_settings.cpu_threads
+        settings.vad_threshold = whisper_settings.vad_threshold
+        settings.force_whisper_cpu = whisper_settings.device == "cpu"
+        settings.force_diarization_cpu = diarization_settings.device == "cpu"
     host = LocalInferenceBackend(
         whisper_models=whisper_models, settings=settings,
         whisper_settings=whisper_settings, diarization_settings=diarization_settings,

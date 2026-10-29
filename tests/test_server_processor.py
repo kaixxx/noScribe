@@ -179,18 +179,21 @@ def test_flac_validator_checks_codec_and_duration(tmp_path):
         validate_flac_audio(flac, 0.5)
 
 
-def test_force_cpu_configures_both_builtin_workers(tmp_path):
+def test_server_workers_use_plugin_defaults_without_settings_files(tmp_path):
+    from noScribe.plugins.local_whisper.settings import WhisperWorkerSettings
+    from noScribe.plugins.local_pyannote.settings import PyannoteWorkerSettings
+
     model = tmp_path / "precise"
     model.mkdir()
     (model / "model.bin").write_bytes(b"model")
     registry = create_server_registry(ServerConfig(
         whisper_models_dir=tmp_path,
         runtime_dir=tmp_path / "runtime",
-        force_cpu=True,
+        plugin_settings_dir=tmp_path / "plugin-settings",
     ))
 
     whisper_host = registry.get("local-whisper")._host
     pyannote_host = registry.get("local-pyannote")._host
     assert whisper_host is pyannote_host
-    assert whisper_host.settings.force_whisper_cpu is True
-    assert whisper_host.settings.force_diarization_cpu is True
+    assert whisper_host.whisper_settings == WhisperWorkerSettings()
+    assert pyannote_host.diarization_settings == PyannoteWorkerSettings()

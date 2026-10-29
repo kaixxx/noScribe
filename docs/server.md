@@ -63,10 +63,10 @@ device: cuda
 selection logic. An explicit `cuda` setting fails if unusable, instead of
 silently switching to CPU. The server has no GUI CPU-retry prompt.
 
-Existing central `force_cpu`, `cpu_threads` and `vad_threshold` settings remain
-fallback defaults for plugin fields not specified in these files. In particular,
-`force_cpu: true` defaults both workers to CPU, but a plugin's explicit `device`
-overrides it. Missing files require no setup. Restart after editing settings.
+Worker options are configured exclusively in the corresponding plugin file.
+Missing files or fields use that plugin's own defaults. Central worker options
+such as `force_cpu`, `cpu_threads` and `vad_threshold` are not accepted in the
+server configuration. Restart after editing settings.
 See the [plugin guide](../noScribe/plugins/README.md) for schema ownership and
 the distinction between configuration and plugin installation.
 
@@ -161,5 +161,5 @@ exposed by the firewall.
 The noScribe scheduler guarantees only that no two noScribe workflows execute
 at once. It cannot reserve VRAM against an independent LLM process. Parallel
 operation therefore needs measured headroom; exclusive operation needs a
-shared coordinator understood by both services. `force_cpu` avoids this issue
-at the cost of throughput.
+shared coordinator understood by both services. Setting `device: cpu` in each
+plugin's settings avoids GPU contention at the cost of throughput.
