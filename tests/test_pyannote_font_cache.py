@@ -21,13 +21,15 @@ import textwrap
 from pathlib import Path
 
 import appdirs
+import pytest
 
 REPO = str(Path(__file__).resolve().parent.parent)
 
 STANDIN = textwrap.dedent("""
     import os
-    raise RuntimeError("fonts=%r dir=%r" % (
-        os.environ.get("MPL_IGNORE_SYSTEM_FONTS"), os.environ.get("MPLCONFIGDIR")))
+    raise RuntimeError("fonts=%r dir=%r telemetry=%r" % (
+        os.environ.get("MPL_IGNORE_SYSTEM_FONTS"), os.environ.get("MPLCONFIGDIR"),
+        os.environ.get("PYANNOTE_METRICS_ENABLED")))
 """)
 
 PROBE = textwrap.dedent("""
@@ -35,7 +37,10 @@ PROBE = textwrap.dedent("""
     from noScribe.pyannote_mp_worker import pyannote_proc_entrypoint
     q = queue.Queue()
     pyannote_proc_entrypoint({"audio_path": "unused.wav"}, q)
-    print(q.get_nowait()["error"])
+    while not q.empty():
+        message = q.get_nowait()
+        if message.get("type") == "result":
+            print(message["error"])
 """)
 
 
@@ -52,6 +57,7 @@ def _run(tmp_path, **env_overrides):
     env = {**os.environ, "PYTHONPATH": os.pathsep.join([str(tmp_path), REPO])}
     env.pop("MPL_IGNORE_SYSTEM_FONTS", None)
     env.pop("MPLCONFIGDIR", None)
+    env.pop("PYANNOTE_METRICS_ENABLED", None)
     env.update(env_overrides)
     proc = subprocess.run([sys.executable, "-c", PROBE], env=env,
                           capture_output=True, text=True)
@@ -79,3 +85,12 @@ def test_a_deliberate_setting_is_left_alone(tmp_path):
     list in the worker can ask for it with an empty value."""
     error = _run(tmp_path, MPL_IGNORE_SYSTEM_FONTS="")
     assert "fonts=''" in error, error
+
+
+@pytest.mark.parametrize("inherited_setting", [None, "1", "true"])
+def test_telemetry_is_disabled_before_pyannote_is_imported(tmp_path, inherited_setting):
+    overrides = {} if inherited_setting is None else {
+        "PYANNOTE_METRICS_ENABLED": inherited_setting,
+    }
+    error = _run(tmp_path, **overrides)
+    assert "telemetry='0'" in error, error

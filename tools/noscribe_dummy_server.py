@@ -37,7 +37,7 @@ class DummyInferenceHandler(BaseHTTPRequestHandler):
             return
         if self.path == "/v1/models":
             self._send_json(200, {
-                "protocol_version": 1,
+                "protocol_version": 2,
                 "server_version": "dummy-1",
                 "features": ["queued_workflows"],
                 "data": [

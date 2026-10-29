@@ -1,0 +1,6 @@
+# Extra version pins for the Docker image, applied on top of
+# environments/requirements_linux.txt. Each pin needs a reason.
+
+# PyAV 19 removed the `metadata_errors` argument of av.open(), which
+# faster-whisper 1.2.1 still passes (faster_whisper/audio.py: decode_audio).
+av<19

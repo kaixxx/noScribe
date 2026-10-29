@@ -1,5 +1,9 @@
 # noScribe inference server
 
+Client and server must both support HTTP protocol version 2. Version 1 clients
+cannot replace streamed partial transcripts on a CPU retry and must be updated
+together with the server. The URL prefix remains `/v1`.
+
 The server reuses the same `local-whisper` and `local-pyannote` plugins as the
 desktop application. It accepts atomic workflows containing transcription,
 diarization, or both. A single execution slot serializes all workflows on CPU
@@ -59,15 +63,17 @@ vad_threshold: 0.5
 device: cuda
 ```
 
-`device: auto` selects the available hardware using the worker's existing
-selection logic. An explicit `cuda` setting fails if unusable, instead of
-silently switching to CPU. The server has no GUI CPU-retry prompt.
+`device: auto` selects the available hardware and retries a failed GPU task
+once on the server's CPU. This applies only to classified GPU errors and
+worker crashes after CUDA was selected. It never changes saved settings:
+the next task or job tries the configured hardware again. An explicit `cuda`
+setting fails if unusable; `cpu` always uses the CPU. No retry prompts are shown.
 
 Worker options are configured exclusively in the corresponding plugin file.
 Missing files or fields use that plugin's own defaults. Central worker options
 such as `force_cpu`, `cpu_threads` and `vad_threshold` are not accepted in the
 server configuration. Restart after editing settings.
-See the [plugin guide](../noScribe/plugins/README.md) for schema ownership and
+See the [plugin guide](../plugins/README.md) for schema ownership and
 the distinction between configuration and plugin installation.
 
 ## Queue and upload protocol
@@ -112,6 +118,11 @@ Content-Length: 12345678
 The NDJSON response contains progress and segment events, one `task_result`
 per operation, and a final `result`. There is no endpoint for downloading a
 previous result.
+
+A CPU retry starts the same task again with a `task_started` event containing
+`retry: true`. Clients must discard the earlier segments of that task before
+consuming its replacement output. Uploading or running jobs enter `cancelling`
+on cancellation; their execution slot remains occupied until cleanup finishes.
 
 For simple integrations, the server also exposes the OpenAI-shaped paths
 `POST /v1/audio/transcriptions` and `POST /v1/audio/diarizations`. They accept

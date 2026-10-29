@@ -48,7 +48,11 @@ def test_job_honours_bare_false_auto_save(config):
     assert m.create_transcription_job(cli_mode=True).auto_save is False
 
 
-def test_startup_reads_a_bare_true_force_whisper_cpu(tmp_path):
+@pytest.mark.parametrize('config_text, expected', [
+    ('force_whisper_cpu: true\n', ['True', 'False']),
+    ('{}\n', ['False', 'False']),
+])
+def test_startup_reads_manual_cpu_overrides_and_defaults(tmp_path, config_text, expected):
     """noScribe reads force_whisper_cpu while it is imported, from its config
     directory; so this runs in a child whose appdirs points into tmp_path.
     (Environment variables would not do: on Windows appdirs asks the shell.)"""
@@ -56,11 +60,17 @@ def test_startup_reads_a_bare_true_force_whisper_cpu(tmp_path):
         import appdirs
         appdirs.user_config_dir = lambda *args, **kwargs: {str(tmp_path)!r}
         with open({str(tmp_path / 'config.yml')!r}, 'w') as f:
-            f.write('force_whisper_cpu: true\\n')
+            f.write({config_text!r})
         import noScribe.main as m
+        import yaml
+        with open(m.config_file) as f:
+            saved = yaml.safe_load(f)
+        assert m.get_config_flag('force_pyannote_cpu', False) is False
+        assert str(saved['force_pyannote_cpu']).lower() == 'false'
+        assert str(saved['force_whisper_cpu']).lower() == {expected[0].lower()!r}
         print(m.force_whisper_cpu, m.force_pyannote_cpu)
     """)
     result = subprocess.run([sys.executable, "-c", child], capture_output=True,
                             text=True, cwd=os.getcwd())
     assert result.returncode == 0, result.stderr
-    assert result.stdout.split()[-2:] == ["True", "False"]
+    assert result.stdout.split()[-2:] == expected

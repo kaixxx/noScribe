@@ -3,13 +3,14 @@ import logging
 import os
 import platform
 import sys
-import traceback
 from dataclasses import asdict, is_dataclass
 
 if sys.version_info >= (3, 12):
     import importlib.resources as impres
 else:
     import importlib_resources as impres
+
+from .worker_errors import WorkerState
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,12 @@ def whisper_proc_entrypoint(args: dict, q):
       {"type": "status", "level": str, "message_id": str, "params": {...}}
       {"type": "progress", "pct": float, "detail": "..."}   # optional
       {"type": "result", "ok": True, "segments": [...], "info": {...}}
-      {"type": "result", "ok": False, "error": str, "trace": str}
+      {"type": "state", "device": str|None, "stage": str}
+      Failed results include the structured fields from worker_errors.error_result.
     """
+    state = WorkerState(q, args.get('device'))
     try:
+        state.update('imports')
         # Import heavy libs only in the child
         from faster_whisper import WhisperModel
         from faster_whisper.audio import decode_audio
@@ -42,6 +46,7 @@ def whisper_proc_entrypoint(args: dict, q):
             except Exception:
                 pass
         
+        state.update('device_selection')
         # determine device
         device = args.get("device", "")
         if device in ('', 'auto'):
@@ -55,6 +60,7 @@ def whisper_proc_entrypoint(args: dict, q):
             else:
                 raise Exception('Platform not supported yet.')
             
+        state.update('model_loading', device=device)
         # Build model in child using provided options
         model = WhisperModel(
             str(args["model_path"]),
@@ -63,6 +69,8 @@ def whisper_proc_entrypoint(args: dict, q):
             cpu_threads=args.get("cpu_threads", 4),
             local_files_only=args.get("local_files_only", True),
         )
+        state.update('audio_loading', device=getattr(model.model, 'device', device))
+        q.put({"type": "log", "level": "info", "msg": f"Whisper: using {state.device}"})
 
         # Prepare audio and VAD
         audio_path = args.get("audio_path")
@@ -96,6 +104,7 @@ def whisper_proc_entrypoint(args: dict, q):
                 audio_path, sampling_rate=model.feature_extractor.sampling_rate
             )
             try:
+                state.update('language_detection')
                 whisper_lang, language_probability, _ = model.detect_language(
                     audio, vad_filter=True, vad_parameters=vad_parameters
                 )
@@ -122,6 +131,7 @@ def whisper_proc_entrypoint(args: dict, q):
 
         # Pass the path so faster-whisper can release its original waveform
         # after VAD, before allocating the full spectrogram (see 28650f2e).
+        state.update('preprocessing')
         segments, info = model.transcribe(
             audio_path,
             language=whisper_lang,
@@ -138,6 +148,7 @@ def whisper_proc_entrypoint(args: dict, q):
         status("start_transcription")
         
         # Stream segments to parent as they arrive
+        state.update('transcription')
         for s in segments:
             try:
                 seg_d = {
@@ -187,11 +198,6 @@ def whisper_proc_entrypoint(args: dict, q):
         gc.collect()
     except Exception as e:
         try:
-            q.put({
-                "type": "result",
-                "ok": False,
-                "error": f"{type(e).__name__}: {e}",
-                "trace": traceback.format_exc(),
-            })
+            q.put(state.failure(e))
         except Exception:
             pass

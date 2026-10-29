@@ -98,8 +98,15 @@ it:
   start_canceling: 'Annullamento in corso... (attendere un secondo)'
   start_transcription: 'Trascrizione in corso...'
   loading_whisper: 'Caricamento di whisper'
-  pyannote_cuda_retry: 'Rilevato errore CUDA di PyAnnote. Riprovo sulla CPU.'
-  whisper_cuda_retry: 'Rilevato errore CUDA di Whisper. Riprovo sulla CPU.'
+  pyannote_cuda_retry: |-
+    Rilevato errore CUDA di PyAnnote. Riprovo sulla CPU. Questo tentativo riguarda solo il lavoro corrente.
+    Per usare sempre la CPU ed evitare questo errore CUDA, impostare force_pyannote_cpu: true in config.yml.
+  whisper_cuda_retry: |-
+    Rilevato errore CUDA di Whisper. Riprovo sulla CPU. Questo tentativo riguarda solo il lavoro corrente.
+    Per usare sempre la CPU ed evitare questo errore CUDA, impostare force_whisper_cpu: true in config.yml.
+  gpu_worker_crash_retry: |-
+    Il processo GPU di %{component} è terminato in modo imprevisto (codice di uscita %{exitcode}, ultima fase: %{stage}). La causa è sconosciuta. Questo lavoro verrà ritentato sulla CPU.
+    Per usare sempre la CPU, impostare %{option}: true in config.yml.
   vad: "Rilevamento dell'attività vocale..."
   language_detect: 'Lingua rilevata "%{lang}" con probabilità %{prob}'
   language_en_only: 'Tieni presente che il modello di IA scelto per la trascrizione è solo in inglese.'
@@ -136,18 +143,6 @@ it:
   err_empty_transcript: 'Non è stato riconosciuto alcun testo nell’intervallo selezionato. Controlla l’audio e le impostazioni di trascrizione.'
   rescue_saving: 'Salvataggio con il nome originale non riuscito. Salvato invece in questo file: %{file}'
   rescue_saving_failed: 'Errore: salvataggio con il nome originale non riuscito. Il nome alternativo esiste già. Il programma deve essere chiuso. (Assicurati che la trascrizione non sia già aperta in Word!)'
-  pyannote_cuda_error_prompt: |-
-    La diarizzazione PyAnnote è fallita con un errore CUDA:
-
-    %{error}
-
-    Passare all'elaborazione su CPU e riprovare?
-  whisper_cuda_error_prompt: |-
-    La trascrizione Whisper è fallita con un errore CUDA:
-
-    %{error}
-
-    Passare all'elaborazione su CPU e riprovare?
   err_noScribeEdit_not_found: "Errore: impossibile trovare l'editor di noScribe."
   err_vtt_invalid_options: 'Avviso: le opzioni "Discorso sovrapposto", "Segna le pause" e "Timestamps" non sono supportate nei file VTT.'
   err_editor_invalid_format: "L'editor può essere utilizzato solo con file HTML. Vuoi avviarlo comunque?"

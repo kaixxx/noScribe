@@ -23,6 +23,7 @@ class JobState(StrEnum):
     READY_FOR_UPLOAD = "ready_for_upload"
     UPLOADING = "uploading"
     RUNNING = "running"
+    CANCELING = "cancelling"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -213,6 +214,23 @@ class JobScheduler:
             job = self._authorized_job_locked(job_id, token)
             if job.state in TERMINAL_STATES:
                 return self._snapshot_locked(job)
+            if job.state in {JobState.UPLOADING, JobState.RUNNING, JobState.CANCELING}:
+                job.state = JobState.CANCELING
+                self._changed.notify_all()
+                return self._snapshot_locked(job)
+            job.state = JobState.CANCELLED
+            job.terminal_at = self._clock()
+            self._release_locked(job)
+            self._changed.notify_all()
+            return self._snapshot_locked(job)
+
+    def finish_cancel(self, job_id: str, token: str) -> JobSnapshot:
+        """Release a cancelled execution slot after its owner has cleaned up."""
+        with self._changed:
+            job = self._authorized_job_locked(job_id, token)
+            if job.state is JobState.CANCELLED:
+                return self._snapshot_locked(job)
+            self._require_state(job, JobState.CANCELING)
             job.state = JobState.CANCELLED
             job.terminal_at = self._clock()
             self._release_locked(job)

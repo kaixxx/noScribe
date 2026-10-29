@@ -5,7 +5,13 @@ Different small and distinct helper functions
 import html
 import html.parser
 import re
+import sys
 from pathlib import Path
+
+if sys.version_info >= (3, 12):
+    import importlib.resources as impres
+else:
+    import importlib_resources as impres
 
 import i18n
 
@@ -23,6 +29,21 @@ HTML_BLOCK_LEVEL_ELEMENTS = {
     "h6",
 }
 REGEX_DETECT_TIMESTAMP = re.compile(r"\[\d\d:\d\d:\d\d\]")
+
+
+def translations_dir() -> str:
+    """
+    Return the folder with the noScribe.<locale>.yml files as a real path.
+
+    python-i18n reads its load path again whenever a key is not memoized yet
+    (a missing key, or the first lookup that falls back to "en"), so the path
+    must stay valid for the whole run. This assumes the translation resources
+    are unpacked on the filesystem (as in source installs and PyInstaller
+    bundles), not stored in a zip archive. Joining a file name on
+    `impres.files("trans")` locates the containing directory without creating
+    a temporary copy whose lifetime is limited to an `impres.as_file()` block.
+    """
+    return str((impres.files("trans") / "noScribe.en.yml").parent)
 
 
 def str_to_ms(time_str: str) -> int:
@@ -249,7 +270,7 @@ def _vtt_escape(txt: str) -> str:
     return txt
 
 
-def html_to_webvtt(html_string: str) -> str:
+def html_to_webvtt(html_string: str, media_path: str = None) -> str:
     """
     Converts an HTML interview output file to a WebVTT transcript.
 
@@ -259,6 +280,7 @@ def html_to_webvtt(html_string: str) -> str:
 
     Args:
         html_string: The input string to be processed.
+        media_path: Optional audio file path for the NOTE media block.
 
     Returns:
         A string containing the WebVTT transcript.
@@ -368,6 +390,8 @@ def html_to_webvtt(html_string: str) -> str:
 
     ret += _vtt_escape(parser.get_title()) + "\n\n"
     ret += _vtt_escape("NOTE\n" + parser.get_info()) + "\n\n"
+    if media_path:
+        ret += f"NOTE media: {media_path}\n\n"
 
     for index, item in enumerate(parser.get_segments()):
         # Add index.

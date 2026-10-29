@@ -14,7 +14,7 @@ from typing import Any, Mapping
 from .manifest import PLUGIN_PROTOCOL_VERSION
 
 
-EVENT_TYPES = frozenset({"log", "status", "progress", "segment", "result"})
+EVENT_TYPES = frozenset({"log", "status", "progress", "segment", "result", "state"})
 METHODS = frozenset({"transcribe", "diarize", "cancel", "health"})
 
 

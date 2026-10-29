@@ -5,10 +5,10 @@ from datetime import datetime
 
 noScribe_version = '0.8'
 clean_build = True
-run_pyinstaller_non_cuda = False
-run_pyinstaller_cuda = True
-run_nsis_non_cuda = False
-run_nsis_cuda = True
+run_pyinstaller_non_cuda = True
+run_pyinstaller_cuda = False
+run_nsis_non_cuda = True
+run_nsis_cuda = False
 
 conda_env_noncuda = 'noScribe_0_6_non_cuda'
 conda_env_cuda = 'noScribe_0_6_cuda'
@@ -77,7 +77,9 @@ def run_nsis(cuda=False):
     if cuda:
         installer_name += '_cuda'
     installer_name += '.exe'
-    installer_name = os.path.join(script_dir, 'win_installer', installer_name)
+    installer_dir = os.path.join(script_dir, 'win_installer')
+    os.makedirs(installer_dir, exist_ok=True)
+    installer_name = os.path.join(installer_dir, installer_name)
         
     print('##############################################################')
     print('NISIS cuda' if cuda else 'NSIS non cuda')
@@ -135,7 +137,7 @@ def run_nsis(cuda=False):
 
     nsis_cmd = '"' + nsis_path + '" /V4 "' + os.path.join(script_dir, 'nsis_tmp.nsi') + '"'
 
-    proc = Popen(nsis_cmd, shell=True, cwd=os.path.join(script_dir, 'win_installer'))
+    proc = Popen(nsis_cmd, shell=True, cwd=installer_dir)
     proc.communicate()    
     if proc.returncode != 0:
         final_report += 'NSIS commpiler failed.\n'

@@ -270,12 +270,31 @@ def test_local_backend_preserves_worker_error_trace(monkeypatch):
     )
     monkeypatch.setattr(inference.mp, "get_context", lambda method: context)
 
-    with pytest.raises(inference.InferenceWorkerError) as caught:
+    with pytest.raises(inference.WorkerError) as caught:
         inference.LocalInferenceBackend().diarize(
             DiarizationRequest("audio.opus")
         )
 
-    assert str(caught.value) == "model failed"
+    assert caught.value.message == "model failed"
     assert caught.value.trace == "worker traceback"
     assert context.process.closed
     assert context.queue.closed
+
+
+def test_cpu_override_is_scoped_to_one_worker_call(monkeypatch):
+    context = _FakeContext([{'type': 'state', 'device': 'cpu', 'stage': 'transcription'},
+                            {'type': 'result', 'ok': True}])
+    monkeypatch.setattr(inference.mp, 'get_context', lambda method: context)
+    backend = inference.LocalInferenceBackend(whisper_models={'model': 'models/model'})
+    request = TranscriptionRequest('audio.wav', ModelRef(LOCAL_WHISPER_BACKEND, 'model'))
+    backend.transcribe(request, on_segment=lambda _: None, device_override='cpu')
+    assert context.process.args[0]['device'] == 'cpu'
+    assert backend.whisper_settings.device == 'auto'
+    context.messages = [{'type': 'result', 'ok': True}]
+    backend.transcribe(request, on_segment=lambda _: None)
+    assert context.process.args[0]['device'] == 'auto'
+    backend.diarize(DiarizationRequest('audio.wav'), device_override='cpu')
+    assert context.process.args[0]['device'] == 'cpu'
+    assert backend.diarization_settings.device == 'auto'
+    backend.diarize(DiarizationRequest('audio.wav'))
+    assert context.process.args[0]['device'] == 'auto'

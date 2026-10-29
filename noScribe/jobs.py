@@ -44,6 +44,9 @@ class TranscriptionJob:
         self.audio_file: str = ''
         self.transcript_file: str = ''
         self.has_partial_transcript: bool = False
+        self.whisper_cpu_fallback: bool = False
+        self.pyannote_cpu_fallback: bool = False
+        self.gpu_errors: dict = {}
 
         self.start: int = 0
         self.stop: int = 0
@@ -68,6 +71,9 @@ class TranscriptionJob:
         return Path(self.transcript_file).suffix.lstrip('.').lower()
 
     def set_running(self) -> None:
+        self.whisper_cpu_fallback = False
+        self.pyannote_cpu_fallback = False
+        self.gpu_errors = {}
         self.status = JobStatus.AUDIO_CONVERSION
         self.started_at = datetime.datetime.now()
         # A repeated job must rebuild the order-dependent speaker mapping.

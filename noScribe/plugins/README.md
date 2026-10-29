@@ -64,11 +64,12 @@ device: cuda
 ```
 
 Whisper accepts `auto`, `cpu`, `cuda`; Pyannote additionally accepts `mps`.
-`auto` retains the worker's automatic device selection. Explicit devices are
-passed through; an unavailable explicit device produces a worker error. The
-desktop can still offer its existing CPU retry, persisting that choice in the
-affected plugin's file. The server has no user prompt or implicit CPU retry for
-an explicit device.
+`auto` retains automatic device selection and permits one CPU retry for a
+classified GPU failure or a native worker crash after CUDA was selected.
+Desktop and server retries apply only to the current task, without prompts or
+changes to plugin settings. The next job tries the configured hardware again.
+Explicit devices are passed through without automatic fallback; an unavailable
+explicit device produces a worker error.
 
 On the server, absent files or fields use the plugin's own defaults; central
 server configuration contains no worker options. On the desktop, absent fields

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -20,6 +21,7 @@ from noScribe.server.processor import (
 )
 from noScribe.server.config import ServerConfig
 from noScribe.audio.convert import ToFlac
+from noScribe.worker_errors import WorkerError, WorkerRetryError, error_result
 
 
 class FakeRegistry:
@@ -66,6 +68,65 @@ class FakeRegistry:
 
     def close(self):
         pass
+
+
+@pytest.mark.parametrize('component', ['transcription', 'diarization'])
+@pytest.mark.parametrize('device', ['auto', 'cuda', 'cpu'])
+def test_server_gpu_retry_is_per_task_and_respects_explicit_device(component, device):
+    registry = FakeRegistry()
+    settings = SimpleNamespace(device=device)
+    registry.get = lambda _: SimpleNamespace(settings=settings)
+    devices = []
+
+    def operation(request, **callbacks):
+        devices.append(callbacks.get('device_override'))
+        if callbacks.get('device_override') != 'cpu':
+            if component == 'transcription':
+                callbacks['on_segment'](TranscriptionSegment(0, 1, 'GPU partial'))
+            raise WorkerError(error_result(RuntimeError('CUDA out of memory'), 'cuda', 'transcription'))
+        if component == 'transcription':
+            callbacks['on_segment'](TranscriptionSegment(0, 1, 'CPU replacement'))
+            return TranscriptionInfo(duration=1)
+        return DiarizationResult()
+
+    setattr(registry, 'transcribe' if component == 'transcription' else 'diarize', operation)
+    processor = RegistryWorkflowProcessor(registry)
+    method = processor._transcribe if component == 'transcription' else processor._diarize
+    model = 'local-whisper/precise' if component == 'transcription' else 'local-pyannote/default'
+    events = []
+    task = JobTask(component, model)
+    if device == 'auto':
+        method(0, task, Path('audio.wav'), events.append, lambda: False)
+        assert devices == [None, 'cpu']
+        assert any(event['type'] == 'task_started' and event.get('retry') for event in events)
+        method(0, task, Path('audio.wav'), events.append, lambda: False)
+        assert devices == [None, 'cpu', None, 'cpu']
+    else:
+        with pytest.raises(WorkerError):
+            method(0, task, Path('audio.wav'), events.append, lambda: False)
+        assert devices == [None]
+    assert settings.device == device
+
+
+def test_server_preserves_both_errors_when_cpu_retry_fails():
+    registry = FakeRegistry()
+    registry.get = lambda _: SimpleNamespace(settings=SimpleNamespace(device='auto'))
+    attempts = []
+
+    def fail(request, **callbacks):
+        device = 'cpu' if callbacks.get('device_override') == 'cpu' else 'cuda'
+        attempts.append(device)
+        raise WorkerError(error_result(RuntimeError('CUDA out of memory' if device == 'cuda' else 'CPU failed'),
+                                       device, 'transcription'))
+
+    registry.transcribe = fail
+    processor = RegistryWorkflowProcessor(registry)
+    with pytest.raises(WorkerRetryError) as caught:
+        processor._transcribe(0, JobTask('transcription', 'local-whisper/precise'),
+                              Path('audio.wav'), lambda _: None, lambda: False)
+    assert attempts == ['cuda', 'cpu']
+    assert caught.value.gpu_error.device == 'cuda'
+    assert caught.value.cpu_error.device == 'cpu'
 
 
 def _job(tasks):

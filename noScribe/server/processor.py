@@ -6,10 +6,14 @@ from pathlib import Path
 from typing import Callable
 
 from ..audio.convert import ToWav
-from ..inference import DiarizationRequest, DiarizationResult, TranscriptionRequest
+from ..inference import (
+    DiarizationRequest, DiarizationResult, TranscriptionRequest, InferenceCancelled,
+    LOCAL_WHISPER_BACKEND, LOCAL_DIARIZATION_BACKEND,
+)
 from ..models import ModelDescriptor, ModelRef
 from ..plugins.registry import BackendRegistry
 from ..plugins.protocol import validate_extensions
+from ..worker_errors import WorkerError, WorkerRetryError
 from .jobs import JobSnapshot, JobTask
 
 
@@ -133,8 +137,10 @@ class RegistryWorkflowProcessor:
                 **payload,
             })
 
-        info = self.registry.transcribe(
+        info = self._run_with_cpu_retry(
+            self.registry.transcribe,
             request,
+            on_retry=lambda: event("task_started", retry=True),
             on_segment=lambda segment: event(
                 "segment",
                 segment={
@@ -196,8 +202,10 @@ class RegistryWorkflowProcessor:
                 **payload,
             })
 
-        result = self.registry.diarize(
+        result = self._run_with_cpu_retry(
+            self.registry.diarize,
             request,
+            on_retry=lambda: event("task_started", retry=True),
             on_log=lambda level, message: event("log", level=level, msg=message),
             on_progress=lambda step, percent: event(
                 "progress", step=step, pct=percent
@@ -210,6 +218,27 @@ class RegistryWorkflowProcessor:
             **result.to_mapping(seconds=True),
         )
         return result
+
+    def _run_with_cpu_retry(self, operation, request, *, on_retry, **callbacks):
+        """Retry a built-in auto-device worker once without changing its settings."""
+        try:
+            return operation(request, **callbacks)
+        except WorkerError as gpu_error:
+            if (callbacks['is_cancelled']() or not gpu_error.allows_cpu_retry
+                    or request.model.backend_id not in {LOCAL_WHISPER_BACKEND, LOCAL_DIARIZATION_BACKEND}
+                    or self.registry.get(request.model.backend_id).settings.device != 'auto'):
+                raise
+            on_retry()
+            callbacks.get('on_log', lambda *_: None)(
+                'info', 'GPU inference failed; retrying this task once on CPU.')
+            try:
+                return operation(request, device_override='cpu', **callbacks)
+            except Exception as cpu_error:
+                if callbacks['is_cancelled']():
+                    raise
+                if isinstance(cpu_error, InferenceCancelled):
+                    raise
+                raise WorkerRetryError(gpu_error, cpu_error) from cpu_error
 
     def _model(self, task: JobTask, capability: str) -> ModelDescriptor:
         try:

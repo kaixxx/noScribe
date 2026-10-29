@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Mapping, Optional
 
 from .models import ModelRef
+from .worker_errors import WorkerError
 from .plugins.protocol import validate_extensions, validate_worker_event
 
 
@@ -327,6 +328,8 @@ class LocalInferenceBackend:
         on_status: StatusCallback = _ignore_status,
         on_progress: TranscriptionProgressCallback = _ignore_transcription_progress,
         is_cancelled: CancelCallback = _never_cancel,
+        *,
+        device_override: str | None = None,
     ) -> TranscriptionInfo:
         from .whisper_mp_worker import whisper_proc_entrypoint
 
@@ -342,7 +345,7 @@ class LocalInferenceBackend:
 
         worker_args = {
             "model_path": model_path,
-            "device": self.whisper_settings.device,
+            "device": device_override or self.whisper_settings.device,
             "compute_type": "auto",
             "cpu_threads": self.whisper_settings.cpu_threads,
             "local_files_only": True,
@@ -367,12 +370,16 @@ class LocalInferenceBackend:
         process.start()
         self._set_active(process, result_queue)
         info = {}
+        worker_state = {'device': 'cpu' if worker_args['device'] == 'cpu' else None,
+                        'stage': 'starting'}
 
         try:
             while True:
-                message = self._next_message(process, result_queue, is_cancelled)
+                message = self._next_message(process, result_queue, is_cancelled, worker_state)
                 message_type = message.get("type") if isinstance(message, dict) else None
-                if message_type == "log":
+                if message_type == "state":
+                    worker_state = {'device': message.get('device'), 'stage': message.get('stage')}
+                elif message_type == "log":
                     on_log(message.get("level", "info"), str(message.get("msg", "")))
                 elif message_type == "status":
                     on_status(
@@ -388,10 +395,7 @@ class LocalInferenceBackend:
                     on_segment(TranscriptionSegment.from_mapping(message.get("segment") or {}))
                 elif message_type == "result":
                     if not message.get("ok"):
-                        raise InferenceWorkerError(
-                            message.get("error", "Transcription failed"),
-                            message.get("trace"),
-                        )
+                        raise WorkerError(message)
                     info = message.get("info") or {}
                     break
         finally:
@@ -405,6 +409,8 @@ class LocalInferenceBackend:
         on_log: LogCallback = _ignore_log,
         on_progress: DiarizationProgressCallback = _ignore_diarization_progress,
         is_cancelled: CancelCallback = _never_cancel,
+        *,
+        device_override: str | None = None,
     ) -> DiarizationResult:
         from .pyannote_mp_worker import pyannote_proc_entrypoint
 
@@ -415,7 +421,7 @@ class LocalInferenceBackend:
         worker_args = {
             "audio_path": request.audio_path,
             "num_speakers": request.num_speakers,
-            "device": self.diarization_settings.device,
+            "device": device_override or self.diarization_settings.device,
             "extensions": request.extensions,
         }
         self._cancel_event.clear()
@@ -428,12 +434,16 @@ class LocalInferenceBackend:
         process.start()
         self._set_active(process, result_queue)
         result = DiarizationResult()
+        worker_state = {'device': 'cpu' if worker_args['device'] == 'cpu' else None,
+                        'stage': 'starting'}
 
         try:
             while True:
-                message = self._next_message(process, result_queue, is_cancelled)
+                message = self._next_message(process, result_queue, is_cancelled, worker_state)
                 message_type = message.get("type") if isinstance(message, dict) else None
-                if message_type == "log":
+                if message_type == "state":
+                    worker_state = {'device': message.get('device'), 'stage': message.get('stage')}
+                elif message_type == "log":
                     on_log(message.get("level", "info"), str(message.get("msg", "")))
                 elif message_type == "progress":
                     on_progress(
@@ -442,10 +452,7 @@ class LocalInferenceBackend:
                     )
                 elif message_type == "result":
                     if not message.get("ok"):
-                        raise InferenceWorkerError(
-                            message.get("error", "Diarization failed"),
-                            message.get("trace"),
-                        )
+                        raise WorkerError(message)
                     result = DiarizationResult.from_mapping(message)
                     break
         finally:
@@ -453,7 +460,7 @@ class LocalInferenceBackend:
 
         return result
 
-    def _next_message(self, process, result_queue, is_cancelled: CancelCallback):
+    def _next_message(self, process, result_queue, is_cancelled: CancelCallback, worker_state):
         while True:
             if self._cancel_event.is_set() or is_cancelled():
                 self.cancel()
@@ -462,9 +469,7 @@ class LocalInferenceBackend:
                 return validate_worker_event(result_queue.get(timeout=0.1))
             except pyqueue.Empty:
                 if not process.is_alive():
-                    raise InferenceWorkerError(
-                        f"Inference worker exited unexpectedly (code {process.exitcode})."
-                    )
+                    raise WorkerError.unexpected_exit(process.exitcode, worker_state)
 
     def _set_active(self, process, result_queue) -> None:
         with self._lock:

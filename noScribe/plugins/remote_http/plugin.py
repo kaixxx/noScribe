@@ -136,13 +136,16 @@ class RemoteHttpPlugin:
         on_status=lambda _message_id, _params, _level: None,
         on_progress=lambda _percent, _detail: None,
         is_cancelled=lambda: False,
+        on_reset=None,
     ) -> TranscriptionInfo:
         if self.supports_workflows:
             def handle(event):
                 if event.get("operation") not in {None, "transcription"}:
                     return
                 event_type = event.get("type")
-                if event_type == "segment":
+                if event_type == "task_started" and event.get("retry") and on_reset is not None:
+                    on_reset()
+                elif event_type == "segment" and on_reset is not None:
                     on_segment(TranscriptionSegment.from_mapping(
                         event.get("segment") or {}
                     ))
@@ -166,6 +169,11 @@ class RemoteHttpPlugin:
             )
             if result.transcription_info is None:
                 raise InferenceWorkerError("Remote transcription returned no metadata.")
+            if on_reset is None:
+                # Consumers without rollback support receive only the final
+                # attempt's segments; desktop consumers can keep streaming.
+                for segment in result.transcription_segments:
+                    on_segment(segment)
             return result.transcription_info
 
         fields = {
@@ -413,6 +421,9 @@ class RemoteHttpPlugin:
                     if not line:
                         continue
                     event = _workflow_event(line)
+                    if event["type"] == "task_started" and event.get("operation") == "transcription":
+                        transcription_segments.clear()
+                        transcription_info = None
                     on_event(event)
                     if (
                         event["type"] == "segment"

@@ -115,6 +115,7 @@ class InferenceService:
             # begin_upload owns the sole processing slot.  Release it even if
             # the runtime filesystem is full or otherwise unavailable.
             self.scheduler.cancel(snapshot.job_id, token)
+            self.scheduler.finish_cancel(snapshot.job_id, token)
             raise HTTPException(
                 507, "Could not create temporary upload storage."
             ) from error
@@ -139,6 +140,8 @@ class InferenceService:
                         break
                     except TimeoutError as error:
                         raise HTTPException(408, "Audio upload timed out.") from error
+                    if self.scheduler.get(snapshot.job_id, token, renew=False).state is JobState.CANCELING:
+                        raise HTTPException(409, "Audio upload was cancelled.")
                     received += len(chunk)
                     if received > self.config.max_upload_bytes:
                         raise HTTPException(413, "Audio upload is too large.")
@@ -150,11 +153,8 @@ class InferenceService:
             return path
         except BaseException:
             path.unlink(missing_ok=True)
-            try:
-                self.scheduler.fail(snapshot.job_id, token, "upload_failed")
-            except InvalidJobState:
-                # Uploading is not RUNNING yet; cancellation releases the slot.
-                self.scheduler.cancel(snapshot.job_id, token)
+            self.scheduler.cancel(snapshot.job_id, token)
+            self.scheduler.finish_cancel(snapshot.job_id, token)
             raise
 
     def stream_processing(
@@ -165,6 +165,8 @@ class InferenceService:
         timed_out = threading.Event()
         finished = threading.Event()
         with self._lock:
+            if self.scheduler.get(snapshot.job_id, token, renew=False).state is JobState.CANCELING:
+                cancel_event.set()
             self._cancel_events[snapshot.job_id] = cancel_event
 
         def emit(event: dict) -> None:
@@ -178,22 +180,17 @@ class InferenceService:
         def run() -> None:
             def timeout_job() -> None:
                 timed_out.set()
-                cancel_event.set()
-                self.processor.cancel()
+                self.cancel(snapshot.job_id, token)
 
             timer = threading.Timer(self.config.job_timeout_seconds, timeout_job)
             timer.daemon = True
             timer.start()
+            error_code = None
             try:
                 self.scheduler.begin_processing(snapshot.job_id, token)
                 self.processor.process(
                     snapshot, audio_path, emit, cancel_event.is_set
                 )
-                if cancel_event.is_set():
-                    self.scheduler.cancel(snapshot.job_id, token)
-                else:
-                    self.scheduler.complete(snapshot.job_id, token)
-                    emit({"type": "result", "ok": True})
             except Exception:
                 if timed_out.is_set():
                     error_code = "job_timeout"
@@ -201,24 +198,38 @@ class InferenceService:
                     error_code = "job_cancelled"
                 else:
                     error_code = "server_job_failed"
-                try:
-                    if error_code == "job_cancelled":
-                        self.scheduler.cancel(snapshot.job_id, token)
-                    else:
-                        self.scheduler.fail(snapshot.job_id, token, error_code)
-                except (InvalidJobState, JobNotFound):
-                    pass
-                emit({"type": "result", "ok": False, "error": error_code})
             finally:
                 timer.cancel()
-                audio_path.unlink(missing_ok=True)
-                finished.set()
+                # A timeout callback must finish before a new job can use the
+                # shared processor; otherwise it could cancel that next job.
+                timer.join()
+                try:
+                    audio_path.unlink(missing_ok=True)
+                except OSError:
+                    error_code = 'server_job_failed'
                 with self._lock:
                     self._cancel_events.pop(snapshot.job_id, None)
+                    if cancel_event.is_set():
+                        self.scheduler.cancel(snapshot.job_id, token)
+                        self.scheduler.finish_cancel(snapshot.job_id, token)
+                    elif error_code:
+                        self.scheduler.fail(snapshot.job_id, token, error_code)
+                    else:
+                        self.scheduler.complete(snapshot.job_id, token)
+                if not cancel_event.is_set():
+                    emit({"type": "result", "ok": not bool(error_code),
+                          **({"error": error_code} if error_code else {})})
+                else:
+                    try:
+                        events.put_nowait({"type": "result", "ok": False,
+                                           "error": 'job_timeout' if timed_out.is_set() else 'job_cancelled'})
+                    except queue.Full:
+                        pass
                 try:
                     events.put(_END, timeout=1)
                 except queue.Full:
                     pass
+                finished.set()
 
         worker = threading.Thread(
             target=run, name=f"noscribe-{snapshot.job_id}", daemon=True
@@ -229,15 +240,23 @@ class InferenceService:
             completed_stream = False
             try:
                 while True:
-                    event = events.get()
+                    try:
+                        event = events.get(timeout=0.1)
+                    except queue.Empty:
+                        if finished.is_set():
+                            completed_stream = True
+                            return
+                        continue
                     if event is _END:
                         completed_stream = True
                         return
                     yield json.dumps(event, ensure_ascii=False) + "\n"
             finally:
                 if not completed_stream and not finished.is_set():
-                    cancel_event.set()
-                    self.processor.cancel()
+                    try:
+                        self.cancel(snapshot.job_id, token)
+                    except JobNotFound:
+                        pass
 
         return StreamingResponse(
             generate(),
@@ -246,12 +265,12 @@ class InferenceService:
         )
 
     def cancel(self, job_id: str, token: str) -> JobSnapshot:
-        snapshot = self.scheduler.cancel(job_id, token)
         with self._lock:
+            snapshot = self.scheduler.cancel(job_id, token)
             event = self._cancel_events.get(job_id)
-        if event is not None:
-            event.set()
-            self.processor.cancel()
+            if event is not None:
+                event.set()
+                self.processor.cancel()
         return snapshot
 
 

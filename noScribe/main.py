@@ -86,6 +86,7 @@ from .plugins.remote_profiles import (
     save_remote_profile,
 )
 from .tkHyperlinkManager import HyperlinkManager
+from .worker_errors import WorkerError, WorkerRetryError
 
 if platform.system() == "Darwin": # = MAC
     from subprocess import check_output
@@ -235,21 +236,9 @@ def get_config_flag(key: str, default: bool) -> bool:
         return False
     return default
 
+# Runtime CPU fallback must not overwrite these saved preferences.
 force_pyannote_cpu = get_config_flag('force_pyannote_cpu', False)
 force_whisper_cpu = get_config_flag('force_whisper_cpu', False)
-
-_CUDA_ERROR_KEYWORDS = (
-    'cuda',
-    'cublas',
-    'cudnn',
-    'cufft',
-    'device-side assert',
-    'invalid device function',
-    'nccl',
-    'gpu driver',
-    'compute capability',
-    'hip error',
-)
 
 PAUSE_OPTIONS = ['none', '1sec+', '2sec+', '3sec+']
 
@@ -270,14 +259,6 @@ def pause_label(pause) -> str:
             and 0 <= pause < len(PAUSE_OPTIONS):
         return PAUSE_OPTIONS[pause]
     return str(pause)
-
-def _is_cuda_error_message(message: str) -> bool:
-    if not message:
-        return False
-    if message.find('(device_cpu)') != -1:
-        return False
-    lower_message = message.lower()
-    return any(keyword in lower_message for keyword in _CUDA_ERROR_KEYWORDS)
 
 def version_higher(version1, version2, subversion_level=99) -> int:
     """Will return 
@@ -2589,7 +2570,8 @@ class App(ctk.CTk):
                 self.log_textbox.delete("1.0", f"1.0 + {self.log_len - 3000} chars")
                 self.log_len = 3000
             if link:
-                tags = tags + self.hyperlink.add(partial(self.openLink, link))
+                # A single tag comes as a string ('error'), several as a list.
+                tags = ([tags] if isinstance(tags, str) else tags) + self.hyperlink.add(partial(self.openLink, link))
             self.log_textbox.insert(tk.END, txt, tags)
             self.log_textbox.yview_moveto(1)
             self.log_len += len(txt)
@@ -2899,8 +2881,6 @@ class App(ctk.CTk):
         config['last_overlapping'] = self.check_box_overlapping.get()
         config['last_timestamps'] = self.check_box_timestamps.get()
         config['last_disfluencies'] = self.check_box_disfluencies.get()
-        config['force_pyannote_cpu'] = str(force_pyannote_cpu)
-        config['force_whisper_cpu'] = str(force_whisper_cpu)
         save_config()
 
     def collect_transcription_options(self) -> TranscriptionQueue:
@@ -3371,9 +3351,8 @@ class App(ctk.CTk):
                                 break
                             except Exception as err:
                                 if self._handle_cuda_fallback(
-                                    'pyannote', err, job.diarization_model
+                                    'pyannote', err, job
                                 ):
-                                    self.logn(t('pyannote_cuda_retry'), 'highlight')
                                     continue
                                 raise
 
@@ -3478,7 +3457,7 @@ class App(ctk.CTk):
                         elif job.output_format == 'txt':
                             txt = utils.html_to_text(d.asHTML(), use_only_body=True)
                         elif job.output_format == 'vtt':
-                            txt = utils.html_to_webvtt(d.asHTML())
+                            txt = utils.html_to_webvtt(d.asHTML(), media_path=job.audio_file)
                         else:
                             raise TypeError(f'Invalid file type "{job.output_format}".')
                         try:
@@ -3559,6 +3538,19 @@ class App(ctk.CTk):
                     last_segment_end = 0
                     last_timestamp_ms = 0
                     first_segment = True
+                    initial_document = d.asHTML()
+
+                    def reset_transcript():
+                        nonlocal main_body, p, speaker, speaker_disp, prev_speaker
+                        nonlocal last_segment_end, last_timestamp_ms, first_segment
+                        d.parseStr(initial_document)
+                        main_body = d.getElementsByClassName('WordSection1')[0]
+                        p = main_body.lastElementChild
+                        speaker = speaker_disp = prev_speaker = ''
+                        last_segment_end = last_timestamp_ms = 0
+                        first_segment = True
+                        job.speaker_name_map = {}
+                        job.has_partial_transcript = False
 
                     def on_segment(segment: TranscriptionSegment):
                         nonlocal first_segment, last_segment_end, last_timestamp_ms, p, speaker, speaker_disp, prev_speaker
@@ -3685,7 +3677,16 @@ class App(ctk.CTk):
                         a = d.createElementFromHTML(a_html)
                         p.appendChild(a)
 
-                        self.log(seg_text)
+                        # Keep the live transcript visible without persisting its
+                        # contents in the job log. Count only the original text,
+                        # before speaker labels and timestamps were added.
+                        self.log(seg_text, where='screen')
+                        self.logn(
+                            f'Segment received: start={utils.ms_to_str(orig_audio_start, include_ms=True)} '
+                            f'end={utils.ms_to_str(orig_audio_end, include_ms=True)} '
+                            f'chars={len(segment.text)}',
+                            where='file',
+                        )
                         
                         first_segment = False
 
@@ -3719,6 +3720,7 @@ class App(ctk.CTk):
                                 on_segment=on_segment,
                                 diarization=diarization,
                                 transcript_start=transcript_start,
+                                on_reset=reset_transcript,
                             )
                             info = remote_workflow_result.transcription_info
                             if info is None:
@@ -3729,6 +3731,8 @@ class App(ctk.CTk):
                             info = self._run_whisper_subprocess_stream(
                                 transcription_audio, job, on_segment,
                                 diarization=diarization_result,
+                                **({'on_reset': reset_transcript} if model_uses_remote_backend(
+                                    self.inference_backend, job.transcription_model) else {}),
                             )
                         if first_segment:
                             raise ValueError(t('err_empty_transcript'))
@@ -3742,7 +3746,7 @@ class App(ctk.CTk):
                         self.logn(t('transcription_finished'), 'highlight')
                     except Exception as err:
                         if self._handle_cuda_fallback(
-                            'whisper', err, job.transcription_model
+                            'whisper', err, job
                         ):
                             retry_cuda = True
                         else:
@@ -3772,7 +3776,6 @@ class App(ctk.CTk):
                                     link=f'file://{job.transcript_file}'
                                 )
                     if retry_cuda:
-                        self.logn(t('whisper_cuda_retry'), 'highlight')
                         continue
                     else:
                         break
@@ -3848,49 +3851,49 @@ class App(ctk.CTk):
             self.logn(f'Error starting transcription: {str(e)}', 'error')
             tk.messagebox.showerror(title='noScribe', message=f'Error starting transcription: {str(e)}')
 
-    def _handle_cuda_fallback(
-        self,
-        component: str,
-        error: Exception,
-        model: ModelRef,
-    ) -> bool:
-        global force_pyannote_cpu
-        global force_whisper_cpu
-        message = str(error).strip()
-        if not _is_cuda_error_message(message):
+    def _handle_cuda_fallback(self, component: str, error: Exception, job: TranscriptionJob) -> bool:
+        """Automatically retry the affected component once on CPU for this job."""
+        # Cancellation is never a failed retry, even if an earlier GPU attempt
+        # failed. Parent-side errors (e.g. saving segments) are not GPU errors.
+        if getattr(self, 'cancel', False) or str(error) == t('err_user_cancelation'):
             return False
+        if component in job.gpu_errors:
+            raise WorkerRetryError(job.gpu_errors[component], error) from error
+        if not isinstance(error, WorkerError) or not error.allows_cpu_retry:
+            return False
+
+        registry = getattr(self, 'inference_backend', None)
+        if registry is not None:
+            model = job.diarization_model if component == 'pyannote' else job.transcription_model
+            expected_backend = LOCAL_DIARIZATION_BACKEND if component == 'pyannote' else LOCAL_WHISPER_BACKEND
+            if model.backend_id != expected_backend:
+                return False
+            if registry.get(model.backend_id).settings.device != 'auto':
+                return False
 
         if component == 'pyannote':
-            if model.backend_id != LOCAL_DIARIZATION_BACKEND:
+            if (registry is None and force_pyannote_cpu) or job.pyannote_cpu_fallback:
                 return False
-            if self.inference_backend.get(LOCAL_DIARIZATION_BACKEND).settings.device == "cpu":
+            job.pyannote_cpu_fallback = True
+        elif component == 'whisper':
+            if (registry is None and force_whisper_cpu) or job.whisper_cpu_fallback:
                 return False
-            prompt = t('pyannote_cuda_error_prompt', error=message)
-            if tk.messagebox.askyesno(title='noScribe', message=prompt):
-                force_pyannote_cpu = True
-                self.inference_backend.get(LOCAL_DIARIZATION_BACKEND).force_cpu()
-                config['force_pyannote_cpu'] = 'true'
-                save_config()
-                return True
+            job.whisper_cpu_fallback = True
+        else:
             return False
 
-        if component == 'whisper':
-            if model.backend_id != LOCAL_WHISPER_BACKEND:
-                return False
-            if self.inference_backend.get(LOCAL_WHISPER_BACKEND).settings.device == "cpu":
-                return False
-            prompt = t('whisper_cuda_error_prompt', error=message)
-            if tk.messagebox.askyesno(title='noScribe', message=prompt):
-                force_whisper_cpu = True
-                self.inference_backend.get(LOCAL_WHISPER_BACKEND).force_cpu()
-                config['force_whisper_cpu'] = 'true'
-                save_config()
-                return True
-            return False
+        job.gpu_errors[component] = error
+        if error.classification == 'worker_crash':
+            message = t('gpu_worker_crash_retry',
+                        component='PyAnnote' if component == 'pyannote' else 'Whisper',
+                        exitcode=error.exitcode, stage=error.stage,
+                        option=f'force_{component}_cpu')
+        else:
+            message = t(f'{component}_cuda_retry')
+        self.logn(message, 'highlight')
+        return True
 
-        return False
-
-    def _run_whisper_subprocess_stream(self, tmp_audio_file: str, job, on_segment, diarization=None):
+    def _run_whisper_subprocess_stream(self, tmp_audio_file: str, job, on_segment, diarization=None, on_reset=None):
         """Run Faster-Whisper through the UI-independent local backend."""
         request = TranscriptionRequest(
             audio_path=tmp_audio_file,
@@ -3936,9 +3939,11 @@ class App(ctk.CTk):
                 on_status=show_status,
                 on_progress=update_progress,
                 is_cancelled=lambda: self.cancel,
+                **({'device_override': 'cpu'} if job.whisper_cpu_fallback else {}),
+                **({'on_reset': on_reset} if on_reset is not None else {}),
             )
-        except InferenceWorkerError as error:
-            if error.user_message_id:
+        except (InferenceWorkerError, WorkerError) as error:
+            if getattr(error, 'user_message_id', None):
                 self.logn(_gui_error_message(error), 'error')
                 self.logn(f'Transcription failed: {error}', where='file')
                 print(f'Transcription failed: {error}', file=sys.stderr)
@@ -3956,6 +3961,7 @@ class App(ctk.CTk):
         on_segment,
         diarization: list[DiarizationSegment],
         transcript_start: int | None = None,
+        on_reset=lambda: None,
     ):
         """Run diarization and transcription with one queued remote upload."""
         request = InferenceWorkflowRequest(
@@ -3982,6 +3988,8 @@ class App(ctk.CTk):
                     job.status = JobStatus.SPEAKER_IDENTIFICATION
                     self.update_queue_table()
                 elif operation == 'transcription':
+                    if event.get('retry'):
+                        on_reset()
                     job.status = JobStatus.TRANSCRIPTION
                     self.update_queue_table()
                     self.logn()
@@ -4059,7 +4067,7 @@ class App(ctk.CTk):
         )
 
         def log_message(level: str, message: str) -> None:
-            self.logn('PyAnnote ' + message, where='file')
+            self.logn('PyAnnote: ' + message, where='both' if level == 'info' else 'file')
 
         def update_progress(step: str, percent: int) -> None:
             self.logr(f'{step}: {percent}%')
@@ -4074,9 +4082,10 @@ class App(ctk.CTk):
                 on_log=log_message,
                 on_progress=update_progress,
                 is_cancelled=lambda: self.cancel,
+                **({'device_override': 'cpu'} if job.pyannote_cpu_fallback else {}),
             )
-        except InferenceWorkerError as error:
-            if error.user_message_id:
+        except (InferenceWorkerError, WorkerError) as error:
+            if getattr(error, 'user_message_id', None):
                 self.logn(_gui_error_message(error), 'error')
                 self.logn(f'PyAnnote error: {error}', where='file')
                 print(f'PyAnnote error: {error}', file=sys.stderr)
@@ -4356,30 +4365,28 @@ def noScribeMain():
     #
     # Using memoization (keeps all translations in memory instead of loading
     # each translation from file). This should make things faster and increased
-    # memory usage should be negligible (in the case of a ML app). This way, it
-    # is possible to use `importlib.ressources` to provide the translation file
-    # once and i18n does not need to access it later. However, it is necessary
-    # to translate one string to have it available throughout the app lifetime.
+    # memory usage should be negligible (in the case of a ML app). i18n still
+    # reads the load path again for keys it has not memoized yet (a missing
+    # key, or the fallback to "en"), so the path must stay valid for the whole
+    # run; see `utils.translations_dir()`.
     i18n.set("filename_format", "{locale}.{format}")
     i18n.set("enable_memoization", True)
     i18n.set("fallback", "en")
     i18n.set("locale", app_locale)
 
-    with impres.as_file(impres.files("trans")) as mypath:
-        i18n.load_path.append(mypath)
-
-        try:
-            print("\nnoScribe")
-            print(t("app_header"), "\n")
-        except Exception as e:
-            logger.error(
-                "Failed to load localization files. "
-                "noScribe cannot start without them and needs to close."
-            )
-            _show_startup_error(
-                "noScribe could not load localization files and needs to close."
-            )
-            raise exception.LocalizationLoadingError from e
+    try:
+        i18n.load_path.append(utils.translations_dir())
+        print("\nnoScribe")
+        print(t("app_header"), "\n")
+    except Exception as e:
+        logger.error(
+            "Failed to load localization files. "
+            "noScribe cannot start without them and needs to close."
+        )
+        _show_startup_error(
+            "noScribe could not load localization files and needs to close."
+        )
+        raise exception.LocalizationLoadingError from e
 
     # Parse command line arguments
     args = parse_cli_args()

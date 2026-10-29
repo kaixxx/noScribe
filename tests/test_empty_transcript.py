@@ -159,3 +159,91 @@ def test_empty_cli_result_returns_failure(app, tmp_path, monkeypatch, capsys):
     assert "No text was recognized" in output
     assert "Output saved to:" not in output
     assert not Path(job.transcript_file).exists()
+
+
+@pytest.mark.parametrize("detection", ["none", "auto"])
+def test_segment_logs_metadata_without_text(app, tmp_path, monkeypatch, capsys, detection):
+    # Exercise the actual file logging as well as the live output.
+    monkeypatch.setattr(app, "log", m.App.log.__get__(app))
+    monkeypatch.setattr(app, "logn", m.App.logn.__get__(app))
+    text = " Confidential interview content."
+
+    def whisper(path, job, on_segment, diarization=None):
+        on_segment(_segment(text))
+        on_segment(_segment(" \t ", start=2.0))
+        return {}
+
+    monkeypatch.setattr(app, "_run_whisper_subprocess_stream", whisper)
+    job = _job(tmp_path, detection=detection)
+    app.queue.add_job(job)
+    app.transcription_worker()
+
+    assert job.status == m.JobStatus.FINISHED
+    assert text.strip() in capsys.readouterr().out
+    assert text.strip() in Path(job.transcript_file).read_text(encoding="utf-8")
+    log = (tmp_path / "log" / "transcript.log").read_text(encoding="utf-8")
+    assert text.strip() not in log
+    segments = [line for line in log.splitlines() if line.startswith("Segment received:")]
+    assert segments == [
+        f"Segment received: start=00:00:01.000 end=00:00:01.500 chars={len(text)}"
+    ]
+
+
+def test_local_cpu_retry_restarts_document_and_next_job_uses_gpu(app, tmp_path, monkeypatch):
+    from noScribe.worker_errors import WorkerError, error_result
+    monkeypatch.setattr(m, 'force_whisper_cpu', False)
+    settings = app.inference_backend.get('local-whisper').settings
+    settings.device = 'auto'
+    attempts = []
+
+    def whisper(path, job, on_segment, diarization=None):
+        attempts.append(job.whisper_cpu_fallback)
+        if not job.whisper_cpu_fallback:
+            on_segment(_segment(' GPU partial'))
+            raise WorkerError(error_result(RuntimeError('CUDA out of memory'), 'cuda', 'transcription'))
+        on_segment(_segment(' CPU replacement'))
+        return {}
+
+    monkeypatch.setattr(app, '_run_whisper_subprocess_stream', whisper)
+    jobs = [_job(tmp_path, name='one'), _job(tmp_path, name='two')]
+    for job in jobs:
+        app.queue.add_job(job)
+    app.transcription_worker()
+    assert attempts == [False, True, False, True]
+    assert settings.device == 'auto'
+    assert m.force_whisper_cpu is False
+    for job in jobs:
+        assert job.status == m.JobStatus.FINISHED
+        transcript = Path(job.transcript_file).read_text(encoding='utf-8')
+        assert 'CPU replacement' in transcript
+        assert 'GPU partial' not in transcript
+
+
+@pytest.mark.parametrize('combined', [False, True])
+def test_remote_cpu_retry_replaces_partial_document(app, tmp_path, monkeypatch, combined):
+    monkeypatch.setattr(m, 'model_uses_remote_backend', lambda *args: True)
+    monkeypatch.setattr(app.inference_backend, 'supports_workflow', lambda *args: combined)
+
+    def workflow(request, **callbacks):
+        callbacks['on_transcription_segment'](_segment(' GPU partial'))
+        callbacks['on_event']({'type': 'task_started', 'operation': 'transcription', 'retry': True})
+        callbacks['on_transcription_segment'](_segment(' CPU replacement'))
+        return InferenceWorkflowResult(transcription_info=TranscriptionInfo(duration=3))
+
+    def transcribe(request, **callbacks):
+        callbacks['on_segment'](_segment(' GPU partial'))
+        callbacks['on_reset']()
+        callbacks['on_segment'](_segment(' CPU replacement'))
+        return TranscriptionInfo(duration=3)
+
+    monkeypatch.setattr(app.inference_backend, 'run_workflow', workflow)
+    monkeypatch.setattr(app.inference_backend, 'transcribe', transcribe)
+    job = _job(tmp_path, detection='auto' if combined else 'none')
+    job.transcription_model = ModelRef('test-server', 'whisper')
+    job.diarization_model = ModelRef('test-server', 'pyannote')
+    app.queue.add_job(job)
+    app.transcription_worker()
+    assert job.status == m.JobStatus.FINISHED, job.error_message
+    transcript = Path(job.transcript_file).read_text(encoding='utf-8')
+    assert 'CPU replacement' in transcript
+    assert 'GPU partial' not in transcript

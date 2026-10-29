@@ -4,6 +4,7 @@ import threading
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from noScribe.http_api_protocol import NOSCRIBE_HTTP_API_PROTOCOL_VERSION
 from noScribe.inference import (
     DiarizationRequest,
     InferenceCancelled,
@@ -32,7 +33,7 @@ def _remote_server():
                 self.send_error(404)
                 return
             self._send_json({
-                "protocol_version": 1,
+                "protocol_version": NOSCRIBE_HTTP_API_PROTOCOL_VERSION,
                 "server_version": "0.1-test",
                 "data": [
                     {
@@ -134,7 +135,7 @@ def _profile(url, **overrides):
 
 
 @contextmanager
-def _workflow_server():
+def _workflow_server(retry=False, api_version=NOSCRIBE_HTTP_API_PROTOCOL_VERSION):
     received = []
 
     class Handler(BaseHTTPRequestHandler):
@@ -144,7 +145,7 @@ def _workflow_server():
             received.append(("GET", self.path, self.headers, b""))
             if self.path == "/v1/models":
                 self._json(200, {
-                    "protocol_version": 1,
+                    "protocol_version": api_version,
                     "server_version": "workflow-test",
                     "features": ["queued_workflows"],
                     "data": [
@@ -212,6 +213,13 @@ def _workflow_server():
                 },
                 {"type": "result", "ok": True},
             ]
+            if retry:
+                events[1:1] = [
+                    {"type": "segment", "task_index": 1, "operation": "transcription",
+                     "segment": {"start": 0, "end": 1, "text": "GPU partial"}},
+                    {"type": "task_started", "task_index": 1,
+                     "operation": "transcription", "retry": True},
+                ]
             payload = b"".join(
                 json.dumps(event).encode("utf-8") + b"\n" for event in events
             )
@@ -368,7 +376,7 @@ def test_remote_model_catalog_can_be_refreshed_without_recreating_plugin():
 
         def json(self):
             return {
-                "protocol_version": 1,
+                "protocol_version": NOSCRIBE_HTTP_API_PROTOCOL_VERSION,
                 "server_version": "test",
                 "features": ["queued_workflows"],
                 "data": [{
@@ -477,3 +485,46 @@ def test_remote_registration_skips_disabled_and_isolates_unknown_drivers():
     assert len(errors) == 1
     assert errors[0].profile.id == "unknown"
     assert "Unsupported" in errors[0].message
+
+
+def test_remote_transcription_replaces_partial_output_on_server_retry(tmp_path):
+    path = tmp_path / 'audio.flac'
+    path.write_bytes(b'fLaC-test')
+    with _workflow_server(retry=True) as (url, _received):
+        plugin = RemoteHttpPlugin(_profile(url))
+        segments = []
+        resets = []
+
+        def reset():
+            resets.append([segment.text for segment in segments])
+            segments.clear()
+
+        try:
+            plugin.transcribe(TranscriptionRequest(str(path), ModelRef('ifs-server', 'local-whisper/precise')),
+                              on_segment=segments.append, on_reset=reset)
+        finally:
+            plugin.close()
+    assert resets == [['GPU partial']]
+    assert [segment.text for segment in segments] == ['Hello']
+
+
+def test_remote_retry_does_not_duplicate_segments_for_consumers_without_reset(tmp_path):
+    path = tmp_path / 'audio.flac'
+    path.write_bytes(b'fLaC-test')
+    with _workflow_server(retry=True) as (url, _received):
+        plugin = RemoteHttpPlugin(_profile(url))
+        segments = []
+        try:
+            plugin.transcribe(TranscriptionRequest(str(path), ModelRef('ifs-server', 'local-whisper/precise')),
+                              on_segment=segments.append)
+        finally:
+            plugin.close()
+    assert [segment.text for segment in segments] == ['Hello']
+
+
+def test_remote_rejects_servers_without_retry_reset_protocol():
+    import pytest
+    with _workflow_server(api_version=1) as (url, received):
+        with pytest.raises(InferenceWorkerError, match='protocol 1'):
+            RemoteHttpPlugin(_profile(url))
+    assert not any(item[0] == 'POST' for item in received)

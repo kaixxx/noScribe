@@ -1,4 +1,6 @@
 import json
+import asyncio
+import threading
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -7,6 +9,8 @@ from noScribe.server import api as server_api
 from noScribe.server.api import MAX_RESERVATION_JSON_BYTES, create_app
 from noScribe.server.config import ServerConfig
 from noScribe.server.jobs import JobScheduler
+from noScribe.server.jobs import JobState, JobTask
+import pytest
 
 
 class FakeProcessor:
@@ -235,3 +239,58 @@ def test_direct_endpoint_rejects_upload_instead_of_queueing_it(tmp_path):
 
     assert response.status_code == 429
     assert response.headers["Retry-After"] == "5"
+
+
+@pytest.mark.parametrize('timeout', [False, True])
+def test_cancellation_keeps_slot_until_processor_exits(tmp_path, timeout):
+    started = threading.Event()
+    cancelled = threading.Event()
+    release = threading.Event()
+
+    class BlockingProcessor(FakeProcessor):
+        def process(self, job, audio_path, emit, is_cancelled):
+            started.set()
+            assert release.wait(5)
+            assert is_cancelled()
+
+        def cancel(self):
+            cancelled.set()
+
+    scheduler = JobScheduler()
+    processor = BlockingProcessor()
+    service = server_api.InferenceService(
+        ServerConfig(runtime_dir=tmp_path, job_timeout_seconds=0.05 if timeout else 30),
+        scheduler, processor,
+    )
+    first = scheduler.submit([JobTask('transcription', 'precise')], audio_filename='one.flac', audio_size=1)
+    second = scheduler.submit([JobTask('transcription', 'precise')], audio_filename='two.flac', audio_size=1)
+    path = tmp_path / 'one.flac'
+    path.write_bytes(b'x')
+    snapshot = scheduler.begin_upload(first.job_id, first.token)
+    response = service.stream_processing(snapshot, first.token, path)
+    try:
+        assert started.wait(3)
+        if timeout:
+            assert cancelled.wait(3)
+        else:
+            service.cancel(first.job_id, first.token)
+        assert scheduler.get(first.job_id, first.token).state is JobState.CANCELING
+        assert scheduler.get(second.job_id, second.token).state is JobState.QUEUED
+        assert scheduler.active_job_id == first.job_id
+    finally:
+        release.set()
+
+    promoted = scheduler.wait_for_change(second.job_id, second.token, JobState.QUEUED, 3)
+    assert promoted.state is JobState.READY_FOR_UPLOAD
+    assert not path.exists()
+
+    async def collect():
+        return [json.loads(line) async for line in response.body_iterator]
+
+    events = asyncio.run(collect())
+    assert events[-1]['ok'] is False
+    assert events[-1]['error'] == ('job_timeout' if timeout else 'job_cancelled')
+    # A late repeat cancel must not touch the processor used by a newer job.
+    cancelled.clear()
+    service.cancel(first.job_id, first.token)
+    assert not cancelled.is_set()

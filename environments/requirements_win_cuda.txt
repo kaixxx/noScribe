@@ -5,6 +5,7 @@ torch==2.8 # torch 2.8 with CUDA 12.8 (pyannote 4.0 does not work with torch 2.9
 torchaudio==2.8 
 AdvancedHTMLParser
 appdirs
+av<19  # faster-whisper 1.2.1 passes metadata_errors to av.open(), which PyAV 19 removed
 cpufeature
 customtkinter
 CTkToolTip

@@ -2,7 +2,7 @@ import contextlib
 import os
 import platform
 import sys
-import traceback
+from .worker_errors import WorkerState
 
 if sys.version_info >= (3, 12):
     import importlib.resources as impres
@@ -88,10 +88,12 @@ def pyannote_proc_entrypoint(args: dict, q):
       {"type":"log","level":"info|warn|error|debug","msg":str}
       {"type":"progress","step":str,"pct":int}
       {"type":"result","ok":True,"segments":[{"start":ms,"end":ms,"label":str}]}
-      {"type":"result","ok":False,"error":str,"trace":str}
+      {"type":"state","device":str|None,"stage":str}
+      Failed results include the structured fields from worker_errors.error_result.
     """
-    device = ''
+    state = WorkerState(q, args.get('device'))
     try:
+        state.update('imports')
         import torch
         if platform.system() == "Darwin" and platform.machine() == "x86_64":
            torch.set_num_threads(1)        
@@ -114,6 +116,10 @@ def pyannote_proc_entrypoint(args: dict, q):
         os.environ.setdefault("MPL_IGNORE_SYSTEM_FONTS", "1")
         os.environ["MPLCONFIGDIR"] = os.path.join(
             appdirs.user_cache_dir("noScribe"), "matplotlib")
+        # pyannote enables usage telemetry by default, including recording
+        # duration and speaker-count settings. Keep noScribe processing local,
+        # even if the parent environment enables telemetry for other apps.
+        os.environ["PYANNOTE_METRICS_ENABLED"] = "0"
         from pyannote.audio import Pipeline
 
         def plog(level, msg):
@@ -150,6 +156,7 @@ def pyannote_proc_entrypoint(args: dict, q):
 
         plog("debug", "Subprocess (diarize) started. Initializing PyAnnote pipeline...")
         
+        state.update('device_selection')
         # determine xpu
         device = args.get("device", "")
         if device in ('', 'auto'):
@@ -163,12 +170,17 @@ def pyannote_proc_entrypoint(args: dict, q):
             else:
                 raise Exception('Platform not supported yet.')
 
+        state.update('model_loading', device=device)
         with impres.as_file(impres.files("pyannote")) as mypath, hide_speechbrain():
             pipeline = Pipeline.from_pretrained(mypath)
+        state.update('audio_loading')
         waveform, sample_rate = load_waveform(audio_file)
+        state.update('device_transfer')
         pipeline.to(torch.device(device))
+        plog("info", f"using {device}")
 
         seg_list = []
+        state.update('diarization')
         with SimpleProgressHook() as hook:
             if num_speakers is not None:
                 diarization = pipeline({"waveform": waveform, "sample_rate": sample_rate}, hook=hook, num_speakers=num_speakers)
@@ -189,14 +201,7 @@ def pyannote_proc_entrypoint(args: dict, q):
 
     except Exception as e:
         try:
-            error_str = f"{type(e).__name__}: {e}"
-            error_str += f' (device_{device[:3]})' # device_cpu or device_cud or device_mps
-            q.put({
-                "type": "result",
-                "ok": False,
-                "error": error_str,
-                "trace": traceback.format_exc(),
-            })
+            q.put(state.failure(e))
         except Exception:
             pass
 
