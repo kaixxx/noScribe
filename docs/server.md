@@ -39,8 +39,36 @@ On Windows, use `requirements_win_cuda.txt` or `requirements_win_cpu.txt`
 instead. No separate server requirements installation is needed.
 
 The configured Whisper directory contains one subdirectory per model, each
-with a `model.bin`. `force_cpu: true` applies to both Whisper and Pyannote. If
-CUDA is unavailable, their existing workers fall back to CPU automatically.
+with a `model.bin`. Worker settings belong to the server administrator and are
+not taken from the desktop configuration or remote job options.
+
+Each plugin reads its own YAML file from `plugin_settings_dir`, defaulting to
+`plugin-settings/` beside the server configuration. Relative paths for this
+setting are resolved against the server configuration file, not the working
+directory. For example:
+
+```yaml
+# plugin-settings/local-whisper.yml
+device: cpu
+cpu_threads: 8
+vad_threshold: 0.5
+```
+
+```yaml
+# plugin-settings/local-pyannote.yml
+device: cuda
+```
+
+`device: auto` selects the available hardware using the worker's existing
+selection logic. An explicit `cuda` setting fails if unusable, instead of
+silently switching to CPU. The server has no GUI CPU-retry prompt.
+
+Existing central `force_cpu`, `cpu_threads` and `vad_threshold` settings remain
+fallback defaults for plugin fields not specified in these files. In particular,
+`force_cpu: true` defaults both workers to CPU, but a plugin's explicit `device`
+overrides it. Missing files require no setup. Restart after editing settings.
+See the [plugin guide](../noScribe/plugins/README.md) for schema ownership and
+the distinction between configuration and plugin installation.
 
 ## Queue and upload protocol
 

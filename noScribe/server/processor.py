@@ -250,6 +250,7 @@ def create_server_registry(config) -> BackendRegistry:
             force_diarization_cpu=config.force_cpu,
             vad_threshold=config.vad_threshold,
         ),
+        settings_dir=config.plugin_settings_dir,
     )
     return registry
 

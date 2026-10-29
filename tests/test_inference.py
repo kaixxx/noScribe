@@ -239,6 +239,24 @@ def test_extension_data_must_be_portable():
     assert TranscriptionRequest("audio.wav", ModelRef("backend", "model")).diarization is None
 
 
+def test_plugin_device_settings_reach_each_worker(monkeypatch, tmp_path):
+    from noScribe.plugins.factory import create_builtin_registry
+    from noScribe.plugins.settings import PluginSettingsStore
+
+    store = PluginSettingsStore(tmp_path)
+    store.save("local-whisper", {"device": "cpu", "cpu_threads": 2})
+    store.save("local-pyannote", {"device": "cuda"})
+    registry = create_builtin_registry({"model": "model"}, LocalWorkerSettings(), tmp_path)
+    context = _FakeContext([{"type": "result", "ok": True}])
+    monkeypatch.setattr(inference.mp, "get_context", lambda method: context)
+    registry.transcribe(TranscriptionRequest("audio.wav", ModelRef(LOCAL_WHISPER_BACKEND, "model")),
+                        on_segment=lambda segment: None)
+    assert context.process.args[0]["device"] == "cpu"
+    assert context.process.args[0]["cpu_threads"] == 2
+    registry.diarize(DiarizationRequest("audio.wav"))
+    assert context.process.args[0]["device"] == "cuda"
+
+
 def test_local_backend_preserves_worker_error_trace(monkeypatch):
     context = _FakeContext(
         [

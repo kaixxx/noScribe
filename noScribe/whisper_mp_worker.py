@@ -44,7 +44,7 @@ def whisper_proc_entrypoint(args: dict, q):
         
         # determine device
         device = args.get("device", "")
-        if device != 'cpu':
+        if device in ('', 'auto'):
             if platform.system() == "Darwin":  # MAC
                 device = 'auto'
             elif platform.system() in ('Windows', 'Linux'):

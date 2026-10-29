@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Mapping
+from pathlib import Path
 
 from ..inference import LocalInferenceBackend, LocalWorkerSettings
 from .local_pyannote import LocalPyannotePlugin
 from .local_whisper import LocalWhisperPlugin
+from .local_whisper.settings import WhisperWorkerSettings
+from .local_pyannote.settings import PyannoteWorkerSettings
+from .settings import PluginSettingsStore
 from .remote_http import NOSCRIBE_HTTP_DRIVER, RemoteHttpPlugin
 from .remote_profiles import RemoteBackendProfile
 from .registry import BackendRegistry
@@ -22,12 +26,36 @@ class RemoteBackendRegistrationError:
 def create_builtin_registry(
     whisper_models: Mapping[str, str],
     settings: LocalWorkerSettings,
+    settings_dir: Path | None = None,
 ) -> BackendRegistry:
     """Create the registry without treating built-ins as special at runtime."""
-    host = LocalInferenceBackend(whisper_models=whisper_models, settings=settings)
+    store = PluginSettingsStore(settings_dir) if settings_dir is not None else None
+    whisper_settings = WhisperWorkerSettings.from_mapping(
+        store.load("local-whisper") if store else {},
+        defaults=WhisperWorkerSettings(
+            device="cpu" if settings.force_whisper_cpu else "auto",
+            cpu_threads=settings.cpu_threads,
+            vad_threshold=settings.vad_threshold,
+        ),
+    )
+    diarization_settings = PyannoteWorkerSettings.from_mapping(
+        store.load("local-pyannote") if store else {},
+        defaults=PyannoteWorkerSettings(
+            device="cpu" if settings.force_diarization_cpu else "auto",
+        ),
+    )
+    # Keep legacy desktop consumers (including its preliminary VAD) in sync.
+    settings.cpu_threads = whisper_settings.cpu_threads
+    settings.vad_threshold = whisper_settings.vad_threshold
+    settings.force_whisper_cpu = whisper_settings.device == "cpu"
+    settings.force_diarization_cpu = diarization_settings.device == "cpu"
+    host = LocalInferenceBackend(
+        whisper_models=whisper_models, settings=settings,
+        whisper_settings=whisper_settings, diarization_settings=diarization_settings,
+    )
     return BackendRegistry([
-        LocalWhisperPlugin(host, whisper_models),
-        LocalPyannotePlugin(host),
+        LocalWhisperPlugin(host, whisper_models, settings_store=store),
+        LocalPyannotePlugin(host, settings_store=store),
     ])
 
 

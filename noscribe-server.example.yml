@@ -12,7 +12,11 @@ terminal_job_ttl_seconds: 60
 upload_timeout_seconds: 3600
 job_timeout_seconds: 86400
 
-# Machine-specific worker settings. force_cpu applies to Whisper and Pyannote.
+# Legacy worker defaults; per-plugin files override individual fields.
+# Relative to this server configuration; each plugin owns its YAML schema.
+plugin_settings_dir: plugin-settings
+# Example local-whisper.yml: {device: cpu, cpu_threads: 8}
+# Example local-pyannote.yml: {device: cuda}
 force_cpu: false
 cpu_threads: 8
 vad_threshold: 0.5

@@ -915,6 +915,7 @@ def _init_app_state(app):
             for name, model in app.local_whisper_models.items()
         },
         settings=app.worker_settings,
+        settings_dir=Path(config_dir) / "plugin-settings",
     )
     app.remote_backend_registration_errors = register_remote_profiles(
         app.inference_backend,
@@ -3857,7 +3858,7 @@ class App(ctk.CTk):
         if component == 'pyannote':
             if model.backend_id != LOCAL_DIARIZATION_BACKEND:
                 return False
-            if force_pyannote_cpu:
+            if self.inference_backend.get(LOCAL_DIARIZATION_BACKEND).settings.device == "cpu":
                 return False
             prompt = t('pyannote_cuda_error_prompt', error=message)
             if tk.messagebox.askyesno(title='noScribe', message=prompt):
@@ -3871,7 +3872,7 @@ class App(ctk.CTk):
         if component == 'whisper':
             if model.backend_id != LOCAL_WHISPER_BACKEND:
                 return False
-            if force_whisper_cpu:
+            if self.inference_backend.get(LOCAL_WHISPER_BACKEND).settings.device == "cpu":
                 return False
             prompt = t('whisper_cuda_error_prompt', error=message)
             if tk.messagebox.askyesno(title='noScribe', message=prompt):

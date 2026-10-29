@@ -272,19 +272,35 @@ class LocalInferenceBackend:
         self,
         whisper_models: Optional[Mapping[str, str]] = None,
         settings: Optional[LocalWorkerSettings] = None,
+        *,
+        whisper_settings=None,
+        diarization_settings=None,
     ):
+        from .plugins.local_whisper.settings import WhisperWorkerSettings
+        from .plugins.local_pyannote.settings import PyannoteWorkerSettings
+
         self._lock = threading.Lock()
         self._process = None
         self._queue = None
         self._cancel_event = threading.Event()
         self._whisper_models = dict(whisper_models or {})
         self.settings = settings or LocalWorkerSettings()
+        self.whisper_settings = whisper_settings or WhisperWorkerSettings(
+            device="cpu" if self.settings.force_whisper_cpu else "auto",
+            cpu_threads=self.settings.cpu_threads,
+            vad_threshold=self.settings.vad_threshold,
+        )
+        self.diarization_settings = diarization_settings or PyannoteWorkerSettings(
+            device="cpu" if self.settings.force_diarization_cpu else "auto",
+        )
 
     def force_cpu(self, component: str) -> None:
         if component == "whisper":
             self.settings.force_whisper_cpu = True
+            self.whisper_settings.device = "cpu"
         elif component == "pyannote":
             self.settings.force_diarization_cpu = True
+            self.diarization_settings.device = "cpu"
         else:
             raise ValueError(f"Unknown inference component: {component}")
 
@@ -326,9 +342,9 @@ class LocalInferenceBackend:
 
         worker_args = {
             "model_path": model_path,
-            "device": "cpu" if self.settings.force_whisper_cpu else "auto",
+            "device": self.whisper_settings.device,
             "compute_type": "auto",
-            "cpu_threads": self.settings.cpu_threads,
+            "cpu_threads": self.whisper_settings.cpu_threads,
             "local_files_only": True,
             "audio_path": request.audio_path,
             "language": request.language,
@@ -337,7 +353,7 @@ class LocalInferenceBackend:
             "beam_size": 5,
             "word_timestamps": True,
             "vad_filter": True,
-            "vad_threshold": self.settings.vad_threshold,
+            "vad_threshold": self.whisper_settings.vad_threshold,
             "diarization": request.diarization.to_mapping() if request.diarization is not None else None,
             "extensions": request.extensions,
         }
@@ -399,7 +415,7 @@ class LocalInferenceBackend:
         worker_args = {
             "audio_path": request.audio_path,
             "num_speakers": request.num_speakers,
-            "device": "cpu" if self.settings.force_diarization_cpu else "",
+            "device": self.diarization_settings.device,
             "extensions": request.extensions,
         }
         self._cancel_event.clear()

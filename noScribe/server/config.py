@@ -27,6 +27,7 @@ class ServerConfig:
     cpu_threads: int = 4
     vad_threshold: float = 0.5
     whisper_models_dir: Path = Path("models")
+    plugin_settings_dir: Path | None = None
     runtime_dir: Path = Path(tempfile.gettempdir()) / "noscribe-server"
     require_tmpfs: bool = False
 
@@ -85,6 +86,8 @@ class ServerConfig:
                 raise ValueError(f"{name} must be positive.")
         object.__setattr__(self, "runtime_dir", Path(self.runtime_dir))
         object.__setattr__(self, "whisper_models_dir", Path(self.whisper_models_dir))
+        if self.plugin_settings_dir is not None:
+            object.__setattr__(self, "plugin_settings_dir", Path(self.plugin_settings_dir))
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> "ServerConfig":
@@ -102,4 +105,8 @@ class ServerConfig:
 def load_server_config(path: Path) -> ServerConfig:
     with path.open("r", encoding="utf-8") as stream:
         value = yaml.safe_load(stream)
-    return ServerConfig.from_mapping(value or {})
+    value = dict(value or {}) if isinstance(value, Mapping) or value is None else value
+    if isinstance(value, dict):
+        directory = Path(value.get("plugin_settings_dir") or "plugin-settings")
+        value["plugin_settings_dir"] = directory if directory.is_absolute() else path.resolve().parent / directory
+    return ServerConfig.from_mapping(value)

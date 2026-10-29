@@ -33,6 +33,55 @@ noScribe configuration directory. Their manifests use the same format, but
 their discovery and signature verification belong to the future plugin
 manager, not to `BackendRegistry`.
 
+## Per-plugin installation settings
+
+The desktop reads `<noScribe user configuration>/plugin-settings/<backend-id>.yml`.
+The server reads its own `plugin_settings_dir`; by default this is
+`plugin-settings/` beside the server YAML file. These are installation settings,
+never client-controlled job options. Plugin packages and their defaults remain
+separate from writable settings so updates need not overwrite user choices.
+
+`PluginSettingsStore` supplies `path_for()`, `load()` and atomic `save()` without
+knowing any plugin-specific fields. Each plugin defines and validates its own
+settings class (see `local_whisper/settings.py` and `local_pyannote/settings.py`).
+An independently installed plugin can use the same store with its own manifest
+ID; adding settings does not require adding fields to the central app config.
+IDs used as settings filenames must start with an ASCII letter or digit and
+contain only ASCII letters, digits, dots, underscores or hyphens.
+
+For example, `local-whisper.yml`:
+
+```yaml
+device: cpu
+cpu_threads: 8
+vad_threshold: 0.5
+```
+
+And `local-pyannote.yml`:
+
+```yaml
+device: cuda
+```
+
+Whisper accepts `auto`, `cpu`, `cuda`; Pyannote additionally accepts `mps`.
+`auto` retains the worker's automatic device selection. Explicit devices are
+passed through; an unavailable explicit device produces a worker error. The
+desktop can still offer its existing CPU retry, persisting that choice in the
+affected plugin's file. The server has no user prompt or implicit CPU retry for
+an explicit device.
+
+Absent fields inherit existing desktop/server worker settings during the
+transition, then plugin defaults. Missing files do not need to be created.
+Plugin files take precedence over legacy `force_*_cpu`, `force_cpu`, thread and
+VAD settings. They are loaded on startup; restart after editing. Invalid files
+or unsupported settings fail explicitly. Settings are not included in model
+catalogues or sent with remote jobs.
+
+This supplies settings storage and initialization for plugins, not an installer
+or automatic loading of arbitrary downloaded code. External worker discovery,
+packaging, installation, updates and verification remain future plugin-manager
+work; bundled plugins continue to be constructed by `factory.py`.
+
 ## Remote backend profiles
 
 Remote server connections are configured independently from `config.yml`.

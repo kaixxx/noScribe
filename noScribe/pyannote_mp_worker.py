@@ -152,7 +152,7 @@ def pyannote_proc_entrypoint(args: dict, q):
         
         # determine xpu
         device = args.get("device", "")
-        if device != 'cpu':
+        if device in ('', 'auto'):
             if platform.system() == "Darwin":  # MAC
                 device = 'mps' if platform.mac_ver()[0] >= '12.3' and torch.backends.mps.is_available() else 'cpu'
             elif platform.system() in ('Windows', 'Linux'):
