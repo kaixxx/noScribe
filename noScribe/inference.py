@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Mapping, Optional
 
 from .models import ModelRef
-from .plugins.protocol import validate_worker_event
+from .plugins.protocol import validate_extensions, validate_worker_event
 
 
 LogCallback = Callable[[str, str], None]
@@ -59,6 +59,7 @@ class TranscriptionWord:
     start: Optional[float] = None
     end: Optional[float] = None
     probability: Optional[float] = None
+    extensions: dict = field(default_factory=dict)
 
     @classmethod
     def from_mapping(cls, value: dict) -> "TranscriptionWord":
@@ -67,6 +68,7 @@ class TranscriptionWord:
             start=value.get("start"),
             end=value.get("end"),
             probability=value.get("prob"),
+            extensions=dict(value.get("extensions") or {}),
         )
 
 
@@ -76,6 +78,7 @@ class TranscriptionSegment:
     end: float
     text: str
     words: tuple[TranscriptionWord, ...] = field(default_factory=tuple)
+    extensions: dict = field(default_factory=dict)
 
     @classmethod
     def from_mapping(cls, value: dict) -> "TranscriptionSegment":
@@ -83,6 +86,7 @@ class TranscriptionSegment:
             start=float(value.get("start") or 0.0),
             end=float(value.get("end") or 0.0),
             text=str(value.get("text") or ""),
+            extensions=dict(value.get("extensions") or {}),
             words=tuple(
                 TranscriptionWord.from_mapping(word)
                 for word in (value.get("words") or [])
@@ -96,6 +100,7 @@ class TranscriptionInfo:
     language: Optional[str] = None
     language_probability: Optional[float] = None
     sample_rate: Optional[int] = None
+    extensions: dict = field(default_factory=dict)
 
     @classmethod
     def from_mapping(cls, value: dict) -> "TranscriptionInfo":
@@ -104,6 +109,7 @@ class TranscriptionInfo:
             language=value.get("language"),
             language_probability=value.get("language_probability"),
             sample_rate=value.get("sample_rate"),
+            extensions=dict(value.get("extensions") or {}),
         )
 
 
@@ -112,6 +118,7 @@ class DiarizationSegment:
     start_ms: int
     end_ms: int
     label: str
+    extensions: dict = field(default_factory=dict)
 
     @classmethod
     def from_mapping(cls, value: dict) -> "DiarizationSegment":
@@ -119,7 +126,57 @@ class DiarizationSegment:
             start_ms=int(value.get("start") or 0),
             end_ms=int(value.get("end") or 0),
             label=str(value.get("label") or ""),
+            extensions=dict(value.get("extensions") or {}),
         )
+
+
+@dataclass(frozen=True)
+class DiarizationResult:
+    """Segments and opaque, JSON-compatible backend evidence.
+
+    Times refer to the supplied audio, before any desktop transcript offset.
+    Sequence access supports consumers interested only in the segments.
+    """
+
+    segments: tuple[DiarizationSegment, ...] = ()
+    extensions: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        validate_extensions(self.extensions)
+
+    def __iter__(self):
+        return iter(self.segments)
+
+    def __len__(self):
+        return len(self.segments)
+
+    def __getitem__(self, index):
+        return self.segments[index]
+
+    @classmethod
+    def from_mapping(cls, value: dict, *, seconds: bool = False):
+        segments = []
+        for item in value.get("segments") or []:
+            if seconds:
+                item = dict(item, start=round(float(item["start"]) * 1000),
+                            end=round(float(item["end"]) * 1000),
+                            label=item.get("speaker") or item.get("label") or "")
+            segments.append(DiarizationSegment.from_mapping(item))
+        return cls(tuple(segments), dict(value.get("extensions") or {}))
+
+    def to_mapping(self, *, seconds: bool = False) -> dict:
+        return {
+            "segments": [
+                {
+                    "start": segment.start_ms / 1000 if seconds else segment.start_ms,
+                    "end": segment.end_ms / 1000 if seconds else segment.end_ms,
+                    ("speaker" if seconds else "label"): segment.label,
+                    **({"extensions": segment.extensions} if segment.extensions else {}),
+                }
+                for segment in self.segments
+            ],
+            "extensions": self.extensions,
+        }
 
 
 @dataclass(frozen=True)
@@ -129,6 +186,11 @@ class TranscriptionRequest:
     language: Optional[str] = None
     multilingual: bool = False
     include_disfluencies: bool = True
+    diarization: DiarizationResult | None = None
+    extensions: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        validate_extensions(self.extensions)
 
 
 @dataclass(frozen=True)
@@ -138,6 +200,10 @@ class DiarizationRequest:
         default_factory=lambda: ModelRef(LOCAL_DIARIZATION_BACKEND, "default")
     )
     num_speakers: Optional[int] = None
+    extensions: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        validate_extensions(self.extensions)
 
 
 @dataclass(frozen=True)
@@ -166,7 +232,11 @@ class InferenceWorkflowRequest:
 class InferenceWorkflowResult:
     transcription_info: TranscriptionInfo | None = None
     transcription_segments: tuple[TranscriptionSegment, ...] = ()
-    diarization_segments: tuple[DiarizationSegment, ...] = ()
+    diarization: DiarizationResult | None = None
+
+    @property
+    def diarization_segments(self) -> tuple[DiarizationSegment, ...]:
+        return self.diarization.segments if self.diarization is not None else ()
 
 
 class InferenceCancelled(RuntimeError):
@@ -268,6 +338,8 @@ class LocalInferenceBackend:
             "word_timestamps": True,
             "vad_filter": True,
             "vad_threshold": self.settings.vad_threshold,
+            "diarization": request.diarization.to_mapping() if request.diarization is not None else None,
+            "extensions": request.extensions,
         }
 
         context = mp.get_context("spawn")
@@ -317,7 +389,7 @@ class LocalInferenceBackend:
         on_log: LogCallback = _ignore_log,
         on_progress: DiarizationProgressCallback = _ignore_diarization_progress,
         is_cancelled: CancelCallback = _never_cancel,
-    ) -> list[DiarizationSegment]:
+    ) -> DiarizationResult:
         from .pyannote_mp_worker import pyannote_proc_entrypoint
 
         if request.model.backend_id != LOCAL_DIARIZATION_BACKEND:
@@ -328,6 +400,7 @@ class LocalInferenceBackend:
             "audio_path": request.audio_path,
             "num_speakers": request.num_speakers,
             "device": "cpu" if self.settings.force_diarization_cpu else "",
+            "extensions": request.extensions,
         }
         self._cancel_event.clear()
         context = mp.get_context("spawn")
@@ -338,7 +411,7 @@ class LocalInferenceBackend:
         )
         process.start()
         self._set_active(process, result_queue)
-        segments = []
+        result = DiarizationResult()
 
         try:
             while True:
@@ -357,15 +430,12 @@ class LocalInferenceBackend:
                             message.get("error", "Diarization failed"),
                             message.get("trace"),
                         )
-                    segments = [
-                        DiarizationSegment.from_mapping(segment)
-                        for segment in (message.get("segments") or [])
-                    ]
+                    result = DiarizationResult.from_mapping(message)
                     break
         finally:
             self._cleanup(process, result_queue)
 
-        return segments
+        return result
 
     def _next_message(self, process, result_queue, is_cancelled: CancelCallback):
         while True:

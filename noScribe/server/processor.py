@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Callable
 
 from ..audio.convert import ToWav
-from ..inference import DiarizationRequest, TranscriptionRequest
+from ..inference import DiarizationRequest, DiarizationResult, TranscriptionRequest
 from ..models import ModelDescriptor, ModelRef
 from ..plugins.registry import BackendRegistry
+from ..plugins.protocol import validate_extensions
 from .jobs import JobSnapshot, JobTask
 
 
@@ -46,15 +47,21 @@ class RegistryWorkflowProcessor:
                 self._model(task, "transcription")
                 options = _options(
                     task,
-                    allowed={"language", "multilingual", "include_disfluencies"},
+                    allowed={"language", "multilingual", "include_disfluencies", "extensions", "diarization"},
                 )
                 _optional_string(options.get("language"))
                 _boolean(options.get("multilingual"), False)
                 _boolean(options.get("include_disfluencies"), True)
+                if options.get("diarization") is not None:
+                    try:
+                        DiarizationResult.from_mapping(options["diarization"], seconds=True)
+                    except (TypeError, KeyError, AttributeError, OverflowError) as error:
+                        raise ValueError("Invalid diarization context.") from error
             else:
                 self._model(task, "diarization")
-                options = _options(task, allowed={"num_speakers"})
+                options = _options(task, allowed={"num_speakers", "extensions"})
                 _optional_positive_int(options.get("num_speakers"), "num_speakers")
+            validate_extensions(options.get("extensions", {}))
 
     def process(
         self,
@@ -71,6 +78,7 @@ class RegistryWorkflowProcessor:
             wav_path = audio_path.with_suffix(".wav")
             self._wav_converter(audio_path, wav_path)
 
+            diarization = None
             for task_index, task in enumerate(job.tasks):
                 if is_cancelled():
                     return
@@ -81,10 +89,10 @@ class RegistryWorkflowProcessor:
                 })
                 if task.operation == "transcription":
                     self._transcribe(
-                        task_index, task, wav_path, emit, is_cancelled
+                        task_index, task, wav_path, emit, is_cancelled, diarization
                     )
                 else:
-                    self._diarize(
+                    diarization = self._diarize(
                         task_index, task, wav_path, emit, is_cancelled
                     )
         finally:
@@ -97,15 +105,19 @@ class RegistryWorkflowProcessor:
     def close(self) -> None:
         self.registry.close()
 
-    def _transcribe(self, index, task, audio_path, emit, is_cancelled) -> None:
+    def _transcribe(self, index, task, audio_path, emit, is_cancelled, diarization=None) -> None:
         model = self._model(task, "transcription")
         options = _options(
             task,
-            allowed={"language", "multilingual", "include_disfluencies"},
+            allowed={"language", "multilingual", "include_disfluencies", "extensions", "diarization"},
         )
         request = TranscriptionRequest(
             audio_path=str(audio_path),
             model=model.ref,
+            extensions=dict(options.get("extensions") or {}),
+            diarization=(diarization if diarization is not None else
+                         DiarizationResult.from_mapping(options["diarization"], seconds=True)
+                         if options.get("diarization") is not None else None),
             language=_optional_string(options.get("language")),
             multilingual=_boolean(options.get("multilingual"), False),
             include_disfluencies=_boolean(
@@ -129,12 +141,14 @@ class RegistryWorkflowProcessor:
                     "start": segment.start,
                     "end": segment.end,
                     "text": segment.text,
+                    "extensions": segment.extensions,
                     "words": [
                         {
                             "word": word.word,
                             "start": word.start,
                             "end": word.end,
                             "prob": word.probability,
+                            "extensions": word.extensions,
                         }
                         for word in segment.words
                     ],
@@ -157,12 +171,13 @@ class RegistryWorkflowProcessor:
                 "language": info.language,
                 "language_probability": info.language_probability,
                 "sample_rate": info.sample_rate,
+                "extensions": info.extensions,
             },
         )
 
-    def _diarize(self, index, task, audio_path, emit, is_cancelled) -> None:
+    def _diarize(self, index, task, audio_path, emit, is_cancelled) -> DiarizationResult:
         model = self._model(task, "diarization")
-        options = _options(task, allowed={"num_speakers"})
+        options = _options(task, allowed={"num_speakers", "extensions"})
         num_speakers = _optional_positive_int(
             options.get("num_speakers"), "num_speakers"
         )
@@ -170,6 +185,7 @@ class RegistryWorkflowProcessor:
             audio_path=str(audio_path),
             model=model.ref,
             num_speakers=num_speakers,
+            extensions=dict(options.get("extensions") or {}),
         )
 
         def event(event_type: str, **payload) -> None:
@@ -180,7 +196,7 @@ class RegistryWorkflowProcessor:
                 **payload,
             })
 
-        segments = self.registry.diarize(
+        result = self.registry.diarize(
             request,
             on_log=lambda level, message: event("log", level=level, msg=message),
             on_progress=lambda step, percent: event(
@@ -191,15 +207,9 @@ class RegistryWorkflowProcessor:
         event(
             "task_result",
             ok=True,
-            segments=[
-                {
-                    "speaker": segment.label,
-                    "start": segment.start_ms / 1000.0,
-                    "end": segment.end_ms / 1000.0,
-                }
-                for segment in segments
-            ],
+            **result.to_mapping(seconds=True),
         )
+        return result
 
     def _model(self, task: JobTask, capability: str) -> ModelDescriptor:
         try:

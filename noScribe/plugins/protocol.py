@@ -7,6 +7,7 @@ the multiprocessing queues by the built-in workers.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
@@ -15,6 +16,17 @@ from .manifest import PLUGIN_PROTOCOL_VERSION
 
 EVENT_TYPES = frozenset({"log", "status", "progress", "segment", "result"})
 METHODS = frozenset({"transcribe", "diarize", "cancel", "health"})
+
+
+def validate_extensions(value: object) -> dict:
+    """Keep extension payloads portable across multiprocessing and HTTP."""
+    if not isinstance(value, dict):
+        raise ValueError("Extensions must be a JSON object.")
+    try:
+        json.dumps(value, allow_nan=False)
+    except (TypeError, ValueError) as error:
+        raise ValueError("Extensions must contain JSON-compatible data.") from error
+    return value
 
 
 @dataclass(frozen=True)

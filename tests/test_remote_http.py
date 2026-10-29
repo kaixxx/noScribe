@@ -192,6 +192,7 @@ def _workflow_server():
                     "task_index": 0,
                     "operation": "diarization",
                     "ok": True,
+                    "extensions": {"test-backend": {"evidence": [[0.9]]}},
                     "segments": [
                         {"speaker": "SPEAKER_00", "start": 0.0, "end": 1.0}
                     ],
@@ -416,6 +417,7 @@ def test_remote_http_plugin_queues_combined_workflow_and_uploads_once(tmp_path):
                     language="en",
                     multilingual=0,
                     include_disfluencies=1,
+                    extensions={"test-backend": {"custom_option": 2}},
                 ),
                 diarization=DiarizationRequest(
                     str(audio_path),
@@ -444,11 +446,13 @@ def test_remote_http_plugin_queues_combined_workflow_and_uploads_once(tmp_path):
     ]
     assert reservation["tasks"][1]["options"]["multilingual"] is False
     assert reservation["tasks"][1]["options"]["include_disfluencies"] is True
+    assert reservation["tasks"][1]["options"]["extensions"] == {"test-backend": {"custom_option": 2}}
     assert uploads[0][3] == audio_path.read_bytes()
     assert uploads[0][2]["X-noScribe-Job-Token"] == "job-secret"
     assert result.transcription_info.language == "en"
     assert result.transcription_segments[0].text == "Hello"
     assert result.diarization_segments[0].label == "SPEAKER_00"
+    assert result.diarization.extensions == {"test-backend": {"evidence": [[0.9]]}}
     assert [segment.text for segment in streamed_segments] == ["Hello"]
     assert [segment.label for segment in streamed_diarization] == ["SPEAKER_00"]
     assert any(event.get("message_id") == "server_queue_wait" for event in events)

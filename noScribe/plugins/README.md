@@ -221,6 +221,36 @@ explicit packaging rules.
 
 ## Compatibility rules
 
+### Extensible requests and results
+
+`TranscriptionRequest` and `DiarizationRequest` have an optional `extensions`
+JSON object. Transcription words, segments and info, and diarization segments
+and results can also carry `extensions`. Use an identifying key (for example
+your plugin ID) to avoid collisions. The plugin owns the contents; no central
+schema or per-extension version is required. Consumers that interpret an
+extension must agree with its producer on its meaning. Unknown result data
+must survive adapter conversions even when consumers ignore it.
+
+`diarize()` returns `DiarizationResult(segments, extensions)`. It supports
+iteration and indexing for segment-only consumers. `None` means no diarization
+was performed; an empty result means it ran and found no segments. Desktop and
+server workflows pass the complete result as `TranscriptionRequest.diarization`
+to subsequent transcription. Workers may ignore this context. The built-in
+Whisper adapter sends it to the worker without changing Whisper inference.
+
+All timestamps refer to the supplied audio excerpt, without the desktop's
+transcript offset. Diarization uses milliseconds internally and in local worker
+messages, seconds on HTTP. Extension contents are never converted implicitly:
+plugins must document their units and speaker-label correspondence. Transport
+data, not server-local paths or Python/NumPy objects; use JSON-compatible values.
+
+Queued HTTP tasks carry request extensions and optional externally computed
+diarization under `options`. A preceding server diarization takes precedence
+over supplied context. Diarization `task_result` events carry `extensions`
+beside `segments`. Existing HTTP reservation size limits still apply; this
+does not implement a separate large-array download protocol. Legacy servers
+without queued workflows reject extended requests in the adapter explicitly.
+
 - Increment the protocol version only for an incompatible wire-format change.
 - Treat backend IDs and model IDs as persistent identifiers once released.
 - Add capabilities rather than testing concrete backend names in consumers.

@@ -6,6 +6,7 @@ import pytest
 import noScribe.inference as inference
 from noScribe.inference import (
     DiarizationRequest,
+    DiarizationResult,
     DiarizationSegment,
     LOCAL_WHISPER_BACKEND,
     LocalWorkerSettings,
@@ -209,6 +210,33 @@ def test_local_backend_translates_worker_stream(monkeypatch):
     assert "locale" not in worker_args
     assert context.process.closed
     assert context.queue.closed
+
+
+def test_diarization_evidence_survives_worker_and_transcription_request(monkeypatch):
+    evidence = {"example-plugin": {"scores": [[0.9, 0.1]], "step": 0.08}}
+    context = _FakeContext([{
+        "type": "result", "ok": True, "extensions": evidence,
+        "segments": [{"start": 0, "end": 80, "label": "SPEAKER_00",
+                      "extensions": {"example-plugin": {"score": 0.9}}}],
+    }])
+    monkeypatch.setattr(inference.mp, "get_context", lambda method: context)
+    backend = inference.LocalInferenceBackend(whisper_models={"model": "model"})
+    result = backend.diarize(DiarizationRequest("audio.wav"))
+    assert result.extensions == evidence
+    assert result.segments[0].extensions["example-plugin"]["score"] == 0.9
+    assert DiarizationResult.from_mapping(result.to_mapping(seconds=True), seconds=True) == result
+
+    context.messages = [{"type": "result", "ok": True}]
+    backend.transcribe(TranscriptionRequest(
+        "audio.wav", ModelRef(LOCAL_WHISPER_BACKEND, "model"), diarization=result,
+    ), on_segment=lambda segment: None)
+    assert context.process.args[0]["diarization"] == result.to_mapping()
+
+
+def test_extension_data_must_be_portable():
+    with pytest.raises(ValueError, match="JSON-compatible"):
+        DiarizationResult(extensions={"backend": object()})
+    assert TranscriptionRequest("audio.wav", ModelRef("backend", "model")).diarization is None
 
 
 def test_local_backend_preserves_worker_error_trace(monkeypatch):

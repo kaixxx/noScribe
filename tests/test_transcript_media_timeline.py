@@ -27,7 +27,7 @@ def test_transcript_uses_actual_converted_media_position(
     )
     logs = []
 
-    def stream(path, job, on_segment):
+    def stream(path, job, on_segment, diarization=None):
         # Leave a one-second pause before the first phrase to cover pause anchors.
         on_segment(TranscriptionSegment(1.0, 1.5, " Hello"))
         return {}

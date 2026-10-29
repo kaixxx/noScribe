@@ -3261,6 +3261,7 @@ class App(ctk.CTk):
                 self.set_progress(1, 100, speaker_setting)
                 remote_workflow_result = None
                 diarization = []
+                diarization_result = None
                 remote_workflow_pending = (
                     job.diarization_enabled
                     and self.inference_backend.supports_workflow(
@@ -3357,9 +3358,10 @@ class App(ctk.CTk):
                                     )
                                     else tmp_audio_file
                                 )
-                                diarization = self._run_diarize_subprocess(
+                                diarization_result = self._run_diarize_subprocess(
                                     diarization_audio, job
                                 )
+                                diarization = list(diarization_result)
                                 break
                             except Exception as err:
                                 if self._handle_cuda_fallback(
@@ -3719,7 +3721,8 @@ class App(ctk.CTk):
                                 )
                         else:
                             info = self._run_whisper_subprocess_stream(
-                                transcription_audio, job, on_segment
+                                transcription_audio, job, on_segment,
+                                diarization=diarization_result,
                             )
                         if first_segment:
                             raise ValueError(t('err_empty_transcript'))
@@ -3881,7 +3884,7 @@ class App(ctk.CTk):
 
         return False
 
-    def _run_whisper_subprocess_stream(self, tmp_audio_file: str, job, on_segment):
+    def _run_whisper_subprocess_stream(self, tmp_audio_file: str, job, on_segment, diarization=None):
         """Run Faster-Whisper through the UI-independent local backend."""
         request = TranscriptionRequest(
             audio_path=tmp_audio_file,
@@ -3889,6 +3892,7 @@ class App(ctk.CTk):
             language=job.language,
             multilingual=job.multilingual,
             include_disfluencies=job.disfluencies,
+            diarization=diarization,
         )
 
         def mark_transcription_started() -> None:

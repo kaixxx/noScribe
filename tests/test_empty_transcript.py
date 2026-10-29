@@ -54,7 +54,7 @@ def _segment(text, start=1.0):
 @pytest.mark.parametrize("detection", ["none", "auto"])
 @pytest.mark.parametrize("texts", [[], ["", " \t\n ", "\u2003"]])
 def test_empty_result_fails_without_saving(app, tmp_path, monkeypatch, suffix, detection, texts):
-    def whisper(path, job, on_segment):
+    def whisper(path, job, on_segment, diarization=None):
         for text in texts:
             on_segment(_segment(text))
         return {}
@@ -103,7 +103,7 @@ def test_combined_workflow_handles_empty_and_valid_results(app, tmp_path, monkey
 
 def test_empty_job_does_not_open_editor(app, tmp_path, monkeypatch):
     app._headless = False
-    monkeypatch.setattr(app, "_run_whisper_subprocess_stream", lambda *args: {})
+    monkeypatch.setattr(app, "_run_whisper_subprocess_stream", lambda *args, **kwargs: {})
     monkeypatch.setattr(app, "launch_editor", lambda *args: pytest.fail("Empty job opened editor"))
     app.queue.add_job(_job(tmp_path))
     app.transcription_worker()
@@ -114,7 +114,7 @@ def test_batch_continues_after_empty_job(app, tmp_path, monkeypatch):
     empty = _job(tmp_path, name="empty")
     valid = _job(tmp_path, name="valid")
 
-    def whisper(path, job, on_segment):
+    def whisper(path, job, on_segment, diarization=None):
         if job is valid:
             on_segment(_segment(" Hello"))
         return {}
@@ -131,7 +131,7 @@ def test_batch_continues_after_empty_job(app, tmp_path, monkeypatch):
 @pytest.mark.parametrize("suffix", ["html", "txt", "vtt"])
 @pytest.mark.parametrize("canceled", [False, True])
 def test_failed_or_canceled_job_keeps_real_partial_text(app, tmp_path, monkeypatch, suffix, canceled):
-    def whisper(path, job, on_segment):
+    def whisper(path, job, on_segment, diarization=None):
         on_segment(_segment(" Hello"))
         on_segment(_segment(" \t ", start=2.0))
         if canceled:
@@ -150,7 +150,7 @@ def test_failed_or_canceled_job_keeps_real_partial_text(app, tmp_path, monkeypat
 
 def test_empty_cli_result_returns_failure(app, tmp_path, monkeypatch, capsys):
     job = _job(tmp_path)
-    monkeypatch.setattr(app, "_run_whisper_subprocess_stream", lambda *args: {})
+    monkeypatch.setattr(app, "_run_whisper_subprocess_stream", lambda *args, **kwargs: {})
     monkeypatch.setattr(m, "HeadlessApp", lambda: app)
     monkeypatch.setattr(m, "create_job_from_cli_args", lambda args: job)
 

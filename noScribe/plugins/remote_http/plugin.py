@@ -13,6 +13,7 @@ import requests
 
 from ...inference import (
     DiarizationSegment,
+    DiarizationResult,
     InferenceCancelled,
     InferenceWorkflowRequest,
     InferenceWorkflowResult,
@@ -164,6 +165,8 @@ class RemoteHttpPlugin:
             "include_disfluencies": _form_bool(request.include_disfluencies),
             "response_format": "noscribe_jsonl",
         }
+        if request.extensions or request.diarization is not None:
+            raise ValueError("This server requires queued workflows for extended requests.")
         if request.language:
             fields["language"] = request.language
 
@@ -211,7 +214,7 @@ class RemoteHttpPlugin:
         on_log=lambda _level, _message: None,
         on_progress=lambda _step, _percent: None,
         is_cancelled=lambda: False,
-    ) -> list[DiarizationSegment]:
+    ) -> DiarizationResult:
         if self.supports_workflows:
             def handle(event):
                 if event.get("operation") not in {None, "diarization"}:
@@ -229,8 +232,10 @@ class RemoteHttpPlugin:
                 on_event=handle,
                 is_cancelled=is_cancelled,
             )
-            return list(result.diarization_segments)
+            return result.diarization if result.diarization is not None else DiarizationResult()
 
+        if request.extensions:
+            raise ValueError("This server requires queued workflows for extended requests.")
         fields = {
             "model": request.model.model_id,
             "response_format": "noscribe_jsonl",
@@ -263,7 +268,7 @@ class RemoteHttpPlugin:
                 _diarization_segment(segment)
                 for segment in (result.get("segments") or [])
             ]
-        return segments
+        return DiarizationResult(tuple(segments), dict(result.get("extensions") or {}))
 
     def run_workflow(
         self,
@@ -285,6 +290,8 @@ class RemoteHttpPlugin:
         tasks = []
         if request.diarization is not None:
             options = {}
+            if request.diarization.extensions:
+                options["extensions"] = request.diarization.extensions
             if request.diarization.num_speakers is not None:
                 options["num_speakers"] = request.diarization.num_speakers
             tasks.append({
@@ -299,6 +306,10 @@ class RemoteHttpPlugin:
                     request.transcription.include_disfluencies
                 ),
             }
+            if request.transcription.extensions:
+                options["extensions"] = request.transcription.extensions
+            if request.transcription.diarization is not None:
+                options["diarization"] = request.transcription.diarization.to_mapping(seconds=True)
             if request.transcription.language:
                 options["language"] = request.transcription.language
             tasks.append({
@@ -383,7 +394,7 @@ class RemoteHttpPlugin:
 
             transcription_segments = []
             transcription_info = None
-            diarization_segments = []
+            diarization = None
             final_result = None
             try:
                 for line in response.iter_lines(chunk_size=1):
@@ -406,11 +417,8 @@ class RemoteHttpPlugin:
                     elif event["type"] == "task_result":
                         self._require_success(event, "Remote task failed")
                         if event.get("operation") == "diarization":
-                            diarization_segments = [
-                                _diarization_segment(segment)
-                                for segment in event.get("segments") or []
-                            ]
-                            on_diarization_result(tuple(diarization_segments))
+                            diarization = DiarizationResult.from_mapping(event, seconds=True)
+                            on_diarization_result(diarization)
                         elif event.get("operation") == "transcription":
                             transcription_info = TranscriptionInfo.from_mapping(
                                 event.get("info") or {}
@@ -426,7 +434,7 @@ class RemoteHttpPlugin:
             return InferenceWorkflowResult(
                 transcription_info=transcription_info,
                 transcription_segments=tuple(transcription_segments),
-                diarization_segments=tuple(diarization_segments),
+                diarization=diarization,
             )
         except InferenceCancelled:
             raise
@@ -667,6 +675,7 @@ def _diarization_segment(value: dict) -> DiarizationSegment:
         start_ms=round(float(value.get("start") or 0) * 1000),
         end_ms=round(float(value.get("end") or 0) * 1000),
         label=str(value.get("speaker") or value.get("label") or ""),
+        extensions=dict(value.get("extensions") or {}),
     )
 
 

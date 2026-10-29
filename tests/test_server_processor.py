@@ -5,6 +5,7 @@ import pytest
 
 from noScribe.inference import (
     DiarizationSegment,
+    DiarizationResult,
     TranscriptionInfo,
     TranscriptionSegment,
     TranscriptionWord,
@@ -48,7 +49,7 @@ class FakeRegistry:
     def diarize(self, request, **callbacks):
         self.calls.append(("diarization", request))
         callbacks["on_progress"]("segmentation", 50)
-        return [DiarizationSegment(500, 1750, "SPEAKER_00")]
+        return DiarizationResult((DiarizationSegment(500, 1750, "SPEAKER_00"),), {"test": {"evidence": [0.9]}})
 
     def transcribe(self, request, **callbacks):
         self.calls.append(("transcription", request))
@@ -109,6 +110,8 @@ def test_processor_runs_diarization_then_transcription_with_one_audio(tmp_path):
     ]
     assert registry.calls[0][1].audio_path.endswith(".wav")
     assert registry.calls[1][1].audio_path.endswith(".wav")
+    assert registry.calls[1][1].diarization.extensions == {"test": {"evidence": [0.9]}}
+    assert registry.calls[1][1].diarization.segments[0].start_ms == 500
     assert not source.with_suffix(".wav").exists()
     assert [event["type"] for event in events].count("task_result") == 2
     diarization_result = next(
@@ -118,6 +121,7 @@ def test_processor_runs_diarization_then_transcription_with_one_audio(tmp_path):
     assert diarization_result["segments"] == [{
         "speaker": "SPEAKER_00", "start": 0.5, "end": 1.75
     }]
+    assert diarization_result["extensions"] == {"test": {"evidence": [0.9]}}
 
 
 def test_processor_catalogue_uses_stable_slash_qualified_ids():
