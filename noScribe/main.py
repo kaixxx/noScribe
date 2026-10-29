@@ -947,6 +947,20 @@ def _model_menu_values(app) -> list[str]:
     ]
 
 
+def _prepare_model_menu(app, menu) -> None:
+    """Retry remote discovery on every opening, before posting the native menu."""
+    menu.configure(values=_model_menu_values(app))
+    app.refresh_remote_models(force=True)
+
+
+def _model_selection_label(app, preferred_ref: str | None) -> str | None:
+    """Keep an available selection, otherwise prefer the bundled precise model."""
+    for ref in (preferred_ref, str(ModelRef(LOCAL_WHISPER_BACKEND, "precise"))):
+        if ref in app.transcription_model_labels:
+            return app.transcription_model_labels[ref]
+    return next(iter(app.transcription_model_options), None)
+
+
 def _remote_backend_error_details(error) -> str:
     """Return the diagnostic form of a remote backend connection error."""
     return (
@@ -1108,10 +1122,8 @@ class App(ctk.CTk):
 
             def _clicked(self, event=0):
                 self.old_value = self.get()
-                self._values = _model_menu_values(self.noScribe_parent)
-                self._dropdown_menu.configure(values=self._values)
+                _prepare_model_menu(self.noScribe_parent, self)
                 super()._clicked(event)
-                self.noScribe_parent.refresh_remote_models()
                 
             def _dropdown_callback(self, value: str):
                 if value == '--------------------':
@@ -1146,12 +1158,9 @@ class App(ctk.CTk):
                                                        dynamic_resizing=False)
         self.option_menu_whisper_model.grid(column=1, row=3, sticky='e', pady=5)
         last_whisper_model = str(_model_ref(get_config('last_whisper_model', 'precise')))
-        if last_whisper_model in self.transcription_models:
-            self.option_menu_whisper_model.set(
-                self.transcription_model_labels[last_whisper_model]
-            )
-        elif len(self.transcription_model_options) > 0:
-            self.option_menu_whisper_model.set(next(iter(self.transcription_model_options)))
+        selected_label = _model_selection_label(self, last_whisper_model)
+        if selected_label is not None:
+            self.option_menu_whisper_model.set(selected_label)
 
         # Mark pauses
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
@@ -1473,11 +1482,6 @@ class App(ctk.CTk):
             return
         self._remote_model_refresh_in_progress = True
 
-        selected = self.transcription_model_options.get(
-            self.option_menu_whisper_model.get()
-        )
-        selected_ref = str(selected.ref) if selected is not None else None
-
         def refresh() -> None:
             refresh_failure = None
             try:
@@ -1493,20 +1497,21 @@ class App(ctk.CTk):
                 )
 
             def apply() -> None:
+                # The user may have selected another model during discovery.
+                selected = self.transcription_model_options.get(
+                    self.option_menu_whisper_model.get()
+                )
+                selected_ref = str(selected.ref) if selected is not None else None
                 self._remote_model_refresh_in_progress = False
                 self._remote_models_refreshed_at = time.monotonic()
                 self.remote_backend_registration_errors = errors
                 _update_transcription_model_catalog(self)
 
-                values = list(self.transcription_model_options)
                 menu_values = _model_menu_values(self)
                 self.option_menu_whisper_model.configure(values=menu_values)
-                if selected_ref in self.transcription_model_labels:
-                    self.option_menu_whisper_model.set(
-                        self.transcription_model_labels[selected_ref]
-                    )
-                elif values:
-                    self.option_menu_whisper_model.set(values[0])
+                selected_label = _model_selection_label(self, selected_ref)
+                if selected_label is not None:
+                    self.option_menu_whisper_model.set(selected_label)
 
                 error_keys = tuple(
                     (error.profile.id, error.message) for error in errors
