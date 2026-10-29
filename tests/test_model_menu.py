@@ -9,6 +9,7 @@ from noScribe.plugins.factory import register_remote_profiles
 from noScribe.plugins.manifest import ExecutionType
 from noScribe.plugins.registry import BackendRegistry
 from noScribe.plugins.remote_profiles import RemoteBackendProfile
+from noScribe.plugins.remote_http import RemoteHttpPlugin
 
 
 def _model(backend, model_id):
@@ -108,6 +109,54 @@ def test_opening_menu_retries_server_that_was_offline_at_startup(app, monkeypatc
 def test_missing_last_used_model_prefers_local_precise(app):
     assert main._model_selection_label(app, "server:unavailable") == "precise"
     assert main._model_selection_label(app, "local-whisper:fast") == "fast"
+
+
+def test_server_shutdown_removes_models_and_restart_restores_them(app, monkeypatch):
+    online = {"server": True, "other-server": True}
+
+    class RemotePlugin(RemoteHttpPlugin):
+        def _fetch_models(self):
+            if not online[self.profile.id]:
+                raise ConnectionError("offline")
+            return [_model(self.profile.id, "remote-model")], "test", {"queued_workflows"}
+
+    monkeypatch.setattr(factory, "RemoteHttpPlugin", RemotePlugin)
+    app.remote_backend_profiles = tuple(RemoteBackendProfile(
+        id=backend, name=name, driver="noscribe-http-v1",
+        url="http://127.0.0.1:8766", api_key="test",
+    ) for backend, name in (("server", "Server"), ("other-server", "Other server")))
+    assert register_remote_profiles(app.inference_backend, app.remote_backend_profiles) == ()
+    main._update_transcription_model_catalog(app)
+    plugin = app.inference_backend.get("server")
+    app.option_menu_whisper_model.set("remote-model (Server)")
+
+    try:
+        online["server"] = False
+        main._prepare_model_menu(app, app.option_menu_whisper_model)
+        _finish_refresh(app)
+
+        assert "remote-model (Server)" not in app.option_menu_whisper_model.values
+        assert "remote-model (Other server)" in app.option_menu_whisper_model.values
+        assert "fast" in app.option_menu_whisper_model.values
+        assert app.option_menu_whisper_model.get() == "precise"
+        assert "server:remote-model" not in app.transcription_models
+        assert not plugin.supports_workflows
+        assert plugin.manifest.capabilities == frozenset()
+        assert len(app.remote_backend_registration_errors) == 1
+
+        online["server"] = True
+        main._prepare_model_menu(app, app.option_menu_whisper_model)
+        _finish_refresh(app)
+
+        assert "remote-model (Server)" in app.option_menu_whisper_model.values
+        assert app.inference_backend.get("server") is plugin
+        assert plugin.supports_workflows
+        assert plugin.manifest.capabilities == frozenset({"transcription"})
+        assert app.remote_backend_registration_errors == ()
+        assert app.option_menu_whisper_model.get() == "precise"
+    finally:
+        for profile in app.remote_backend_profiles:
+            app.inference_backend.get(profile.id).close()
 
 
 def test_refresh_uses_precise_if_selected_model_disappears(app):

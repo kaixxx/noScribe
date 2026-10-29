@@ -105,8 +105,17 @@ class RemoteHttpPlugin:
             return list(self._models)
 
     def refresh_models(self) -> None:
-        """Atomically replace the advertised models after a successful fetch."""
-        models, server_version, features = self._fetch_models()
+        """Advertise only models confirmed by the latest discovery request."""
+        try:
+            models, server_version, features = self._fetch_models()
+        except Exception:
+            # Keep the profile/session for retries, but do not offer stale
+            # models or workflow capabilities while the server is unavailable.
+            with self._models_lock:
+                self._models = []
+                self.supports_workflows = False
+                self.manifest = replace(self.manifest, capabilities=frozenset())
+            raise
         capabilities = frozenset(
             capability for model in models for capability in model.capabilities
         )
