@@ -1,15 +1,19 @@
 import re
-from types import SimpleNamespace
 
 import pytest
 
 import noScribe.main as m
+from noScribe.models import ModelRef
+from noScribe.inference import (
+    DiarizationSegment, InferenceWorkflowResult, TranscriptionInfo, TranscriptionSegment,
+)
 
 
+@pytest.mark.parametrize("workflow", [False, True])
 @pytest.mark.parametrize("suffix", ["html", "txt", "vtt"])
 @pytest.mark.parametrize("detection", ["none", "auto"])
 def test_transcript_uses_actual_converted_media_position(
-    monkeypatch, tmp_path, delayed_audio_video, suffix, detection
+    monkeypatch, tmp_path, delayed_audio_video, suffix, detection, workflow
 ):
     monkeypatch.setattr(m, "config_dir", str(tmp_path))
     monkeypatch.setattr(m, "config", {})
@@ -23,25 +27,35 @@ def test_transcript_uses_actual_converted_media_position(
     )
     logs = []
 
-    def stream(path, job, on_segment):
+    def stream(path, job, on_segment, diarization=None):
         # Leave a one-second pause before the first phrase to cover pause anchors.
-        on_segment({"start": 1.0, "end": 1.5, "text": " Hello", "words": []})
+        on_segment(TranscriptionSegment(1.0, 1.5, " Hello"))
         return {}
 
-    app = SimpleNamespace(
-        cancel=False, _ffmpeg_proc=None,
-        update_queue_table=lambda: None,
-        set_progress=lambda *args: None,
-        log=lambda *args, **kwargs: None,
-        logn=lambda text="", *args, **kwargs: logs.append(text),
-        _run_whisper_subprocess_stream=stream,
-        _run_diarize_subprocess=lambda *args: [
-            {"start": 1000, "end": 1500, "label": "SPEAKER_00"}
-        ],
-        _apply_speaker_name=lambda speaker, job: m.App._apply_speaker_name(app, speaker, job),
-        _speaker_key=m.App._speaker_key,
-        _handle_cuda_fallback=lambda *args: False,
-    )
+    app = m.HeadlessApp()
+    monkeypatch.setattr(app, "set_progress", lambda *args: None)
+    monkeypatch.setattr(app, "update_queue_table", lambda: None)
+    monkeypatch.setattr(app, "log", lambda *args, **kwargs: None)
+    monkeypatch.setattr(app, "logn", lambda text="", *args, **kwargs: logs.append(text))
+    monkeypatch.setattr(app, "_run_whisper_subprocess_stream", stream)
+    monkeypatch.setattr(app, "_run_diarize_subprocess", lambda *args: [
+        DiarizationSegment(1000, 1500, "SPEAKER_00")
+    ])
+    if workflow and detection == "auto":
+        job.transcription_model = ModelRef("test-server", "whisper")
+        job.diarization_model = ModelRef("test-server", "pyannote")
+        monkeypatch.setattr(m, "model_uses_remote_backend", lambda *args: True)
+        monkeypatch.setattr(app.inference_backend, "supports_workflow", lambda *args: True)
+
+        def run_workflow(request, **callbacks):
+            assert request.audio_path.endswith(".flac")
+            callbacks["on_diarization_result"]([
+                DiarizationSegment(1000, 1500, "SPEAKER_00")
+            ])
+            callbacks["on_transcription_segment"](TranscriptionSegment(1.0, 1.5, " Hello"))
+            return InferenceWorkflowResult(transcription_info=TranscriptionInfo())
+
+        monkeypatch.setattr(app.inference_backend, "run_workflow", run_workflow)
     m.App._process_single_job(app, job)
 
     text = output.read_text(encoding="utf-8")

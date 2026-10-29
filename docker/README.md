@@ -6,6 +6,10 @@ jobs and machines where installing Python, PyTorch and the models by hand is
 not wanted. For desktop use, the regular installers from
 [noscribe.de](https://noscribe.de) are the more comfortable choice.
 
+The standalone API server dependencies (`fastapi` and `uvicorn`) are excluded
+from this CLI image, as is PyInstaller. Deploy the API server separately using
+[its deployment guide](../noScribe/server/README.md).
+
 Everything runs locally inside the container. The image contains the Whisper
 and pyannote models, so nothing is downloaded at runtime and no audio leaves
 the machine. (Only the GUI mode contacts GitHub on start to look for a new

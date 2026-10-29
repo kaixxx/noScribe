@@ -1,0 +1,15 @@
+{
+  "id": "local-pyannote",
+  "name": "Local Pyannote",
+  "version": "1.0.0",
+  "protocol_version": 1,
+  "engine": "pyannote",
+  "execution": {
+    "type": "builtin",
+    "adapter": "local-pyannote"
+  },
+  "capabilities": [
+    "diarization",
+    "overlapping_speech"
+  ]
+}

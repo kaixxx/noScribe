@@ -1,0 +1,502 @@
+"""FastAPI transport for queued, zero-retention inference workflows."""
+
+from __future__ import annotations
+
+import json
+import asyncio
+import os
+import queue
+import tempfile
+import threading
+import time
+from pathlib import Path
+from typing import Callable, Mapping, Protocol
+
+from fastapi import FastAPI, Header, HTTPException, Request, status
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from ..http_api_protocol import NOSCRIBE_HTTP_API_PROTOCOL_VERSION
+from .config import ServerConfig
+from .jobs import (
+    InvalidJobState,
+    JobNotFound,
+    JobScheduler,
+    JobSnapshot,
+    JobState,
+    JobTask,
+    QueueFull,
+)
+from .storage import prepare_runtime_directory
+
+
+MAX_RESERVATION_JSON_BYTES = 64 * 1024
+_END = object()
+
+
+class WorkflowProcessor(Protocol):
+    def list_models(self) -> list[Mapping[str, object]]: ...
+
+    def validate_tasks(self, tasks: tuple[JobTask, ...]) -> None: ...
+
+    def process(
+        self,
+        job: JobSnapshot,
+        audio_path: Path,
+        emit: Callable[[dict], None],
+        is_cancelled: Callable[[], bool],
+    ) -> None: ...
+
+    def cancel(self) -> None: ...
+
+
+class TaskBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    type: str = Field(min_length=1, max_length=32)
+    model: str = Field(min_length=1, max_length=256)
+    options: dict[str, object] = Field(default_factory=dict)
+
+
+class AudioBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    filename: str = Field(min_length=1, max_length=512)
+    size: int = Field(gt=0)
+
+
+class JobBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    tasks: list[TaskBody] = Field(min_length=1, max_length=2)
+    audio: AudioBody
+
+
+class InferenceService:
+    def __init__(
+        self,
+        config: ServerConfig,
+        scheduler: JobScheduler,
+        processor: WorkflowProcessor,
+    ):
+        self.config = config
+        self.scheduler = scheduler
+        self.processor = processor
+        self._cancel_events: dict[str, threading.Event] = {}
+        self._lock = threading.Lock()
+        prepare_runtime_directory(
+            self.config.runtime_dir, require_tmpfs=self.config.require_tmpfs
+        )
+
+    async def receive_audio(
+        self,
+        request: Request,
+        snapshot: JobSnapshot,
+        token: str,
+    ) -> Path:
+        if request.headers.get("content-type", "").split(";", 1)[0] not in {
+            "audio/flac",
+            "audio/x-flac",
+            "application/octet-stream",
+        }:
+            raise HTTPException(415, "Expected a FLAC audio request body.")
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                declared_length = int(content_length)
+            except ValueError as error:
+                raise HTTPException(400, "Invalid Content-Length header.") from error
+            if declared_length != snapshot.audio_size:
+                raise HTTPException(400, "Upload size differs from the reservation.")
+
+        self.scheduler.begin_upload(snapshot.job_id, token)
+        try:
+            descriptor, filename = tempfile.mkstemp(
+                prefix="upload-", suffix=".flac", dir=self.config.runtime_dir
+            )
+        except OSError as error:
+            # begin_upload owns the sole processing slot.  Release it even if
+            # the runtime filesystem is full or otherwise unavailable.
+            self.scheduler.cancel(snapshot.job_id, token)
+            self.scheduler.finish_cancel(snapshot.job_id, token)
+            raise HTTPException(
+                507, "Could not create temporary upload storage."
+            ) from error
+        path = Path(filename)
+        received = 0
+        started = time.monotonic()
+        try:
+            with os.fdopen(descriptor, "wb") as stream:
+                chunks = request.stream().__aiter__()
+                while True:
+                    remaining = (
+                        self.config.upload_timeout_seconds
+                        - (time.monotonic() - started)
+                    )
+                    if remaining <= 0:
+                        raise HTTPException(408, "Audio upload timed out.")
+                    try:
+                        chunk = await asyncio.wait_for(
+                            anext(chunks), timeout=remaining
+                        )
+                    except StopAsyncIteration:
+                        break
+                    except TimeoutError as error:
+                        raise HTTPException(408, "Audio upload timed out.") from error
+                    if self.scheduler.get(snapshot.job_id, token, renew=False).state is JobState.CANCELING:
+                        raise HTTPException(409, "Audio upload was cancelled.")
+                    received += len(chunk)
+                    if received > self.config.max_upload_bytes:
+                        raise HTTPException(413, "Audio upload is too large.")
+                    if received > snapshot.audio_size:
+                        raise HTTPException(400, "Upload exceeds its reserved size.")
+                    stream.write(chunk)
+            if received != snapshot.audio_size:
+                raise HTTPException(400, "Upload size differs from the reservation.")
+            return path
+        except BaseException:
+            path.unlink(missing_ok=True)
+            self.scheduler.cancel(snapshot.job_id, token)
+            self.scheduler.finish_cancel(snapshot.job_id, token)
+            raise
+
+    def stream_processing(
+        self, snapshot: JobSnapshot, token: str, audio_path: Path
+    ) -> StreamingResponse:
+        events: queue.Queue[object] = queue.Queue(maxsize=100)
+        cancel_event = threading.Event()
+        timed_out = threading.Event()
+        finished = threading.Event()
+        with self._lock:
+            if self.scheduler.get(snapshot.job_id, token, renew=False).state is JobState.CANCELING:
+                cancel_event.set()
+            self._cancel_events[snapshot.job_id] = cancel_event
+
+        def emit(event: dict) -> None:
+            while not cancel_event.is_set():
+                try:
+                    events.put(event, timeout=0.1)
+                    return
+                except queue.Full:
+                    continue
+
+        def run() -> None:
+            def timeout_job() -> None:
+                timed_out.set()
+                self.cancel(snapshot.job_id, token)
+
+            timer = threading.Timer(self.config.job_timeout_seconds, timeout_job)
+            timer.daemon = True
+            timer.start()
+            error_code = None
+            try:
+                self.scheduler.begin_processing(snapshot.job_id, token)
+                self.processor.process(
+                    snapshot, audio_path, emit, cancel_event.is_set
+                )
+            except Exception:
+                if timed_out.is_set():
+                    error_code = "job_timeout"
+                elif cancel_event.is_set():
+                    error_code = "job_cancelled"
+                else:
+                    error_code = "server_job_failed"
+            finally:
+                timer.cancel()
+                # A timeout callback must finish before a new job can use the
+                # shared processor; otherwise it could cancel that next job.
+                timer.join()
+                try:
+                    audio_path.unlink(missing_ok=True)
+                except OSError:
+                    error_code = 'server_job_failed'
+                with self._lock:
+                    self._cancel_events.pop(snapshot.job_id, None)
+                    if cancel_event.is_set():
+                        self.scheduler.cancel(snapshot.job_id, token)
+                        self.scheduler.finish_cancel(snapshot.job_id, token)
+                    elif error_code:
+                        self.scheduler.fail(snapshot.job_id, token, error_code)
+                    else:
+                        self.scheduler.complete(snapshot.job_id, token)
+                if not cancel_event.is_set():
+                    emit({"type": "result", "ok": not bool(error_code),
+                          **({"error": error_code} if error_code else {})})
+                else:
+                    try:
+                        events.put_nowait({"type": "result", "ok": False,
+                                           "error": 'job_timeout' if timed_out.is_set() else 'job_cancelled'})
+                    except queue.Full:
+                        pass
+                try:
+                    events.put(_END, timeout=1)
+                except queue.Full:
+                    pass
+                finished.set()
+
+        worker = threading.Thread(
+            target=run, name=f"noscribe-{snapshot.job_id}", daemon=True
+        )
+        worker.start()
+
+        def generate():
+            completed_stream = False
+            try:
+                while True:
+                    try:
+                        event = events.get(timeout=0.1)
+                    except queue.Empty:
+                        if finished.is_set():
+                            completed_stream = True
+                            return
+                        continue
+                    if event is _END:
+                        completed_stream = True
+                        return
+                    yield json.dumps(event, ensure_ascii=False) + "\n"
+            finally:
+                if not completed_stream and not finished.is_set():
+                    try:
+                        self.cancel(snapshot.job_id, token)
+                    except JobNotFound:
+                        pass
+
+        return StreamingResponse(
+            generate(),
+            media_type="application/x-ndjson",
+            headers={"Cache-Control": "no-store"},
+        )
+
+    def cancel(self, job_id: str, token: str) -> JobSnapshot:
+        with self._lock:
+            snapshot = self.scheduler.cancel(job_id, token)
+            event = self._cancel_events.get(job_id)
+            if event is not None:
+                event.set()
+                self.processor.cancel()
+        return snapshot
+
+
+def create_app(
+    config: ServerConfig,
+    processor: WorkflowProcessor,
+    *,
+    scheduler: JobScheduler | None = None,
+) -> FastAPI:
+    scheduler = scheduler or JobScheduler(
+        max_queued=config.max_queued_jobs,
+        reservation_ttl=config.reservation_ttl_seconds,
+        upload_ready_ttl=config.upload_ready_ttl_seconds,
+        terminal_ttl=config.terminal_job_ttl_seconds,
+    )
+    service = InferenceService(config, scheduler, processor)
+    app = FastAPI(title="noScribe inference server", version="0.1.0")
+    app.state.inference_service = service
+
+    @app.middleware("http")
+    async def no_store(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @app.exception_handler(JobNotFound)
+    async def unknown_job(_request: Request, _error: JobNotFound):
+        return JSONResponse(status_code=404, content={"error": "unknown_job"})
+
+    @app.exception_handler(InvalidJobState)
+    async def invalid_state(_request: Request, error: InvalidJobState):
+        return JSONResponse(
+            status_code=409,
+            content={"error": "invalid_job_state", "detail": str(error)},
+        )
+
+    @app.get("/health")
+    def health():
+        return {"ok": True, "active_job": scheduler.active_job_id is not None}
+
+    @app.get("/v1/models")
+    def models():
+        return {
+            "protocol_version": NOSCRIBE_HTTP_API_PROTOCOL_VERSION,
+            "server_version": app.version,
+            "features": ["queued_workflows"],
+            "data": processor.list_models(),
+        }
+
+    @app.post("/v1/audio/jobs", status_code=status.HTTP_202_ACCEPTED)
+    async def reserve_job(request: Request):
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                declared_length = int(content_length)
+            except ValueError as error:
+                raise HTTPException(400, "Invalid Content-Length header.") from error
+            if declared_length > MAX_RESERVATION_JSON_BYTES:
+                raise HTTPException(413, "Reservation request is too large.")
+
+        raw_body = bytearray()
+        async for chunk in request.stream():
+            raw_body.extend(chunk)
+            if len(raw_body) > MAX_RESERVATION_JSON_BYTES:
+                raise HTTPException(413, "Reservation request is too large.")
+        try:
+            body = JobBody.model_validate_json(raw_body)
+        except ValidationError as error:
+            raise HTTPException(422, "Invalid reservation request.") from error
+
+        if body.audio.size > config.max_upload_bytes:
+            raise HTTPException(413, "Reserved audio is too large.")
+        if not body.audio.filename.casefold().endswith(".flac"):
+            raise HTTPException(400, "Server workflows require FLAC audio.")
+        operations = [task.type for task in body.tasks]
+        if len(set(operations)) != len(operations):
+            raise HTTPException(422, "A workflow may contain each task type once.")
+        try:
+            tasks = tuple(
+                JobTask(task.type, task.model, task.options) for task in body.tasks
+            )
+            processor.validate_tasks(tasks)
+            admission = scheduler.submit(
+                tasks,
+                audio_filename=Path(body.audio.filename).name,
+                audio_size=body.audio.size,
+            )
+        except QueueFull as error:
+            raise HTTPException(429, "The inference queue is full.") from error
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        return {
+            "job_id": admission.job_id,
+            "job_token": admission.token,
+            "state": admission.state,
+            "position": admission.position,
+        }
+
+    @app.get("/v1/audio/jobs/{job_id}")
+    def job_status(
+        job_id: str,
+        x_noscribe_job_token: str = Header(alias="X-noScribe-Job-Token"),
+    ):
+        return _snapshot_response(scheduler.get(job_id, x_noscribe_job_token))
+
+    @app.delete("/v1/audio/jobs/{job_id}")
+    def cancel_job(
+        job_id: str,
+        x_noscribe_job_token: str = Header(alias="X-noScribe-Job-Token"),
+    ):
+        return _snapshot_response(service.cancel(job_id, x_noscribe_job_token))
+
+    @app.post("/v1/audio/jobs/{job_id}/audio")
+    async def upload_audio(
+        job_id: str,
+        request: Request,
+        x_noscribe_job_token: str = Header(alias="X-noScribe-Job-Token"),
+    ):
+        snapshot = scheduler.get(job_id, x_noscribe_job_token, renew=False)
+        if snapshot.audio_size > config.max_upload_bytes:
+            raise HTTPException(413, "Reserved audio is too large.")
+        path = await service.receive_audio(
+            request, snapshot, x_noscribe_job_token
+        )
+        return service.stream_processing(snapshot, x_noscribe_job_token, path)
+
+    async def direct_audio_request(
+        request: Request,
+        task: JobTask,
+    ):
+        content_length = request.headers.get("content-length")
+        if content_length is None:
+            raise HTTPException(411, "Content-Length is required.")
+        try:
+            audio_size = int(content_length)
+        except ValueError as error:
+            raise HTTPException(400, "Invalid Content-Length header.") from error
+        if audio_size <= 0:
+            raise HTTPException(400, "Audio upload is empty.")
+        if audio_size > config.max_upload_bytes:
+            raise HTTPException(413, "Audio upload is too large.")
+        try:
+            processor.validate_tasks((task,))
+            admission = scheduler.submit(
+                (task,),
+                audio_filename="audio.flac",
+                audio_size=audio_size,
+                allow_queue=False,
+            )
+        except QueueFull as error:
+            raise HTTPException(
+                429,
+                "The inference slot is busy; reserve a queued workflow instead.",
+                headers={"Retry-After": "5"},
+            ) from error
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        snapshot = scheduler.get(admission.job_id, admission.token, renew=False)
+        path = await service.receive_audio(request, snapshot, admission.token)
+        response = service.stream_processing(snapshot, admission.token, path)
+        response.headers["X-noScribe-Job-ID"] = admission.job_id
+        response.headers["X-noScribe-Job-Token"] = admission.token
+        return response
+
+    @app.post("/v1/audio/transcriptions")
+    async def direct_transcription(
+        request: Request,
+        model: str,
+        language: str | None = None,
+        multilingual: bool = False,
+        include_disfluencies: bool = True,
+        response_format: str = "noscribe_jsonl",
+    ):
+        if response_format != "noscribe_jsonl":
+            raise HTTPException(400, "Only response_format=noscribe_jsonl is supported.")
+        options = {
+            "multilingual": multilingual,
+            "include_disfluencies": include_disfluencies,
+        }
+        if language:
+            options["language"] = language
+        try:
+            task = JobTask("transcription", model, options)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        return await direct_audio_request(request, task)
+
+    @app.post("/v1/audio/diarizations")
+    async def direct_diarization(
+        request: Request,
+        model: str,
+        num_speakers: int | None = None,
+        response_format: str = "noscribe_jsonl",
+    ):
+        if response_format != "noscribe_jsonl":
+            raise HTTPException(400, "Only response_format=noscribe_jsonl is supported.")
+        options = {}
+        if num_speakers is not None:
+            options["num_speakers"] = num_speakers
+        try:
+            task = JobTask("diarization", model, options)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        return await direct_audio_request(request, task)
+
+    return app
+
+
+def _snapshot_response(snapshot: JobSnapshot) -> dict:
+    value = {
+        "job_id": snapshot.job_id,
+        "state": snapshot.state,
+        "position": snapshot.position,
+        "tasks": [
+            {
+                "type": task.operation,
+                "model": task.model,
+                "options": dict(task.options),
+            }
+            for task in snapshot.tasks
+        ],
+    }
+    if snapshot.upload_before is not None:
+        value["upload_expires_in"] = max(
+            0.0, snapshot.upload_before - time.monotonic()
+        )
+    if snapshot.error_code:
+        value["error"] = snapshot.error_code
+    return value

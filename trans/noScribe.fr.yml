@@ -64,6 +64,7 @@ fr:
   # Statut de la tâche
   waiting: 'en attente'
   audio_conversion: 'conversion audio'
+  waiting_for_server: 'attente d’une place sur le serveur'
   speaker_identification: 'identification des locuteurs'
   transcription: 'transcription'
   canceling: 'annulation en cours'
@@ -93,6 +94,7 @@ fr:
   audio_conversion_skipped_invalid_packets: "%{count} paquets audio invalides ont été ignorés."
   start_identifying_speakers: "Identification des locuteurs en cours..."
   loading_pyannote: "Chargement de pyannote"
+  streaming_audio: "Transmission de l'audio au serveur..."
   start_canceling: "Annulation en cours... (veuillez patienter un instant)"
   start_transcription: "Transcription en cours..."
   loading_whisper: "Chargement de whisper"
@@ -125,6 +127,7 @@ fr:
     Voulez-vous écraser ce fichier de sortie ?
   err_invalid_time_string: "Il s'agit d'une heure invalide : \"%{time}\""
   err_options: "Erreur dans les options"
+  err_remote_backend_connection: "Impossible de se connecter au backend distant « %{name} »."
   err_unsupported_output_format: "Erreur : Le format de sortie \"%{file_type}\" n'est pas pris en charge."
   err_no_audio_file: "Erreur : Veuillez sélectionner un fichier audio."
   err_no_transcript_file: "Erreur : Veuillez choisir un nom de fichier pour la transcription terminée."

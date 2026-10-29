@@ -31,6 +31,7 @@ noScribe_datas += [
 ('../prompts/prompt_nd.yml', 'prompts/'), 
 ('../README.md', '.')]
 noScribe_datas += collect_data_files('customtkinter')
+noScribe_datas += collect_data_files('noScribe.plugins', includes=['**/backend.json'])
 noScribe_datas += copy_metadata('AdvancedHTMLParser')
 noScribe_datas += collect_data_files('faster_whisper')
 
@@ -72,7 +73,9 @@ noScribe_a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['speechbrain'],
+    # The inference server is deployed from source and is not part of the
+    # desktop application bundle.
+    excludes=['speechbrain', 'noScribe.server', 'uvicorn'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

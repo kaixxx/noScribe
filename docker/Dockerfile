@@ -72,7 +72,7 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_ROOT_USER_ACTION=ignore
 
 # PyTorch from its own index first (TORCH_VARIANT), then requirements_linux.txt
-# (minus pyinstaller). The CUDA wheels bring cuBLAS and cuDNN as pip packages,
+# (minus PyInstaller and the standalone API server). The CUDA wheels bring cuBLAS and cuDNN as pip packages,
 # so no CUDA base image is needed.
 # Versions come from three constraint sources:
 #   - TORCH_VERSION, so pip cannot swap in a torch build from PyPI
@@ -94,7 +94,7 @@ RUN set -eu; cd /tmp/pip; \
     fi; \
     pip install --index-url "https://download.pytorch.org/whl/${TORCH_VARIANT}" -c constraints.txt \
         "torch==${TORCH_VERSION}" "torchaudio==${TORCH_VERSION}"; \
-    grep -viE '^[[:space:]]*pyinstaller' requirements.txt > requirements-docker.txt; \
+    grep -viE '^[[:space:]]*(pyinstaller|fastapi|uvicorn)([<>=!~[:space:]]|$)' requirements.txt > requirements-docker.txt; \
     pip install -r requirements-docker.txt -c constraints.txt; \
     if [ "${USE_LOCK}" = 1 ]; then \
       pip freeze --all | grep -v '^pip==' > installed.txt; \

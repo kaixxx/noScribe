@@ -1,0 +1,35 @@
+[Unit]
+Description=noScribe local inference server
+After=network.target
+
+[Service]
+Type=simple
+User=noscribe
+Group=noscribe
+WorkingDirectory=/opt/noscribe
+ExecStart=/opt/noscribe/.venv/bin/python -m noScribe.server --config /etc/noscribe/server.yml
+Restart=on-failure
+RestartSec=5
+
+# /run is normally tmpfs. RuntimeDirectory is private to the service account
+# and is removed automatically when the service stops.
+RuntimeDirectory=noscribe-server
+RuntimeDirectoryMode=0700
+
+UMask=0077
+LimitCORE=0
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/run/noscribe-server
+
+# PrivateDevices must remain disabled because CUDA needs /dev/nvidia*.
+
+[Install]
+WantedBy=multi-user.target

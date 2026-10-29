@@ -10,6 +10,10 @@ import yaml
 pytest.importorskip("tkinter")
 
 import noScribe.main as m
+from noScribe.models import ModelRef
+from noScribe.inference import (
+    DiarizationSegment, InferenceWorkflowResult, TranscriptionInfo, TranscriptionSegment,
+)
 
 
 @pytest.fixture
@@ -29,7 +33,7 @@ def app(tmp_path, monkeypatch):
     monkeypatch.setattr(instance, "update_queue_table", lambda: None)
     monkeypatch.setattr(instance, "update_queue_controls", lambda: None)
     monkeypatch.setattr(instance, "_run_diarize_subprocess", lambda *args: [
-        {"start": 0, "end": 3000, "label": "SPEAKER_00"}
+        DiarizationSegment(0, 3000, "SPEAKER_00")
     ])
     return instance
 
@@ -44,14 +48,13 @@ def _job(tmp_path, suffix="html", detection="none", name="transcript"):
 
 
 def _segment(text, start=1.0):
-    return {"start": start, "end": start + 0.5, "text": text, "words": []}
-
+    return TranscriptionSegment(start, start + 0.5, text)
 
 @pytest.mark.parametrize("suffix", ["html", "txt", "vtt"])
 @pytest.mark.parametrize("detection", ["none", "auto"])
 @pytest.mark.parametrize("texts", [[], ["", " \t\n ", "\u2003"]])
 def test_empty_result_fails_without_saving(app, tmp_path, monkeypatch, suffix, detection, texts):
-    def whisper(path, job, on_segment):
+    def whisper(path, job, on_segment, diarization=None):
         for text in texts:
             on_segment(_segment(text))
         return {}
@@ -69,9 +72,38 @@ def test_empty_result_fails_without_saving(app, tmp_path, monkeypatch, suffix, d
     assert not any("Saved to:" in line or "Transcription finished" in line for line in app.logs)
 
 
+@pytest.mark.parametrize("texts", [[], ["", " \t\n ", "\u2003"], [" Hello"]])
+def test_combined_workflow_handles_empty_and_valid_results(app, tmp_path, monkeypatch, texts):
+    monkeypatch.setattr(app.inference_backend, "supports_workflow", lambda *args: True)
+
+    def run_workflow(request, **callbacks):
+        assert request.audio_path.endswith(".flac")
+        callbacks["on_diarization_result"]([DiarizationSegment(0, 3000, "SPEAKER_00")])
+        for text in texts:
+            callbacks["on_transcription_segment"](_segment(text))
+        return InferenceWorkflowResult(transcription_info=TranscriptionInfo())
+
+    monkeypatch.setattr(app.inference_backend, "run_workflow", run_workflow)
+    job = _job(tmp_path, detection="auto")
+    job.transcription_model = ModelRef("test-server", "whisper")
+    job.diarization_model = ModelRef("test-server", "pyannote")
+    monkeypatch.setattr(m, "model_uses_remote_backend", lambda *args: True)
+    app.queue.add_job(job)
+    app.transcription_worker()
+
+    meaningful = any(text.strip() for text in texts)
+    assert job.status == (m.JobStatus.FINISHED if meaningful else m.JobStatus.ERROR)
+    assert Path(job.transcript_file).exists() is meaningful
+    if meaningful:
+        assert "Hello" in Path(job.transcript_file).read_text(encoding="utf-8")
+    else:
+        assert "No text was recognized" in job.error_message
+        assert not job.has_partial_transcript
+
+
 def test_empty_job_does_not_open_editor(app, tmp_path, monkeypatch):
     app._headless = False
-    monkeypatch.setattr(app, "_run_whisper_subprocess_stream", lambda *args: {})
+    monkeypatch.setattr(app, "_run_whisper_subprocess_stream", lambda *args, **kwargs: {})
     monkeypatch.setattr(app, "launch_editor", lambda *args: pytest.fail("Empty job opened editor"))
     app.queue.add_job(_job(tmp_path))
     app.transcription_worker()
@@ -82,7 +114,7 @@ def test_batch_continues_after_empty_job(app, tmp_path, monkeypatch):
     empty = _job(tmp_path, name="empty")
     valid = _job(tmp_path, name="valid")
 
-    def whisper(path, job, on_segment):
+    def whisper(path, job, on_segment, diarization=None):
         if job is valid:
             on_segment(_segment(" Hello"))
         return {}
@@ -96,11 +128,10 @@ def test_batch_continues_after_empty_job(app, tmp_path, monkeypatch):
     assert valid.status == m.JobStatus.FINISHED
     assert "Hello" in Path(valid.transcript_file).read_text(encoding="utf-8")
 
-
 @pytest.mark.parametrize("suffix", ["html", "txt", "vtt"])
 @pytest.mark.parametrize("canceled", [False, True])
 def test_failed_or_canceled_job_keeps_real_partial_text(app, tmp_path, monkeypatch, suffix, canceled):
-    def whisper(path, job, on_segment):
+    def whisper(path, job, on_segment, diarization=None):
         on_segment(_segment(" Hello"))
         on_segment(_segment(" \t ", start=2.0))
         if canceled:
@@ -119,12 +150,11 @@ def test_failed_or_canceled_job_keeps_real_partial_text(app, tmp_path, monkeypat
 
 def test_empty_cli_result_returns_failure(app, tmp_path, monkeypatch, capsys):
     job = _job(tmp_path)
-    app.whisper_models = {"test": object()}
-    monkeypatch.setattr(app, "_run_whisper_subprocess_stream", lambda *args: {})
+    monkeypatch.setattr(app, "_run_whisper_subprocess_stream", lambda *args, **kwargs: {})
     monkeypatch.setattr(m, "HeadlessApp", lambda: app)
     monkeypatch.setattr(m, "create_job_from_cli_args", lambda args: job)
 
-    assert m.run_cli_mode(SimpleNamespace(model="test")) == 1
+    assert m.run_cli_mode(SimpleNamespace(model="")) == 1
     output = capsys.readouterr().out
     assert "No text was recognized" in output
     assert "Output saved to:" not in output
@@ -138,7 +168,7 @@ def test_segment_logs_metadata_without_text(app, tmp_path, monkeypatch, capsys, 
     monkeypatch.setattr(app, "logn", m.App.logn.__get__(app))
     text = " Confidential interview content."
 
-    def whisper(path, job, on_segment):
+    def whisper(path, job, on_segment, diarization=None):
         on_segment(_segment(text))
         on_segment(_segment(" \t ", start=2.0))
         return {}
@@ -157,3 +187,63 @@ def test_segment_logs_metadata_without_text(app, tmp_path, monkeypatch, capsys, 
     assert segments == [
         f"Segment received: start=00:00:01.000 end=00:00:01.500 chars={len(text)}"
     ]
+
+
+def test_local_cpu_retry_restarts_document_and_next_job_uses_gpu(app, tmp_path, monkeypatch):
+    from noScribe.worker_errors import WorkerError, error_result
+    monkeypatch.setattr(m, 'force_whisper_cpu', False)
+    settings = app.inference_backend.get('local-whisper').settings
+    settings.device = 'auto'
+    attempts = []
+
+    def whisper(path, job, on_segment, diarization=None):
+        attempts.append(job.whisper_cpu_fallback)
+        if not job.whisper_cpu_fallback:
+            on_segment(_segment(' GPU partial'))
+            raise WorkerError(error_result(RuntimeError('CUDA out of memory'), 'cuda', 'transcription'))
+        on_segment(_segment(' CPU replacement'))
+        return {}
+
+    monkeypatch.setattr(app, '_run_whisper_subprocess_stream', whisper)
+    jobs = [_job(tmp_path, name='one'), _job(tmp_path, name='two')]
+    for job in jobs:
+        app.queue.add_job(job)
+    app.transcription_worker()
+    assert attempts == [False, True, False, True]
+    assert settings.device == 'auto'
+    assert m.force_whisper_cpu is False
+    for job in jobs:
+        assert job.status == m.JobStatus.FINISHED
+        transcript = Path(job.transcript_file).read_text(encoding='utf-8')
+        assert 'CPU replacement' in transcript
+        assert 'GPU partial' not in transcript
+
+
+@pytest.mark.parametrize('combined', [False, True])
+def test_remote_cpu_retry_replaces_partial_document(app, tmp_path, monkeypatch, combined):
+    monkeypatch.setattr(m, 'model_uses_remote_backend', lambda *args: True)
+    monkeypatch.setattr(app.inference_backend, 'supports_workflow', lambda *args: combined)
+
+    def workflow(request, **callbacks):
+        callbacks['on_transcription_segment'](_segment(' GPU partial'))
+        callbacks['on_event']({'type': 'task_started', 'operation': 'transcription', 'retry': True})
+        callbacks['on_transcription_segment'](_segment(' CPU replacement'))
+        return InferenceWorkflowResult(transcription_info=TranscriptionInfo(duration=3))
+
+    def transcribe(request, **callbacks):
+        callbacks['on_segment'](_segment(' GPU partial'))
+        callbacks['on_reset']()
+        callbacks['on_segment'](_segment(' CPU replacement'))
+        return TranscriptionInfo(duration=3)
+
+    monkeypatch.setattr(app.inference_backend, 'run_workflow', workflow)
+    monkeypatch.setattr(app.inference_backend, 'transcribe', transcribe)
+    job = _job(tmp_path, detection='auto' if combined else 'none')
+    job.transcription_model = ModelRef('test-server', 'whisper')
+    job.diarization_model = ModelRef('test-server', 'pyannote')
+    app.queue.add_job(job)
+    app.transcription_worker()
+    assert job.status == m.JobStatus.FINISHED, job.error_message
+    transcript = Path(job.transcript_file).read_text(encoding='utf-8')
+    assert 'CPU replacement' in transcript
+    assert 'GPU partial' not in transcript

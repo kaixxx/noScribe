@@ -64,6 +64,7 @@ zh-CN: &defaults
   # 任务状态
   waiting: '等待中'
   audio_conversion: '音频转换'
+  waiting_for_server: '正在等待服务器空位'
   speaker_identification: '说话人识别'
   transcription: '转录'
   canceling: '正在取消'
@@ -93,6 +94,7 @@ zh-CN: &defaults
   audio_conversion_skipped_invalid_packets: '已跳过 %{count} 个无效音频包。'
   start_identifying_speakers: '正在识别说话人...'
   loading_pyannote: '加载pyannote中'
+  streaming_audio: '正在将音频传输到服务器...'
   start_canceling: '正在取消...（请稍候）'
   start_transcription: '正在转录...'
   loading_whisper: '正在加载whisper'
@@ -126,6 +128,7 @@ zh-CN: &defaults
   err_setup: '设置过程中发生错误。请检查您的网络连接并重新启动程序。'
   err_invalid_time_string: '无效的时间格式：“%{time}”'
   err_options: '选项错误'
+  err_remote_backend_connection: '无法连接到远程后端“%{name}”。'
   err_unsupported_output_format: '错误：不支持输出格式 "%{file_type}"。'
   err_no_audio_file: '错误：请选择音频文件。'
   err_no_transcript_file: '错误：请选择完成的转录文件名。'

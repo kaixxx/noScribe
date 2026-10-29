@@ -10,6 +10,7 @@ binaries = []
 # PyInstaller's static analysis cannot follow -- declare it explicitly.
 hiddenimports = ['PIL._tkinter_finder', 'noScribe.main']
 datas += collect_data_files('faster_whisper')
+datas += collect_data_files('noScribe.plugins', includes=['**/backend.json'])
 datas += collect_data_files('lightning_fabric')
 tmp_ret = collect_all('pyannote')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
@@ -35,7 +36,9 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['speechbrain'],
+    # The inference server is deployed from source and is not part of the
+    # desktop application bundle.
+    excludes=['speechbrain', 'noScribe.server', 'uvicorn'],
     noarchive=False,
     optimize=0,
 )

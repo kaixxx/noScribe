@@ -1,0 +1,39 @@
+# Included inside an HTTPS-enabled nginx server block. The authentication
+# service is deployment-specific and must return 2xx only for authorized calls.
+
+location = /_noscribe_auth {
+    internal;
+    proxy_pass http://127.0.0.1:9000/verify;
+    proxy_pass_request_body off;
+    proxy_set_header Content-Length "";
+    proxy_set_header Authorization $http_authorization;
+}
+
+location /v1/audio/ {
+    auth_request /_noscribe_auth;
+
+    client_max_body_size 1g;
+    client_body_timeout 1h;
+    proxy_read_timeout 24h;
+    proxy_send_timeout 1h;
+
+    # Do not spool recordings or streamed inference results to persistent disk.
+    proxy_request_buffering off;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_http_version 1.1;
+
+    proxy_pass http://127.0.0.1:8766;
+}
+
+location = /v1/models {
+    auth_request /_noscribe_auth;
+    proxy_pass http://127.0.0.1:8766;
+}
+
+location = /health {
+    proxy_pass http://127.0.0.1:8766;
+}
+
+# Configure client_body_temp_path to a size-limited directory below /run in
+# the surrounding nginx http block as defense in depth.

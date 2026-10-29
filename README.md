@@ -1,4 +1,4 @@
-﻿# noScribe
+# noScribe
 ### Cutting Edge AI Technology for Automated Audio Transcription
 </br>
 
@@ -32,7 +32,13 @@
 
 See the corresponding sections on my website: https://noscribe.de 
 
-To run noScribe without its window in a Docker container (CPU only, for servers and batch jobs), see [docker/README.md](docker/README.md).
+To run noScribe without its window in a Docker container (CPU or CUDA, for servers and batch jobs), see [docker/README.md](docker/README.md).
+
+## Experimental Local Inference Server
+
+The development branch can run Whisper and Pyannote as a queued, local-only
+inference service for small teams. Deployment, security, reverse-proxy, and
+zero-retention details are documented in [noScribe/server/README.md](noScribe/server/README.md).
 
 ## About Me
 **Kai Dröge**, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).

@@ -63,6 +63,7 @@ def test_fallback_and_ui_save_preserve_manual_overrides(monkeypatch, component, 
         'option_menu_pause', 'check_box_overlapping', 'check_box_timestamps',
         'check_box_disfluencies',
     )})
+    app.transcription_model_options = {}
     m.App.save_ui_state(app)
     assert len(saved_configs) == 1
     assert {k: v for k, v in saved_configs[0].items() if k.startswith('force_')} == original
@@ -133,3 +134,22 @@ def test_crash_retries_only_after_cuda_was_selected(monkeypatch, component, devi
         assert m.App._handle_cuda_fallback(app, component, crash, m.TranscriptionJob()) is False
     else:
         assert logs == []
+
+
+@pytest.mark.parametrize('device', ['auto', 'cpu', 'cuda'])
+@pytest.mark.parametrize('component', ['whisper', 'pyannote'])
+def test_plugin_device_policy_controls_desktop_retry(monkeypatch, component, device):
+    settings = SimpleNamespace(device=device)
+    registry = SimpleNamespace(get=lambda _: SimpleNamespace(settings=settings))
+    app = SimpleNamespace(cancel=False, inference_backend=registry, logn=lambda *args: None)
+    job = m.TranscriptionJob()
+    assert m.App._handle_cuda_fallback(app, component, gpu_error(), job) is (device == 'auto')
+    assert settings.device == device
+
+
+def test_remote_error_does_not_trigger_desktop_cpu_retry():
+    registry = SimpleNamespace(get=lambda _: pytest.fail('Remote failure accessed local settings'))
+    app = SimpleNamespace(cancel=False, inference_backend=registry)
+    job = m.TranscriptionJob()
+    job.transcription_model = m.ModelRef('remote', 'whisper')
+    assert m.App._handle_cuda_fallback(app, 'whisper', gpu_error(), job) is False

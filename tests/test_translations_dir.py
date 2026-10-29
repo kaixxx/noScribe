@@ -58,9 +58,15 @@ def test_missing_key_falls_back_to_the_key(clean_i18n, locale):
     assert t(MISSING_KEY) == MISSING_KEY
 
 
-@pytest.mark.parametrize("module", ["main.py", "whisper_mp_worker.py"])
-def test_trans_folder_is_not_a_temporary_copy(module):
+def test_trans_folder_is_not_a_temporary_copy():
     source = _without_comments(
-        (REPO / "noScribe" / module).read_text(encoding="utf-8"))
+        (REPO / "noScribe" / "main.py").read_text(encoding="utf-8"))
     assert 'as_file(impres.files("trans"))' not in source
     assert "translations_dir()" in source
+
+
+def test_whisper_worker_leaves_translation_to_the_consumer():
+    source = _without_comments(
+        (REPO / 'noScribe' / 'whisper_mp_worker.py').read_text(encoding='utf-8'))
+    assert 'i18n' not in source
+    assert 'impres.files("trans")' not in source

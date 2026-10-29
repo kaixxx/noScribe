@@ -115,8 +115,8 @@ def test_whisper_reports_selected_device_and_inference_failures(monkeypatch, tmp
     audio.touch()
     messages = Queue()
     whisper_proc_entrypoint({
-        'device': 'auto', 'whisper_model': SimpleNamespace(path=tmp_path),
-        'audio_path': str(audio), 'language_name': 'German', 'language_code': 'de',
+        'device': 'auto', 'model_path': str(tmp_path),
+        'audio_path': str(audio), 'language': 'de',
     }, messages)
     result = list(messages.queue)[-1]
     assert result['ok'] is False
@@ -130,7 +130,7 @@ def test_whisper_reports_selected_device_and_inference_failures(monkeypatch, tmp
 @pytest.mark.parametrize('component', ['whisper', 'pyannote'])
 @pytest.mark.parametrize('crashed', [False, True])
 def test_parent_preserves_failure_details_and_last_state(monkeypatch, component, crashed):
-    import noScribe.main as m
+    import noScribe.inference as inference
     failure = error_result(RuntimeError('CUDA out of memory'), 'cuda', 'model_loading')
     messages = [{'type': 'state', 'device': 'cuda', 'stage': 'model_loading'}]
     if not crashed:
@@ -151,13 +151,15 @@ def test_parent_preserves_failure_details_and_last_state(monkeypatch, component,
     process = SimpleNamespace(start=lambda: None, is_alive=lambda: False,
                               exitcode=-11, join=lambda **kw: None, close=lambda: None)
     context = SimpleNamespace(Queue=FakeQueue, Process=lambda **kw: process)
-    monkeypatch.setattr(m.mp, 'get_context', lambda *args: context)
-    app = SimpleNamespace(cancel=False, logn=lambda *args, **kw: None)
-    job = m.TranscriptionJob()
-    method = m.App._run_whisper_subprocess_stream if component == 'whisper' else m.App._run_diarize_subprocess
-    args = (app, 'test.wav', job, lambda segment: None) if component == 'whisper' else (app, 'test.wav', job)
+    monkeypatch.setattr(inference.mp, 'get_context', lambda *args: context)
+    backend = inference.LocalInferenceBackend(whisper_models={'precise': 'model'})
     with pytest.raises(WorkerError) as caught:
-        method(*args)
+        if component == 'whisper':
+            backend.transcribe(inference.TranscriptionRequest(
+                'test.wav', inference.ModelRef('local-whisper', 'precise')),
+                on_segment=lambda segment: None)
+        else:
+            backend.diarize(inference.DiarizationRequest('test.wav'))
     error = caught.value
     assert error.device == 'cuda'
     assert error.stage == 'model_loading'
@@ -169,5 +171,5 @@ def test_parent_preserves_failure_details_and_last_state(monkeypatch, component,
     else:
         assert error.trace == failure['trace']
         assert error.classification == 'gpu_out_of_memory'
-    assert app._mp_proc is None
-    assert app._mp_queue is None
+    assert backend._process is None
+    assert backend._queue is None
