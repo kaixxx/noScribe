@@ -333,7 +333,6 @@ class LocalInferenceBackend:
     ) -> TranscriptionInfo:
         from .whisper_mp_worker import whisper_proc_entrypoint
 
-        self._cancel_event.clear()
         if request.model.backend_id != LOCAL_WHISPER_BACKEND:
             raise ValueError(
                 f"Backend {request.model.backend_id!r} cannot be handled locally."
@@ -360,17 +359,35 @@ class LocalInferenceBackend:
             "diarization": request.diarization.to_mapping() if request.diarization is not None else None,
             "extensions": request.extensions,
         }
+        return self.run_transcription_worker(
+            whisper_proc_entrypoint, worker_args, on_segment,
+            on_log, on_status, on_progress, is_cancelled)
 
+    def run_transcription_worker(
+        self,
+        entrypoint,
+        worker_args: dict,
+        on_segment: Callable[[TranscriptionSegment], None],
+        on_log: LogCallback = _ignore_log,
+        on_status: StatusCallback = _ignore_status,
+        on_progress: TranscriptionProgressCallback = _ignore_transcription_progress,
+        is_cancelled: CancelCallback = _never_cancel,
+    ) -> TranscriptionInfo:
+        """Run one transcription worker that speaks the local worker protocol.
+
+        Shared by every bundled transcription plugin, so they all get the same
+        cancellation, crash detection and cleanup."""
+        self._cancel_event.clear()
         context = mp.get_context("spawn")
         result_queue = context.Queue()
         process = context.Process(
-            target=whisper_proc_entrypoint,
+            target=entrypoint,
             args=(worker_args, result_queue),
         )
         process.start()
         self._set_active(process, result_queue)
         info = {}
-        worker_state = {'device': 'cpu' if worker_args['device'] == 'cpu' else None,
+        worker_state = {'device': 'cpu' if worker_args.get('device') == 'cpu' else None,
                         'stage': 'starting'}
 
         try:

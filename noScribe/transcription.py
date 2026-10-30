@@ -58,13 +58,29 @@ class WhisperModelManager:
                 )
                 continue
 
-            # Check here whether a `model.bin` file is present in
-            # the directory. This is necessary for a whisper model.
+            # faster-whisper models have a `model.bin`. A directory without one
+            # is either a different model format -- e.g. an MLX/Voxtral build,
+            # which uses safetensors and (for the shipped builds) is offered
+            # by its own plugin, local-voxtral -- or an incomplete/broken
+            # faster-whisper download. A safetensors dir is not a faster-whisper
+            # model, so we don't warn (that was noise for the expected Voxtral
+            # case); but we still log it at debug so a user-supplied safetensors
+            # model that never shows up in the picker is diagnosable. A dir with
+            # neither `model.bin` nor safetensors is a broken download -- warn.
             if not (entry / "model.bin").exists():
-                logger.warning(
-                    "Missing `model.bin` in model dir: %s. Ignoring.",
-                    entry.absolute(),
-                )
+                if any(entry.glob("*.safetensors")):
+                    logger.debug(
+                        "Skipping non-faster-whisper (safetensors) model directory: "
+                        "%s. If this is an MLX/Voxtral build it is handled by its "
+                        "own engine; the faster-whisper scanner ignores it.",
+                        entry.absolute(),
+                    )
+                else:
+                    logger.warning(
+                        "Model directory has no `model.bin` (incomplete download?): "
+                        "%s. Ignoring.",
+                        entry.absolute(),
+                    )
                 continue
 
             self.models[entry.name] = WhisperModel(
