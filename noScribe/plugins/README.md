@@ -306,6 +306,12 @@ The bundled plugins document their extensions here:
   and `embeddings`, one vector (or `None` where the span could not be
   embedded) per span, in the same order, from the same embedding model as the
   centroids. The desktop's voice check uses both.
+- `local-nemotron`, result: `probabilities`, the model's per-frame speaker
+  probabilities as `{"float16_base64", "shape": [rows, columns], "columns":
+  [label, ...], "frame_s"}`: rows of float16, one per `frame_s` seconds of the
+  supplied audio, one column per speaker channel, `columns` naming each
+  channel with the label the segments use. About 7.7 MB per hour of audio.
+  The desktop's voice check reads them instead of embedding voices.
 
 Queued HTTP tasks carry request extensions and optional externally computed
 diarization under `options`. A preceding server diarization takes precedence

@@ -210,6 +210,24 @@ def _valid_spans(spans):
         for span in spans)
 
 
+def select_device(requested):
+    """The device a plugin's settings name ('cpu', 'cuda', 'mps'), else, for ''
+    or 'auto', the platform's accelerator where it works: MPS on macOS 12.3 and
+    later, CUDA on Windows and Linux. Shared with nemotron_mp_worker; torch is
+    imported here, in the child, not at module load."""
+    import torch
+    if requested not in (None, '', 'auto'):
+        return requested
+    if platform.system() == "Darwin":  # MAC
+        return 'mps' if platform.mac_ver()[0] >= '12.3' and torch.backends.mps.is_available() else 'cpu'
+    if platform.system() in ('Windows', 'Linux'):
+        try:
+            return 'cuda' if torch.cuda.is_available() and torch.cuda.device_count() > 0 else 'cpu'
+        except Exception:
+            return 'cpu'
+    raise Exception('Platform not supported yet.')
+
+
 def pyannote_proc_entrypoint(args: dict, q):
     """Runs diarization in a child process and streams progress/logs.
     Messages:
@@ -296,18 +314,7 @@ def pyannote_proc_entrypoint(args: dict, q):
         plog("debug", "Subprocess (diarize) started. Initializing PyAnnote pipeline...")
         
         state.update('device_selection')
-        # determine xpu
-        device = args.get("device", "")
-        if device in ('', 'auto'):
-            if platform.system() == "Darwin":  # MAC
-                device = 'mps' if platform.mac_ver()[0] >= '12.3' and torch.backends.mps.is_available() else 'cpu'
-            elif platform.system() in ('Windows', 'Linux'):
-                try:
-                    device = 'cuda' if torch.cuda.is_available() and torch.cuda.device_count() > 0 else 'cpu'
-                except:
-                    device = 'cpu'
-            else:
-                raise Exception('Platform not supported yet.')
+        device = select_device(args.get("device", ""))
 
         # Every unit is embedded at its own length, and MPS compiles and keeps one
         # graph per distinct input length, so its memory grows with the recording.

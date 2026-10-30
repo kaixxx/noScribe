@@ -188,6 +188,61 @@ class Voice:
         return MARGIN_AGREE * scale, MARGIN_OVERRULE * scale
 
 
+class Probabilities:
+    """Evidence from a diarization that reports its own speaker probabilities,
+    frame by frame (noScribe.nemotron_mp_worker): a unit's score per speaker is
+    the model's mean probability for that speaker over the unit.
+
+    Measured on the pool the margins above were chosen on, minus what is known to
+    be in Nemotron's training data (AMI train/dev, VoxConverse): 16 AMI test
+    meetings and 77 CallHome calls in five languages (CallHome Part 1 is in it,
+    whether these calls are is not known). Words under the wrong speaker
+    afterwards:
+
+                                          faster-whisper   second engine
+        pyannote, check with Voice            3.03 %          3.06 %
+        Nemotron, no check                    2.62 %          4.47 %
+        Nemotron, check with Voice            1.82 %          2.29 %
+        Nemotron, check with Probabilities    1.57 %          2.02 %
+
+    (Voice there: pyannote's embedding model, centroids over Nemotron's long
+    clean turns.) Both margins are 0 and not scaled -- the unit simply goes to
+    the speaker the model hears most in it: 0.05, 0.1, 0.2, 0.3 and 0.4 left more
+    words wrong on the tuning half, each more than the last, and the other half
+    agreed. On the AMI meetings alone the gain over pyannote with Voice is
+    smaller (faster-whisper 2.16 -> 1.79 %, the second engine 2.57 -> 2.51 %).
+    A unit the model hears almost no one in moves on small differences too;
+    leaving it alone below a mean probability of 0.02, 0.05, 0.1 or 0.2 left
+    more words wrong each time (0.02: 1 more with faster-whisper, 32 with the
+    second engine), so it is not done.
+
+    probabilities   rows of per-speaker probabilities, one row per frame_s, as
+                    a numpy array
+    columns         {label: its column}, labels spelled as in the transcript;
+                    only the speakers the diarization named, so that a column
+                    that never spoke takes no part
+    """
+
+    def __init__(self, probabilities, columns, frame_s):
+        self.probabilities, self.columns, self.frame_s = probabilities, columns, frame_s
+        self.labels = set(columns)
+
+    def scores(self, spans):
+        out = []
+        for start_s, end_s in spans:
+            first = int(start_s / self.frame_s)
+            rows = self.probabilities[first:max(first + 1, int(end_s / self.frame_s))]
+            if len(rows) == 0:
+                out.append(None)
+                continue
+            mean = rows.mean(axis=0, dtype='float32')  # the rows may be float16
+            out.append({label: float(mean[column]) for label, column in self.columns.items()})
+        return out
+
+    def margins(self, units):
+        return 0.0, 0.0
+
+
 def decide(current, turns_ms, scores, agree=None, overrule=None):
     """The speaker label a unit should carry.
 

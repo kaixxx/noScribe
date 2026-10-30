@@ -424,17 +424,31 @@ class LocalInferenceBackend:
             "device": device_override or self.diarization_settings.device,
             "extensions": request.extensions,
         }
+        return self.run_diarization_worker(
+            pyannote_proc_entrypoint, worker_args, on_log, on_progress, is_cancelled)
+
+    def run_diarization_worker(
+        self,
+        entrypoint,
+        worker_args: dict,
+        on_log: LogCallback = _ignore_log,
+        on_progress: DiarizationProgressCallback = _ignore_diarization_progress,
+        is_cancelled: CancelCallback = _never_cancel,
+    ) -> DiarizationResult:
+        """Run one diarization worker that speaks the local worker protocol.
+
+        Shared by every bundled diarization plugin."""
         self._cancel_event.clear()
         context = mp.get_context("spawn")
         result_queue = context.Queue()
         process = context.Process(
-            target=pyannote_proc_entrypoint,
+            target=entrypoint,
             args=(worker_args, result_queue),
         )
         process.start()
         self._set_active(process, result_queue)
         result = DiarizationResult()
-        worker_state = {'device': 'cpu' if worker_args['device'] == 'cpu' else None,
+        worker_state = {'device': 'cpu' if worker_args.get('device') == 'cpu' else None,
                         'stage': 'starting'}
 
         try:
