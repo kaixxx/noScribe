@@ -113,6 +113,8 @@ de:
   audio_conversion_skipped_invalid_packets: '%{count} fehlerhafte Audiopakete wurden übersprungen.'
   start_identifying_speakers: 'Sprecher:innen identifizieren...'
   loading_pyannote: 'Pyannote laden'
+  loading_nemotron: 'Nemotron laden'
+  nemotron_all_speakers: "Alle 8 Sprecherkanäle von Nemotron sind belegt: Sprechen mehr Personen, wurden einige anderen zugeordnet."
   streaming_audio: 'Audio wird zum Server gestreamt...'
   start_canceling: 'Abbrechen läuft...'
   start_transcription: 'Transkription...'
@@ -120,6 +122,9 @@ de:
   pyannote_cuda_retry: |-
     PyAnnote CUDA-Fehler erkannt. Erneuter Versuch auf der CPU. Dieser erneute Versuch gilt nur für den aktuellen Auftrag.
     Um dauerhaft die CPU zu verwenden und diesen CUDA-Fehler zu vermeiden, setzen Sie force_pyannote_cpu: true in config.yml.
+  nemotron_cuda_retry: |-
+    Nemotron CUDA-Fehler erkannt. Erneuter Versuch auf der CPU. Dieser erneute Versuch gilt nur für den aktuellen Auftrag.
+    Um dauerhaft die CPU zu verwenden und diesen CUDA-Fehler zu vermeiden, setzen Sie force_nemotron_cpu: true in config.yml.
   whisper_cuda_retry: |-
     Whisper CUDA-Fehler erkannt. Erneuter Versuch auf der CPU. Dieser erneute Versuch gilt nur für den aktuellen Auftrag.
     Um dauerhaft die CPU zu verwenden und diesen CUDA-Fehler zu vermeiden, setzen Sie force_whisper_cpu: true in config.yml.
@@ -131,6 +136,10 @@ de:
   server_queue_wait: 'Warten auf Serverplatz (Position %{position})'
   language_en_only: 'Achtung: Das für die Transkription gewählte KI-Modell unterstützt ausschließlich Englisch.'
   transcription_finished: 'Transkription beendet.'
+  voice_check_start: 'Sprecher:innen anhand der Stimme prüfen...'
+  voice_check_done: '%{count} Passage(n) neu zugeordnet.'
+  voice_check_skipped: 'Die Stimmprüfung konnte nicht abgeschlossen werden; die Sprecher:innen bleiben wie von der Diarisierung zugeordnet.'
+  voice_check_canceled: 'Stimmprüfung abgebrochen. Das Transkript ist vollständig, die Sprecher:innen bleiben wie von der Diarisierung zugeordnet.'
   transcription_saved: 'Gespeichert unter: %{file}'
   trancription_time: 'Dauer: %{duration} Minuten'
   queue_complete: '=== Warteschlangenverarbeitung abgeschlossen ==='

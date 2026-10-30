@@ -94,6 +94,8 @@ es:
   audio_conversion_skipped_invalid_packets: 'Se omitieron %{count} paquetes de audio no válidos.'
   start_identifying_speakers: 'Identificación de oradores...'
   loading_pyannote: 'Cargando pyannote'
+  loading_nemotron: 'Cargando Nemotron'
+  nemotron_all_speakers: "Los 8 canales de hablante de Nemotron están en uso: si hablan más personas, algunas se han fusionado con otras."
   streaming_audio: 'Transmitiendo audio al servidor...'
   start_canceling: 'Cancelando... (por favor, espera un momento)'
   start_transcription: 'Transcribiendo...'
@@ -101,6 +103,9 @@ es:
   pyannote_cuda_retry: |-
     Se detectó un error CUDA en PyAnnote. Reintentando en la CPU. Este reintento se aplica solo al trabajo actual.
     Para usar siempre la CPU y evitar este error CUDA, establezca force_pyannote_cpu: true en config.yml.
+  nemotron_cuda_retry: |-
+    Se detectó un error CUDA en Nemotron. Reintentando en la CPU. Este reintento se aplica solo al trabajo actual.
+    Para usar siempre la CPU y evitar este error CUDA, establezca force_nemotron_cpu: true en config.yml.
   whisper_cuda_retry: |-
     Se detectó un error CUDA en Whisper. Reintentando en la CPU. Este reintento se aplica solo al trabajo actual.
     Para usar siempre la CPU y evitar este error CUDA, establezca force_whisper_cpu: true en config.yml.
@@ -111,6 +116,10 @@ es:
   language_detect: 'Idioma detectado "%{lang}" con probabilidad %{prob}'
   language_en_only: 'Ten en cuenta que el modelo de IA seleccionado para la transcripción funciona únicamente en inglés.'
   transcription_finished: 'Transcripción finalizada.'
+  voice_check_start: 'Comprobando los oradores por su voz...'
+  voice_check_done: '%{count} pasaje(s) reasignado(s).'
+  voice_check_skipped: 'No se pudo completar la comprobación por voz; los oradores quedan como los asignó la diarización.'
+  voice_check_canceled: 'Comprobación por voz detenida. La transcripción está completa, con los oradores como los asignó la diarización.'
   transcription_saved: 'Guardado en %{file}'
   trancription_time: 'Duración: %{duration} minutos'
   queue_complete: '=== Procesamiento de la cola completado ==='

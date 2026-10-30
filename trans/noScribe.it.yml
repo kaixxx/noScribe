@@ -94,6 +94,8 @@ it:
   audio_conversion_skipped_invalid_packets: 'Sono stati ignorati %{count} pacchetti audio non validi.'
   start_identifying_speakers: 'Identificazione degli speaker in corso...'
   loading_pyannote: 'Caricamento di pyannote'
+  loading_nemotron: 'Caricamento di Nemotron'
+  nemotron_all_speakers: "Tutti gli 8 canali di parlante di Nemotron sono in uso: se parlano più persone, alcune sono state unite ad altre."
   streaming_audio: 'Trasmissione audio al server...'
   start_canceling: 'Annullamento in corso... (attendere un secondo)'
   start_transcription: 'Trascrizione in corso...'
@@ -101,6 +103,9 @@ it:
   pyannote_cuda_retry: |-
     Rilevato errore CUDA di PyAnnote. Riprovo sulla CPU. Questo tentativo riguarda solo il lavoro corrente.
     Per usare sempre la CPU ed evitare questo errore CUDA, impostare force_pyannote_cpu: true in config.yml.
+  nemotron_cuda_retry: |-
+    Rilevato errore CUDA di Nemotron. Riprovo sulla CPU. Questo tentativo riguarda solo il lavoro corrente.
+    Per usare sempre la CPU ed evitare questo errore CUDA, impostare force_nemotron_cpu: true in config.yml.
   whisper_cuda_retry: |-
     Rilevato errore CUDA di Whisper. Riprovo sulla CPU. Questo tentativo riguarda solo il lavoro corrente.
     Per usare sempre la CPU ed evitare questo errore CUDA, impostare force_whisper_cpu: true in config.yml.
@@ -111,6 +116,10 @@ it:
   language_detect: 'Lingua rilevata "%{lang}" con probabilità %{prob}'
   language_en_only: 'Tieni presente che il modello di IA scelto per la trascrizione è solo in inglese.'
   transcription_finished: 'Trascrizione completata.'
+  voice_check_start: 'Verifica dei parlanti in base alla voce...'
+  voice_check_done: '%{count} passaggio/i riassegnato/i.'
+  voice_check_skipped: 'Impossibile completare la verifica vocale; i parlanti restano come assegnati dalla diarizzazione.'
+  voice_check_canceled: 'Verifica vocale interrotta. La trascrizione è completa, con i parlanti come assegnati dalla diarizzazione.'
   transcription_saved: 'Salvato in %{file}'
   trancription_time: 'Durata: %{duration} minuti'
   queue_complete: '=== Elaborazione della coda completata ==='

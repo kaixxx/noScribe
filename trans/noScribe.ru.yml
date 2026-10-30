@@ -95,6 +95,8 @@ ru:
   audio_conversion_skipped_invalid_packets: 'Пропущено недопустимых аудиопакетов: %{count}.'
   start_identifying_speakers: 'Определение дикторов...'
   loading_pyannote: 'Загрузка pyannote'
+  loading_nemotron: 'Загрузка Nemotron'
+  nemotron_all_speakers: "Все 8 каналов дикторов Nemotron заняты: если говорящих больше, некоторые из них объединены с другими."
   streaming_audio: 'Передача аудио на сервер...'
   start_canceling: 'Отмена... (пожалуйста, подождите)'
   start_transcription: 'Транскрибация...'
@@ -102,6 +104,9 @@ ru:
   pyannote_cuda_retry: |-
     Обнаружена ошибка CUDA в PyAnnote. Повторяю на CPU. Повторная попытка относится только к текущему заданию.
     Чтобы всегда использовать CPU и избежать этой ошибки CUDA, установите force_pyannote_cpu: true в config.yml.
+  nemotron_cuda_retry: |-
+    Обнаружена ошибка CUDA в Nemotron. Повторяю на CPU. Повторная попытка относится только к текущему заданию.
+    Чтобы всегда использовать CPU и избежать этой ошибки CUDA, установите force_nemotron_cpu: true в config.yml.
   whisper_cuda_retry: |-
     Обнаружена ошибка CUDA в Whisper. Повторяю на CPU. Повторная попытка относится только к текущему заданию.
     Чтобы всегда использовать CPU и избежать этой ошибки CUDA, установите force_whisper_cpu: true в config.yml.
@@ -112,6 +117,10 @@ ru:
   language_detect: 'Обнаружен язык «%{lang}» с вероятностью %{prob}'
   language_en_only: 'Обратите внимание: выбранная для транскрибации модель ИИ поддерживает только английский язык.'
   transcription_finished: 'Транскрибация завершена.'
+  voice_check_start: 'Проверка говорящих по голосу...'
+  voice_check_done: 'Переназначено фрагментов: %{count}.'
+  voice_check_skipped: 'Проверку по голосу завершить не удалось; говорящие остаются такими, как их определила диаризация.'
+  voice_check_canceled: 'Проверка по голосу прервана. Расшифровка завершена, говорящие остаются такими, как их определила диаризация.'
   transcription_saved: 'Сохранено в %{file}'
   trancription_time: 'Продолжительность: %{duration} минут'
   queue_complete: '=== Обработка очереди завершена ==='

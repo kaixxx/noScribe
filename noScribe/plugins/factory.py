@@ -7,6 +7,8 @@ from typing import Mapping
 from pathlib import Path
 
 from ..inference import LocalInferenceBackend, LocalWorkerSettings
+from .local_nemotron import LocalNemotronPlugin
+from .local_nemotron.settings import NemotronWorkerSettings
 from .local_pyannote import LocalPyannotePlugin
 from .local_whisper import LocalWhisperPlugin
 from .local_whisper.settings import WhisperWorkerSettings
@@ -27,8 +29,13 @@ def create_builtin_registry(
     whisper_models: Mapping[str, str],
     settings: LocalWorkerSettings | None = None,
     settings_dir: Path | None = None,
+    *,
+    nemotron_defaults: NemotronWorkerSettings | None = None,
 ) -> BackendRegistry:
-    """Create the registry without treating built-ins as special at runtime."""
+    """Create the registry without treating built-ins as special at runtime.
+
+    nemotron_defaults stand in for absent fields of Nemotron's settings file, as
+    the desktop's older config.yml entries do for Whisper and Pyannote above."""
     store = PluginSettingsStore(settings_dir) if settings_dir is not None else None
     whisper_settings = WhisperWorkerSettings.from_mapping(
         store.load("local-whisper") if store else {},
@@ -54,9 +61,12 @@ def create_builtin_registry(
         whisper_models=whisper_models, settings=settings,
         whisper_settings=whisper_settings, diarization_settings=diarization_settings,
     )
+    nemotron_settings = NemotronWorkerSettings.from_mapping(
+        store.load("local-nemotron") if store else {}, defaults=nemotron_defaults)
     return BackendRegistry([
         LocalWhisperPlugin(host, whisper_models, settings_store=store),
         LocalPyannotePlugin(host, settings_store=store),
+        LocalNemotronPlugin(host, settings=nemotron_settings, settings_store=store),
     ])
 
 

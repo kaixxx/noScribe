@@ -8,7 +8,7 @@ from typing import Callable
 from ..audio.convert import ToWav
 from ..inference import (
     DiarizationRequest, DiarizationResult, TranscriptionRequest, InferenceCancelled,
-    LOCAL_WHISPER_BACKEND, LOCAL_DIARIZATION_BACKEND,
+    LOCAL_WHISPER_BACKEND, LOCAL_DIARIZATION_BACKEND, LOCAL_NEMOTRON_BACKEND,
 )
 from ..models import ModelDescriptor, ModelRef
 from ..plugins.registry import BackendRegistry
@@ -225,7 +225,8 @@ class RegistryWorkflowProcessor:
             return operation(request, **callbacks)
         except WorkerError as gpu_error:
             if (callbacks['is_cancelled']() or not gpu_error.allows_cpu_retry
-                    or request.model.backend_id not in {LOCAL_WHISPER_BACKEND, LOCAL_DIARIZATION_BACKEND}
+                    or request.model.backend_id not in {LOCAL_WHISPER_BACKEND, LOCAL_DIARIZATION_BACKEND,
+                                                        LOCAL_NEMOTRON_BACKEND}
                     or self.registry.get(request.model.backend_id).settings.device != 'auto'):
                 raise
             on_retry()
