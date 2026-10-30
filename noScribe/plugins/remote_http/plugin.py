@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 import requests
+from urllib3.exceptions import DecodeError, ProtocolError, ReadTimeoutError, SSLError
 
 from ...inference import (
     DiarizationSegment,
@@ -414,7 +415,7 @@ class RemoteHttpPlugin:
             diarization = None
             final_result = None
             try:
-                for line in response.iter_lines(chunk_size=1):
+                for line in _iter_lines(response):
                     if self._cancel_event.is_set() or is_cancelled():
                         self.cancel()
                         raise InferenceCancelled("Inference canceled")
@@ -616,7 +617,7 @@ class RemoteHttpPlugin:
                 self._active_response = response
                 self._active_job_id = response.headers.get("X-noScribe-Job-ID")
             try:
-                for line in response.iter_lines(chunk_size=1):
+                for line in _iter_lines(response):
                     if self._cancel_event.is_set() or is_cancelled():
                         self.cancel()
                         raise InferenceCancelled("Inference canceled")
@@ -684,6 +685,51 @@ class RemoteHttpPlugin:
             user_message_id="err_remote_backend_connection",
             user_message_params={"name": self.profile.name},
         )
+
+
+def _iter_lines(response):
+    """The response body line by line, each line as soon as it has arrived.
+
+    requests' iter_lines(chunk_size=1) delivers promptly, but it joins its
+    buffer anew for every byte, so a line costs time quadratic in its length:
+    a 200 kB event took 27 s, and a diarization result that carries speaker
+    probabilities (several MB per hour of audio) never arrived. read1 returns
+    whatever has arrived, up to 64 kB, so lines still come as soon as they are
+    sent, and each byte is looked at once. urllib3's errors are raised as
+    requests' own, as iter_lines raises them, so a dropped connection or a
+    cancel still reaches the handlers that catch requests.RequestException;
+    so is the AttributeError a read raises once cancel() has closed the
+    response under it."""
+    read1 = getattr(response.raw, "read1", None)
+    if read1 is None:  # a urllib3 without read1
+        yield from response.iter_lines(chunk_size=1)
+        return
+    buffer = bytearray()
+    while True:
+        try:
+            data = read1(65536, decode_content=True)
+        except ProtocolError as error:
+            raise requests.exceptions.ChunkedEncodingError(error) from error
+        except DecodeError as error:
+            raise requests.exceptions.ContentDecodingError(error) from error
+        except ReadTimeoutError as error:
+            raise requests.exceptions.ConnectionError(error) from error
+        except SSLError as error:
+            raise requests.exceptions.SSLError(error) from error
+        except AttributeError as error:
+            if not getattr(response.raw, "closed", False):
+                raise
+            raise requests.exceptions.ConnectionError("the response was closed") from error
+        if not data:
+            break
+        scan, start = len(buffer), 0
+        buffer += data
+        while (end := buffer.find(b"\n", scan)) >= 0:
+            yield bytes(buffer[start:end]).rstrip(b"\r")
+            start = scan = end + 1
+        del buffer[:start]
+    if buffer:
+        yield bytes(buffer)
 
 
 def _form_bool(value: bool) -> str:
