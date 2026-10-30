@@ -288,7 +288,8 @@ iteration and indexing for segment-only consumers. `None` means no diarization
 was performed; an empty result means it ran and found no segments. Desktop and
 server workflows pass the complete result as `TranscriptionRequest.diarization`
 to subsequent transcription. Workers may ignore this context. The built-in
-Whisper adapter sends it to the worker without changing Whisper inference.
+Whisper worker takes the turns of a `local-pyannote` diarization as its speech
+map, in place of Silero's voice activity (`whisper_mp_worker.speech_turns_from`).
 
 All timestamps refer to the supplied audio excerpt, without the desktop's
 transcript offset. Diarization uses milliseconds internally and in local worker
