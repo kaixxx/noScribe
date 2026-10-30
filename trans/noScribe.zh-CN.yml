@@ -112,6 +112,10 @@ zh-CN: &defaults
   language_en_only: '请注意，所选用于转写的 AI 模型仅支持英文。'
 
   transcription_finished: '转录完成。'
+  voice_check_start: '正在根据声音核对说话人...'
+  voice_check_done: '已重新分配 %{count} 段。'
+  voice_check_skipped: '未能完成声音核对；说话人保持说话人分离的结果。'
+  voice_check_canceled: '已停止声音核对。转录已完成，说话人保持说话人分离的结果。'
   transcription_saved: '已保存至 %{file}'
   trancription_time: '时长：%{duration}分钟'
   queue_complete: '=== 队列处理完成 ==='
