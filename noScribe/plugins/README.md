@@ -208,7 +208,9 @@ selected recording range to lossless 16 kHz mono FLAC. The driver refuses other
 file extensions, preventing the existing WAV working file or an original
 video from being uploaded accidentally. When a selected remote profile also
 offers diarization, noScribe automatically uses that profile's diarization
-model; otherwise it falls back to local Pyannote.
+model, choosing among several by `diarization_engine` in `config.yml` (`auto`
+prefers Nemotron, except for a fixed number of speakers); otherwise it falls
+back to a local diarization plugin.
 
 ### Development dummy server
 

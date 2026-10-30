@@ -42,6 +42,7 @@ def _never_cancel() -> bool:
 
 LOCAL_WHISPER_BACKEND = "local-whisper"
 LOCAL_DIARIZATION_BACKEND = "local-pyannote"
+LOCAL_NEMOTRON_BACKEND = "local-nemotron"
 
 
 @dataclass
