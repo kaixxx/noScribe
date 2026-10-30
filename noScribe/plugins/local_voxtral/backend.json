@@ -1,0 +1,16 @@
+{
+  "id": "local-voxtral",
+  "name": "Local Voxtral",
+  "version": "1.0.0",
+  "protocol_version": 1,
+  "engine": "voxtral",
+  "execution": {
+    "type": "builtin",
+    "adapter": "local-voxtral"
+  },
+  "capabilities": [
+    "transcription",
+    "word_timestamps",
+    "language_detection"
+  ]
+}

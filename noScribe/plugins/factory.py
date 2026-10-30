@@ -8,6 +8,8 @@ from pathlib import Path
 
 from ..inference import LocalInferenceBackend, LocalWorkerSettings
 from .local_pyannote import LocalPyannotePlugin
+from .local_voxtral import LocalVoxtralPlugin
+from .local_voxtral.settings import VoxtralWorkerSettings
 from .local_whisper import LocalWhisperPlugin
 from .local_whisper.settings import WhisperWorkerSettings
 from .local_pyannote.settings import PyannoteWorkerSettings
@@ -27,8 +29,16 @@ def create_builtin_registry(
     whisper_models: Mapping[str, str],
     settings: LocalWorkerSettings | None = None,
     settings_dir: Path | None = None,
+    *,
+    voxtral_defaults: VoxtralWorkerSettings | None = None,
+    corrections_dir: Path | None = None,
 ) -> BackendRegistry:
-    """Create the registry without treating built-ins as special at runtime."""
+    """Create the registry without treating built-ins as special at runtime.
+
+    voxtral_defaults stand in for absent fields of Voxtral's settings file, as
+    the desktop's older config.yml entries do for Whisper and Pyannote above.
+    Voxtral keeps its corrections file in `corrections_dir`, by default the
+    directory above the plugin settings, else noScribe's configuration directory."""
     store = PluginSettingsStore(settings_dir) if settings_dir is not None else None
     whisper_settings = WhisperWorkerSettings.from_mapping(
         store.load("local-whisper") if store else {},
@@ -54,9 +64,19 @@ def create_builtin_registry(
         whisper_models=whisper_models, settings=settings,
         whisper_settings=whisper_settings, diarization_settings=diarization_settings,
     )
+    voxtral_settings = VoxtralWorkerSettings.from_mapping(
+        store.load("local-voxtral") if store else {}, defaults=voxtral_defaults)
+    if corrections_dir is None:
+        if settings_dir is not None:
+            corrections_dir = Path(settings_dir).parent
+        else:
+            import appdirs
+            corrections_dir = Path(appdirs.user_config_dir('noScribe'))
     return BackendRegistry([
         LocalWhisperPlugin(host, whisper_models, settings_store=store),
         LocalPyannotePlugin(host, settings_store=store),
+        LocalVoxtralPlugin(host, corrections_dir=corrections_dir,
+                           settings=voxtral_settings, settings_store=store),
     ])
 
 

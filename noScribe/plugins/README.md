@@ -19,9 +19,14 @@ plugins/
 │   ├── __init__.py
 │   ├── plugin.py
 │   └── backend.json
-└── local_pyannote/
+├── local_pyannote/
+│   ├── __init__.py
+│   ├── plugin.py
+│   └── backend.json
+└── local_voxtral/
     ├── __init__.py
     ├── plugin.py
+    ├── settings.py
     └── backend.json
 ```
 
@@ -295,6 +300,17 @@ transcript offset. Diarization uses milliseconds internally and in local worker
 messages, seconds on HTTP. Extension contents are never converted implicitly:
 plugins must document their units and speaker-label correspondence. Transport
 data, not server-local paths or Python/NumPy objects; use JSON-compatible values.
+
+The desktop adds `extensions["noscribe"]` to every local transcription
+request: `needs_timing` (false when the transcript carries no times, no
+speakers and no pause marks) and `speaker_names` (the names the user entered,
+in order). A plugin may use them; `local-voxtral` skips its forced alignment
+without times and corrects the spelling of the names. They are not sent to a
+server, since one without queued workflows refuses extensions.
+
+A plugin may also offer `menu_hint(model) -> str`, text the model menu shows
+after the model's name and nowhere else; `local-voxtral` shows the RAM a build
+needs, with a warning sign where the machine has less.
 
 Queued HTTP tasks carry request extensions and optional externally computed
 diarization under `options`. A preceding server diarization takes precedence
