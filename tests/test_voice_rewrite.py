@@ -295,6 +295,34 @@ def test_a_diarization_from_elsewhere_is_left_as_it_is():
     assert not any('voice_check' in line for line in h.app.logged)
 
 
+def test_a_diarization_with_its_own_probabilities_is_its_own_second_opinion():
+    """With speaker probabilities in the diarization's extensions (the
+    local-nemotron plugin's result) the check reads them instead of asking
+    pyannote for voices: each column is the speaker the worker's `columns`
+    names, whatever the order, and a column the diarization never named cannot
+    win a unit even where it is loudest."""
+    import numpy as np
+    from noScribe.nemotron_mp_worker import EXTENSION_KEY, encode_probabilities
+    turns, segments = two_people()
+    rows = np.zeros((1000, 3), dtype=np.float16)  # 10 s, columns: SPEAKER_01, SPEAKER_00, SPEAKER_02
+    rows[:170, 1] = 0.9    # S00 asks, up to 1.7 s
+    rows[170:, 0] = 0.9    # S01 from there on
+    rows[:, 2] = 0.95      # never named, loudest everywhere
+    h = harness(turns, voice_at=None, extensions={EXTENSION_KEY: {'probabilities': encode_probabilities(
+        rows, ['SPEAKER_01', 'SPEAKER_00', 'SPEAKER_02'])}})
+    for segment in segments:
+        h.on_segment(segment)
+
+    def no_voices(*args):
+        raise AssertionError('the probabilities are the evidence; no embedding call')
+
+    h.app._run_voice_embeddings = no_voices
+    h.check_voices()
+    first, second = paragraphs(h)
+    assert first.startswith('S00:') and first.endswith('Does it help?')
+    assert second.startswith('S01:') and 'Yes, sure.' in second
+
+
 def test_names_follow_the_order_in_which_the_voices_are_first_heard():
     """The diarization put the opening under S01; the voice says it is S00. The
     first name belongs to whoever is heard first, so it has to change hands."""

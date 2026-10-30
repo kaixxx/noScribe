@@ -113,6 +113,8 @@ de:
   audio_conversion_skipped_invalid_packets: '%{count} fehlerhafte Audiopakete wurden übersprungen.'
   start_identifying_speakers: 'Sprecher:innen identifizieren...'
   loading_pyannote: 'Pyannote laden'
+  loading_nemotron: 'Nemotron laden'
+  nemotron_all_speakers: "Alle 8 Sprecherkanäle von Nemotron sind belegt: Sprechen mehr Personen, wurden einige anderen zugeordnet."
   streaming_audio: 'Audio wird zum Server gestreamt...'
   start_canceling: 'Abbrechen läuft...'
   start_transcription: 'Transkription...'
@@ -120,6 +122,9 @@ de:
   pyannote_cuda_retry: |-
     PyAnnote CUDA-Fehler erkannt. Erneuter Versuch auf der CPU. Dieser erneute Versuch gilt nur für den aktuellen Auftrag.
     Um dauerhaft die CPU zu verwenden und diesen CUDA-Fehler zu vermeiden, setzen Sie force_pyannote_cpu: true in config.yml.
+  nemotron_cuda_retry: |-
+    Nemotron CUDA-Fehler erkannt. Erneuter Versuch auf der CPU. Dieser erneute Versuch gilt nur für den aktuellen Auftrag.
+    Um dauerhaft die CPU zu verwenden und diesen CUDA-Fehler zu vermeiden, setzen Sie force_nemotron_cpu: true in config.yml.
   whisper_cuda_retry: |-
     Whisper CUDA-Fehler erkannt. Erneuter Versuch auf der CPU. Dieser erneute Versuch gilt nur für den aktuellen Auftrag.
     Um dauerhaft die CPU zu verwenden und diesen CUDA-Fehler zu vermeiden, setzen Sie force_whisper_cpu: true in config.yml.

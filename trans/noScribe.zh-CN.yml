@@ -94,6 +94,8 @@ zh-CN: &defaults
   audio_conversion_skipped_invalid_packets: '已跳过 %{count} 个无效音频包。'
   start_identifying_speakers: '正在识别说话人...'
   loading_pyannote: '加载pyannote中'
+  loading_nemotron: '加载Nemotron中'
+  nemotron_all_speakers: "Nemotron 的 8 个说话人通道已全部占用：如果说话人更多，其中一些已被合并到其他人中。"
   streaming_audio: '正在将音频传输到服务器...'
   start_canceling: '正在取消...（请稍候）'
   start_transcription: '正在转录...'
@@ -101,6 +103,9 @@ zh-CN: &defaults
   pyannote_cuda_retry: |-
     检测到 PyAnnote 的 CUDA 错误。正在使用 CPU 重试。 此次重试仅适用于当前任务。
     如需始终使用 CPU 并避免此 CUDA 错误，请在 config.yml 中设置 force_pyannote_cpu: true。
+  nemotron_cuda_retry: |-
+    检测到 Nemotron 的 CUDA 错误。正在使用 CPU 重试。 此次重试仅适用于当前任务。
+    如需始终使用 CPU 并避免此 CUDA 错误，请在 config.yml 中设置 force_nemotron_cpu: true。
   whisper_cuda_retry: |-
     检测到 Whisper 的 CUDA 错误。正在使用 CPU 重试。 此次重试仅适用于当前任务。
     如需始终使用 CPU 并避免此 CUDA 错误，请在 config.yml 中设置 force_whisper_cpu: true。

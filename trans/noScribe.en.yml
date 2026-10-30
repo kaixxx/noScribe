@@ -117,6 +117,8 @@ en:
   audio_conversion_skipped_invalid_packets: '%{count} invalid audio packets were skipped.'
   start_identifying_speakers: 'Speaker identification...'
   loading_pyannote: 'Loading pyannote'
+  loading_nemotron: 'Loading Nemotron'
+  nemotron_all_speakers: "All 8 of Nemotron's speaker channels are in use: if more people speak, some were merged with others."
   streaming_audio: 'Streaming audio to server...'
   start_canceling: 'Canceling... (please wait a second)'
   start_transcription: 'Transcription...'
@@ -124,6 +126,9 @@ en:
   pyannote_cuda_retry: |-
     PyAnnote CUDA error detected. Retrying on CPU. This retry applies only to the current job.
     To always use CPU and avoid this CUDA error, set force_pyannote_cpu: true in config.yml.
+  nemotron_cuda_retry: |-
+    Nemotron CUDA error detected. Retrying on CPU. This retry applies only to the current job.
+    To always use CPU and avoid this CUDA error, set force_nemotron_cpu: true in config.yml.
   whisper_cuda_retry: |-
     Whisper CUDA error detected. Retrying on CPU. This retry applies only to the current job.
     To always use CPU and avoid this CUDA error, set force_whisper_cpu: true in config.yml.
