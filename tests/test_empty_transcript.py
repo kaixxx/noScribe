@@ -150,6 +150,9 @@ def test_failed_or_canceled_job_keeps_real_partial_text(app, tmp_path, monkeypat
 
 def test_empty_cli_result_returns_failure(app, tmp_path, monkeypatch, capsys):
     job = _job(tmp_path)
+    # The CLI picks its default model from the catalogue before it creates the
+    # job; give it one, so the test does not depend on Whisper weights on disk.
+    app.transcription_models = {"local-whisper:precise": object()}
     monkeypatch.setattr(app, "_run_whisper_subprocess_stream", lambda *args, **kwargs: {})
     monkeypatch.setattr(m, "HeadlessApp", lambda: app)
     monkeypatch.setattr(m, "create_job_from_cli_args", lambda args: job)
