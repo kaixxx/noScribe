@@ -69,6 +69,7 @@ from .inference import (
     TranscriptionSegment,
 )
 from .jobs import JobStatus, TranscriptionJob, TranscriptionQueue
+from .voice_pause import format_voice_pause
 from .models import ModelRef
 from .plugins.factory import (
     create_builtin_registry,
@@ -361,6 +362,8 @@ def format_job_summary(
     model_name = transcription_model_name or job.transcription_model.model_id
     lines.append(f"{t('label_whisper_model')} {model_name}")
     lines.append(f"{t('label_pause')} {pause_label(job.pause)}")
+    if job.voice_pause_markers:
+        lines.append("VOICE-style pauses: ✓")
     lines.append(f"{t('label_speaker')} {_job_speaker_setting(job)}")
     if job.speaker_names:
         lines.append(f"{t('label_speaker_names')} {', '.join(job.speaker_names)}")
@@ -403,6 +406,8 @@ def format_transcript_options(
     options.append(f'{t("label_timestamps")} {yes if job.timestamps else no}')
     options.append(f'{t("label_disfluencies")} {yes if job.disfluencies else no}')
     options.append(f'{t("label_pause")} {pause_label(job.pause)}')
+    if job.voice_pause_markers:
+        options.append("VOICE-style pauses")
     return ' | '.join(options)
 
 
@@ -476,7 +481,7 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
                            speaker_detection=None,
                            speaker_names=None,
                            overlapping=None, timestamps=None, disfluencies=None, pause=None,
-                           cli_mode=False) -> TranscriptionJob:
+                           voice_pause_markers=False, cli_mode=False) -> TranscriptionJob:
     """Create a TranscriptionJob with all default values
     
     This function handles both CLI and GUI job creation, ensuring all defaults
@@ -544,11 +549,13 @@ def create_transcription_job(audio_file=None, transcript_file=None, start_time=N
     
     job.auto_save = get_config_flag('auto_save', True)
 
+    job.voice_pause_markers = bool(voice_pause_markers)
     # Check for invalid VTT options
-    if job.output_format == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
+    if job.output_format == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps or job.voice_pause_markers):
         if cli_mode:
             print("Warning: VTT format doesn't support pause markers, overlapping speech, or timestamps. These options will be disabled.")
         job.pause = 0
+        job.voice_pause_markers = False
         job.overlapping = False
         job.timestamps = False
     
@@ -608,6 +615,7 @@ def create_job_from_cli_args(args) -> TranscriptionJob:
         timestamps=args.timestamps,
         disfluencies=args.disfluencies,
         pause=args.pause,
+        voice_pause_markers=getattr(args, "voice_pauses", False),
         cli_mode=True
     )
 
@@ -665,6 +673,9 @@ Examples:
     parser.add_argument('--pause', choices=PAUSE_OPTIONS, default=None,
                        help='Mark pauses in transcript')
     
+    parser.add_argument("--voice-pauses", action="store_true",
+                        help="Use VOICE-style (.) and (n) pause markers")
+
     return parser.parse_args()
 
 
@@ -1147,9 +1158,20 @@ class App(ctk.CTk):
         self.label_pause = ctk.CTkLabel(self.frame_options, text=t('label_pause'))
         self.label_pause.grid(column=0, row=4, sticky='w', pady=5)
 
-        self.option_menu_pause = ctk.CTkOptionMenu(self.frame_options, width=100, values=PAUSE_OPTIONS)
-        self.option_menu_pause.grid(column=1, row=4, sticky='e', pady=5)
+        self.pause_controls = ctk.CTkFrame(self.frame_options, fg_color='transparent')
+        self.pause_controls.grid(column=1, row=4, sticky='e', pady=5)
+        self.option_menu_pause = ctk.CTkOptionMenu(self.pause_controls, width=100, values=PAUSE_OPTIONS)
+        self.option_menu_pause.pack(anchor='e')
         self.option_menu_pause.set(get_config('last_pause', '1sec+'))
+        self.check_box_voice_pauses = ctk.CTkCheckBox(
+            self.pause_controls, text='VOICE style', width=100,
+            command=self._on_voice_pauses_changed)
+        self.check_box_voice_pauses.pack(anchor='e', pady=(6, 0))
+        CTkToolTip(self.check_box_voice_pauses,
+                   text='VOICE style: (.) at 0.2–0.6s, (n) above 0.6s')
+        if get_config_flag('last_voice_pause_markers', False):
+            self.check_box_voice_pauses.select()
+        self._on_voice_pauses_changed()
 
         # Speaker Detection (Diarization)
         self.label_speaker = ctk.CTkLabel(self.frame_options, text=t('label_speaker'))
@@ -2874,6 +2896,11 @@ class App(ctk.CTk):
             self.label_speaker_names.grid()
             self.entry_speaker_names.grid()
 
+    def _on_voice_pauses_changed(self):
+        # VOICE mode replaces standard pause formatting; never combine them.
+        self.option_menu_pause.configure(
+            state="disabled" if self.check_box_voice_pauses.get() else "normal")
+
     def save_ui_state(self):
         """Remember the current option settings for the next run."""
         config['last_language'] = self.option_menu_language.get()
@@ -2886,6 +2913,7 @@ class App(ctk.CTk):
         if selected_model is not None:
             config['last_whisper_model'] = str(selected_model.ref)
         config['last_pause'] = self.option_menu_pause.get()
+        config['last_voice_pause_markers'] = bool(self.check_box_voice_pauses.get())
         config['last_overlapping'] = self.check_box_overlapping.get()
         config['last_timestamps'] = self.check_box_timestamps.get()
         config['last_disfluencies'] = self.check_box_disfluencies.get()
@@ -2943,10 +2971,11 @@ class App(ctk.CTk):
                 timestamps=self.check_box_timestamps.get(),
                 disfluencies=self.check_box_disfluencies.get(),
                 pause=self.option_menu_pause.get(),  # Pass string value
+                voice_pause_markers=bool(self.check_box_voice_pauses.get()),
                 cli_mode=False
             )
             # Handle VTT format warnings in GUI mode
-            if job.output_format == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps):
+            if job.output_format == 'vtt' and (job.pause > 0 or job.overlapping or job.timestamps or self.check_box_voice_pauses.get()):
                 self.logn()
                 self.logn(t('err_vtt_invalid_options'), 'error')
             
@@ -3581,7 +3610,11 @@ class App(ctk.CTk):
                             ts = f'[{ts}]'
 
                         # check for pauses and mark them in the transcript
-                        if (job.pause > 0) and (start - last_segment_end >= job.pause * 1000): # (more than x seconds with no speech)
+                        gap_ms = start - last_segment_end
+                        pause_str = None
+                        if job.voice_pause_markers:
+                            pause_str = format_voice_pause(gap_ms / 1000.0)
+                        elif (job.pause > 0) and (gap_ms >= job.pause * 1000):
                             pause_len = round((start - last_segment_end)/1000)
                             if pause_len >= 60: # longer than 60 seconds
                                 pause_str = ' ' + t('pause_minutes', minutes=round(pause_len/60))
@@ -3590,6 +3623,7 @@ class App(ctk.CTk):
                             else: # less than 10 seconds
                                 pause_str = ' (' + (pause_marker * pause_len) + ')'
 
+                        if pause_str is not None:
                             if first_segment:
                                 pause_str = pause_str.lstrip() + ' '
 
@@ -4467,6 +4501,9 @@ def noScribeMain():
             app.option_menu_language.set(args.language)
         if getattr(args, 'pause', None):
             app.option_menu_pause.set(args.pause)
+            if getattr(args, "voice_pauses", False):
+                app.check_box_voice_pauses.select()
+                app._on_voice_pauses_changed()
         if getattr(args, 'speaker_detection', None):
             app.option_menu_speaker.set(args.speaker_detection)
         if getattr(args, 'speaker_names', None) is not None:
