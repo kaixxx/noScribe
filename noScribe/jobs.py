@@ -64,6 +64,7 @@ class TranscriptionJob:
         self.timestamps: bool = False
         self.disfluencies: bool = True
         self.pause: int = 0
+        self.voice_pause_markers: bool = False
         self.auto_save: bool = True
 
     @property
