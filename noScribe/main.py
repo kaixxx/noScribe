@@ -2519,6 +2519,14 @@ class App(ctk.CTk):
                 popenargs = [sys.executable, program]
             if file != '':
                 popenargs.append(file)
+            if platform.system() == "Linux" and hasattr(sys, "_MEIPASS"):
+                env = os.environ.copy()
+                original = env.get("LD_LIBRARY_PATH_ORIG")
+                if original is None:
+                    env.pop("LD_LIBRARY_PATH", None)
+                else:
+                    env["LD_LIBRARY_PATH"] = original
+                kwargs["env"] = env
             Popen(popenargs, **kwargs)
         else:
             self.logn(t('err_noScribeEdit_not_found'), 'error')
