@@ -1,0 +1,20 @@
+# Install with `pip install -r requirements_linux.txt`
+# torch==2.8 # pyannote 4 is currently not compatible with torch 2.9; torch version is set by torchaudio
+torchaudio==2.8
+torchcodec==0.7.0
+av<19  # faster-whisper 1.2.1 passes metadata_errors to av.open(), which PyAV 19 removed
+AdvancedHTMLParser
+appdirs
+customtkinter
+CTkToolTip
+faster-whisper
+importlib-resources>=5.10; python_version < "3.12"
+# >=3.11 honours MPL_IGNORE_SYSTEM_FONTS, which the diarization worker sets;
+# see the comment in noScribe/pyannote_mp_worker.py.
+matplotlib>=3.11
+Pillow
+pyannote.audio>=4
+pyinstaller
+python-i18n
+PyYAML
+soundfile

@@ -1,0 +1,8 @@
+qtawesome
+pyqt6==6.9.1 # >=6.10.0 currently requires qmake on linux
+AdvancedHTMLParser
+pillow
+appdirs
+PyYAML
+pyinstaller
+av>=11,<13
