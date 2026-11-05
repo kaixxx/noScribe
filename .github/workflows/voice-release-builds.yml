@@ -1,0 +1,132 @@
+name: Build noScribe VOICE (Whisper Small)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - voice-custom-pauses
+      - voice-pause-markers
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-2025
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r environments/requirements_win_cpu.txt
+          python -m pip install huggingface_hub
+          python -m pip check
+      - name: Download Whisper Small and generate build spec
+        shell: pwsh
+        run: python tools/voice_release/prepare_build.py --platform windows
+      - name: Build portable Windows app
+        shell: pwsh
+        run: python -m PyInstaller --noconfirm --clean pyinstaller/noScribe_voice_win.spec
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          if (!(Test-Path 'dist/noScribe/noScribe.exe')) { throw 'Missing Windows executable' }
+          if (!(Test-Path 'dist/noScribe/_internal/models/small/model.bin')) {
+            Write-Warning 'Model not at _internal path; checking anywhere in dist'
+            $model = Get-ChildItem 'dist/noScribe' -Recurse -Filter model.bin | Where-Object { $_.FullName -match '[\\/]small[\\/]' }
+            if (!$model) { throw 'Whisper Small model not bundled' }
+          }
+          & './dist/noScribe/noScribe.exe' --help
+      - name: Zip Windows build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          Compress-Archive -Path 'dist/noScribe' -DestinationPath 'release/noScribe-VOICE-Windows-x64-Small.zip' -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: noScribe-VOICE-Windows-x64-Small
+          path: release/noScribe-VOICE-Windows-x64-Small.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  macos:
+    name: macOS Apple Silicon
+    runs-on: macos-15
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Verify architecture and install dependencies
+        run: |
+          test "$(uname -m)" = "arm64"
+          python -m pip install --upgrade pip
+          python -m pip install -r environments/requirements_macOS_arm64.txt
+          python -m pip install huggingface_hub
+          python -m pip check
+      - name: Download Whisper Small and generate build spec
+        run: python tools/voice_release/prepare_build.py --platform macos
+      - name: Build macOS application
+        run: python -m PyInstaller --noconfirm --clean pyinstaller/noScribe_voice_macOS.spec
+      - name: Smoke test
+        run: |
+          test -d dist/noScribe.app
+          find dist/noScribe.app -name model.bin | grep '/small/'
+          dist/noScribe.app/Contents/MacOS/noScribe --help
+      - name: Zip macOS app with resource forks preserved
+        run: |
+          mkdir -p release
+          ditto -c -k --sequesterRsrc --keepParent dist/noScribe.app release/noScribe-VOICE-macOS-arm64-Small.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: noScribe-VOICE-macOS-arm64-Small
+          path: release/noScribe-VOICE-macOS-arm64-Small.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  linux:
+    name: Linux x64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install system requirements
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk libgl1 libglib2.0-0 libsndfile1 libx11-6 libxcb1 libxcb-xinerama0 libxkbcommon-x11-0
+      - name: Install Python dependencies (CPU-only PyTorch)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0' 'torchaudio==2.8.0'
+          python -m pip install -r environments/requirements_linux.txt
+          python -m pip install huggingface_hub
+          python -m pip check
+      - name: Download Whisper Small and generate build spec
+        run: python tools/voice_release/prepare_build.py --platform linux
+      - name: Build Linux application
+        run: python -m PyInstaller --noconfirm --clean pyinstaller/noScribe_voice_linux.spec
+      - name: Smoke test
+        run: |
+          test -x dist/noScribe/noScribe
+          find dist/noScribe -name model.bin | grep '/small/'
+          ./dist/noScribe/noScribe --help
+      - name: Archive Linux build preserving executable permissions
+        run: |
+          mkdir -p release
+          tar -czf release/noScribe-VOICE-Linux-x64-Small.tar.gz -C dist noScribe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: noScribe-VOICE-Linux-x64-Small
+          path: release/noScribe-VOICE-Linux-x64-Small.tar.gz
+          if-no-files-found: error
+          retention-days: 14

@@ -33,8 +33,13 @@ def whisper_proc_entrypoint(args: dict, q):
         from faster_whisper import WhisperModel
         from faster_whisper.audio import decode_audio
         from faster_whisper.vad import VadOptions
-        import torch
+
+        torch = None
+        if platform.system() in ("Windows", "Linux"):
+            import torch
+
         import yaml
+
         def status(message_id, params=None, level="info"):
             try:
                 q.put({
@@ -192,7 +197,8 @@ def whisper_proc_entrypoint(args: dict, q):
         except Exception:
             pass
         try:
-            torch.cuda.empty_cache()
+            if torch is not None:
+                torch.cuda.empty_cache()
         except Exception:
             pass
         gc.collect()
