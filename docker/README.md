@@ -146,11 +146,31 @@ is enough.
   audio with `precise` and speaker detection in 32 seconds
 - not yet tested on native Linux with the NVIDIA Container Toolkit
 
+## Published image
+
+`.github/workflows/docker-image.yml` builds the CPU image, runs a short
+transcription as a smoke test and pushes it to the GitHub Container Registry
+of the repository owner, `ghcr.io/<owner>/noscribe`:
+
+| Trigger                                  | Tags                 |
+|------------------------------------------|----------------------|
+| release tag `v<version>`, e.g. `v0.8.1`  | `0.8.1`, `latest`    |
+| manual run with "push" ticked            | `sha-<commit>`, plus `edge` on `main` |
+| manual run without "push"                | nothing, build and test only |
+
+Docker Hub is an optional second target: once the repository secret
+`DOCKERHUB_TOKEN` (a Docker Hub access token) exists, the same tags are also
+pushed to `<account>/noscribe`. The account is the repository variable
+`DOCKERHUB_USERNAME`, or the repository owner if it is not set.
+
+The package on ghcr.io is created private on the first push and has to be
+made public once in its package settings. The GPU variant is not published.
+
 ## Image tags
 
-This repository does not publish images. The naming scheme below is the
-proposed one for images built from this Dockerfile; it is recorded here so
-that locally built and published images are named alike.
+The naming scheme below is the proposed one for images built from this
+Dockerfile, including later revisions and flavors; the workflow above
+currently uses only the version, `latest` and `edge`.
 
 ```
 <noScribe version>[-r<N>][-<flavor>]
@@ -238,3 +258,4 @@ image built here.
 | `docker/requirements.lock`       | generated package list of the tested image      |
 | `docker/requirements-cu128.lock` | the same for the GPU (CUDA) variant             |
 | `docker/update-lock.sh`          | regenerates the lock files                      |
+| `.github/workflows/docker-image.yml` | builds, tests and publishes the CPU image   |

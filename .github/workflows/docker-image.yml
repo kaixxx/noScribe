@@ -1,0 +1,160 @@
+name: Docker image
+
+# Builds the CPU image from docker/Dockerfile, runs a short smoke test and
+# pushes the tested image to the GitHub Container Registry of the repository
+# owner (ghcr.io/<owner>/noscribe), with the built-in GITHUB_TOKEN.
+#
+# - release tag v<version> (e.g. v0.8.1): pushed as <version> and latest
+# - Actions tab -> Run workflow with "push" ticked: pushed as sha-<commit>,
+#   plus edge when run on main
+# - Run workflow without "push": build and test only
+#
+# Docker Hub is an optional second target. It switches on once the repository
+# secret DOCKERHUB_TOKEN (a Docker Hub access token) exists; the account name
+# is taken from the repository variable DOCKERHUB_USERNAME, or the repository
+# owner if that is not set. The image is then also pushed as
+# <account>/noscribe with the same tags.
+#
+# The package on ghcr.io is created private on the first push and has to be
+# made public once in its package settings.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      push:
+        description: Push the image (sha-<commit>, edge on main)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  LOCAL_TAG: noscribe:ci
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    env:
+      PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.push == true }}
+      DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
+      DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME || github.repository_owner }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # The image is about 8 GB unpacked, plus build cache. Remove
+      # preinstalled toolchains that are not needed.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Compute tags and labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            name=ghcr.io/${{ github.repository_owner }}/noscribe
+            name=docker.io/${{ env.DOCKERHUB_USERNAME }}/noscribe,enable=${{ env.DOCKERHUB == 'true' }}
+          flavor: |
+            latest=false
+          tags: |
+            type=match,pattern=v(.*),group=1
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=edge,branch=main
+            type=sha,prefix=sha-,format=short,enable=${{ github.event_name == 'workflow_dispatch' }}
+          labels: |
+            org.opencontainers.image.title=noScribe
+            org.opencontainers.image.description=noScribe transcription on the command line (CPU, Whisper models included)
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: false
+          load: true
+          tags: |
+            ${{ env.LOCAL_TAG }}
+            ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: "Smoke test: models are found"
+        run: |
+          docker run --rm "$LOCAL_TAG" --help-models | tee models.txt
+          grep -q precise models.txt
+          grep -q fast models.txt
+
+      # First 45 seconds of the interview recording from tests/data, with
+      # speaker detection.
+      - name: "Smoke test: transcription"
+        run: |
+          set -o pipefail
+          mkdir -p out && chmod 777 out
+          docker run --rm \
+            -v "$PWD/tests/data:/in:ro" \
+            -v "$PWD/out:/data" \
+            "$LOCAL_TAG" /in/interview.mp3 smoke.txt \
+            --model fast --language de --stop 00:00:45 2>&1 | grep -v '^DEBUG:'
+          test -s out/smoke.txt
+          cat out/smoke.txt
+          grep -qi 'rspiel' out/smoke.txt
+
+      # Push the image that was just tested; all its tags are already set on
+      # the loaded image.
+      - name: Log in to ghcr.io
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: env.PUBLISH == 'true' && env.DOCKERHUB == 'true'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push image
+        if: env.PUBLISH == 'true'
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          test -n "$TAGS" || { echo "::error::no tags to push"; exit 1; }
+          for t in $TAGS; do docker push "$t"; done
+
+      - name: Summary
+        if: always()
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          {
+            if [ "$PUBLISH" = true ] && [ "${{ job.status }}" = success ]; then
+              echo "Pushed with these tags:"
+            else
+              echo "Nothing was published. Tags this build would get:"
+            fi
+            echo '```'
+            echo "${TAGS:-(none: not a release tag and not main)}"
+            echo '```'
+            echo '```'
+            docker image ls "$LOCAL_TAG" || true
+            df -h /
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
