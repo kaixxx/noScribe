@@ -296,6 +296,17 @@ messages, seconds on HTTP. Extension contents are never converted implicitly:
 plugins must document their units and speaker-label correspondence. Transport
 data, not server-local paths or Python/NumPy objects; use JSON-compatible values.
 
+The bundled plugins document their extensions here:
+
+- `local-pyannote`, result: `centroids`, `{label: [float, ...]}`, the
+  pipeline's own speaker centroid for each label of the result's segments
+  (labels as in the segments; a label without a usable centroid is left out).
+  Request: `embed_spans`, a list of `[start_s, end_s]` in seconds of the
+  supplied audio. With it, `diarize()` does not diarize: it returns no segments
+  and `embeddings`, one vector (or `None` where the span could not be
+  embedded) per span, in the same order, from the same embedding model as the
+  centroids. The desktop's voice check uses both.
+
 Queued HTTP tasks carry request extensions and optional externally computed
 diarization under `options`. A preceding server diarization takes precedence
 over supplied context. Diarization `task_result` events carry `extensions`
