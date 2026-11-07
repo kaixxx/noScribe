@@ -154,9 +154,15 @@ of the repository owner, `ghcr.io/<owner>/noscribe`:
 
 | Trigger                                  | Tags                 |
 |------------------------------------------|----------------------|
-| release tag `v<version>`, e.g. `v0.8.1`  | `0.8.1`, `latest`    |
-| manual run with "push" ticked            | `sha-<commit>`, plus `edge` on `main` |
+| push of a release tag `v<version>`, e.g. `v0.8.1` | `0.8.1`, plus `latest` for the newest stable release |
+| manual run with "push" ticked            | `sha-<commit>`, plus `edge` on `main`; on a release tag, also its version and eligible `latest` |
 | manual run without "push"                | nothing, build and test only |
+
+The "push" checkbox also applies when manually running on a release tag.
+`latest` is reserved for the highest numeric stable version and image revision
+(`-r<N>`) currently tagged in the repository. Prerelease and flavor tags do
+not receive it. Remote tags are checked again immediately before pushing
+`latest`, so rebuilding an older release cannot replace a newer one.
 
 Docker Hub is an optional second target: once the repository secret
 `DOCKERHUB_TOKEN` (a Docker Hub access token) exists, the same tags are also
@@ -206,8 +212,8 @@ Flavors are not combined (`-cuda-gui`) unless there is a concrete need; every
 combination multiplies the build matrix.
 
 A release is a git tag `v<noScribe version>-r<N>` (for example `v0.7.2-r1`);
-the image tag is the git tag without the `v`. Branch and pull-request builds
-are never pushed.
+the image tag is the git tag without the `v`. Branch builds are published only
+when manually requested with "push"; pull-request builds are never pushed.
 
 ## Python dependencies
 
@@ -259,3 +265,4 @@ image built here.
 | `docker/requirements-cu128.lock` | the same for the GPU (CUDA) variant             |
 | `docker/update-lock.sh`          | regenerates the lock files                      |
 | `.github/workflows/docker-image.yml` | builds, tests and publishes the CPU image   |
+| `docker/image_release.py`        | checks which stable release may publish `latest` |

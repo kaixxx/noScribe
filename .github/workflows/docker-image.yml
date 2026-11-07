@@ -4,7 +4,8 @@ name: Docker image
 # pushes the tested image to the GitHub Container Registry of the repository
 # owner (ghcr.io/<owner>/noscribe), with the built-in GITHUB_TOKEN.
 #
-# - release tag v<version> (e.g. v0.8.1): pushed as <version> and latest
+# - release tag v<version> (e.g. v0.8.1): pushed as <version>, plus latest
+#   only for the newest stable version and image revision
 # - Actions tab -> Run workflow with "push" ticked: pushed as sha-<commit>,
 #   plus edge when run on main
 # - Run workflow without "push": build and test only
@@ -45,7 +46,7 @@ jobs:
       contents: read
       packages: write
     env:
-      PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.push == true }}
+      PUBLISH: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.push == true) }}
       DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
       DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME || github.repository_owner }}
     steps:
@@ -61,6 +62,10 @@ jobs:
 
       - uses: docker/setup-buildx-action@v4
 
+      - name: Check latest stable release
+        id: release
+        run: python docker/image_release.py >> "$GITHUB_OUTPUT"
+
       - name: Compute tags and labels
         id: meta
         uses: docker/metadata-action@v6
@@ -72,7 +77,7 @@ jobs:
             latest=false
           tags: |
             type=match,pattern=v(.*),group=1
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=latest,enable=${{ steps.release.outputs.latest == 'true' }}
             type=edge,branch=main
             type=sha,prefix=sha-,format=short,enable=${{ github.event_name == 'workflow_dispatch' }}
           labels: |
@@ -137,7 +142,19 @@ jobs:
           TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           test -n "$TAGS" || { echo "::error::no tags to push"; exit 1; }
-          for t in $TAGS; do docker push "$t"; done
+          : > "$RUNNER_TEMP/noscribe-pushed-tags.txt"
+          for t in $TAGS; do
+            if [[ "$t" == *:latest ]]; then
+              # A newer release may have been tagged during this build.
+              latest=$(python docker/image_release.py)
+              if [[ "$latest" != latest=true ]]; then
+                echo "::notice::Skipping $t: this is no longer the latest stable release"
+                continue
+              fi
+            fi
+            docker push "$t"
+            echo "$t" >> "$RUNNER_TEMP/noscribe-pushed-tags.txt"
+          done
 
       - name: Summary
         if: always()
@@ -147,12 +164,15 @@ jobs:
           {
             if [ "$PUBLISH" = true ] && [ "${{ job.status }}" = success ]; then
               echo "Pushed with these tags:"
+              echo '```'
+              cat "$RUNNER_TEMP/noscribe-pushed-tags.txt"
+              echo '```'
             else
               echo "Nothing was published. Tags this build would get:"
+              echo '```'
+              echo "${TAGS:-(none: not a release tag and not main)}"
+              echo '```'
             fi
-            echo '```'
-            echo "${TAGS:-(none: not a release tag and not main)}"
-            echo '```'
             echo '```'
             docker image ls "$LOCAL_TAG" || true
             df -h /
