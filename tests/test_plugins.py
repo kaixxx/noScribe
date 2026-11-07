@@ -187,7 +187,10 @@ def test_registry_routes_supported_atomic_workflow():
     assert result == "remote:same-name"
 
 
-def test_builtin_plugins_load_manifests_and_advertise_models():
+def test_builtin_plugins_load_manifests_and_advertise_models(monkeypatch):
+    # Voxtral offers its builds only on Apple Silicon with the MLX stack
+    # (tests/test_voxtral_plugin.py); here it offers none, whatever the machine.
+    monkeypatch.setattr("noScribe.plugins.local_voxtral.plugin._apple_silicon", lambda: False)
     registry = create_builtin_registry(
         {"precise": "models/precise", "custom": "models/custom"},
         LocalWorkerSettings(),
@@ -196,6 +199,7 @@ def test_builtin_plugins_load_manifests_and_advertise_models():
     manifests = {manifest.id: manifest for manifest in registry.list_plugins()}
     assert manifests["local-whisper"].execution.type is ExecutionType.BUILTIN
     assert manifests["local-pyannote"].execution.type is ExecutionType.BUILTIN
+    assert manifests["local-voxtral"].execution.type is ExecutionType.BUILTIN
     assert {str(model.ref) for model in registry.list_models("transcription")} == {
         "local-whisper:precise",
         "local-whisper:custom",

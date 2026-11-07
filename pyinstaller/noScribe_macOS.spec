@@ -23,9 +23,11 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    # The inference server is deployed from source and is not part of the
-    # desktop application bundle.
-    excludes=['speechbrain', 'noScribe.server', 'uvicorn'],
+    # The optional Voxtral stack stays out of the packaged app even when the
+    # build venv has it: a partial MLX copy would let the model picker offer
+    # Voxtral and then fail to run it. The inference server is deployed from
+    # source and is not part of the desktop application bundle.
+    excludes=['speechbrain', 'mlx', 'mlx_lm', 'mlx_voxtral', 'noScribe.server', 'uvicorn'],
     noarchive=False,
     optimize=0,
 )
