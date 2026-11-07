@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=noScribeEdit
+Exec=/absolute/path/to/noScribe/_internal/noScribeEdit/noScribeEdit
+Icon=/absolute/path/to/noScribe/_internal/noScribeEdit/_internal/noScribeEditLogo.png
+Terminal=false
+Categories=Utility;
+Comment=AI enabled audio transcription
