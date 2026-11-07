@@ -62,6 +62,16 @@ if os.path.exists(torchvision_stable_extension):
     noScribe_binaries.append((torchvision_stable_extension, 'torchvision'))
 noScribe_hiddenimports += collect_submodules('pyannote')
 noScribe_hiddenimports += collect_submodules('scipy')
+# transformers imports its model packages lazily, so the analysis does not see
+# the two the Nemotron diarization worker loads.
+noScribe_hiddenimports += collect_submodules('transformers.models.nemotron3_diarization')
+noScribe_hiddenimports += collect_submodules('transformers.models.nemotron_asr_streaming')
+# transformers reads torchcodec's version from its metadata whenever torchcodec
+# is importable, and refuses to load AutoProcessor without it.
+try:
+    noScribe_datas += copy_metadata('torchcodec')
+except Exception:
+    pass
 # noScribe_hiddenimports += ['scipy._lib.array_api_compat.numpy.fft']
 
 noScribe_a = Analysis(

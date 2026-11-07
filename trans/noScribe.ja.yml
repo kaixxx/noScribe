@@ -94,6 +94,8 @@ ja:
   audio_conversion_skipped_invalid_packets: '%{count} 件の無効な音声パケットをスキップしました。'
   start_identifying_speakers: '話者の識別を開始中...'
   loading_pyannote: 'pyannoteの読み込み中'
+  loading_nemotron: 'Nemotronの読み込み中'
+  nemotron_all_speakers: "Nemotron の話者チャンネル 8 つがすべて使用されています。話者がそれ以上いる場合、一部は他の話者にまとめられています。"
   streaming_audio: '音声をサーバーに転送しています...'
   start_canceling: 'キャンセル中...（しばらくお待ちください）'
   start_transcription: '転写を開始中...'
@@ -101,6 +103,9 @@ ja:
   pyannote_cuda_retry: |-
     PyAnnote の CUDA エラーを検出しました。CPU で再試行します。 この再試行は現在のジョブにのみ適用されます。
     常に CPU を使用してこの CUDA エラーを回避するには、config.yml で force_pyannote_cpu: true を設定してください。
+  nemotron_cuda_retry: |-
+    Nemotron の CUDA エラーを検出しました。CPU で再試行します。 この再試行は現在のジョブにのみ適用されます。
+    常に CPU を使用してこの CUDA エラーを回避するには、config.yml で force_nemotron_cpu: true を設定してください。
   whisper_cuda_retry: |-
     Whisper の CUDA エラーを検出しました。CPU で再試行します。 この再試行は現在のジョブにのみ適用されます。
     常に CPU を使用してこの CUDA エラーを回避するには、config.yml で force_whisper_cpu: true を設定してください。
@@ -111,6 +116,10 @@ ja:
   language_detect: '検出された言語は「%{lang}」（確率 %{prob}）'
   language_en_only: '選択した文字起こし用のAIモデルは英語専用です。'
   transcription_finished: '転写が完了しました。'
+  voice_check_start: '声で話者を確認しています...'
+  voice_check_done: '%{count} 件の発話を割り当て直しました。'
+  voice_check_skipped: '声による確認を完了できませんでした。話者は話者分離の結果のままです。'
+  voice_check_canceled: '声による確認を中止しました。文字起こしは完了しており、話者は話者分離の結果のままです。'
   transcription_saved: '%{file}に保存されました'
   trancription_time: '所要時間：%{duration}分'
   queue_complete: '=== キュー処理が完了 ==='

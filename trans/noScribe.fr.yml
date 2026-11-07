@@ -94,6 +94,8 @@ fr:
   audio_conversion_skipped_invalid_packets: "%{count} paquets audio invalides ont été ignorés."
   start_identifying_speakers: "Identification des locuteurs en cours..."
   loading_pyannote: "Chargement de pyannote"
+  loading_nemotron: "Chargement de Nemotron"
+  nemotron_all_speakers: "Les 8 canaux de locuteurs de Nemotron sont tous utilisés : si davantage de personnes parlent, certaines ont été fusionnées avec d'autres."
   streaming_audio: "Transmission de l'audio au serveur..."
   start_canceling: "Annulation en cours... (veuillez patienter un instant)"
   start_transcription: "Transcription en cours..."
@@ -101,6 +103,9 @@ fr:
   pyannote_cuda_retry: |-
     Erreur CUDA PyAnnote détectée. Nouvel essai sur le CPU. Ce nouvel essai concerne uniquement la tâche en cours.
     Pour toujours utiliser le CPU et éviter cette erreur CUDA, définissez force_pyannote_cpu: true dans config.yml.
+  nemotron_cuda_retry: |-
+    Erreur CUDA Nemotron détectée. Nouvel essai sur le CPU. Ce nouvel essai concerne uniquement la tâche en cours.
+    Pour toujours utiliser le CPU et éviter cette erreur CUDA, définissez force_nemotron_cpu: true dans config.yml.
   whisper_cuda_retry: |-
     Erreur CUDA Whisper détectée. Nouvel essai sur le CPU. Ce nouvel essai concerne uniquement la tâche en cours.
     Pour toujours utiliser le CPU et éviter cette erreur CUDA, définissez force_whisper_cpu: true dans config.yml.
@@ -111,6 +116,10 @@ fr:
   language_detect: 'Langue détectée « %{lang} » avec une probabilité de %{prob}'
   language_en_only: "Notez que le modèle d'IA sélectionné pour la transcription est réservé à l'anglais."
   transcription_finished: "Transcription terminée."
+  voice_check_start: 'Vérification des locuteurs d''après leur voix...'
+  voice_check_done: '%{count} passage(s) réattribué(s).'
+  voice_check_skipped: 'La vérification par la voix n''a pas pu être terminée ; les locuteurs restent tels que la diarisation les a attribués.'
+  voice_check_canceled: 'Vérification par la voix interrompue. La transcription est complète, avec les locuteurs tels que la diarisation les a attribués.'
   transcription_saved: 'Enregistré sous %{file}'
   trancription_time: "Durée : %{duration} minutes"
   queue_complete: "=== Traitement de la file d'attente terminé ==="
