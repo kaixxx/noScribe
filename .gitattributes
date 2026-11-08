@@ -4,3 +4,6 @@
 *.sh text eol=lf
 # Compared line by line against `pip freeze` during the image build
 docker/requirements*.lock text eol=lf
+
+# Preserve original NVIDIA license documents and their recorded SHA-256 values.
+third_party_licenses/nvidia/*LICENSE.txt -text

@@ -14,6 +14,8 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# An additional CUDA permission for copyright interests controlled by Kai Dröge
+# is set out in CUDA-EXCEPTION.txt.
 
 import argparse
 import datetime

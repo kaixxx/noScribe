@@ -1,0 +1,36 @@
+noScribe: additional permission under GNU GPL version 3 section 7
+
+Permission and scope
+--------------------
+Kai Dröge grants this additional permission solely for the copyright
+interests in noScribe that he owns or is otherwise authorized to license.
+
+For material covered by this permission, you may link or combine that
+material, directly or through its dependencies, with the following NVIDIA
+libraries, and convey the resulting combination:
+
+CUDA Runtime, CUPTI, NVRTC, cuBLAS, cuDNN, cuFFT, cuFile, cuRAND, cuSOLVER,
+cuSPARSE, cuSPARSELt, NCCL, nvJitLink, and NVTX.
+
+For such combinations, the GNU General Public License does not require
+you to license these NVIDIA libraries under the GNU General Public
+License or to provide their source code as part of the Corresponding
+Source of the combination.
+
+All other requirements of the GNU General Public License remain
+applicable to the covered material, including the requirements to
+provide its Corresponding Source and the source of modifications to it.
+
+This permission grants no rights to the NVIDIA libraries themselves.
+Their use, modification, and redistribution remain subject to their
+respective licenses. Other third-party material retains its own license.
+
+You may remove this additional permission as provided by GNU GPL
+version 3 section 7. Authors of modifications may extend this permission
+to their own material, but are not required to do so.
+
+License documents
+-----------------
+The GNU GPL text is in LICENSE.txt. Original NVIDIA license documents and
+their versioned sources are in third_party_licenses/nvidia/. Including
+these documents does not change the scope of the permission above.

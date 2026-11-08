@@ -12,9 +12,15 @@ import re
 
 
 logger = logging.getLogger(__name__)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 LICENSE_NAME = re.compile(
     r"^(?:licen[sc]es?|notice|copying|copyright|eula)(?:$|[._-])"
     r"|^third[-_ ]?party[-_ ]?(?:licen[sc]es?|notices?)(?:$|[._-])",
+    re.IGNORECASE,
+)
+NVIDIA_LIBRARY = re.compile(
+    r"^(?:lib)?(?:cublas|cudart|cudnn|cufft|cupti|curand|cusolver|cusparse|"
+    r"cufile|nvrtc|nvjitlink|nvtoolsext|nvtx|nccl)[^/\\]*\.(?:dll|so)(?:\.[0-9]+)*$",
     re.IGNORECASE,
 )
 
@@ -51,6 +57,7 @@ def collect_license_files(entries, output_dir):
     The returned tuples can be passed directly to COLLECT. Original document paths
     are preserved inside a separate directory for each distribution and version.
     """
+    entries = list(entries)
     included_sources = {
         _source_key(source) for _, source, _ in entries if source
     }
@@ -81,16 +88,41 @@ def collect_license_files(entries, output_dir):
                 documents.append((str(destination), str(source)))
         packages.append((name, version, sorted(set(documents))))
 
-    data = []
+    exception_path = PROJECT_ROOT / "CUDA-EXCEPTION.txt"
+    if not exception_path.is_file():
+        raise FileNotFoundError(exception_path)
+    data = [("CUDA-EXCEPTION.txt", str(exception_path), "DATA")]
     overview = [
         "Third-party license files",
         "",
         "Generated from installed distributions represented in this build.",
-        "Only documents supplied by those distributions are collected.",
+        "Package license documents come from those installed distributions.",
         "This does not establish completeness for native libraries, models,",
         "or embedded applications such as noScribeEdit.",
         "",
+        "The separately granted noScribe CUDA permission and its scope are",
+        "described in CUDA-EXCEPTION.txt beside the noScribe GPL license.",
+        "",
     ]
+    if any(
+        NVIDIA_LIBRARY.match(Path(path).name)
+        for destination, source, _ in entries
+        for path in (destination, source)
+        if path
+    ):
+        nvidia_dir = PROJECT_ROOT / "third_party_licenses" / "nvidia"
+        documents = sorted(path for path in nvidia_dir.rglob("*") if path.is_file())
+        if not documents:
+            raise FileNotFoundError(f"NVIDIA license documents missing: {nvidia_dir}")
+        for path in documents:
+            destination = "third_party_licenses/nvidia/" + path.relative_to(nvidia_dir).as_posix()
+            data.append((destination, str(path), "DATA"))
+        overview.extend([
+            "Versioned supplemental NVIDIA documents: nvidia/README.md",
+            "See nvidia/SOURCES.json for original package versions and checksums.",
+            "These supplement the installed package documents listed below.",
+            "",
+        ])
     missing = []
     for name, version, documents in sorted(packages):
         overview.append(f"{name} {version}")
@@ -106,7 +138,7 @@ def collect_license_files(entries, output_dir):
     output_dir.mkdir(parents=True, exist_ok=True)
     overview_path = output_dir / "third_party_licenses.txt"
     overview_path.write_text("\n".join(overview), encoding="utf-8")
-    logger.info("Collected %d license documents from %d distributions", len(data), len(packages))
+    logger.info("Collected %d license/support documents for %d distributions", len(data), len(packages))
     if missing:
         logger.warning(
             "No separate license documents found for: %s. See third_party_licenses/README.txt.",
