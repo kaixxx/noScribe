@@ -1,8 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
+import sys
 
 from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import collect_all
+
+# The repository, including the shared collector, is mounted at /noScribe.
+sys.path.insert(0, '/noScribe/pyinstaller')
+from collect_licenses import collect_license_files
 
 datas = [('/noScribe/img/noScribeLogo.png', 'img/'), ('/noScribe/img/graphic_sw.png', 'img/'), ('/noScribe/LICENSE.txt', '.'), ('/noScribe/prompts/prompt.yml', 'prompts/'), ('/noScribe/prompts/prompt_nd.yml', 'prompts/'), ('/noScribe/pyannote', 'pyannote/'), ('/noScribe/README.md', '.'), ('/noScribe/trans', 'trans/')]
 binaries = []
@@ -34,6 +39,11 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+license_datas = collect_license_files(
+    a.pure + a.binaries + a.datas + a.scripts,
+    workpath,
+)
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -58,6 +68,7 @@ coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
+    license_datas,
     strip=False,
     upx=True,
     upx_exclude=[],

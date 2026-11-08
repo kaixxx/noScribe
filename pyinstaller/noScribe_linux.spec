@@ -1,8 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
+import sys
 
 from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import collect_all
+
+sys.path.insert(0, SPECPATH)
+from collect_licenses import collect_license_files
 
 datas = [('../img/noScribeLogo.png', 'img/'), ('../img/graphic_sw.png', 'img/'), ('../LICENSE.txt', '.'), ('../prompts/prompt.yml', 'prompts/'), ('../prompts/prompt_nd.yml', 'prompts/'), ('../pyannote', 'pyannote/'), ('../README.md', '.'), ('../trans', 'trans/')]
 binaries = []
@@ -42,6 +46,11 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+license_datas = collect_license_files(
+    a.pure + a.binaries + a.datas + a.scripts,
+    workpath,
+)
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -66,6 +75,7 @@ coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
+    license_datas,
     strip=False,
     upx=True,
     upx_exclude=[],

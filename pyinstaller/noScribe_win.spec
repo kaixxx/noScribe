@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
+import sys
 
 from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import collect_dynamic_libs
@@ -10,6 +11,8 @@ from PyInstaller.utils.hooks import get_package_paths
 
 block_cipher = None
 project_root = os.path.abspath(os.path.join(SPECPATH, '..'))
+sys.path.insert(0, SPECPATH)
+from collect_licenses import collect_license_files
 
 # noScribe:
 
@@ -82,6 +85,13 @@ noScribe_a = Analysis(
     noarchive=False,
 )
 
+# This spec is shared by the CPU and CUDA environments. Collect the license
+# documents of distributions actually represented in the finished analysis.
+noScribe_license_datas = collect_license_files(
+    noScribe_a.pure + noScribe_a.binaries + noScribe_a.datas + noScribe_a.scripts,
+    workpath,
+)
+
 noScribe_pyz = PYZ(noScribe_a.pure, noScribe_a.zipped_data, cipher=block_cipher)
 
 noScribe_exe = EXE(
@@ -110,6 +120,7 @@ noScribe_coll = COLLECT(
     noScribe_a.binaries,
     noScribe_a.zipfiles,
     noScribe_a.datas,
+    noScribe_license_datas,
     strip=False,
     upx=False,
     name='noScribe'
