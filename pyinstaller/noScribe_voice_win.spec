@@ -1,0 +1,114 @@
+# -*- mode: python ; coding: utf-8 -*-
+import os
+
+from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_dynamic_libs
+from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import copy_metadata
+from PyInstaller.utils.hooks import get_package_paths
+
+block_cipher = None
+project_root = os.path.abspath(os.path.join(SPECPATH, '..'))
+
+# noScribe:
+
+noScribe_datas = [] 
+noScribe_binaries = []
+# noScribe.main is reached through the package's lazy __getattr__, which
+# PyInstaller's static analysis cannot follow -- declare it explicitly.
+noScribe_hiddenimports = ['noScribe.main']
+
+noScribe_datas += [
+('../models/small/', './models/small/'),
+('../trans/', './trans/'), 
+('../img/graphic_sw.png', 'img/'), 
+('../LICENSE.txt', '.'), 
+('../img/noScribeLogo.ico', 'img/'), 
+('../prompts/prompt.yml', 'prompts/'),
+('../prompts/prompt_nd.yml', 'prompts/'), 
+('../README.md', '.')]
+noScribe_datas += collect_data_files('customtkinter')
+noScribe_datas += collect_data_files('noScribe.plugins', includes=['**/backend.json'])
+noScribe_datas += copy_metadata('AdvancedHTMLParser')
+noScribe_datas += collect_data_files('faster_whisper')
+
+# for pyannote:
+noScribe_datas += [('../pyannote/', './pyannote/')]
+noScribe_datas += collect_data_files('lightning')
+noScribe_datas += collect_data_files('gradio')
+noScribe_datas += collect_data_files('lightning_fabric')
+noScribe_datas += collect_data_files('pyannote')
+noScribe_datas += copy_metadata('filelock')
+noScribe_datas += copy_metadata('tqdm')
+# noScribe_datas += copy_metadata('regex')
+noScribe_datas += copy_metadata('requests')
+noScribe_datas += copy_metadata('packaging')
+noScribe_datas += copy_metadata('numpy')
+noScribe_datas += copy_metadata('scipy')
+noScribe_datas += copy_metadata('tokenizers')
+noScribe_datas += copy_metadata('pyannote.audio')
+noScribe_datas += copy_metadata('pyannote.core')
+noScribe_datas += copy_metadata('pyannote.database')
+noScribe_datas += copy_metadata('pyannote.metrics')
+noScribe_datas += copy_metadata('pyannote.pipeline')
+noScribe_binaries += collect_dynamic_libs('pyannote')
+noScribe_binaries += collect_dynamic_libs('torchvision')
+_, torchvision_path = get_package_paths('torchvision')
+torchvision_stable_extension = os.path.join(torchvision_path, '_C_stable.pyd')
+if os.path.exists(torchvision_stable_extension):
+    noScribe_binaries.append((torchvision_stable_extension, 'torchvision'))
+noScribe_hiddenimports += collect_submodules('pyannote')
+noScribe_hiddenimports += collect_submodules('scipy')
+# noScribe_hiddenimports += ['scipy._lib.array_api_compat.numpy.fft']
+
+noScribe_a = Analysis(
+    ['../noScribe/__main__.py'],
+    pathex=[project_root],
+    binaries=noScribe_binaries,
+    datas=noScribe_datas,
+    hiddenimports=noScribe_hiddenimports,   # <-- use them
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    # The inference server is deployed from source and is not part of the
+    # desktop application bundle.
+    excludes=['speechbrain', 'noScribe.server', 'uvicorn'],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
+noScribe_pyz = PYZ(noScribe_a.pure, noScribe_a.zipped_data, cipher=block_cipher)
+
+noScribe_exe = EXE(
+    noScribe_pyz,
+    noScribe_a.scripts,
+    [],
+    exclude_binaries=True,
+    name='noScribe',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    # console=False,
+    hide_console="hide-late",
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon=['../img/noScribeLogo.ico'],
+)
+
+# assemble the dist folder with all needed DLLs, datas, etc.
+noScribe_coll = COLLECT(
+    noScribe_exe,
+    noScribe_a.binaries,
+    noScribe_a.zipfiles,
+    noScribe_a.datas,
+    strip=False,
+    upx=False,
+    name='noScribe'
+)
