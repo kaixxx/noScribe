@@ -44,6 +44,11 @@ RUN set -eu; \
     fetch /models/precise "https://huggingface.co/${PRECISE_REPO}/resolve/${PRECISE_REV}" "${PRECISE_SHA256}"; \
     fetch /models/fast "https://huggingface.co/${FAST_REPO}/resolve/${FAST_REV}/${FAST_SUBDIR}" "${FAST_SHA256}"
 
+# Keep the model descriptions and MIT license with the downloaded weights.
+# Copy them after downloading so documentation edits preserve the model cache.
+COPY models/precise/NOSCRIBE_README.txt /models/precise/NOSCRIBE_README.txt
+COPY models/fast/NOSCRIBE_README.txt /models/fast/NOSCRIBE_README.txt
+
 # ---------------------------------------------------------------------------
 # Stage 2: system packages and Python dependencies
 # ---------------------------------------------------------------------------

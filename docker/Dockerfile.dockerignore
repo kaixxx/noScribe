@@ -14,5 +14,11 @@ generate_linux_binary.sh
 environments
 !environments/requirements_linux.txt
 
-# Whisper models are downloaded during the build; keep local copies out.
-models
+# Whisper weights are downloaded during the build; include only their notices.
+models/**
+!models/precise/
+!models/fast/
+models/precise/**
+models/fast/**
+!models/precise/NOSCRIBE_README.txt
+!models/fast/NOSCRIBE_README.txt

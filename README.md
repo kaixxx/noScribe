@@ -34,12 +34,6 @@ See the corresponding sections on my website: https://noscribe.de
 
 To run noScribe without its window in a Docker container (CPU or CUDA, for servers and batch jobs), see [docker/README.md](docker/README.md).
 
-## Licensing
-
-noScribe is licensed under the [GNU GPL version 3 or later](LICENSE.txt).
-[CUDA-EXCEPTION.txt](CUDA-EXCEPTION.txt) contains an additional CUDA linking
-permission granted by Kai Dröge for the copyright interests he controls.
-
 ## About Me
 **Kai Dröge**, PhD in sociology (with a background in computer science), qualitative researcher and teacher, [Lucerne University for Applied Science (Switzerland)](https://www.hslu.ch/de-ch/hochschule-luzern/ueber-uns/personensuche/profile/?pid=823) and [Institute for Social Research, Frankfurt/M. (Germany)](https://www.ifs.uni-frankfurt.de/personendetails/kai-droege.html).
 
@@ -50,6 +44,15 @@ NoScribe is free and always will be. However, developing it costs real money. I 
 
 ## Citation (APA Style)
 Dröge, K. (2026). noScribe. AI-powered Audio Transcription (Version XXX) [Computer software]. https://github.com/kaixxx/noScribe
+
+## Licensing
+
+noScribe is licensed under the [GNU GPL version 3 or later](LICENSE.txt).
+[CUDA-EXCEPTION.txt](CUDA-EXCEPTION.txt) contains an additional CUDA linking
+permission granted by Kai Dröge for the copyright interests he controls.
+
+noScribe uses PyAV, which bundles FFmpeg libraries. Their licensing depends on
+the build and enabled components; see [FFmpeg's license and legal information](https://ffmpeg.org/legal.html).
 
 ## Other Software
 If you are interested in open source software for the analysis of qualitative data, take a look at [QualCoder](https://github.com/ccbogel/QualCoder), where I am a regular contributor.
