@@ -42,7 +42,7 @@ jobs:
             AdvancedHTMLParser appdirs customtkinter \
             'faster-whisper==1.2.1' Pillow \
             'pyinstaller==6.14.1' python-i18n PyYAML soundfile \
-            huggingface_hub
+            huggingface_hub requests
           python -m pip check
           python - <<'PY'
           import av, ctranslate2
