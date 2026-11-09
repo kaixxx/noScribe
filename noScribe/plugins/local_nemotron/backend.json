@@ -1,0 +1,15 @@
+{
+  "id": "local-nemotron",
+  "name": "Local Nemotron",
+  "version": "1.0.0",
+  "protocol_version": 1,
+  "engine": "nemotron",
+  "execution": {
+    "type": "builtin",
+    "adapter": "local-nemotron"
+  },
+  "capabilities": [
+    "diarization",
+    "overlapping_speech"
+  ]
+}

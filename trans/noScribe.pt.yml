@@ -95,6 +95,8 @@ pt:
   audio_conversion_skipped_invalid_packets: '%{count} pacotes de áudio inválidos foram ignorados.'
   start_identifying_speakers: 'Identificação de alto-falantes...'
   loading_pyannote: 'Carregando pyannote'
+  loading_nemotron: 'Carregando Nemotron'
+  nemotron_all_speakers: "Os 8 canais de orador do Nemotron estão todos em uso: se falarem mais pessoas, algumas foram fundidas com outras."
   streaming_audio: 'Transmitindo áudio para o servidor...'
   start_canceling: 'Cancelando... (aguarde um segundo)'
   start_transcription: 'Transcrição...'
@@ -102,6 +104,9 @@ pt:
   pyannote_cuda_retry: |-
     Erro CUDA do PyAnnote detectado. Tentando novamente na CPU. Esta nova tentativa aplica-se apenas à tarefa atual.
     Para usar sempre a CPU e evitar este erro CUDA, defina force_pyannote_cpu: true em config.yml.
+  nemotron_cuda_retry: |-
+    Erro CUDA do Nemotron detectado. Tentando novamente na CPU. Esta nova tentativa aplica-se apenas à tarefa atual.
+    Para usar sempre a CPU e evitar este erro CUDA, defina force_nemotron_cpu: true em config.yml.
   whisper_cuda_retry: |-
     Erro CUDA do Whisper detectado. Tentando novamente na CPU. Esta nova tentativa aplica-se apenas à tarefa atual.
     Para usar sempre a CPU e evitar este erro CUDA, defina force_whisper_cpu: true em config.yml.
@@ -112,6 +117,10 @@ pt:
   language_detect: 'Idioma detectado "%{lang}" com probabilidade %{prob}'
   language_en_only: 'Tenha em atenção que o modelo de IA selecionado para a transcrição é apenas em inglês.'
   transcription_finished: 'Transcrição concluída.'
+  voice_check_start: 'Verificando os oradores pela voz...'
+  voice_check_done: '%{count} trecho(s) reatribuído(s).'
+  voice_check_skipped: 'Não foi possível concluir a verificação por voz; os oradores ficam como a diarização os atribuiu.'
+  voice_check_canceled: 'Verificação por voz interrompida. A transcrição está completa, com os oradores como a diarização os atribuiu.'
   transcription_saved: 'Salvo em %{file}'
   trancription_time: 'Duração: %{duration} minutos'
   queue_complete: '=== Processamento da fila concluído ==='

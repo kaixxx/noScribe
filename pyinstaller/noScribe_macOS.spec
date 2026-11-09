@@ -3,6 +3,8 @@ import sys
 
 from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import copy_metadata
 
 sys.path.insert(0, SPECPATH)
 from collect_licenses import collect_license_files
@@ -17,6 +19,16 @@ datas += collect_data_files('noScribe.plugins', includes=['**/backend.json'])
 datas += collect_data_files('lightning_fabric')
 tmp_ret = collect_all('pyannote')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+# transformers imports its model packages lazily, so the analysis does not see
+# the two the Nemotron diarization worker loads.
+hiddenimports += collect_submodules('transformers.models.nemotron3_diarization')
+hiddenimports += collect_submodules('transformers.models.nemotron_asr_streaming')
+# transformers reads torchcodec's version from its metadata whenever torchcodec
+# is importable, and refuses to load AutoProcessor without it.
+try:
+    datas += copy_metadata('torchcodec')
+except Exception:
+    pass
 
 
 a = Analysis(

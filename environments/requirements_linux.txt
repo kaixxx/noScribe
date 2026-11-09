@@ -10,13 +10,23 @@ CTkToolTip
 faster-whisper
 fastapi>=0.115,<1
 importlib-resources>=5.10; python_version < "3.12"
+# transformers builds Nemotron's mel filters with librosa when it constructs the
+# processor (noScribe/nemotron_mp_worker.py), and nothing else here pulls it in.
+librosa
 # >=3.11 honours MPL_IGNORE_SYSTEM_FONTS, which the diarization worker sets;
 # see the comment in noScribe/pyannote_mp_worker.py.
 matplotlib>=3.11
 Pillow
 pyannote.audio>=4
-pyinstaller
+# 6.21 or newer: before 6.14 a frozen transformers cannot import itself (its
+# import-structure scan fails on __init__.pyc), and before 6.21 a frozen scipy 1.18
+# misses scipy._cyutility and array_api_compat's numpy.fft. The Windows spec collects
+# all of scipy itself, so its pin to 6.14.1 is enough there.
+pyinstaller>=6.21
 python-i18n
 PyYAML
 soundfile
+# 5.18 or newer: the first release that carries Nemotron 3 Diarization, which
+# noScribe/nemotron_mp_worker.py runs.
+transformers>=5.18
 uvicorn>=0.30,<1

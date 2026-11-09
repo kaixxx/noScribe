@@ -196,12 +196,16 @@ def test_builtin_plugins_load_manifests_and_advertise_models():
     manifests = {manifest.id: manifest for manifest in registry.list_plugins()}
     assert manifests["local-whisper"].execution.type is ExecutionType.BUILTIN
     assert manifests["local-pyannote"].execution.type is ExecutionType.BUILTIN
+    assert manifests["local-nemotron"].execution.type is ExecutionType.BUILTIN
     assert {str(model.ref) for model in registry.list_models("transcription")} == {
         "local-whisper:precise",
         "local-whisper:custom",
     }
+    # Nemotron is offered where transformers and librosa can run it, so the
+    # machine decides whether it is listed.
     assert [
         str(model.ref) for model in registry.list_models("diarization")
+        if model.ref.backend_id != "local-nemotron"
     ] == ["local-pyannote:default"]
 
 
