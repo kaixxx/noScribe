@@ -1,0 +1,107 @@
+name: Build noScribe VOICE — macOS Intel (Whisper Small)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [voice-custom-pauses]
+    paths:
+      - 'noScribe/**'
+      - 'pyinstaller/**'
+      - 'tools/voice_release/**'
+      - '.github/workflows/build-macos-intel.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  intel:
+    name: macOS Intel x86_64 (CPU-only)
+    runs-on: macos-15-intel
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out your modified noScribe
+        uses: actions/checkout@v4
+
+      - name: Set up native Intel Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+
+      - name: Check CPU and install minimal runtime
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = 'x86_64'
+          python -c 'import platform; assert platform.machine() == "x86_64"'
+          python -m pip install --upgrade pip
+          python -m pip install \
+            'av>=12,<19' \
+            AdvancedHTMLParser appdirs customtkinter \
+            'faster-whisper==1.2.1' Pillow \
+            'pyinstaller==6.14.1' python-i18n PyYAML soundfile \
+            huggingface_hub
+          python -m pip check
+          python - <<'PY'
+          import av, ctranslate2
+          from faster_whisper import WhisperModel
+          from i18n import t
+          print('PyAV:', av.__version__, 'CTranslate2:', ctranslate2.__version__)
+          PY
+
+      - name: Prepare Intel-only app and Whisper Small
+        run: |
+          set -euo pipefail
+          python tools/voice_release/prepare_intel_build.py
+          python -m py_compile noScribe/main.py noScribe/plugins/factory.py
+          python - <<'PY'
+          from faster_whisper import WhisperModel
+          model = WhisperModel('models/small', device='cpu', compute_type='int8')
+          print('Whisper Small loaded on Intel CPU')
+          PY
+
+      - name: Bundle native macOS Intel application
+        run: |
+          set -euo pipefail
+          python -m PyInstaller --noconfirm --clean pyinstaller/noScribe_voice_intel.spec
+
+      - name: Smoke-test packaged application (no GUI required)
+        run: |
+          set -euo pipefail
+          APP='dist/noScribe-VOICE.app'
+          test -d "$APP"
+          test -x "$APP/Contents/MacOS/noScribe"
+          file "$APP/Contents/MacOS/noScribe"
+          find "$APP" -name model.bin | grep '/small/'
+          "$APP/Contents/MacOS/noScribe" --help-models | tee /tmp/models.txt
+          grep 'small' /tmp/models.txt
+          "$APP/Contents/MacOS/noScribe" --help >/dev/null
+
+      - name: End-to-end transcription of a short spoken sample
+        run: |
+          set -euo pipefail
+          say -o /tmp/voice-sample.aiff 'This is a short transcription test for noScribe VOICE.'
+          'dist/noScribe-VOICE.app/Contents/MacOS/noScribe' \
+            /tmp/voice-sample.aiff /tmp/voice-output.txt \
+            --no-gui --model small --language en \
+            --speaker-detection none --voice-pauses
+          test -s /tmp/voice-output.txt
+          echo 'Intel app completed a real audio transcription.'
+
+      - name: Create user-downloadable ZIP
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          ditto -c -k --sequesterRsrc --keepParent \
+            dist/noScribe-VOICE.app \
+            release/noScribe-VOICE-macOS-Intel-x64-Small.zip
+
+      - name: Upload Intel app
+        uses: actions/upload-artifact@v4
+        with:
+          name: noScribe-VOICE-macOS-Intel-x64-Small
+          path: release/noScribe-VOICE-macOS-Intel-x64-Small.zip
+          if-no-files-found: error
+          retention-days: 14
