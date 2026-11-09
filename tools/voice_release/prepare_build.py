@@ -1,3 +1,4 @@
+
 """Prepare an opt-in noScribe VOICE edition release build.
 
 Run this script from the repository root AFTER installing runtime dependencies
@@ -43,14 +44,38 @@ def create_spec(platform: str) -> Path:
     text = template.read_text(encoding="utf-8")
 
     if platform == "windows":
-        text = replace_once(
-            text,
-            "('../models/precise/', './models/precise/'),\n"
-            "('../models/fast/', './models/fast/'),\n"
-            "('../noScribeEdit/', './noScribeEdit/'),",
-            "('../models/small/', './models/small/'),",
-            "Windows bundled models/editor",
-        )
+        # The upstream Windows spec may use different indentation or line endings.
+        # Replace only the three individual data entries, not one exact text block.
+        entries = {
+            "('../models/precise/','./models/precise/'),": "precise",
+            "('../models/fast/','./models/fast/'),": "fast",
+            "('../noScribeEdit/','./noScribeEdit/'),": "editor",
+        }
+        found = {name: 0 for name in entries.values()}
+        updated_lines = []
+        for line in text.splitlines(keepends=True):
+            # Normalization tolerates indentation, spaces, quotes and CRLF/LF.
+            normalized = "".join(line.split()).replace('"', "'")
+            entry = entries.get(normalized)
+            if entry is None:
+                updated_lines.append(line)
+                continue
+            found[entry] += 1
+            if entry == "precise":
+                indentation = line[: len(line) - len(line.lstrip())]
+                newline = "\r\n" if line.endswith("\r\n") else "\n"
+                updated_lines.append(
+                    indentation + "('../models/small/', './models/small/')," + newline
+                )
+            # Remove unused fast and precise models and noScribeEdit data entry.
+            # The editor is distributed separately for this VOICE build.
+        if found != {"precise": 1, "fast": 1, "editor": 1}:
+            raise RuntimeError(
+                "Cannot safely patch Windows model/editor entries: "
+                f"expected one of each, found {found}. "
+                "Review pyinstaller/noScribe_win.spec."
+            )
+        text = "".join(updated_lines)
     elif platform == "macos":
         text = replace_once(
             text,
@@ -112,3 +137,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
