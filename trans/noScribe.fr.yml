@@ -111,6 +111,10 @@ fr:
   language_detect: 'Langue détectée « %{lang} » avec une probabilité de %{prob}'
   language_en_only: "Notez que le modèle d'IA sélectionné pour la transcription est réservé à l'anglais."
   transcription_finished: "Transcription terminée."
+  voice_check_start: 'Vérification des locuteurs d''après leur voix...'
+  voice_check_done: '%{count} passage(s) réattribué(s).'
+  voice_check_skipped: 'La vérification par la voix n''a pas pu être terminée ; les locuteurs restent tels que la diarisation les a attribués.'
+  voice_check_canceled: 'Vérification par la voix interrompue. La transcription est complète, avec les locuteurs tels que la diarisation les a attribués.'
   transcription_saved: 'Enregistré sous %{file}'
   trancription_time: "Durée : %{duration} minutes"
   queue_complete: "=== Traitement de la file d'attente terminé ==="
