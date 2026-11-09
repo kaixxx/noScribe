@@ -55,11 +55,14 @@ noScribe_datas += copy_metadata('pyannote.database')
 noScribe_datas += copy_metadata('pyannote.metrics')
 noScribe_datas += copy_metadata('pyannote.pipeline')
 noScribe_binaries += collect_dynamic_libs('pyannote')
-noScribe_binaries += collect_dynamic_libs('torchvision')
-_, torchvision_path = get_package_paths('torchvision')
-torchvision_stable_extension = os.path.join(torchvision_path, '_C_stable.pyd')
-if os.path.exists(torchvision_stable_extension):
-    noScribe_binaries.append((torchvision_stable_extension, 'torchvision'))
+# torchvision is optional in the CPU release environment.
+from importlib.util import find_spec
+if find_spec('torchvision') is not None:
+    noScribe_binaries += collect_dynamic_libs('torchvision')
+    _, torchvision_path = get_package_paths('torchvision')
+    torchvision_stable_extension = os.path.join(torchvision_path, '_C_stable.pyd')
+    if os.path.exists(torchvision_stable_extension):
+        noScribe_binaries.append((torchvision_stable_extension, 'torchvision'))
 noScribe_hiddenimports += collect_submodules('pyannote')
 noScribe_hiddenimports += collect_submodules('scipy')
 # noScribe_hiddenimports += ['scipy._lib.array_api_compat.numpy.fft']
